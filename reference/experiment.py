@@ -31,6 +31,8 @@ from datetime import datetime, timezone
 
 import numpy as np
 
+import stages
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PY = os.path.join(ROOT, "reference/.venv/bin/python")
 BEND = os.environ.get("BEND_BIN") or os.path.expanduser("~/.bend/bin/bend")
@@ -39,7 +41,7 @@ ENV_DIR = os.path.join(ROOT, ".bend", "env")
 if os.path.isdir(ENV_DIR):
     ENV["BEND_LIB"] = ENV_DIR
 
-SCHEMA = "mlbend.experiment/1"
+SCHEMA = "mlbend.experiment/3"
 
 
 # --------------------------------------------------------------------------
@@ -384,6 +386,7 @@ TASKS = {
                     "source": "https://huggingface.co/datasets/mstz/optdigits",
                     "files": ["https://huggingface.co/datasets/mstz/optdigits/resolve/4f20cc827b763fb69e2a80e18e892e4e11498aec/optdigits.data"], "expected_sha256": "e1b683cc211604fe8fd8c4417e6a69f31380e0c61d4af22e93cc21e9257ffedd"},
         "seed": 0,
+        "stages": {"program": "bench/plumbing/main.bend"},
         "parse": parse_diffusion_vit,
         "reference": reference_diffusion_vit,
         "metrics": {
@@ -679,12 +682,30 @@ def aggregate_tables(tables):
     return out
 
 
-def manifest_for(task, cfg, evals, repeat, probe, trainer="bend"):
+def peaks_for(machine_info):
+    """The machine's measured peaks, if a probe wrote them (B3)."""
+    key = re.sub(r"[^A-Za-z0-9._-]+", "-", machine_info.get("platform", "machine")).strip("-")
+    for name in (f"peaks-{key}.json", "peaks.json"):
+        path = os.path.join(ROOT, "results", name)
+        if os.path.isfile(path):
+            try:
+                with open(path) as f:
+                    return json.load(f)
+            except (OSError, ValueError):
+                return {}
+    return {}
+
+
+def manifest_for(task, cfg, evals, repeat, probe, trainer="bend", lane="cpu", threads=None,
+                 stages_list=None, stage_counts=None, stage_notes=None, stage_source=None):
     run_seconds = min(e["run_seconds"] for e in evals) if evals else 0.0
     build_seconds = evals[0]["build_seconds"] if evals else 0.0
     reference_seconds = max(e["reference_seconds"] for e in evals) if evals else 0.0
     table = aggregate_tables([e["table"] for e in evals])
     seeds = [e["seed"] for e in evals]
+    notes = list(stage_notes or [])
+    if notes:
+        notes.append("the stage split is one step, not the whole run")
     manifest = {
         "schema": SCHEMA,
         "created_at": datetime.now(timezone.utc).isoformat(),
@@ -692,6 +713,8 @@ def manifest_for(task, cfg, evals, repeat, probe, trainer="bend"):
                  "dataset": dict(cfg["dataset"], **probe), "seed": seeds[0] if seeds else None},
         "seeds": seeds,
         "trainer": trainer,
+        "variant": {"trainer": trainer, "lane": lane, "threads": threads,
+                    "bend": bend_version()},
         "git": git_state(),
         "bend": {"version": bend_version()},
         "packages": packages(),
@@ -706,6 +729,12 @@ def manifest_for(task, cfg, evals, repeat, probe, trainer="bend"):
             "reference_seconds": round(reference_seconds, 3),
             "speed_ratio": round(reference_seconds / run_seconds, 3) if run_seconds else None,
         },
+        "stages": stages_list or [],
+        "stages_source": stage_source,
+        "counts": stage_counts or {},
+        "peaks": peaks_for(machine()),
+        "bounds": {},
+        "notes": notes,
         "seed_runs": [{"seed": e["seed"], "metrics": e["table"],
                        "run_seconds": round(e["run_seconds"], 3),
                        "reference_seconds": round(e["reference_seconds"], 3)}
@@ -740,8 +769,10 @@ def report_text(manifest):
              f"   reference: {manifest['run']['reference_seconds']} s"
              f"   fetch: {manifest['run']['fetch_seconds']} s"
              f"   sha256: {manifest['task']['dataset']['sha256'][:12]}" + seed_text,
-             "",
-             f"{'metric':<18}{'bend':>28}{'reference':>28}{'delta':>22}  ok"]
+             ""]
+    lines.extend(stages.text(manifest.get("stages"), manifest.get("counts")))
+    lines.extend(["",
+             f"{'metric':<18}{'bend':>28}{'reference':>28}{'delta':>22}  ok"])
     for name, row in manifest["metrics"].items():
         bend = show_metric(row["bend"], row.get("bend_sd"))
         want = show_metric(row["reference"], row.get("reference_sd"))
@@ -853,6 +884,8 @@ def main():
     parser.add_argument("--trainer", choices=["bend", "numpy"], default="bend",
                         help="which trainer runs the task: the Bend program or the NumPy reference")
     parser.add_argument("--seeds", help="comma-separated seeds, overriding the task's list")
+    parser.add_argument("--lane", default="cpu", help="the lane the program runs on (cpu, gpu); recorded in the variant")
+    parser.add_argument("--threads", type=int, default=None, help="the runtime's thread count, when known")
     parser.add_argument("--summary", action="store_true", help="write results/RESULTS.md from the latest reports")
     args = parser.parse_args()
 
@@ -882,9 +915,15 @@ def main():
             binary, build_seconds = None, 0.0
         else:
             binary, build_seconds = build_bend(name, cfg)
+        stages_list, stage_counts, stage_notes, stage_source = [], {}, [], None
+        if cfg.get("stages") and args.trainer == "bend":
+            stages_list, stage_counts, stage_notes, stage_source = stages.capture(cfg)
         evals = [evaluate(name, cfg, seed, args.repeat, args.trainer, binary, build_seconds)
                  for seed in seeds]
-        manifest = manifest_for(name, cfg, evals, args.repeat, probe, args.trainer)
+        manifest = manifest_for(name, cfg, evals, args.repeat, probe, args.trainer,
+                                lane=args.lane, threads=args.threads,
+                                stages_list=stages_list, stage_counts=stage_counts,
+                                stage_notes=stage_notes, stage_source=stage_source)
         path = write_report(manifest, args.out)
         print(report_text(manifest))
         print(f"report: {path}")
