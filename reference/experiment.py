@@ -31,6 +31,7 @@ from datetime import datetime, timezone
 
 import numpy as np
 
+import report_run
 import stages
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -194,6 +195,16 @@ def parse_diffusion_digits(out):
     return {"first_loss": losses[0],
             "final_loss": float(final.group(1)) if final else losses[-1],
             **vals}
+
+
+def parse_vit_step(out):
+    """The benchmark task's one number: the loss after three steps (reported, not gated)."""
+    match = re.search(r"^loss_after_3: ([0-9.eE+-]+)$", out, re.M)
+    return {"loss_after_3": float(match.group(1)) if match else None}
+
+
+def reference_vit_step(context=None):
+    return {"loss_after_3": None}
 
 
 def parse_diffusion_vit(out):
@@ -395,6 +406,19 @@ TASKS = {
             "final_loss": {"tolerance": 0, "mode": "report"},
             "sample_mean": {"tolerance": 0, "mode": "report"},
             "sample_std": {"tolerance": 0, "mode": "report"},
+        },
+    },
+    "vit-step": {
+        "description": "one ViT training step at the plumbing benchmark's sizes, timed by stage",
+        "program": "bench/plumbing/main.bend",
+        "dataset": {"name": "synthetic-vit-step", "rows": 1024, "features": 64,
+                    "source": "built in bench/plumbing/main.bend"},
+        "seed": 0,
+        "stages": {"program": "bench/plumbing/main.bend"},
+        "parse": parse_vit_step,
+        "reference": reference_vit_step,
+        "metrics": {
+            "loss_after_3": {"tolerance": 0, "mode": "report"},
         },
     },
     "transformer-periodic": {
@@ -759,28 +783,8 @@ def show_metric(value, sd, digits=6):
 
 
 def report_text(manifest):
-    seeds = manifest.get("seeds") or []
-    seed_text = f"   seeds: {len(seeds)}" + (f" ({seeds[0]}..{seeds[-1]})" if len(seeds) > 1 else "")
-    lines = [f"task: {manifest['task']['name']}  ({manifest['task']['description']})",
-             f"git: {manifest['git']['branch']} {manifest['git']['commit']}"
-             + (" (dirty)" if manifest["git"]["dirty"] else ""),
-             f"trainer: {manifest['trainer']}   bend: {manifest['bend']['version']}   build: {manifest['run']['build_seconds']} s"
-             f"   run: {manifest['run']['seconds_min']} s"
-             f"   reference: {manifest['run']['reference_seconds']} s"
-             f"   fetch: {manifest['run']['fetch_seconds']} s"
-             f"   sha256: {manifest['task']['dataset']['sha256'][:12]}" + seed_text,
-             ""]
-    lines.extend(stages.text(manifest.get("stages"), manifest.get("counts")))
-    lines.extend(["",
-             f"{'metric':<18}{'bend':>28}{'reference':>28}{'delta':>22}  ok"])
-    for name, row in manifest["metrics"].items():
-        bend = show_metric(row["bend"], row.get("bend_sd"))
-        want = show_metric(row["reference"], row.get("reference_sd"))
-        delta = show_metric(row.get("delta"), row.get("delta_sd"), 4)
-        lines.append(f"{name:<18}{bend:>28}{want:>28}{delta:>22}  {'ok' if row['pass'] else 'FAIL'}")
-    lines.append("")
-    lines.append("PASS" if manifest["passed"] else "FAIL")
-    return "\n".join(lines)
+    """The report card is the page: one renderer, two callers (B2)."""
+    return report_run.page(manifest)
 
 
 def log_wandb(manifest, project, name, offline):

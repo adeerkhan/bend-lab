@@ -8,7 +8,7 @@ BEND := $(or $(BEND_BIN),$(HOME)/.bend/bin/bend)
 BEND_VERSION := 2.0.38
 BEND_REF := ../bend-ref
 
-.PHONY: setup check laws sync-bend clean lint env env-check release experiment experiments results bench plumbing flow flow64 doctor figures select plots sweep sweep-agent
+.PHONY: setup check laws sync-bend clean lint env env-check release experiment experiments results report bench plumbing flow flow64 doctor figures select plots sweep sweep-agent
 
 setup:            ## Bend, Lean and the Python venv
 	scripts/setup.sh
@@ -36,6 +36,10 @@ experiments:      ## every task, with its report cards, saved under results/
 
 results:          ## regenerate results/RESULTS.md from the latest reports
 	$(PY) reference/experiment.py --summary
+
+report:           ## the page of a task's latest record; AGAINST=<record> compares two runs
+	@test -n "$(TASK)" || (echo "usage: make report TASK=<task> [AGAINST=<record>]" && false)
+	$(PY) reference/report_run.py --task $(TASK) $(if $(AGAINST),--against $(AGAINST),)
 
 bench:            ## a compute-only kernel benchmark, saved under results/
 	$(PY) reference/bench_matmul.py
