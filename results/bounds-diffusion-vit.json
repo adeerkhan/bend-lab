@@ -1,0 +1,17 @@
+{
+  "run/step/input": {
+    "read": 81920,
+    "write": 81920,
+    "flops": 0
+  },
+  "run/step/forward": {
+    "read": 484864,
+    "write": 16384,
+    "flops": 3223552
+  },
+  "run/step/loss_backward_opt": {
+    "read": 419328,
+    "write": 402944,
+    "flops": 6447104
+  }
+}

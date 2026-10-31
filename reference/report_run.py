@@ -15,6 +15,11 @@ import json
 import os
 import sys
 
+try:
+    import bounds as bounds_mod
+except ImportError:  # the page still works without the floor module
+    bounds_mod = None
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -51,16 +56,10 @@ def pad(text, width, left=False):
 # ---- floors (filled by B3) ----
 
 def floor_us(record, path):
-    """The floor of a stage in microseconds, or None.
-
-    B2 ships with empty bounds/peaks, so this returns None and the page prints
-    `unavailable`; B3 fills `reference/bounds.py` and the task's `bounds`.
-    """
-    try:
-        import bounds
-    except ImportError:
+    """The floor of a stage in microseconds, or None (see reference/bounds.py)."""
+    if bounds_mod is None:
         return None
-    return bounds.floor_us(record, path)
+    return bounds_mod.floor_us(record, path)
 
 
 # ---- the page ----
@@ -102,14 +101,21 @@ def page(record, against=None):
         else:
             lines.append(f"stages   {ms_text(root)} ms")
         lines.append("timings  wall from IO.now(); a stage below 1 ms prints <1 ms")
-        peaks = record.get("peaks") or {}
+        if bounds_mod is not None and not (record.get("bounds") or {}):
+            task_name = task.get("name", "")
+            side = bounds_mod.sidecar(task_name)
+            if os.path.isfile(side):
+                lines.append(f"bounds   from {os.path.relpath(side, ROOT)} (the task's declared floor)")
+        peaks = bounds_mod.peaks_of(record) if bounds_mod else (record.get("peaks") or {})
         if not peaks:
             lines.append("peaks    not probed: no stage is scored, and no floor is printed")
         else:
             lines.append(
-                f"peaks    {peaks.get('read_gbs', '?')} GB/s read, {peaks.get('write_gbs', '?')} GB/s written"
-                f" · {peaks.get('flops_gflops', '?')} GFLOP/s"
-                f" · one launch {peaks.get('launch_us', '?')} us (not charged)")
+                f"peaks    {peaks.get('read_gbs', 'unprobed')} GB/s read,"
+                f" {peaks.get('write_gbs', 'unprobed')} GB/s written"
+                f" · {peaks.get('flops_gflops', 'unprobed')} GFLOP/s"
+                f" · launch {peaks.get('launch_us') if peaks.get('launch_us') else 'unprobed'}"
+                + (f" · {peaks['source_file']}" if peaks.get("source_file") else ""))
         lines.extend(notes(record))
         lines.append("")
         lines.append(pad("component", 34) + pad("ms", 8, True) + pad("share", 8, True)
@@ -141,7 +147,7 @@ def notes(record):
 
 
 def stage_rows(record, stages, root):
-    bounds = record.get("bounds") or {}
+    bounds = bounds_mod.bounds_for(record) if bounds_mod else (record.get("bounds") or {})
     rows = []
     for entry in stages:
         path = entry["path"]
@@ -199,18 +205,28 @@ def totals(record, stages, root):
 
 
 def ladder(record, stages, root):
-    floors = [floor_us(record, entry["path"]) for entry in stages if entry["depth"] > 0]
-    if not record.get("peaks") or not record.get("bounds") or any(f is None for f in floors):
-        return ["", "  how much is on the table   unavailable: a floor needs bounds and measured peaks"]
+    peaks = bounds_mod.peaks_of(record) if bounds_mod else (record.get("peaks") or {})
+    if not peaks:
+        return ["", "  how much is on the table   unavailable: no measured peaks (make peaks)"]
+    leaves = [entry for entry in stages
+              if entry["depth"] > 0
+              and not any(other["path"].startswith(entry["path"] + "/") for other in stages)]
+    scored = [(entry, floor_us(record, entry["path"])) for entry in leaves]
+    scored = [(entry, floor) for entry, floor in scored if floor is not None]
+    if not scored:
+        return ["", "  how much is on the table   unavailable: no stage declares a floor (make bounds TASK=...)"]
     host = sum(entry["ms"] for entry in stages if entry.get("kind") == "host")
-    gains = sum(max(0.0, entry["ms"] * 1000.0 - (floor_us(record, entry["path"]) or 0.0))
-                for entry in stages
-                if entry["depth"] > 0
-                and not any(other["path"].startswith(entry["path"] + "/") for other in stages)
-                and floor_us(record, entry["path"]) is not None)
-    return ["", f"  how much is on the table{ms_text((host * 1000.0 + gains) / 1000.0):>20} ms",
-            f"  {'host':<12}{ms_text(host):>8}   less host work",
-            f"  {'kernels':<12}{ms_text(gains / 1000.0):>8}   a faster kernel or a fuser"]
+    host_scored = [(entry, floor) for entry, floor in scored if entry.get("kind") == "host"]
+    kernel_scored = [(entry, floor) for entry, floor in scored if entry.get("kind") != "host"]
+    host_gain = host * 1000.0 + sum(max(0.0, entry["ms"] * 1000.0 - floor)
+                                   for entry, floor in host_scored)
+    kernel_gain = sum(max(0.0, entry["ms"] * 1000.0 - floor) for entry, floor in kernel_scored)
+    kernel_gain = min(kernel_gain, max(0.0, root * 1000.0 - host_gain))
+    total = min(root * 1000.0, host_gain + kernel_gain)
+    note = "" if len(scored) == len(leaves) else f"   {len(scored)} of {len(leaves)} leaves have a floor"
+    return ["", f"  how much is on the table{ms_text(total / 1000.0):>20} ms{note}",
+            f"  {'host':<12}{ms_text(host_gain / 1000.0):>8}   less host work",
+            f"  {'kernels':<12}{ms_text(kernel_gain / 1000.0):>8}   a faster kernel or a fuser"]
 
 
 def worklist(record, stages):

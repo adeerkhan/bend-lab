@@ -31,6 +31,7 @@ from datetime import datetime, timezone
 
 import numpy as np
 
+import bounds as floors
 import report_run
 import stages
 
@@ -398,6 +399,7 @@ TASKS = {
                     "files": ["https://huggingface.co/datasets/mstz/optdigits/resolve/4f20cc827b763fb69e2a80e18e892e4e11498aec/optdigits.data"], "expected_sha256": "e1b683cc211604fe8fd8c4417e6a69f31380e0c61d4af22e93cc21e9257ffedd"},
         "seed": 0,
         "stages": {"program": "bench/plumbing/main.bend"},
+        "bounds": floors.vit_step,
         "parse": parse_diffusion_vit,
         "reference": reference_diffusion_vit,
         "metrics": {
@@ -415,6 +417,7 @@ TASKS = {
                     "source": "built in bench/plumbing/main.bend"},
         "seed": 0,
         "stages": {"program": "bench/plumbing/main.bend"},
+        "bounds": floors.vit_step,
         "parse": parse_vit_step,
         "reference": reference_vit_step,
         "metrics": {
@@ -730,6 +733,10 @@ def manifest_for(task, cfg, evals, repeat, probe, trainer="bend", lane="cpu", th
     notes = list(stage_notes or [])
     if notes:
         notes.append("the stage split is one step, not the whole run")
+    bounds_value = cfg.get("bounds")
+    if callable(bounds_value):
+        bounds_value = bounds_value()
+    bounds_value = bounds_value or {}
     manifest = {
         "schema": SCHEMA,
         "created_at": datetime.now(timezone.utc).isoformat(),
@@ -757,7 +764,7 @@ def manifest_for(task, cfg, evals, repeat, probe, trainer="bend", lane="cpu", th
         "stages_source": stage_source,
         "counts": stage_counts or {},
         "peaks": peaks_for(machine()),
-        "bounds": {},
+        "bounds": bounds_value,
         "notes": notes,
         "seed_runs": [{"seed": e["seed"], "metrics": e["table"],
                        "run_seconds": round(e["run_seconds"], 3),
