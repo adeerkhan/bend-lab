@@ -1,0 +1,89 @@
+{
+  "schema": "mlbend.checkpoint/1",
+  "created_at": "2026-11-01T08:14:55.640198+00:00",
+  "weights": null,
+  "model": {
+    "structure": "03f470b1ce59d1edb0a9a5dc505fa660aae87619f2d37f0d00f2f0210df77b51",
+    "declared": {
+      "layers": [
+        3,
+        128,
+        128,
+        2
+      ],
+      "act": "silu",
+      "euler": 32
+    }
+  },
+  "config": {
+    "sha256": "e42cbe74fbccb822a9d3bde265b362bb1e438e7ced770b70cea1811db94cc517",
+    "values": {
+      "steps": 6000,
+      "lr": 0.003,
+      "batch": 128,
+      "optimizer": "adamw"
+    }
+  },
+  "packages": {
+    "bend-ml-autograd": [
+      "0.1.1.0 0x0ed882696c6c048c64c66242a999a426"
+    ],
+    "bend-ml-bpe-tokenizer": [
+      "0.1.3.0 0x559a0abb492a951db15be435191b6d0a"
+    ],
+    "bend-ml-nat-lemmas": [
+      "0.1.0.0 0xa7aa06c09e97c6747c12cc64bb5203d9",
+      "0.1.1.0 0x2bbe4207657ea8b1158567d930651411",
+      "0.1.2.0 0x09966385f3a8541fb22fd49450cdf477"
+    ],
+    "bend-ml-tensor": [
+      "0.1.0.0 0xf9837737d2c3f58ae1d0c5df42255584"
+    ],
+    "bend-ml-tensor-array": [
+      "0.1.14.0 0x0f6479f09ada7ae614e64e31e8f5a730",
+      "0.1.16.0 0x0159e1f0f11cc1d285ac6a993d19ba8a"
+    ],
+    "bend-ml-tensor-fork": [
+      "0.1.4.0 0xd13098b0f80022977b3ddb83a57e3c50"
+    ],
+    "bend-ml-tensor-gpu": [
+      "0.1.2.1 0x454d8eb5320624d5b121fdc9d78ee0a6"
+    ],
+    "bendtorch-gpu": [
+      "1.1.1.0 0x3c22148d676c2988827dae103c18f499"
+    ],
+    "mlbend-cluster": [
+      "0.1.0.0 0x0c4fbc7d44d2e3e47247a6c1f12c05e0"
+    ],
+    "mlbend-datasets": [
+      "0.1.6.0 0xf3d145d639153c61b826e4f60d3c0dcd"
+    ],
+    "mlbend-generative": [
+      "0.1.1.0 0xd48e7ce018b6fa7dc613b629e4260a23"
+    ],
+    "mlbend-huggingface": [
+      "0.1.1.0 0x9f97047b6ffb57443a7a2a2f0adefcbd"
+    ],
+    "mlbend-metrics": [
+      "0.1.0.0 0x9afaa60ee4d17706cb14d6ec20d1d4ae"
+    ],
+    "mlbend-pipeline": [
+      "0.1.0.0 0xea73a86e2118529cadd597fb3727979b"
+    ],
+    "mlbend-preprocess": [
+      "0.1.0.0 0xa8182854f375cd61135ccd32993993cc"
+    ],
+    "mlbend-report": [
+      "0.1.0.0 0x97687e0483c49ddb64fe1ee5f5244927"
+    ],
+    "mlbend-select": [
+      "0.1.0.0 0xf6594aa2392363c8ab774bc81fb20b9d"
+    ],
+    "mlbend-split": [
+      "0.1.1.0 0xe8b7953f71ec5b441a90a08e0961269b"
+    ]
+  },
+  "bend": "2.0.38",
+  "git": "8685f7f",
+  "tensors": []
+}

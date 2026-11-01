@@ -23,6 +23,8 @@ import numpy as np
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "reference"))
 from vit_results import loss_svg
+import checkpoints
+from experiment import bend_version, git_state, packages
 
 OUT = os.path.join(ROOT, "results", "flow-matching")
 STEPS = int(os.environ.get("FLOW_STEPS") or 6000)
@@ -136,6 +138,16 @@ so the means and the box count are compared with that data.
 """
     with open(os.path.join(OUT, "REPORT.md"), "w") as f:
         f.write(card)
+    # what a resume would have to match: the model, the config, the packages
+    identity = checkpoints.identity_only(
+        {"layers": [3, 128, 128, 2], "act": "silu", "euler": EULER},
+        {"steps": STEPS, "lr": 0.003, "batch": 128, "optimizer": "adamw"},
+        packages(), bend=bend_version(), git=git_state().get("commit"))
+    with open(os.path.join(OUT, "checkpoint.json"), "w") as f:
+        json.dump(identity, f, indent=2)
+        f.write("\n")
+    print(f"identity: results/flow-matching/checkpoint.json"
+          f" (model {identity['model']['structure'][:12]})")
     print(card)
 
 

@@ -53,6 +53,9 @@ references:       ## freeze every task's reference numbers under results/referen
 references-refresh: ## recompute the frozen references with the live functions (runs the corpus)
 	$(PY) reference/experiment.py --all --freeze-references --refresh-references
 
+prune:            ## keep the newest records per task and everything RESULTS.md cites (PRUNE_DRY=1 to look)
+	$(PY) reference/prune.py $(if $(PRUNE_DRY),--dry-run,) $(if $(KEEP),--keep $(KEEP),)
+
 matrix:           ## run the declared cells (task, lane, seed), one record each, and a summary
 	$(PY) reference/matrix.py $(if $(LIVE),--live,) $(if $(TASK),--task $(TASK),)
 
