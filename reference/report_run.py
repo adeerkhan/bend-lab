@@ -100,6 +100,9 @@ def page(record, against=None):
                 f" (median of {source.get('repeats', 1)}) · {source.get('note', 'a stage split')}")
         else:
             lines.append(f"stages   {ms_text(root)} ms")
+        steps = (run.get("seconds_min", 0.0) * 1000.0 / root) if root else 0.0
+        if steps >= 1.5:
+            lines.append(f"         the task ran about {steps:.0f} steps at the stage root")
         lines.append("timings  wall from IO.now(); a stage below 1 ms prints <1 ms")
         if bounds_mod is not None and not (record.get("bounds") or {}):
             task_name = task.get("name", "")
@@ -181,7 +184,7 @@ def stage_rows(record, stages, root):
 
 
 def totals(record, stages, root):
-    host = sum(entry["ms"] for entry in stages if entry.get("kind") == "host")
+    host = sum(entry["ms"] for entry in stages if entry.get("kind") in ("host", "once"))
     children = sum(entry["ms"] for entry in stages if entry["depth"] == 1)
     unaccounted = max(0.0, root - children)
     counts = record.get("counts") or {}
@@ -215,9 +218,9 @@ def ladder(record, stages, root):
     scored = [(entry, floor) for entry, floor in scored if floor is not None]
     if not scored:
         return ["", "  how much is on the table   unavailable: no stage declares a floor (make bounds TASK=...)"]
-    host = sum(entry["ms"] for entry in stages if entry.get("kind") == "host")
-    host_scored = [(entry, floor) for entry, floor in scored if entry.get("kind") == "host"]
-    kernel_scored = [(entry, floor) for entry, floor in scored if entry.get("kind") != "host"]
+    host = sum(entry["ms"] for entry in stages if entry.get("kind") in ("host", "once"))
+    host_scored = [(entry, floor) for entry, floor in scored if entry.get("kind") in ("host", "once")]
+    kernel_scored = [(entry, floor) for entry, floor in scored if entry.get("kind") not in ("host", "once")]
     host_gain = host * 1000.0 + sum(max(0.0, entry["ms"] * 1000.0 - floor)
                                    for entry, floor in host_scored)
     kernel_gain = sum(max(0.0, entry["ms"] * 1000.0 - floor) for entry, floor in kernel_scored)
