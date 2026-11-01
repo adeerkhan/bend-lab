@@ -1,0 +1,23 @@
+{
+  "schema": "mlbend.reference/1",
+  "task": "diffusion-digits",
+  "created_at": "2026-10-27T16:58:00.458882+00:00",
+  "frozen_at": "2026-11-01T07:58:15.478228+00:00",
+  "command": "reference/references.py --freeze --task diffusion-digits",
+  "source": {
+    "record": "results/latest/diffusion-digits.json",
+    "created_at": "2026-10-27T16:58:00.458882+00:00"
+  },
+  "bend": "2.0.38",
+  "git": "0c45702",
+  "machine": "Linux-7.2.9-200.fc44.x86_64-x86_64-with-glibc2.43",
+  "seeds": {
+    "0": {
+      "first_loss": 1.003894329071045,
+      "data_mean": 0.30756473541259766,
+      "final_loss": 0.04449313133955002,
+      "sample_mean": 0.3807023763656616,
+      "sample_std": 0.3594193458557129
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "schema": "mlbend.reference/1",
+  "task": "cifar-10",
+  "created_at": "2026-10-31T16:52:28.466240+00:00",
+  "frozen_at": "2026-11-01T07:58:15.477972+00:00",
+  "command": "reference/references.py --freeze --task cifar-10",
+  "source": {
+    "record": "results/latest/cifar-10.json",
+    "created_at": "2026-10-31T16:52:28.466240+00:00"
+  },
+  "bend": "2.0.38",
+  "git": "e26b1fc",
+  "machine": "Linux-7.2.9-200.fc44.x86_64-x86_64-with-glibc2.43",
+  "seeds": {
+    "0": {
+      "first_loss": 1.0014538764953613,
+      "data_mean": 0.47485461831092834,
+      "final_loss": 1.0167508125305176,
+      "sample_mean": 0.4938988983631134,
+      "sample_std": 0.4289633333683014
+    }
+  }
+}

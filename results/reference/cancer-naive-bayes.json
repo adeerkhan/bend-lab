@@ -1,0 +1,19 @@
+{
+  "schema": "mlbend.reference/1",
+  "task": "cancer-naive-bayes",
+  "created_at": "2026-10-24T17:46:36.178760+00:00",
+  "frozen_at": "2026-11-01T07:58:15.477834+00:00",
+  "command": "reference/references.py --freeze --task cancer-naive-bayes",
+  "source": {
+    "record": "results/latest/cancer-naive-bayes.json",
+    "created_at": "2026-10-24T17:46:36.178760+00:00"
+  },
+  "bend": "2.0.38",
+  "git": "1ffe18a",
+  "machine": "Linux-7.2.9-200.fc44.x86_64-x86_64-with-glibc2.43",
+  "seeds": {
+    "0": {
+      "accuracy": 0.9854014598540146
+    }
+  }
+}

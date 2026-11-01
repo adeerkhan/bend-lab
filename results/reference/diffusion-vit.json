@@ -1,0 +1,20 @@
+{
+  "schema": "mlbend.reference/1",
+  "task": "diffusion-vit",
+  "created_at": "2026-10-31T20:45:21.806661+00:00",
+  "frozen_at": "2026-11-01T07:58:15.478526+00:00",
+  "command": "reference/references.py --freeze --task diffusion-vit",
+  "source": {
+    "record": "results/latest/diffusion-vit.json",
+    "created_at": "2026-10-31T20:45:21.806661+00:00"
+  },
+  "bend": "2.0.38",
+  "git": "4f78ae5",
+  "machine": "Linux-7.2.13-200.fc44.x86_64-x86_64-with-glibc2.43",
+  "seeds": {
+    "0": {
+      "first_loss": 1.006967544555664,
+      "data_mean": 0.30756473541259766
+    }
+  }
+}

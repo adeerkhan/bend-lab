@@ -89,6 +89,10 @@ def main():
     packages = sorted(d for d in os.listdir(ROOT)
                       if os.path.isdir(os.path.join(ROOT, d)) and os.path.exists(os.path.join(ROOT, d, "main.bend")))
 
+    # 0. the frozen references cover every task, so this gate runs without NumPy
+    run("results/reference/*.json: every task has a frozen reference",
+        [PY, "reference/references.py", "--check"])
+
     # 1. the proofs: the checker, then the audited kernel
     for pkg in packages:
         f = f"{pkg}/main.bend"

@@ -1,0 +1,24 @@
+{
+  "schema": "mlbend.reference/1",
+  "task": "wine-kmeans",
+  "created_at": "2026-10-24T17:50:08.039605+00:00",
+  "frozen_at": "2026-11-01T07:58:15.480261+00:00",
+  "command": "reference/references.py --freeze --task wine-kmeans",
+  "source": {
+    "record": "results/latest/wine-kmeans.json",
+    "created_at": "2026-10-24T17:50:08.039605+00:00"
+  },
+  "bend": "2.0.38",
+  "git": "1ffe18a",
+  "machine": "Linux-7.2.9-200.fc44.x86_64-x86_64-with-glibc2.43",
+  "seeds": {
+    "0": {
+      "inertia": 50645.64456047263,
+      "cluster_sizes": [
+        2384,
+        990,
+        3123
+      ]
+    }
+  }
+}

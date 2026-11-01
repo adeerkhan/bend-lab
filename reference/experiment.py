@@ -29,9 +29,13 @@ import hashlib
 import io
 from datetime import datetime, timezone
 
-import numpy as np
+try:
+    import numpy as np
+except ImportError:  # the frozen-reference gate runs on a machine without NumPy
+    np = None
 
 import bounds as floors
+import references as frozen_refs
 import report_run
 import stages
 
@@ -654,21 +658,41 @@ def machine():
         "processor": platform.processor(),
         "cpu_count": os.cpu_count(),
         "python": platform.python_version(),
-        "numpy": np.__version__,
+        "numpy": np.__version__ if np is not None else "absent",
     }
 
 
-def evaluate(task, cfg, seed, repeat, trainer, binary, build_seconds):
+def frozen_error(task, seed):
+    """The gate's error when a task or a seed has no frozen reference."""
+    return (f"no frozen reference for {task} seed {seed}: "
+            f"{os.path.relpath(frozen_refs.path(task), ROOT)} is missing it.\n"
+            "a task without a frozen reference is a gate error, not a skip: "
+            "run make references (or make references-refresh)")
+
+
+def evaluate(task, cfg, seed, repeat, trainer, binary, build_seconds,
+             reference_mode="live", frozen=None):
     """One seed: run the program (or the adapter), and compare its numbers."""
     ENV["MLBEND_SEED"] = str(seed)
+    if trainer == "numpy" and reference_mode == "frozen":
+        raise SystemExit("--trainer numpy is the reference, so it cannot read a frozen one")
     if trainer == "numpy":
         times, parsed = [], None
     else:
         out, times = run_binary(task, binary, seed, repeat)
         parsed = cfg["parse"](out)
-    start = time.perf_counter()
-    reference_values = cfg["reference"](parsed)
-    reference_seconds = time.perf_counter() - start
+    if reference_mode == "live" and np is None:
+        raise SystemExit("live references need NumPy, which is not installed here: "
+                         "use --references frozen (see make references)")
+    if reference_mode == "frozen":
+        table = (frozen or {}).get(seed)
+        if table is None:
+            raise SystemExit(frozen_error(task, seed))
+        reference_values, reference_seconds = dict(table), 0.0
+    else:
+        start = time.perf_counter()
+        reference_values = cfg["reference"](parsed)
+        reference_seconds = time.perf_counter() - start
     if trainer == "numpy":
         table = compare(cfg, reference_values, reference_values)
     else:
@@ -679,12 +703,18 @@ def evaluate(task, cfg, seed, repeat, trainer, binary, build_seconds):
 
 
 def mean_sd(values):
-    """The mean and the sample deviation, or the one value for a non-number."""
+    """The mean and the sample deviation, or the one value for a non-number.
+
+    Plain arithmetic, not NumPy: the frozen-reference gate aggregates the
+    metric table on a machine where NumPy is not installed.
+    """
     if values and all(isinstance(v, (int, float)) and not isinstance(v, bool)
                       for v in values):
-        mean = float(np.mean(values))
-        sd = float(np.std(values, ddof=1)) if len(values) > 1 else None
-        return mean, sd
+        mean = sum(values) / len(values)
+        sd = None
+        if len(values) > 1:
+            sd = (sum((v - mean) ** 2 for v in values) / (len(values) - 1)) ** 0.5
+        return float(mean), (float(sd) if sd is not None else None)
     return (values[0] if values else None), None
 
 
@@ -724,7 +754,8 @@ def peaks_for(machine_info):
 
 
 def manifest_for(task, cfg, evals, repeat, probe, trainer="bend", lane="cpu", threads=None,
-                 stages_list=None, stage_counts=None, stage_notes=None, stage_source=None):
+                 stages_list=None, stage_counts=None, stage_notes=None, stage_source=None,
+                 reference_mode="live"):
     run_seconds = min(e["run_seconds"] for e in evals) if evals else 0.0
     build_seconds = evals[0]["build_seconds"] if evals else 0.0
     reference_seconds = max(e["reference_seconds"] for e in evals) if evals else 0.0
@@ -733,6 +764,10 @@ def manifest_for(task, cfg, evals, repeat, probe, trainer="bend", lane="cpu", th
     notes = list(stage_notes or [])
     if notes:
         notes.append("the stage split is one step, not the whole run")
+    if reference_mode == "frozen":
+        notes.append("references: frozen from "
+                     + os.path.relpath(frozen_refs.path(task), ROOT)
+                     + "; the reference functions did not run")
     bounds_value = cfg.get("bounds")
     if callable(bounds_value):
         bounds_value = bounds_value()
@@ -898,7 +933,16 @@ def main():
     parser.add_argument("--lane", default="cpu", help="the lane the program runs on (cpu, gpu); recorded in the variant")
     parser.add_argument("--threads", type=int, default=None, help="the runtime's thread count, when known")
     parser.add_argument("--summary", action="store_true", help="write results/RESULTS.md from the latest reports")
+    parser.add_argument("--references", choices=["live", "frozen"], default="live",
+                        help="the reference numbers: the live functions (needs NumPy), or "
+                             "results/reference/<task>.json, which needs none")
+    parser.add_argument("--freeze-references", action="store_true",
+                        help="write results/reference/<task>.json from this run's reference column")
+    parser.add_argument("--refresh-references", action="store_true",
+                        help="with --freeze-references: recompute live and overwrite")
     args = parser.parse_args()
+    if args.refresh_references:
+        args.freeze_references, args.references = True, "live"
 
     if args.summary:
         print(summary(os.path.join(ROOT, "results")))
@@ -929,13 +973,30 @@ def main():
         stages_list, stage_counts, stage_notes, stage_source = [], {}, [], None
         if cfg.get("stages") and args.trainer == "bend":
             stages_list, stage_counts, stage_notes, stage_source = stages.capture(cfg)
-        evals = [evaluate(name, cfg, seed, args.repeat, args.trainer, binary, build_seconds)
+        frozen = None
+        if args.references == "frozen":
+            frozen = frozen_refs.values(frozen_refs.read(name))
+            if not frozen:
+                raise SystemExit(frozen_error(name, seeds[0]))
+        evals = [evaluate(name, cfg, seed, args.repeat, args.trainer, binary, build_seconds,
+                          reference_mode=args.references, frozen=frozen)
                  for seed in seeds]
         manifest = manifest_for(name, cfg, evals, args.repeat, probe, args.trainer,
                                 lane=args.lane, threads=args.threads,
                                 stages_list=stages_list, stage_counts=stage_counts,
-                                stage_notes=stage_notes, stage_source=stage_source)
+                                stage_notes=stage_notes, stage_source=stage_source,
+                                reference_mode=args.references)
         path = write_report(manifest, args.out)
+        if args.freeze_references:
+            target = frozen_refs.path(name)
+            if os.path.isfile(target) and not args.refresh_references:
+                print(f"reference: {os.path.relpath(target, ROOT)} kept"
+                      " (--refresh-references rewrites it)")
+            else:
+                payload = frozen_refs.from_record(name, manifest,
+                                                  " ".join([os.path.relpath(PY, ROOT)] + sys.argv))
+                payload["frozen_at"] = datetime.now(timezone.utc).isoformat()
+                print(f"reference: {os.path.relpath(frozen_refs.write(name, payload), ROOT)}")
         print(report_text(manifest))
         print(f"report: {path}")
         if args.wandb:

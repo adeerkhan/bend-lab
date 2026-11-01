@@ -29,7 +29,7 @@ env-check:        ## the environment against the lock, and the example over it
 
 experiment:       ## run one task and write a report card: make experiment TASK=iris-crossval
 	@test -n "$(TASK)" || (echo "usage: make experiment TASK=<task> (see reference/experiment.py --list)" && false)
-	$(PY) reference/experiment.py --task $(TASK) $(if $(TRAINER),--trainer $(TRAINER),)
+	$(PY) reference/experiment.py --task $(TASK) $(if $(TRAINER),--trainer $(TRAINER),) $(if $(REFERENCES),--references $(REFERENCES),)
 
 experiments:      ## every task, with its report cards, saved under results/
 	$(PY) reference/experiment.py --all --repeat 2
@@ -40,6 +40,12 @@ results:          ## regenerate results/RESULTS.md from the latest reports
 report:           ## the page of a task's latest record; AGAINST=<record> compares two runs
 	@test -n "$(TASK)" || (echo "usage: make report TASK=<task> [AGAINST=<record>]" && false)
 	$(PY) reference/report_run.py --task $(TASK) $(if $(AGAINST),--against $(AGAINST),)
+
+references:       ## freeze every task's reference numbers under results/reference/
+	$(PY) reference/references.py --freeze --all $(if $(REFRESH),--refresh-references,)
+
+references-refresh: ## recompute the frozen references with the live functions (runs the corpus)
+	$(PY) reference/experiment.py --all --freeze-references --refresh-references
 
 peaks:            ## the machine's measured ceilings (read, write, copy, flops), saved under results/
 	$(PY) reference/bench_peaks.py
