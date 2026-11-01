@@ -47,6 +47,9 @@ references:       ## freeze every task's reference numbers under results/referen
 references-refresh: ## recompute the frozen references with the live functions (runs the corpus)
 	$(PY) reference/experiment.py --all --freeze-references --refresh-references
 
+matrix:           ## run the declared cells (task, lane, seed), one record each, and a summary
+	$(PY) reference/matrix.py $(if $(LIVE),--live,) $(if $(TASK),--task $(TASK),)
+
 peaks:            ## the machine's measured ceilings (read, write, copy, flops), saved under results/
 	$(PY) reference/bench_peaks.py
 

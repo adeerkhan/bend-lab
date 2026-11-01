@@ -1,0 +1,124 @@
+{
+  "schema": "mlbend.matrix/1",
+  "created_at": "2026-11-01T08:11:45.138550+00:00",
+  "references": "frozen",
+  "cells": [
+    {
+      "task": "vit-step",
+      "lane": "cpu",
+      "seed": 0,
+      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/vit-step-20261101T080715Z.json",
+      "plan": "env -u CUDA_HOME /home/adeerkhan/github/bend/bend-lab/reference/experiment.py --task vit-step --lane cpu --seeds 0 --references frozen --out /home/adeerkhan/github/bend/bend-lab/results/matrix/cells --no-latest",
+      "lane_evidence": {
+        "cuda_home": null,
+        "linked_nvrtc": [],
+        "exit": 0,
+        "started_at": "2026-11-01T08:05:42.571080+00:00"
+      },
+      "failures": []
+    },
+    {
+      "task": "vit-step",
+      "lane": "gpu",
+      "seed": 0,
+      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/vit-step-20261101T080855Z.json",
+      "plan": "CUDA_HOME=/home/adeerkhan/.local/cuda-nvrtc /home/adeerkhan/github/bend/bend-lab/reference/experiment.py --task vit-step --lane gpu --seeds 0 --references frozen --out /home/adeerkhan/github/bend/bend-lab/results/matrix/cells --no-latest",
+      "lane_evidence": {
+        "cuda_home": "/home/adeerkhan/.local/cuda-nvrtc",
+        "linked_nvrtc": [
+          "libnvrtc.so.13"
+        ],
+        "exit": 0,
+        "started_at": "2026-11-01T08:07:15.370312+00:00"
+      },
+      "failures": []
+    },
+    {
+      "task": "iris-crossval",
+      "lane": "cpu",
+      "seed": 42,
+      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/iris-crossval-20261101T080937Z.json",
+      "plan": "env -u CUDA_HOME /home/adeerkhan/github/bend/bend-lab/reference/experiment.py --task iris-crossval --lane cpu --seeds 42 --references frozen --out /home/adeerkhan/github/bend/bend-lab/results/matrix/cells --no-latest",
+      "lane_evidence": {
+        "cuda_home": null,
+        "linked_nvrtc": [],
+        "exit": 0,
+        "started_at": "2026-11-01T08:08:55.209922+00:00"
+      },
+      "failures": []
+    },
+    {
+      "task": "iris-crossval",
+      "lane": "cpu",
+      "seed": 43,
+      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/iris-crossval-20261101T081019Z.json",
+      "plan": "env -u CUDA_HOME /home/adeerkhan/github/bend/bend-lab/reference/experiment.py --task iris-crossval --lane cpu --seeds 43 --references frozen --out /home/adeerkhan/github/bend/bend-lab/results/matrix/cells --no-latest",
+      "lane_evidence": {
+        "cuda_home": null,
+        "linked_nvrtc": [],
+        "exit": 0,
+        "started_at": "2026-11-01T08:09:37.577955+00:00"
+      },
+      "failures": []
+    },
+    {
+      "task": "iris-crossval",
+      "lane": "cpu",
+      "seed": 44,
+      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/iris-crossval-20261101T081101Z.json",
+      "plan": "env -u CUDA_HOME /home/adeerkhan/github/bend/bend-lab/reference/experiment.py --task iris-crossval --lane cpu --seeds 44 --references frozen --out /home/adeerkhan/github/bend/bend-lab/results/matrix/cells --no-latest",
+      "lane_evidence": {
+        "cuda_home": null,
+        "linked_nvrtc": [],
+        "exit": 0,
+        "started_at": "2026-11-01T08:10:19.799797+00:00"
+      },
+      "failures": []
+    },
+    {
+      "task": "attention-parity",
+      "lane": "cpu",
+      "seed": 0,
+      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/attention-parity-20261101T081102Z.json",
+      "plan": "env -u CUDA_HOME /home/adeerkhan/github/bend/bend-lab/reference/experiment.py --task attention-parity --lane cpu --seeds 0 --references frozen --out /home/adeerkhan/github/bend/bend-lab/results/matrix/cells --no-latest",
+      "lane_evidence": {
+        "cuda_home": null,
+        "linked_nvrtc": [],
+        "exit": 0,
+        "started_at": "2026-11-01T08:11:01.825568+00:00"
+      },
+      "failures": []
+    },
+    {
+      "task": "wine-pca",
+      "lane": "cpu",
+      "seed": 0,
+      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/wine-pca-20261101T081145Z.json",
+      "plan": "env -u CUDA_HOME /home/adeerkhan/github/bend/bend-lab/reference/experiment.py --task wine-pca --lane cpu --seeds 0 --references frozen --out /home/adeerkhan/github/bend/bend-lab/results/matrix/cells --no-latest",
+      "lane_evidence": {
+        "cuda_home": null,
+        "linked_nvrtc": [],
+        "exit": 0,
+        "started_at": "2026-11-01T08:11:02.523020+00:00"
+      },
+      "failures": []
+    }
+  ],
+  "absent": [
+    {
+      "task": "iris-crossval",
+      "lane": "gpu",
+      "why": "plain Bend, no device path: the GPU lane is BendTorch's"
+    },
+    {
+      "task": "wine-pca",
+      "lane": "gpu",
+      "why": "plain Bend, no device path: the GPU lane is BendTorch's"
+    },
+    {
+      "task": "attention-parity",
+      "lane": "gpu",
+      "why": "plain Bend, no device path: the GPU lane is BendTorch's"
+    }
+  ]
+}

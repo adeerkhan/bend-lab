@@ -855,15 +855,21 @@ def log_wandb(manifest, project, name, offline):
     return mode
 
 
-def write_report(manifest, out_dir):
-    """Write the timestamped report and the task's latest report."""
+def write_report(manifest, out_dir, latest=True):
+    """Write the timestamped report and, unless asked not to, the task's latest.
+
+    A matrix cell is one of many runs of the same task, so it writes only its own
+    record: the latest card stays the one a person asked for.
+    """
     os.makedirs(out_dir, exist_ok=True)
     latest_name = "latest" if manifest.get("trainer", "bend") == "bend" else "latest-numpy"
     latest_dir = os.path.join(os.path.dirname(out_dir), latest_name)
     os.makedirs(latest_dir, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     path = os.path.join(out_dir, f"{manifest['task']['name']}-{stamp}.json")
-    for target in (path, os.path.join(latest_dir, manifest["task"]["name"] + ".json")):
+    targets = (path,) if not latest else (path, os.path.join(latest_dir,
+                                                             manifest["task"]["name"] + ".json"))
+    for target in targets:
         with open(target, "w") as f:
             json.dump(manifest, f, indent=2)
     return path
@@ -940,6 +946,8 @@ def main():
                         help="write results/reference/<task>.json from this run's reference column")
     parser.add_argument("--refresh-references", action="store_true",
                         help="with --freeze-references: recompute live and overwrite")
+    parser.add_argument("--no-latest", action="store_true",
+                        help="write only the timestamped record, not results/latest/<task>.json")
     args = parser.parse_args()
     if args.refresh_references:
         args.freeze_references, args.references = True, "live"
@@ -986,7 +994,7 @@ def main():
                                 stages_list=stages_list, stage_counts=stage_counts,
                                 stage_notes=stage_notes, stage_source=stage_source,
                                 reference_mode=args.references)
-        path = write_report(manifest, args.out)
+        path = write_report(manifest, args.out, latest=not args.no_latest)
         if args.freeze_references:
             target = frozen_refs.path(name)
             if os.path.isfile(target) and not args.refresh_references:
