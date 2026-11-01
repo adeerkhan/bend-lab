@@ -1,6 +1,6 @@
 {
-  "schema": "mlbend.experiment/1",
-  "created_at": "2026-10-31T16:52:28.466240+00:00",
+  "schema": "mlbend.experiment/3",
+  "created_at": "2026-11-01T09:10:43.267422+00:00",
   "task": {
     "name": "cifar-10",
     "description": "a DDPM denoiser over the first 256 CIFAR-10 images, BendTorch against NumPy",
@@ -16,7 +16,7 @@
       "expected_sha256": "80f3ca81e56946a0eabc65f68b69558b4fdc741e1aafb0d9f552fcee768b3161",
       "bytes": 54902548,
       "sha256": "80f3ca81e56946a0eabc65f68b69558b4fdc741e1aafb0d9f552fcee768b3161",
-      "fetch_seconds": 0.069,
+      "fetch_seconds": 0.098,
       "cache": "/home/adeerkhan/github/bend/bend-lab/reference/.cache/datasets"
     },
     "seed": 0
@@ -25,8 +25,14 @@
     0
   ],
   "trainer": "bend",
+  "variant": {
+    "trainer": "bend",
+    "lane": "cpu",
+    "threads": null,
+    "bend": "2.0.38"
+  },
   "git": {
-    "commit": "e26b1fc",
+    "commit": "f0b6246",
     "branch": "main",
     "dirty": true
   },
@@ -141,33 +147,76 @@
     }
   ],
   "machine": {
-    "platform": "Linux-7.2.9-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "platform": "Linux-7.2.13-200.fc44.x86_64-x86_64-with-glibc2.43",
     "machine": "x86_64",
     "processor": "",
     "cpu_count": 28,
     "python": "3.14.8",
-    "numpy": "2.5.4"
+    "numpy": "2.5.2"
   },
   "run": {
-    "build_seconds": 50.806,
-    "seconds_min": 65.42,
+    "build_seconds": 49.185,
+    "seconds_min": 69.621,
     "seconds_all": [
-      65.42
+      69.621
     ],
     "repeat": 1,
-    "fetch_seconds": 0.069,
-    "compute_seconds": 65.351,
-    "reference_seconds": 5.444,
-    "speed_ratio": 0.083
+    "fetch_seconds": 0.098,
+    "compute_seconds": 69.523,
+    "reference_seconds": 6.415,
+    "speed_ratio": 0.092
   },
+  "stages": [],
+  "stages_source": null,
+  "counts": {},
+  "peaks": {
+    "schema": "mlbend.peaks/1",
+    "created_at": "2026-10-31T21:08:08.983977+00:00",
+    "machine": {
+      "platform": "Linux-7.2.13-200.fc44.x86_64-x86_64-with-glibc2.43",
+      "machine": "x86_64",
+      "processor": "",
+      "cpu_count": 28
+    },
+    "bend": "2.0.38",
+    "read_gbs": 3.355,
+    "write_gbs": 8.389,
+    "copy_gbs": 11.185,
+    "flops_gflops": 10.038,
+    "flops_dtype": "f32",
+    "launch_us": null,
+    "source": {
+      "program": "bench/peaks/main.bend",
+      "bytes": 16777216,
+      "repeats": 3,
+      "flops": "results/bench-matmul.json ([128, 128] F32)"
+    },
+    "median_ms": {
+      "copy_head": 1.0,
+      "copy_ms": 3.0,
+      "n": 4194304.0,
+      "read_head": 4194304.0,
+      "read_ms": 5.0,
+      "write_head": 1.0,
+      "write_ms": 2.0
+    },
+    "notes": [
+      "read, write and copy are through Array.get/Array.set, not raw DRAM",
+      "copy counts a read and a write of every byte",
+      "flops is bench/matmul's measured rate at its shape",
+      "launch latency needs a bang: unprobed"
+    ]
+  },
+  "bounds": {},
+  "notes": [],
   "seed_runs": [
     {
       "seed": 0,
       "metrics": {
         "first_loss": {
-          "bend": 1.0014287,
+          "bend": 1.0014539,
           "reference": 1.0014538764953613,
-          "delta": -2.517649536137867e-05,
+          "delta": 2.3504638679838763e-08,
           "tolerance": 0.0001,
           "mode": "relative",
           "pass": true
@@ -181,33 +230,33 @@
           "pass": true
         },
         "final_loss": {
-          "bend": 1.002612,
+          "bend": 1.0167489,
           "reference": 1.0167508125305176,
           "pass": true,
           "note": "different folds; reported, not compared"
         },
         "sample_mean": {
-          "bend": 0.49627486,
+          "bend": 0.49389824,
           "reference": 0.4938988983631134,
           "pass": true,
           "note": "different folds; reported, not compared"
         },
         "sample_std": {
-          "bend": 0.40319788,
+          "bend": 0.42896575,
           "reference": 0.4289633333683014,
           "pass": true,
           "note": "different folds; reported, not compared"
         }
       },
-      "run_seconds": 65.42,
-      "reference_seconds": 5.444
+      "run_seconds": 69.621,
+      "reference_seconds": 6.415
     }
   ],
   "metrics": {
     "first_loss": {
-      "bend": 1.0014287,
+      "bend": 1.0014539,
       "reference": 1.0014538764953613,
-      "delta": -2.517649536137867e-05,
+      "delta": 2.3504638679838763e-08,
       "tolerance": 0.0001,
       "mode": "relative",
       "pass": true,
@@ -229,7 +278,7 @@
       "n_seeds": 1
     },
     "final_loss": {
-      "bend": 1.002612,
+      "bend": 1.0167489,
       "reference": 1.0167508125305176,
       "pass": true,
       "note": "different folds; reported, not compared",
@@ -240,7 +289,7 @@
       "n_seeds": 1
     },
     "sample_mean": {
-      "bend": 0.49627486,
+      "bend": 0.49389824,
       "reference": 0.4938988983631134,
       "pass": true,
       "note": "different folds; reported, not compared",
@@ -251,7 +300,7 @@
       "n_seeds": 1
     },
     "sample_std": {
-      "bend": 0.40319788,
+      "bend": 0.42896575,
       "reference": 0.4289633333683014,
       "pass": true,
       "note": "different folds; reported, not compared",

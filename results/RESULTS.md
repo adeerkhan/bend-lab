@@ -13,11 +13,11 @@ Machine: Linux-7.2.9-200.fc44.x86_64-x86_64-with-glibc2.43 · 28 CPUs · Bend 2.
 | `attention-parity` | synthetic-attention (4x8) | `439ef1cd` | checksum | 1 | 1.76295 | 1.76295 | 3.342e-09 | 0 | 1 | 1 | 3 | ok |
 | `cancer-knn` | breast_cancer (683x9) | `4c35090c` | accuracy | 1 | 0.978102 | 0.978102 | 1.022e-08 | 1 | 196 | 195 | 1617 | ok |
 | `cancer-naive-bayes` | breast_cancer (683x9) | `4c35090c` | accuracy | 1 | 0.985401 | 0.985401 | -9.854e-09 | 0 | 22 | 22 | 535 | ok |
-| `cifar-10` | cifar10 (256x3072) | `80f3ca81` | first_loss | 1 | 1.00143 | 1.00145 | -2.518e-05 | 69 | 65420 | 65351 | 5444 | ok |
-| `cifar-10` | cifar10 (256x3072) | `80f3ca81` | data_mean | 1 | 0.474855 | 0.474855 | 1.689e-09 | 69 | 65420 | 65351 | 5444 | ok |
-| `cifar-10` | cifar10 (256x3072) | `80f3ca81` | final_loss | 1 | 1.00261 | 1.01675 | - | 69 | 65420 | 65351 | 5444 | ok |
-| `cifar-10` | cifar10 (256x3072) | `80f3ca81` | sample_mean | 1 | 0.496275 | 0.493899 | - | 69 | 65420 | 65351 | 5444 | ok |
-| `cifar-10` | cifar10 (256x3072) | `80f3ca81` | sample_std | 1 | 0.403198 | 0.428963 | - | 69 | 65420 | 65351 | 5444 | ok |
+| `cifar-10` | cifar10 (256x3072) | `80f3ca81` | first_loss | 1 | 1.00145 | 1.00145 | 2.35e-08 | 98 | 69621 | 69523 | 6415 | ok |
+| `cifar-10` | cifar10 (256x3072) | `80f3ca81` | data_mean | 1 | 0.474855 | 0.474855 | 1.689e-09 | 98 | 69621 | 69523 | 6415 | ok |
+| `cifar-10` | cifar10 (256x3072) | `80f3ca81` | final_loss | 1 | 1.01675 | 1.01675 | - | 98 | 69621 | 69523 | 6415 | ok |
+| `cifar-10` | cifar10 (256x3072) | `80f3ca81` | sample_mean | 1 | 0.493898 | 0.493899 | - | 98 | 69621 | 69523 | 6415 | ok |
+| `cifar-10` | cifar10 (256x3072) | `80f3ca81` | sample_std | 1 | 0.428966 | 0.428963 | - | 98 | 69621 | 69523 | 6415 | ok |
 | `diffusion-2d` | two-moons (128x2) | `6764e1b1` | first_loss | 1 | 152.954 | 152.954 | -1.483e-05 | 0 | 31919 | 31919 | 36063 | ok |
 | `diffusion-2d` | two-moons (128x2) | `6764e1b1` | final_loss | 1 | 0.0649613 | 0.0569123 | - | 0 | 31919 | 31919 | 36063 | ok |
 | `diffusion-2d` | two-moons (128x2) | `6764e1b1` | sample_mean | 1 | 0.385003 | 0.385002 | - | 0 | 31919 | 31919 | 36063 | ok |
@@ -35,6 +35,7 @@ Machine: Linux-7.2.9-200.fc44.x86_64-x86_64-with-glibc2.43 · 28 CPUs · Bend 2.
 | `transformer-periodic` | periodic-0-7 (32x8) | `3fd593d8` | first_loss | 1 | 2.35914 | 2.35914 | 6.813e-07 | 0 | 26 | 26 | 41 | ok |
 | `transformer-periodic` | periodic-0-7 (32x8) | `3fd593d8` | final_loss | 1 | 0.00211434 | 0.1351 | - | 0 | 26 | 26 | 41 | ok |
 | `transformer-periodic` | periodic-0-7 (32x8) | `3fd593d8` | accuracy | 1 | 1 | 0.9375 | 0.0625 | 0 | 26 | 26 | 41 | ok |
+| `vit-step` | synthetic-vit-step (1024x64) | `8a7882ec` | loss_after_3 | 1 | 0.921376 | - | - | 0 | 31422 | 31422 | 0 | ok |
 | `wine-kmeans` | wine (6497x11) | `7dcde7c7` | inertia | 1 | 50645.6 | 50645.6 | -0.00456 | 1 | 2289 | 2288 | 1073 | ok |
 | `wine-kmeans` | wine (6497x11) | `7dcde7c7` | cluster_sizes | 1 | [2384, 990, 3123] | [2384, 990, 3123] | 0 | 1 | 2289 | 2288 | 1073 | ok |
 | `wine-pca` | wine (6497x11) | `7dcde7c7` | explained_variance_ratio | 1 | 0.275443 | 0.275443 | 3.956e-07 | 0 | 4016 | 4016 | 1170 | ok |
