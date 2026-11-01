@@ -17,10 +17,17 @@ relevant entry before changing performance-sensitive code or a law.
   noise draw, i.e. memorising a single pair, which is not a denoiser).
 - **The step split at these sizes** (`bench/plumbing_cifar`, three runs,
   renamed to the keys the stage reader reads): input **41 ms**, forward
-  **36**, target **4**, loss + backward + optimizer **44**, one step **126**,
-  sampler 322-327. The floor `cifar_step` puts 807,168 parameters against 256
+  **37**, target **4**, loss + backward + optimizer **45.7**, one step
+  **127.7**, sampler 322-327. The floor `cifar_step` puts 807,168 parameters against 256
   rows: 413 GFLOP a forward, 827 with the backward, and the achieved numbers
-  are 114% and 203% of those floors (`make experiment TASK=cifar-train`).
+  are 111% and 180% of those floors (`make experiment TASK=cifar-train`).
+- **The first `cifar-train` split was measured on an empty dataset**
+  (ISSUE-039). `reference/stages.py` ran the stage program without
+  `MLBEND_DATA`, so the probe's `Datasets.csv_of` fell back to the hub, failed
+  and returned `Nil{}`; the record then said input `<1 ms` and a step of
+  80.7 ms where the probe reads 41 and 126. The cache is now in the stage
+  environment and a run that prints `the dataset failed` is refused rather than
+  timed. Any task whose stage program reads the cache was exposed to this.
 - **The stage reader now speaks the CIFAR probe's keys.** `bench/plumbing_cifar`
   prints `step_in_ms`, `step_tgt_ms` and `forward_ms` (the names
   `reference/stages.py` reads), and the forward is timed on a second

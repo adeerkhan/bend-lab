@@ -18,7 +18,11 @@ import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BEND = os.environ.get("BEND_BIN") or os.path.expanduser("~/.bend/bin/bend")
-ENV = dict(os.environ, BEND_NO_TELEMETRY="1")
+ENV = dict(os.environ, BEND_NO_TELEMETRY="1",
+           # the program is the task's own and reads the task's cache: the
+           # runner sets this for the task, so the split must set it too or the
+           # program fetches from the hub or fails and times an empty list
+           MLBEND_DATA=os.path.join(ROOT, "reference/.cache/datasets"))
 ENV_DIR = os.path.join(ROOT, ".bend", "env")
 if os.path.isdir(ENV_DIR):
     ENV["BEND_LIB"] = ENV_DIR
@@ -49,6 +53,9 @@ def run_program(program, repeats=3):
         out = subprocess.run([binary], capture_output=True, text=True, env=ENV, cwd=ROOT)
         if out.returncode != 0:
             raise SystemExit(f"stages: {program} did not run:\n{out.stdout}{out.stderr}")
+        if "the dataset failed" in out.stdout:
+            raise SystemExit(f"stages: {program} could not read the dataset under "
+                             f"MLBEND_DATA={ENV['MLBEND_DATA']}; the split would time an empty list")
         runs.append(named(out.stdout))
     keys = sorted(set().union(*runs))
     return {key: statistics.median(run.get(key, 0.0) for run in runs) for key in keys}

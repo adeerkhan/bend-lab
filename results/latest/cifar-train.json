@@ -1,6 +1,6 @@
 {
   "schema": "mlbend.experiment/3",
-  "created_at": "2026-11-01T12:24:29.160686+00:00",
+  "created_at": "2026-11-01T13:04:43.535302+00:00",
   "task": {
     "name": "cifar-train",
     "description": "the CIFAR-10 denoiser trained at a repeating level, BendTorch against NumPy",
@@ -16,7 +16,7 @@
       "expected_sha256": "80f3ca81e56946a0eabc65f68b69558b4fdc741e1aafb0d9f552fcee768b3161",
       "bytes": 54902548,
       "sha256": "80f3ca81e56946a0eabc65f68b69558b4fdc741e1aafb0d9f552fcee768b3161",
-      "fetch_seconds": 0.067,
+      "fetch_seconds": 0.078,
       "cache": "/home/adeerkhan/github/bend/bend-lab/reference/.cache/datasets"
     },
     "seed": 0
@@ -32,7 +32,7 @@
     "bend": "2.0.38"
   },
   "git": {
-    "commit": "7962882",
+    "commit": "91adea2",
     "branch": "main",
     "dirty": true
   },
@@ -160,46 +160,46 @@
     "numpy": "2.5.2"
   },
   "run": {
-    "build_seconds": 44.515,
-    "seconds_min": 94.427,
+    "build_seconds": 44.294,
+    "seconds_min": 94.412,
     "seconds_all": [
-      94.427
+      94.412
     ],
     "repeat": 1,
-    "fetch_seconds": 0.067,
-    "compute_seconds": 94.36,
-    "reference_seconds": 34.12,
+    "fetch_seconds": 0.078,
+    "compute_seconds": 94.334,
+    "reference_seconds": 34.107,
     "speed_ratio": 0.361
   },
   "stages": [
     {
       "path": "run",
       "depth": 0,
-      "ms": 3079.667,
+      "ms": 3276.667,
       "kind": "wall"
     },
     {
       "path": "run/init",
       "depth": 1,
-      "ms": 2999.0,
+      "ms": 3149.0,
       "kind": "once"
     },
     {
       "path": "run/step",
       "depth": 1,
-      "ms": 80.667,
+      "ms": 127.667,
       "kind": "wall"
     },
     {
       "path": "run/step/input",
       "depth": 2,
-      "ms": 0.0,
+      "ms": 41.0,
       "kind": "host"
     },
     {
       "path": "run/step/forward",
       "depth": 2,
-      "ms": 36.0,
+      "ms": 37.0,
       "kind": "wall"
     },
     {
@@ -211,7 +211,7 @@
     {
       "path": "run/step/loss_backward_opt",
       "depth": 2,
-      "ms": 40.667,
+      "ms": 45.667,
       "kind": "wall"
     }
   ],
@@ -224,7 +224,7 @@
   "counts": {
     "run/step/input": {
       "rows_ms": 0.0,
-      "from_list_ms": 0.0
+      "from_list_ms": 41.0
     }
   },
   "peaks": {
@@ -289,8 +289,8 @@
   },
   "notes": [
     "clock: IO.now is milliseconds; a stage below 1 ms prints <1 ms",
-    "init_params 2999 ms once per process (in run/init)",
-    "rows 0 ms and the matrix conversion 0 ms sit inside step_in",
+    "init_params 3149 ms once per process (in run/init)",
+    "rows 0 ms and the matrix conversion 41 ms sit inside step_in",
     "parameters 807168",
     "the stage split is one step, not the whole run"
   ],
@@ -313,8 +313,8 @@
           "note": "different folds; reported, not compared"
         }
       },
-      "run_seconds": 94.427,
-      "reference_seconds": 34.12
+      "run_seconds": 94.412,
+      "reference_seconds": 34.107
     }
   ],
   "metrics": {

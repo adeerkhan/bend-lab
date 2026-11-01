@@ -7,6 +7,82 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-01 — the fills land for the target, cifar-train is real, and the config is upstream's
+
+**Where things stand.** `main` is green: `make validate --quick` passes (16 s,
+env-check and `check_all --fast`) and **`make check` 95/95** on this tree
+(`BEND_MEM=16G scripts/bend-guard.sh make check PY=reference/.venv-lucidrains/bin/python`;
+it rewrote five `results/*/run.json` timestamps, reverted per ISSUE-033). Three
+commits, plus a fourth that fixes the stage capture (ISSUE-039):
+
+- `7cdd515` — the CIFAR target's noise is bend-ml#23's `fill_gauss`
+  (`bend-ml-tensor-gpu@0.1.5.0`). A step **143 ms → 128** (`bench/plumbing_cifar`,
+  three runs: `full_step_x3_ms` 426/430/441 → 376/382/393). The target's noise
+  goes from 29 ms of `gauss_at` plus 3 ms of staging to **4 ms**. The input keeps
+  `gauss_at`: the fill plus the list the row walk needs measured **70 ms**
+  against **40** (ISSUE-038). The version clash does not block it — a `Mat`
+  cannot cross `tensor-array` 0.1.14/0.1.18, but the `Array<F32>` that
+  `fill_gauss` returns can (`bench/fill_cross`, max_diff **2.09e-7** against
+  `gauss_at`, gate 1.3e-6) — so the stack bump stays its own change and was not
+  needed. Comment posted on bend-ml#23 with both splits, the CUDA numbers and
+  the commands.
+- `7962882` — `examples/cifar`'s `do_step` takes the config, because
+  `Train.step` derives the optimizer from the config it is handed and `Train`
+  carries none (ISSUE-037). The numbers are bit-identical. Filed upstream as
+  [nuxyel/BendTorch#24](https://github.com/nuxyel/BendTorch/issues/24) with
+  `bench/train_cfg` (three Trains at lr 0.001/0.01/0.1, all stepped at 0.001,
+  all read **6.5033846**) and two candidate fixes; we said we would take
+  "carry the config in the `Train` and drop `step`'s argument".
+- `91adea2` — `examples/cifar_train` + task `cifar-train`: the same model and
+  the same 256 images, a level from {16, 32, 48} each step, lr 1e-3, 600 steps.
+  `first_loss` **1.0022775**, `final_loss` **0.9960275**, `loss_drop`
+  **1.0062749** against the twin's 1.0069602 (delta 6.85e-04, gated at 2e-3
+  relative). `final_loss` is report-only. `cifar-10` is unchanged and its
+  description now says it is a plumbing check.
+
+**What the fills were worth at CIFAR scale: 15 ms of a 143 ms step.** The
+generator was half the staging but the *list* is what the input pays for, so
+the fill pays off where a `Mat` can take the array directly (the target) and not
+where a list must be walked (the input). On the CUDA lane it is **worse**: the
+first fill 33-41 ms, a warm one 17, the step **159-165 ms** against 128 on the
+CPU threads, with `ldd` resolving `libnvrtc.so.13` and `nvidia-smi` showing the
+pid at 104 MiB. See ISSUE-038 and `docs/NOTES.md` for the table.
+
+**The step now has a name for every part** (`bench/plumbing_cifar`, three runs,
+the record's medians): input **41 ms**, forward **37**, target **4**, loss +
+backward + optimizer **45.7**, one step **127.7**, sampler 322-327. The stage reader
+(`reference/stages.py`) reads these keys, so `cifar-train`'s page has a real
+split and `bounds.cifar_step` scores it (114% and 203% of the flops floors).
+
+**Upstream, untouched by us:** BendTorch#22 and #23 are both `MERGEABLE`/`CLEAN`
+against `devel`. nuxyel reviewed #22 and asked for three things (close the
+`k > h + 2p` edge in the signature, a stride > 1 end-to-end case, and the
+PyTorch comparisons moved into `make check`); we answered on the PR with the two
+signature shapes and the note that his `7x5` example has an even surplus, so
+`7x6` goes in as well. **Nothing was pushed**: no new PRs, and #24 stays an
+issue until he answers.
+
+**One bug worth remembering (ISSUE-039).** The first `cifar-train` record's
+stage split was measured on an empty dataset: `reference/stages.py` ran the
+stage program without `MLBEND_DATA`, the probe's `Datasets.csv_of` fell back to
+the hub, failed, and timed 256 rows of embedding only (input `<1 ms`, step
+80.7). The stage environment now carries the runner's cache and a run whose
+output says `the dataset failed` is refused instead of timed.
+
+**A correction to the session's brief (worth knowing):** `reference/.venv` is
+**not** empty — it is Python 3.14.8 with numpy 2.5.4, and every `make` target
+here ran over it without an override. `reference/.venv-lucidrains/bin/python`
+was used for the twin runs as asked, and `make check`/`make experiment` were run
+with `PY=reference/.venv-lucidrains/bin/python`.
+
+**Traps paid for this session.** A `Mat` and a `List` cannot share one `Array`
+(`Array.to_list` consumes it), so a fill that feeds both costs two bangs; the
+copy from an `Array` to a `List<&2, F32>` is ~18 ns a cell and a walk that
+matches two lists a pixel costs more than the `gauss_at` it replaces; a DoF
+record cannot hold a `List<F32>` (a `Type`), and a `do` block cannot hold a
+`+x = v` let, so a value reused twice becomes a parameter of its own def; and
+`T.Fwd<P, Y, S>` takes `Y` second, not `X`.
+
 ## 2026-10-30 — PR #17 merged; the corpus is renamed and the README is real
 
 **Where things stand.** `main` is green, **`make check` 92/92** on the

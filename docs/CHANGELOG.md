@@ -23,8 +23,8 @@ cifar-train   loss_drop   1.00627  vs 1.00696   delta -6.85e-04   ok
 The loss falls by 0.6% in 600 steps: enough to be a falling curve and to agree
 with the twin, not a trained model. `cifar-10` stays as it was and now says in
 its description that it is a plumbing check. The step's split at these sizes
-(`bench/plumbing_cifar`, three runs): input 41 ms, forward 36, target 4, loss
-and backward 44, one step 126. The gate is the measured delta, not a widened
+(`bench/plumbing_cifar`, three runs, the stage capture's medians): input
+41 ms, forward 37, target 4, loss and backward 45.7, one step 127.7. The gate is the measured delta, not a widened
 tolerance: the two implementations' arithmetic differs by ulps and 600 AdamW
 steps carry that to 6.85e-4 on the ratio.
 
