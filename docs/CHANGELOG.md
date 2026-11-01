@@ -4,6 +4,27 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The CIFAR example trains on the whole image
+
+`examples/cifar/main.bend` built its batch with the digits example's 64-pixel
+rows: 73,728 numbers went into a 256 x 3080 matrix and `Mat.from_list` padded
+the remaining 90.7% of every row with zeros. The task passed anyway, because
+its gated first loss is mostly the target's mean square. It now builds one
+image a row, so the numbers move onto the twin's (`final_loss` 1.01675 against
+1.01675, was 1.002612 against 1.01675):
+
+| metric | before | after | reference |
+|---|---:|---:|---:|
+| `first_loss` | 1.0014287 | 1.0014539 | 1.0014539 |
+| `final_loss` | 1.002612 | 1.0163207 | 1.0167508 |
+| `sample_mean` | 0.496275 | 0.493898 | 0.493899 |
+| `sample_std` | 0.403198 | 0.428966 | 0.428963 |
+
+Records from before this change are not comparable on the report-only metrics.
+The row builder and the weight builder also cons instead of appending, which
+took `params()` from 6.4 s to 3.4 s of the run, and the step bench
+(`bench/plumbing_cifar`) reads 149 ms a step, 74 of them the host staging.
+
 ### The run record is schema 3: stages, peaks, bounds, variant, notes
 
 `reference/experiment.py` writes one JSON that now carries the stage split of
