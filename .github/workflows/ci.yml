@@ -3,16 +3,27 @@ name: CI
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
   pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
   workflow_dispatch:
   schedule:
     - cron: "23 5 * * 1"   # weekly, to catch changes in BendHub packages or in the toolchain
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  check:
-    name: the proofs, the kernel and the numbers
+  validate:
+    name: make validate
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-24.04      # pinned (ubuntu-latest moves to 26 on 2026-10-19); 4 vCPU, 16 GB RAM
-    timeout-minutes: 60   # 58 checks, one build each; 30 was reached on 2026-10-23
+    timeout-minutes: 90        # 93 checks, one build each; 60 was reached on 2026-11-01
     steps:
       - uses: actions/checkout@v7
 
@@ -31,5 +42,45 @@ jobs:
       - name: Set up (Bend 2.0.38, Lean 4.34.0, Python venv)
         run: scripts/setup.sh
 
-      - name: Checks (proofs, kernel, rejected programs, NumPy and scikit-learn)
-        run: make check
+      - name: The one gate (env-check, the cheap gate, the full check, the smoke)
+        run: make validate
+
+  long:
+    name: make validate --long
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Cache the Bend and Lean toolchains
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.bend
+            ~/.elan
+          key: toolchain-${{ runner.os }}-${{ hashFiles('scripts/setup.sh') }}
+
+      - name: Set up (Bend 2.0.38, Lean 4.34.0, Python venv)
+        run: scripts/setup.sh
+
+      - name: The long gate (the corpus, the benchmarks, the plumbing split, flow64)
+        run: make validate LONG=1
+
+      - name: Upload the run records and the pages
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: results-${{ github.run_id }}
+          path: |
+            results/raw/
+            results/latest/
+            results/matrix/
+            results/reference/
+            results/RESULTS.md
+          if-no-files-found: warn
+          retention-days: 30

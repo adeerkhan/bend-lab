@@ -19,6 +19,7 @@ if os.path.isdir(ENV_DIR):
     # the environment the packages are checked in: the same one the examples run in
     ENV["BEND_LIB"] = ENV_DIR
 results = []
+FAST = "--fast" in sys.argv   # the cheap gate: the proofs and the frozen references only
 
 
 def tidy(text):
@@ -62,6 +63,9 @@ def run(name, cmd, ok_if=None, timeout=1800):
     print(f"{'ok  ' if ok else 'ERROR'} {name} ({time.time() - t0:.0f}s)")
     if not ok:
         print("     " + out.strip().replace("\n", "\n     ")[-600:])
+        if FAST:
+            print(f"\n{sum(results)}/{len(results)} checks passed before the failure")
+            sys.exit(1)
     return out
 
 
@@ -110,6 +114,11 @@ def main():
         clean = not re.search(r"@unsafe|^\s*\?\w+|sorry", re.sub(r"#.*", "", src), re.M)
         results.append(clean)
         print(f"{'ok  ' if clean else 'ERROR'} {pkg}/main.bend: no @unsafe or ?TODO")
+
+    if FAST:
+        ok = sum(results)
+        print(f"\n{ok}/{len(results)} checks passed (--fast: the proofs and the frozen references)")
+        sys.exit(0 if ok == len(results) else 1)
 
     # 3. the programs that must be refused
     for pkg in packages:
