@@ -5,6 +5,19 @@ relevant entry before changing performance-sensitive code or a law.
 
 ## 2026-11-01 — the CIFAR fills: the target, not the input
 
+- **`Train.step`'s config overrides `Train.new`'s, and that is the whole of
+  ISSUE-037** (upstream: [nuxyel/BendTorch#24](https://github.com/nuxyel/BendTorch/issues/24)).
+  `Train` is `Train{p, g, st, p1, p2, loss}` — no config — and `step` derives
+  the optimizer from `+cfg` at the call site (`Opt.at(cfg, q1, q2)`,
+  `OptCfg.c1/c2`), so the lr `Train.new` got reaches only `OptState.new` and
+  `q_start`. `bench/train_cfg`: three `Train`s built at lr 0.001, 0.01 and 0.1
+  and all stepped at 0.001 read **6.5033846** three times; stepped at their own
+  rates they read 6.5033846 / 1.2917502 / 0.4104244. The issue proposes
+  carrying the config in the `Train` and dropping the argument, or refusing a
+  step whose lr/b1/b2/wd differ; we would take the first, because the bug is
+  two sources for one value, and removing the parameter removes the class.
+  Locally `do_step` now takes the config, and the numbers are bit-identical.
+
 - **The fill crosses the version clash.** `bend-ml-tensor-gpu@0.1.5.0` imports
   `bend-ml-tensor-array@0.1.18.0` and this project pins 0.1.14.0; both resolve
   (`bendenv lock`: two `bend-ml-tensor-array` entries, 0.1.14.0 and 0.1.18.0)

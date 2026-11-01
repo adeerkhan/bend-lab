@@ -4,6 +4,19 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The CIFAR step takes its config, so a task can name one
+
+`examples/cifar/main.bend`'s `do_step` called `Train.step` with `cfg()` in its
+own body, so a learning rate given to `Train.new` never reached the step:
+BendTorch's `Train` carries no config and `Train.step` builds the optimizer
+from the config it is handed (ISSUE-037, filed upstream as
+[nuxyel/BendTorch#24](https://github.com/nuxyel/BendTorch/issues/24)). The
+config is now a parameter, and the loop passes `cfg()`, so the numbers are
+unchanged bit for bit: `first_loss` 1.0014538, `final_loss` 1.0163177, and a
+step is still 126-129 ms in `bench/plumbing_cifar`. `bench/train_cfg` is the
+20-line repro: three `Train`s built at lr 0.001, 0.01 and 0.1 and stepped at
+0.001 all read 6.5033846.
+
 ### The CIFAR target's noise is one counter fill
 
 `examples/cifar/main.bend` asked for 786,432 Gaussians one at a time

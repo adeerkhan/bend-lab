@@ -366,9 +366,15 @@ def params() -> B4P():
     Unit{}},
   T.Lin{mat_of(d(), hidden(), 3n), TA.Mat.fill(1n, d(), 0.0)}}
 
-def do_step(+s: Nat, tr: T.Train<B4P()>, +x0: List<&2, F32>) -> T.Train<B4P()>:
+# The config is a parameter, not `cfg()` in the body: `Train.step` derives the
+# optimizer from the config it is handed and ignores the one `Train.new` was
+# given (ISSUE-037, BendTorch#24), so the call site is the only place an lr
+# lives. Threaded here, a probe or a task can step at a rate of its own without
+# copying `do_step`; the loop below passes `cfg()` and the numbers are the same
+# bit for bit.
+def do_step(+s: Nat, +c: T.OptCfg, tr: T.Train<B4P()>, +x0: List<&2, F32>) -> T.Train<B4P()>:
   +t = Nat.add(Nat.mod(s, 64n), 1n)
-  T.Train.step(~B4P(), ~X(), ~Y(), ~B4S(n()), ~Y(), ~Model(n()), ~mse, cfg(), tr,
+  T.Train.step(~B4P(), ~X(), ~Y(), ~B4S(n()), ~Y(), ~Model(n()), ~mse, c, tr,
     TA.Mat.from_list(n(), inwidth(), input_of(s, t, coef_a(t), coef_b(t), x0)),
     noise_of(s))
 
@@ -395,7 +401,7 @@ def loop(rows_left: Nat, +i: Nat, +x0: List<&2, F32>, tr: T.Train<B4P()>) -> IO(
     case 1n+rest T.Train{p, g, st, q1, q2, +l}:
       do IO<T.Train<B4P()>>:
         Unit <- print_or(should_print(i), l)
-        loop(rest, (1n + i : Nat), x0, do_step(i, T.Train{p, g, st, q1, q2, l}, x0))
+        loop(rest, (1n + i : Nat), x0, do_step(i, cfg(), T.Train{p, g, st, q1, q2, l}, x0))
 
 # ---- the sample: 64 fresh digits by the ancestral loop ----
 #

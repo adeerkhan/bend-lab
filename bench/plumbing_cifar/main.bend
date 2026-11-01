@@ -37,7 +37,7 @@ def show_cells(+inp: List<&2, F32>) -> IO(Unit):
 def step3(+left: Nat, tr: T.Train<M.B4P()>, +x0: List<&2, F32>) -> T.Train<M.B4P()>:
   match left:
     case 0n: tr
-    case 1n+p: step3(p, M.do_step(0n, tr, x0), x0)
+    case 1n+p: step3(p, M.do_step(0n, M.cfg(), tr, x0), x0)
 
 def bench_with(+x0: List<&2, F32>) -> IO(Unit):
   do IO<Unit>:
