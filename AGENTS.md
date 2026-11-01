@@ -106,6 +106,26 @@ publishes to BendHub and tags the released commit `<name>-v<version>`.
 9. Public text (READMEs, `docs/`) is written in a neutral, professional voice:
    no first person, no dash dividers, no private ledger links.
 
+## Measurement rules
+
+- **A number comes from a command.** In a report, a README, a commit or a
+  record, a number is quoted with the command that printed it. No estimates, no
+  "about".
+- **`unavailable` over 0.** A missing measurement prints `unavailable`, never a
+  zero and never a guess; a stage below a millisecond prints `<1 ms`.
+- **A lane, device, thread or version change is a banner, never a delta.**
+  `make report TASK=... AGAINST=...` prints `lane changed` and keeps both
+  numbers; the verdict does not pretend two lanes are one measurement.
+- **No gate is loosened.** A config comes down, a tolerance is widened only with
+  a measured reason written beside it, and a check is never skipped: a skipped
+  check reads exactly like a passing one.
+- **`.local/` is local-only.** Never committed, pushed, linked or quoted. Every
+  finding goes to `bend-lab/.local/issues-hit.md`, rendered by `make issues`;
+  a public issue is written only after the maintainer has the repro.
+- **Read the plan before performance work**: `.local/burn-to-bend-plan.md`.
+- **Heavy builds run under the guard**: `BEND_MEM=9G scripts/bend-guard.sh ...`,
+  never a bare `bend -o`.
+
 ## Bend 2.0.38 pitfalls we paid for
 
 The traps below are the ones this repository's code hit; they are the same
