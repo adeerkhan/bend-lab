@@ -104,7 +104,7 @@ def Model(~r: Nat) -> T.Layer<B4P, M2(r, inwidth()), M2(r, d()), B4S(r)>:
   T.Seq(~B3P, ~T.Lin<hidden(), d()>, ~M2(r, inwidth()), ~M2(r, hidden()), ~M2(r, d()),
     ~B3S(r), ~M2(r, hidden()), ~B3(~r), ~T.Linear(r, hidden(), d(), 0n))
 
-# ---- the data: 1024 digits, the pixels scaled to [0, 1] ----
+# ---- the data: the first 256 CIFAR-10 images, the pixels scaled to [0, 1] ----
 
 # the loader runs once, so the rows are built the plain way: appended,
 # ascending. (The training input is built per step; that one needs the
@@ -168,29 +168,30 @@ def coef_b(+t: Nat) -> F32:
 
 # ---- the model input: the noised pixels beside the embedding ----
 #
-# Built in three plainly-correct stages: each row's cells are appended in
-# order (row-local cost only); the rows are consed as finished blocks; one
-# flatten-cons walk and one reverse turn the blocks into the flat
-# row-major list. The noise index j rides across rows: pixel p of row r
-# pairs with counter index r*64+p, the same index the target noise list
-# holds.
+# One row is one image: its `width` pixels, noised, then the embedding's
+# eight numbers. The row is built by consing, then reversed once: appending
+# to a 3072-cell row instead is quadratic in the row width, and at CIFAR
+# scale that is the step's whole cost (bend-ml#23). The rows are consed as
+# finished blocks; one flatten-cons walk and one reverse turn the blocks
+# into the flat row-major list. The noise index j rides across rows: pixel
+# p of row r pairs with counter index r*width + p, the same index the
+# target noise list holds.
 
 def row_temb_go(+te: List<&2, F32>, +k: Nat, +acc: List<&2, F32>) -> List<&2, F32>:
   match k:
     case 0n:
       acc
     case 1n+rest:
-      row_temb_go(te, rest, List.append(&2, F32, acc, Con{at(te, Nat.sub(8n, k)), Nil{}}))
+      row_temb_go(te, rest, Con{at(te, Nat.sub(8n, k)), acc})
 
-# the pixels of one row, noised and appended in order; j is the row's
-# base noise index, riding +1 a pixel
+# the pixels of one row, noised and consed (the row comes out reversed,
+# `row_of` turns it); j is the row's base noise index, riding +1 a pixel
 def row_pixels_go(+s: Nat, +a: F32, +b: F32, +te: List<&2, F32>,
   x0: List<&2, F32>, +left: Nat, +j: Nat, +acc: List<&2, F32>) -> List<&2, F32>:
   match x0 left:
     case Con{h, tail} 1n+rest:
       row_pixels_go(s, a, b, te, tail, rest, (1n + j : Nat),
-        List.append(&2, F32, acc,
-          Con{(a * h + (b * G.gauss_at(s, j) : F32) : F32), Nil{}}))
+        Con{(a * h + (b * G.gauss_at(s, j) : F32) : F32), acc})
     case Con{h, tail} 0n:
       row_temb_go(te, 8n, acc)
     case Nil{} 0n:
@@ -203,23 +204,25 @@ def row_pixels_go(+s: Nat, +a: F32, +b: F32, +te: List<&2, F32>,
 type RR is Data:
   RR{frag: List<&2, F32>, rest: List<&2, F32>}
 
-# Sixty-four pixels consumed: the tail that is left of the row.
-def drop64_go(+xs: List<&2, F32>, +n: Nat) -> List<&2, F32>:
+# `width` pixels consumed: the tail that is left of the row.
+def drop_go(+xs: List<&2, F32>, +n: Nat) -> List<&2, F32>:
   match xs n:
     case _ 0n:
       xs
     case Con{h, t} 1n+rest:
-      drop64_go(t, rest)
+      drop_go(t, rest)
     case Nil{} _:
       Nil{}
 
 # one row consumed: the finished block and the rest of the list
-def row_of(+s: Nat, +a: F32, +b: F32, +te: List<&2, F32>, x0: List<&2, F32>, +j: Nat) -> RR:
+def row_of(+s: Nat, +a: F32, +b: F32, +te: List<&2, F32>, x0: List<&2, F32>,
+  +j: Nat, +width: Nat) -> RR:
   match x0:
     case Nil{}:
       RR{Nil{}, Nil{}}
     case Con{+h, +tail}:
-      RR{row_pixels_go(s, a, b, te, Con{h, tail}, 64n, j, Nil{}), drop64_go(Con{h, tail}, 64n)}
+      RR{List.reverse(&2, F32, row_pixels_go(s, a, b, te, Con{h, tail}, width, j, Nil{})),
+        drop_go(Con{h, tail}, width)}
 
 def rr_frag(rr: RR) -> List<&2, F32>:
   match rr:
@@ -233,14 +236,14 @@ def rr_rest(rr: RR) -> List<&2, F32>:
 
 # the rows, consed as blocks: the first row ends up deepest
 def rows_go(+s: Nat, +a: F32, +b: F32, +t: Nat, +te: List<&2, F32>,
-  +rows_left: Nat, +j: Nat, x0: List<&2, F32>, +acc: List<&2, List<&2, F32>>) ->
+  +rows_left: Nat, +j: Nat, +width: Nat, x0: List<&2, F32>, +acc: List<&2, List<&2, F32>>) ->
   List<&2, List<&2, F32>>:
   match rows_left:
     case 0n:
       acc
     case 1n+rest:
-      +rr = row_of(s, a, b, te, x0, j)
-      rows_go(s, a, b, t, te, rest, (64n + j : Nat), rr_rest(rr), Con{rr_frag(rr), acc})
+      +rr = row_of(s, a, b, te, x0, j, width)
+      rows_go(s, a, b, t, te, rest, (width + j : Nat), width, rr_rest(rr), Con{rr_frag(rr), acc})
 
 # flatten the blocks by consing (each block lands reversed), then one
 # reverse of the whole: the flat row-major list
@@ -267,14 +270,15 @@ def flat_go(rows: List<&2, List<&2, F32>>, +acc: List<&2, F32>) -> List<&2, F32>
     case Con{row, rest}:
       flat_go(rest, cons_all(row, acc))
 
+# the training batch: n() images of d() pixels, each beside its embedding
 def input_of(+s: Nat, +t: Nat, +a: F32, +b: F32, +x0: List<&2, F32>) -> List<&2, F32>:
-  list_rev(flat_go(rows_rev(rows_go(s, a, b, t, G.temb_of(t, 64n, 4n), 1024n, 0n, x0, Nil{}),
+  list_rev(flat_go(rows_rev(rows_go(s, a, b, t, G.temb_of(t, 64n, 4n), n(), 0n, d(), x0, Nil{}),
     Nil{}), Nil{}), Nil{})
 
-# the sampler's input: 64 rows, the sample not noised again
+# the sampler's input: samples() images, the sample not noised again
 def sinput_of(+t: Nat, x: List<&2, F32>) -> List<&2, F32>:
   list_rev(flat_go(rows_rev(rows_go((1000000n + t : Nat), 1.0, 0.0, t, G.temb_of(t, 64n, 4n),
-    64n, 0n, x, Nil{}), Nil{}), Nil{}), Nil{})
+    samples(), 0n, d(), x, Nil{}), Nil{}), Nil{}), Nil{})
 
 # ---- the training loop ----
 
