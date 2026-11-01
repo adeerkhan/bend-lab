@@ -20,6 +20,8 @@ and a `plot.svg`.
 | [`transformers/periodic`](transformers/periodic) | a one-block causal transformer trained on a periodic sequence |
 | [`unsupervised/kmeans`](unsupervised/kmeans) | k-means over wine, through `mlbend-cluster` |
 | [`unsupervised/pca`](unsupervised/pca) | the first principal component of wine by power iteration |
+| [`cifar`](cifar) | the CIFAR-10 denoiser as a plumbing check: 40 steps, 40 noise levels, one visit each, and samples |
+| [`cifar_train`](cifar_train) | the same model trained so its loss can fall: a level from {16, 32, 48}, lr 1e-3, 600 steps, `loss_drop` against the twin |
 
 These are programs that use the libraries and the packages, not packages of
 their own. Bend-ml and BendTorch are the libraries; nothing here re-implements

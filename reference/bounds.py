@@ -109,9 +109,36 @@ def vit_step(params=100736, rows=1024, fe=20, px=4, tokens=16):
     }
 
 
+def cifar_step(params=807168, rows=256, fe=3080, px=3072):
+    """One CIFAR MLP training step (examples/cifar_train).
+
+    The model is not token-parallel: each of the 256 rows meets every weight
+    once, so the dense lower bound is 2·params·rows flops for the forward and
+    twice that for the backward. The three linears are 3080→128→128→3072 and
+    `params` counts their weights and biases (807,168 from the probe). The
+    optimizer's own pass is not counted, and neither are the input builder's
+    temporaries or the loss's elementwise work.
+    """
+    return {
+        "run/step/input": {"read": rows * fe * BYTES, "write": rows * fe * BYTES, "flops": 0},
+        "run/step/forward": {
+            "read": (params + rows * fe) * BYTES,
+            "write": rows * px * BYTES,
+            "flops": 2 * params * rows,
+        },
+        "run/step/target": {"read": rows * px * BYTES, "write": rows * px * BYTES, "flops": 0},
+        "run/step/loss_backward_opt": {
+            "read": (params + rows * px) * BYTES,
+            "write": params * BYTES,
+            "flops": 4 * params * rows,
+        },
+    }
+
+
 TASK_BOUNDS = {
     "vit-step": vit_step,
     "diffusion-vit": vit_step,
+    "cifar-train": cifar_step,
 }
 
 

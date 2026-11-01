@@ -1,0 +1,22 @@
+{
+  "created_at": "2026-11-01T12:07:33.954658+00:00",
+  "example": "examples/cifar_train/main.bend",
+  "seconds": 95.3983838558197,
+  "steps": 600,
+  "levels": [
+    16,
+    32,
+    48
+  ],
+  "lr": 0.001,
+  "bend": {
+    "first_loss": 1.0022775,
+    "final_loss": 0.9960275,
+    "loss_drop": 1.0062749
+  },
+  "numpy": {
+    "first_loss": 1.0022774934768677,
+    "final_loss": 0.9953497052192688,
+    "loss_drop": 1.006960155030209
+  }
+}

@@ -173,13 +173,16 @@ def init_params():
             "w3": init(3, D, H), "b3": np.zeros(D, dtype=F)}
 
 
-def train(x0):
+def train(x0, steps=STEPS, levels=None, lr=LR):
+    """The example's loop. `levels` repeats a small set of noise levels instead
+    of the 64-step cycle: cifar-train's schedule, and the reason its loss can
+    fall (ISSUE-036)."""
     params = init_params()
     moment = {k: np.zeros_like(v) for k, v in params.items()}
     velocity = {k: np.zeros_like(v) for k, v in params.items()}
     curve = []
-    for s in range(STEPS):
-        t = s % T + 1
+    for s in range(steps):
+        t = s % T + 1 if levels is None else levels[s % len(levels)]
         abar = ALPHAS[t - 1]
         inp = input_of(s, t, np.sqrt(abar).astype(F),
                        np.sqrt(F(1.0 - abar)).astype(F), x0, N)
@@ -209,7 +212,7 @@ def train(x0):
             velocity[k] = F(B2 * velocity[k] + F(1.0 - B2) * F(g * g))
             mhat = F(moment[k] / F(1.0 - B1 ** (s + 1)))
             vhat = F(velocity[k] / F(1.0 - B2 ** (s + 1)))
-            params[k] = F(params[k] - F(LR * F(F(mhat / F(np.sqrt(vhat) + EPS)) + WD * params[k])))
+            params[k] = F(params[k] - F(lr * F(F(mhat / F(np.sqrt(vhat) + EPS)) + WD * params[k])))
     return params, curve
 
 
@@ -269,6 +272,19 @@ def ddim_sample(params, eta, k, draw=True, salt=0):
         eps = F(F(x - F(sa * xc)) / sm)
         x = ddim(step_of(abar, prev, eta), x, eps, z)
     return x
+
+
+# cifar-train's run: a level from this set each step, at the rate the sweep
+# measured (ISSUE-036)
+TRAIN_STEPS, TRAIN_LEVELS, TRAIN_LR = 600, (16, 32, 48), 1e-3
+
+
+def train_answer():
+    """The cifar-train twin: the same model, levels and rate as the example."""
+    x0 = load()
+    params, curve = train(x0, steps=TRAIN_STEPS, levels=TRAIN_LEVELS, lr=TRAIN_LR)
+    return {"first_loss": float(curve[0]), "final_loss": float(curve[-1]),
+            "loss_drop": float(curve[0] / curve[-1])}
 
 
 def numpy_answer():

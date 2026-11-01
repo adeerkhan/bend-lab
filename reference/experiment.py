@@ -237,6 +237,28 @@ def reference_diffusion_vit(context=None):
             "final_loss": None, "sample_mean": None, "sample_std": None}
 
 
+def parse_cifar_train(out):
+    """cifar-train's numbers: the drop, and the last loss (report mode)."""
+    losses = [float(v) for v in re.findall(r"^loss: ([0-9.eE+-]+)$", out, re.M)]
+    final = re.search(r"^final_loss: ([0-9.eE+-]+)$", out, re.M)
+    drop = re.search(r"^loss_drop: ([0-9.eE+-]+)$", out, re.M)
+    return {"loss_drop": float(drop.group(1)) if drop else None,
+            "final_loss": float(final.group(1)) if final else (losses[-1] if losses else None),
+            "first_loss": losses[0] if losses else None}
+
+
+def reference_cifar_train(context=None):
+    """The twin's numbers for cifar-train: the same model at the same levels.
+
+    `test_cifar.train` is the gate's own loop; `train_answer` runs it at
+    cifar-train's steps, levels and rate.
+    """
+    sys.path.insert(0, os.path.join(ROOT, "reference"))
+    from test_cifar import train_answer
+
+    return train_answer()
+
+
 def reference_cifar(context=None):
     """The twin's numbers for cifar-10: the first loss and the data's mean.
 
@@ -378,7 +400,7 @@ TASKS = {
         },
     },
     "cifar-10": {
-        "description": "a DDPM denoiser over the first 256 CIFAR-10 images, BendTorch against NumPy",
+        "description": "a plumbing check: one DDPM step over 256 CIFAR-10 images, 40 noise levels, one visit each, BendTorch against NumPy",
         "program": "examples/cifar/main.bend",
         "dataset": {"name": "cifar10", "rows": 256, "features": 3072,
                     "source": "https://huggingface.co/datasets/arwics/cifar10",
@@ -393,6 +415,23 @@ TASKS = {
             "final_loss": {"tolerance": 0, "mode": "report"},
             "sample_mean": {"tolerance": 0, "mode": "report"},
             "sample_std": {"tolerance": 0, "mode": "report"},
+        },
+    },
+    "cifar-train": {
+        "description": "the CIFAR-10 denoiser trained at a repeating level, BendTorch against NumPy",
+        "program": "examples/cifar_train/main.bend",
+        "dataset": {"name": "cifar10", "rows": 256, "features": 3072,
+                    "source": "https://huggingface.co/datasets/arwics/cifar10",
+                    "files": ["https://huggingface.co/datasets/arwics/cifar10/resolve/f44619abdb57391606d732724f9fc40a684471bf/train.csv"],
+                    "expected_sha256": "80f3ca81e56946a0eabc65f68b69558b4fdc741e1aafb0d9f552fcee768b3161"},
+        "seed": 0,
+        "stages": {"program": "bench/plumbing_cifar/main.bend"},
+        "bounds": floors.cifar_step,
+        "parse": parse_cifar_train,
+        "reference": reference_cifar_train,
+        "metrics": {
+            "loss_drop": {"tolerance": 0.002, "mode": "relative"},
+            "final_loss": {"tolerance": 0, "mode": "report"},
         },
     },
     "diffusion-vit": {

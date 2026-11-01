@@ -37,6 +37,7 @@ CELLS = (
     {"task": "iris-crossval", "lane": "cpu", "seeds": [42, 43, 44]},
     {"task": "attention-parity", "lane": "cpu", "seeds": [0]},
     {"task": "wine-pca", "lane": "cpu", "seeds": [0]},
+    {"task": "cifar-train", "lane": "cpu", "seeds": [0]},
 )
 
 # The cells a lane does not have, and why. A program in plain Bend has no
@@ -45,6 +46,8 @@ ABSENT = (
     ("iris-crossval", "gpu", "plain Bend, no device path: the GPU lane is BendTorch's"),
     ("wine-pca", "gpu", "plain Bend, no device path: the GPU lane is BendTorch's"),
     ("attention-parity", "gpu", "plain Bend, no device path: the GPU lane is BendTorch's"),
+    ("cifar-train", "gpu", "the device lane's exp differs from the host's; "
+                           "no measured tolerance for a 600-step curve yet"),
 )
 
 

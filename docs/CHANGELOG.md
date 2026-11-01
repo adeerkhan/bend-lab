@@ -4,6 +4,30 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### `cifar-train`: a CIFAR run whose loss can fall
+
+`examples/cifar_train` is `examples/cifar`'s denoiser over the same 256 images
+with the two things ISSUE-036 says the plumbing run lacks: a level drawn from
+{16, 32, 48} each step (200 visits a level in 600 steps, against one in forty)
+and lr 1e-3. The twin is `reference/test_cifar.py`'s loop with
+`train(levels=..., lr=...)`, and the task is `cifar-train` in
+`reference/experiment.py`: the same dataset pin, `bench/plumbing_cifar` as its
+stage split, `reference/bounds.py`'s `cifar_step` as its floors, `loss_drop`
+(first loss over last) gated at 2e-3 relative, `final_loss` report-only.
+
+```
+cifar-train   loss_drop   1.00627  vs 1.00696   delta -6.85e-04   ok
+              final_loss  0.996027 vs 0.99535   (report)
+```
+
+The loss falls by 0.6% in 600 steps: enough to be a falling curve and to agree
+with the twin, not a trained model. `cifar-10` stays as it was and now says in
+its description that it is a plumbing check. The step's split at these sizes
+(`bench/plumbing_cifar`, three runs): input 41 ms, forward 36, target 4, loss
+and backward 44, one step 126. The gate is the measured delta, not a widened
+tolerance: the two implementations' arithmetic differs by ulps and 600 AdamW
+steps carry that to 6.85e-4 on the ratio.
+
 ### The CIFAR step takes its config, so a task can name one
 
 `examples/cifar/main.bend`'s `do_step` called `Train.step` with `cfg()` in its

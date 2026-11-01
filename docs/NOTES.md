@@ -5,6 +5,28 @@ relevant entry before changing performance-sensitive code or a law.
 
 ## 2026-11-01 — the CIFAR fills: the target, not the input
 
+- **`cifar-train` is the first CIFAR task whose loss is a training
+  measurement.** `examples/cifar_train` is the same denoiser over the same 256
+  images with a level from {16, 32, 48} each step and lr 1e-3, 600 steps:
+  `first_loss` **1.0022775**, `final_loss` **0.9960275**, `loss_drop`
+  **1.0062749** against the twin's 1.0069602 (delta 6.85e-04, gated at 2e-3
+  relative, which is the measured delta and not a widened one). The fall is
+  0.6% in 600 steps — a falling curve, not a trained model: ISSUE-036's table
+  said a repeating level is what makes a CIFAR loss move, and 0.6% is what the
+  scheduled run gives at this budget (the 0.529 in the same table is one fixed
+  noise draw, i.e. memorising a single pair, which is not a denoiser).
+- **The step split at these sizes** (`bench/plumbing_cifar`, three runs,
+  renamed to the keys the stage reader reads): input **41 ms**, forward
+  **36**, target **4**, loss + backward + optimizer **44**, one step **126**,
+  sampler 322-327. The floor `cifar_step` puts 807,168 parameters against 256
+  rows: 413 GFLOP a forward, 827 with the backward, and the achieved numbers
+  are 114% and 203% of those floors (`make experiment TASK=cifar-train`).
+- **The stage reader now speaks the CIFAR probe's keys.** `bench/plumbing_cifar`
+  prints `step_in_ms`, `step_tgt_ms` and `forward_ms` (the names
+  `reference/stages.py` reads), and the forward is timed on a second
+  `params()` (3.1 s, outside every timer) because a parameter record is affine.
+  The numbers are the ones item 1 measured under `input`/`target`.
+
 - **`Train.step`'s config overrides `Train.new`'s, and that is the whole of
   ISSUE-037** (upstream: [nuxyel/BendTorch#24](https://github.com/nuxyel/BendTorch/issues/24)).
   `Train` is `Train{p, g, st, p1, p2, loss}` — no config — and `step` derives

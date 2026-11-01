@@ -34,6 +34,20 @@ def show_cells(+inp: List<&2, F32>) -> IO(Unit):
     Unit <- IO.print(String.append("input[73728]: ", F32.show(M.at(inp, 73728n))))
     IO.print(String.append("input[788479]: ", F32.show(M.at(inp, 788479n))))
 
+# the forward's own loss against the target, so the value is used
+def loss_of(lo: T.LossOut<M.Y()>) -> F32:
+  match lo:
+    case T.LossOut{l, dy}:
+      l
+
+def fwd_mse(r: T.Fwd<M.B4P(), M.Y(), M.B4S(M.n())>, tgt: TA.Mat<M.n(), M.d()>) -> T.LossOut<M.Y()>:
+  match r:
+    case T.Fwd{p2, y, s}:
+      M.mse(y, tgt)
+
+def fwd_loss(r: T.Fwd<M.B4P(), M.Y(), M.B4S(M.n())>, tgt: TA.Mat<M.n(), M.d()>) -> F32:
+  loss_of(fwd_mse(r, tgt))
+
 def step3(+left: Nat, tr: T.Train<M.B4P()>, +x0: List<&2, F32>) -> T.Train<M.B4P()>:
   match left:
     case 0n: tr
@@ -50,26 +64,34 @@ def bench_with(+x0: List<&2, F32>) -> IO(Unit):
     t1 : Nat <- IO.now()
     Unit <- show_ms("init_params", Nat.sub(t1, t0))
 
-    t2 : Nat <- IO.now()
-    m_tgt0 : TA.Mat<M.n(), M.d()> <- IO.pure(TA.Mat<M.n(), M.d()>, M.noise_of(1n))
-    t3 : Nat <- IO.now()
-    Unit <- show_ms("noise_target", Nat.sub(t3, t2))
-
     t4 : Nat <- IO.now()
     m_in : TA.Mat<M.n(), M.inwidth()> <- IO.pure(TA.Mat<M.n(), M.inwidth()>,
       TA.Mat.from_list(M.n(), M.inwidth(),
         M.input_of(1n, 1n, M.coef_a(1n), M.coef_b(1n), x0)))
     t5 : Nat <- IO.now()
-    Unit <- show_ms("input", Nat.sub(t5, t4))
+    Unit <- show_ms("step_in", Nat.sub(t5, t4))
 
-    # the three cells the fills must not move (0, 73728, 788479), read back
-    # off the timed matrix so the probe does not depend on how the input was built
-    Unit <- show_cells(ml_list(TA.Mat.to_list(M.n(), M.inwidth(), m_in)))
+    # the three cells the fills must not move (0, 73728, 788479), read off a
+    # second build of the same input: the timed matrix keeps one owner for the
+    # forward below, and this read is outside every timer
+    Unit <- show_cells(ml_list(TA.Mat.to_list(M.n(), M.inwidth(),
+      TA.Mat.from_list(M.n(), M.inwidth(), M.input_of(1n, 1n, M.coef_a(1n), M.coef_b(1n), x0)))))
 
     t6 : Nat <- IO.now()
     m_tgt : TA.Mat<M.n(), M.d()> <- IO.pure(TA.Mat<M.n(), M.d()>, M.noise_of(1n))
     t7 : Nat <- IO.now()
-    Unit <- show_ms("target", Nat.sub(t7, t6))
+    Unit <- show_ms("step_tgt", Nat.sub(t7, t6))
+
+    # the forward alone, so the report can put it beside the loss and backward.
+    # Its parameters are a second `params()` (3.1 s, outside every timer): the
+    # first copy belongs to Train.new below, and a parameter record is affine.
+    pf : M.B4P() <- IO.pure(M.B4P, M.params())
+    t7a : Nat <- IO.now()
+    fwd : T.Fwd<M.B4P(), M.Y(), M.B4S(M.n())> <- IO.pure(T.Fwd<M.B4P(), M.Y(), M.B4S(M.n())>,
+      T.Layer.fwd(M.B4P(), M.X(), M.Y(), M.B4S(M.n()), M.Model(M.n()), pf, m_in))
+    t7b : Nat <- IO.now()
+    Unit <- show_ms("forward", Nat.sub(t7b, t7a))
+    Unit <- IO.print(String.append("loss_at_input: ", F32.show(fwd_loss(fwd, m_tgt))))
 
     t8 : Nat <- IO.now()
     tr0 : T.Train<M.B4P()> <- IO.pure(T.Train<M.B4P()>,

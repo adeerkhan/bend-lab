@@ -1,9 +1,9 @@
 {
   "schema": "mlbend.experiment/3",
-  "created_at": "2026-11-01T11:50:30.636493+00:00",
+  "created_at": "2026-11-01T12:28:44.905606+00:00",
   "task": {
     "name": "cifar-10",
-    "description": "a DDPM denoiser over the first 256 CIFAR-10 images, BendTorch against NumPy",
+    "description": "a plumbing check: one DDPM step over 256 CIFAR-10 images, 40 noise levels, one visit each, BendTorch against NumPy",
     "program": "examples/cifar/main.bend",
     "dataset": {
       "name": "cifar10",
@@ -16,7 +16,7 @@
       "expected_sha256": "80f3ca81e56946a0eabc65f68b69558b4fdc741e1aafb0d9f552fcee768b3161",
       "bytes": 54902548,
       "sha256": "80f3ca81e56946a0eabc65f68b69558b4fdc741e1aafb0d9f552fcee768b3161",
-      "fetch_seconds": 0.076,
+      "fetch_seconds": 0.065,
       "cache": "/home/adeerkhan/github/bend/bend-lab/reference/.cache/datasets"
     },
     "seed": 0
@@ -32,7 +32,7 @@
     "bend": "2.0.38"
   },
   "git": {
-    "commit": "7cdd515",
+    "commit": "7962882",
     "branch": "main",
     "dirty": true
   },
@@ -160,16 +160,16 @@
     "numpy": "2.5.2"
   },
   "run": {
-    "build_seconds": 47.699,
-    "seconds_min": 60.846,
+    "build_seconds": 47.496,
+    "seconds_min": 60.864,
     "seconds_all": [
-      60.846
+      60.864
     ],
     "repeat": 1,
-    "fetch_seconds": 0.076,
-    "compute_seconds": 60.77,
-    "reference_seconds": 3.016,
-    "speed_ratio": 0.05
+    "fetch_seconds": 0.065,
+    "compute_seconds": 60.799,
+    "reference_seconds": 3.008,
+    "speed_ratio": 0.049
   },
   "stages": [],
   "stages_source": null,
@@ -253,8 +253,8 @@
           "note": "different folds; reported, not compared"
         }
       },
-      "run_seconds": 60.846,
-      "reference_seconds": 3.016
+      "run_seconds": 60.864,
+      "reference_seconds": 3.008
     }
   ],
   "metrics": {

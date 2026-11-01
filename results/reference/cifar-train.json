@@ -1,0 +1,20 @@
+{
+  "schema": "mlbend.reference/1",
+  "task": "cifar-train",
+  "created_at": "2026-11-01T12:24:29.160686+00:00",
+  "frozen_at": "2026-11-01T12:24:44.469537+00:00",
+  "command": "reference/references.py --freeze --task cifar-train",
+  "source": {
+    "record": "results/latest/cifar-train.json",
+    "created_at": "2026-11-01T12:24:29.160686+00:00"
+  },
+  "bend": "2.0.38",
+  "git": "7962882",
+  "machine": "Linux-7.2.13-200.fc44.x86_64-x86_64-with-glibc2.43",
+  "seeds": {
+    "0": {
+      "loss_drop": 1.006960155030209,
+      "final_loss": 0.9953497052192688
+    }
+  }
+}
