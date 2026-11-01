@@ -27,6 +27,12 @@ ENV_DIR = os.path.join(ROOT, ".bend", "env")
 if os.path.isdir(ENV_DIR):
     ENV["BEND_LIB"] = ENV_DIR
 
+# A program that could not read its dataset still exits 0 and prints every
+# key: an empty batch and a fast one have the same shape, so a split measured
+# on one reads as a step (ISSUE-039). The probes print this line; the capture
+# refuses the run instead of timing it.
+DATASET_FAILED = "the dataset failed"
+
 NAME_MS = re.compile(r"^([a-z_0-9]+)_ms: ([0-9.eE+-]+)$")
 NAMED = re.compile(r"^([a-z_0-9]+): ([0-9.eE+-]+)$")
 
@@ -41,6 +47,11 @@ def named(text):
     return values
 
 
+def refuses(stdout):
+    """Whether a run's output says the program could not read its dataset."""
+    return DATASET_FAILED in stdout
+
+
 def run_program(program, repeats=3):
     """Build `program` once, run it `repeats` times, and keep each key's median."""
     binary = os.path.join(tempfile.mkdtemp(), "mlbend-stages")
@@ -53,7 +64,7 @@ def run_program(program, repeats=3):
         out = subprocess.run([binary], capture_output=True, text=True, env=ENV, cwd=ROOT)
         if out.returncode != 0:
             raise SystemExit(f"stages: {program} did not run:\n{out.stdout}{out.stderr}")
-        if "the dataset failed" in out.stdout:
+        if refuses(out.stdout):
             raise SystemExit(f"stages: {program} could not read the dataset under "
                              f"MLBEND_DATA={ENV['MLBEND_DATA']}; the split would time an empty list")
         runs.append(named(out.stdout))

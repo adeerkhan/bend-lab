@@ -38,6 +38,27 @@ CELLS = (
     {"task": "attention-parity", "lane": "cpu", "seeds": [0]},
     {"task": "wine-pca", "lane": "cpu", "seeds": [0]},
     {"task": "cifar-train", "lane": "cpu", "seeds": [0]},
+    {"task": "vit-first", "lane": "cpu", "seeds": [0]},
+    {"task": "transformer-periodic", "lane": "cpu", "seeds": [0]},
+    {"task": "diffusion-2d", "lane": "cpu", "seeds": [0]},
+    {"task": "iris-mlp", "lane": "cpu", "seeds": [0]},
+    {"task": "wine-kmeans", "lane": "cpu", "seeds": [0]},
+    {"task": "cancer-knn", "lane": "cpu", "seeds": [0]},
+    {"task": "cancer-naive-bayes", "lane": "cpu", "seeds": [0]},
+    {"task": "heart-naive-bayes", "lane": "cpu", "seeds": [0]},
+    {"task": "cifar-10", "lane": "cpu", "seeds": [0]},
+)
+
+# A task with no cell at all, and why, and where its gate is instead. The
+# matrix never shrinks silently (appendix D): a task is a cell row or it is
+# here with its measured cost and the test that covers it. The cost is
+# `build_seconds + compute_seconds` from its last record on this machine.
+NO_CELL = (
+    ("diffusion-digits", 226,
+     "226 s a cell (build 77 + run 148); gated by reference/test_diffusion_digits.py"),
+    ("diffusion-vit", 724,
+     "724 s a cell (build 100 + run 625, 3000 steps); gated by "
+     "reference/test_diffusion_vit.py (first loss, forward, one step, DDIM, eta, legibility)"),
 )
 
 # The cells a lane does not have, and why. A program in plain Bend has no
@@ -48,6 +69,12 @@ ABSENT = (
     ("attention-parity", "gpu", "plain Bend, no device path: the GPU lane is BendTorch's"),
     ("cifar-train", "gpu", "the device lane's exp differs from the host's; "
                            "no measured tolerance for a 600-step curve yet"),
+    ("cifar-10", "gpu", "the device lane's exp differs from the host's; the task has no "
+                        "measured device tolerance yet"),
+    ("vit-first", "gpu", "the twin is one host window and the device lane's exp is not "
+                         "the host's; no measured tolerance for out_sq there yet"),
+    ("diffusion-2d", "gpu", "the device lane's exp differs from the host's; no measured "
+                            "tolerance for this task's gate yet"),
 )
 
 
@@ -100,7 +127,10 @@ def run_cell(cell, seed, live):
         "started_at": started.isoformat(),
     }
     failures = []
-    if run.returncode != 0 or record is None:
+    # A nonzero exit with a record means the task ran and failed its gate: the
+    # metric rows say which one. Only a missing record is a `run` failure, so a
+    # failure names `task/lane/seed/metric` as the docstring promises.
+    if record is None:
         detail = (run.stdout + run.stderr).strip().splitlines()
         failures.append({"metric": "run", "reason": detail[-1] if detail else "no record"})
     else:
@@ -121,7 +151,7 @@ def run_cell(cell, seed, live):
             "lane_evidence": evidence, "failures": failures}
 
 
-def summary(cells, absent, path_json, path_md, live):
+def summary(cells, absent, no_cell, path_json, path_md, live):
     ran = [c for c in cells if c["record"]]
     failed = [c for c in cells if c["failures"]]
     lines = [
@@ -147,6 +177,9 @@ def summary(cells, absent, path_json, path_md, live):
             for item in cell["failures"]:
                 lines.append(f"- `{cell['task']}/{cell['lane']}/{cell['seed']}/{item['metric']}`"
                              f" — {item['reason']}")
+    lines += ["", "## Tasks with no cell, and why", ""]
+    for task, seconds, why in no_cell:
+        lines.append(f"- `{task}` — {seconds} s: {why}")
     lines += ["", "## Cells a lane does not have", ""]
     for task, lane, why in absent:
         lines.append(f"- `{task}` / {lane}: {why}")
@@ -158,7 +191,8 @@ def summary(cells, absent, path_json, path_md, live):
                    "created_at": datetime.now(timezone.utc).isoformat(),
                    "references": "live" if live else "frozen",
                    "cells": cells,
-                   "absent": [{"task": t, "lane": l, "why": w} for t, l, w in absent]},
+                   "absent": [{"task": t, "lane": l, "why": w} for t, l, w in absent],
+                   "no_cell": [{"task": t, "seconds": s, "why": w} for t, s, w in no_cell]},
                   f, indent=2)
     return path_md, len(failed)
 
@@ -167,7 +201,19 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--live", action="store_true", help="recompute the references (needs NumPy)")
     parser.add_argument("--task", help="only this task's cells")
+    parser.add_argument("--summary-only", action="store_true",
+                        help="redo SUMMARY.md and matrix.json from the last cells, no run")
     args = parser.parse_args()
+    if args.summary_only:
+        # the page from the artifact: a wording change in ABSENT or NO_CELL does
+        # not need a 25-minute re-measure, and the two cannot drift
+        data = json.load(open(os.path.join(OUT, "matrix.json")))
+        path_md, failed = summary(data["cells"], ABSENT, NO_CELL,
+                                  os.path.join(OUT, "matrix.json"),
+                                  os.path.join(OUT, "SUMMARY.md"), data.get("references") == "live")
+        print(open(path_md).read())
+        print(f"summary: {os.path.relpath(path_md, ROOT)}")
+        return 1 if failed else 0
     cells = []
     for cell in CELLS:
         if args.task and cell["task"] != args.task:
@@ -178,7 +224,7 @@ def main():
     if not cells:
         raise SystemExit("no cells: --task names a task the matrix does not declare")
     os.makedirs(OUT, exist_ok=True)
-    path_md, failed = summary(cells, ABSENT, os.path.join(OUT, "matrix.json"),
+    path_md, failed = summary(cells, ABSENT, NO_CELL, os.path.join(OUT, "matrix.json"),
                               os.path.join(OUT, "SUMMARY.md"), args.live)
     print(open(path_md).read())
     print(f"summary: {os.path.relpath(path_md, ROOT)}")

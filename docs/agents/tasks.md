@@ -101,7 +101,18 @@ NumPy. A task without a frozen file is a gate error — `make check` says which.
 
 Add the task to `CELLS` in `reference/matrix.py` (and to `ABSENT` with a reason
 when a lane cannot run it). A lane is a build fact: `gpu` links `libnvrtc`,
-`cpu` must not; the matrix fails a cell whose label and binary disagree.
+`cpu` must not; the matrix fails a cell whose label and binary disagree. A task
+too slow to run as a cell goes in `NO_CELL` with its measured cost and the test
+that covers it: the matrix never shrinks silently, and `SUMMARY.md` prints both
+lists.
+
+A fixed issue gets a cell that **failed before and passes after**, named after
+the issue where the name is useful. Two shapes, depending on what broke: a new
+task when the finding is a number (as `vit-first` is for the ViT's level
+pairing), and a `reference/test_*.py` when it is a guard in the runner (as
+`reference/test_stages.py` is for a stage split measured on an empty dataset).
+Prove it bites by reverting the fix, running the cell, and keeping the failing
+record beside the passing one.
 
 ## 12. Finish
 

@@ -273,10 +273,16 @@ def levels_of(s):
     return [t_of(s, 63 - i) for i in range(64)]
 
 
-def loss_at(s, seed=1):
-    """The loss Bend's step `s` prints, with the per-image timesteps (ISSUE-016):
-    chunk `(s div 64) mod 16`, a level per image from the same Weyl sequence,
-    the noise of seed s, and the model's MSE against it."""
+def loss_pieces(s, seed=1):
+    """The three numbers of Bend's step `s`: its loss, mean(target^2), mean(out^2).
+
+    The window is the per-image timestep one (ISSUE-016): chunk
+    `(s div 64) mod 16`, a level per image from the same Weyl sequence, the
+    noise of seed s. The two mean squares are returned beside the loss because
+    the loss is dominated by the target's own mean square (~1.0), so a wrong
+    pairing moves it only in the fourth digit while the model's mean square
+    moves in the second: `vit-first` gates all three.
+    """
     from test_diffusion_digits import ALPHAS, noise_of, load
     x0 = load()
     chunk = (s * 2246822519 // 1048576 % 16) * 64
@@ -290,7 +296,14 @@ def loss_at(s, seed=1):
     po = np.tile(np.stack([pos(k) for k in range(TK)]), (64, 1, 1))
     tokens = F(np.concatenate([tok, np.repeat(te[:, None, :], TK, axis=1), po], axis=-1))
     out = forward(bend_init(seed), tokens)
-    return float(np.mean(F(out - target_of(nz)) ** 2))
+    tgt = target_of(nz)
+    return (float(np.mean(F(out - tgt) ** 2)), float(np.mean(F(tgt * tgt))),
+            float(np.mean(F(out * out))))
+
+
+def loss_at(s, seed=1):
+    """The loss Bend's step `s` prints; `loss_pieces` has it with its two sides."""
+    return loss_pieces(s, seed)[0]
 
 
 def first_loss(seed=1):

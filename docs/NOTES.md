@@ -5,6 +5,17 @@ relevant entry before changing performance-sensitive code or a law.
 
 ## 2026-11-01 — the CIFAR fills: the target, not the input
 
+- **Every finding from this session is now a cell** (the plan's B5 rule). The
+  one that matters is `vit-first`: a one-second program (`bench/vit_first`)
+  against the twin's `loss_pieces(0)`, gating `loss_at_0`, `tgt_sq` and
+  **`out_sq`**. The loss alone would have hidden ISSUE-040 for another week
+  because it is dominated by the target's mean square: with the old pairing
+  `loss_at_0` moves 1.149e-04 and `out_sq` moves 2.5e-3 relative, and gates of
+  1e-6 and 1e-4 are what make the wiring testable in a second instead of a
+  3000-step run. `reference/test_stages.py` does the same for ISSUE-039 in
+  0.3 s, and `make matrix` now names all sixteen tasks — 15 cells and two
+  `no_cell` lines with measured costs — so the matrix cannot shrink silently
+  (ISSUE-041).
 - **`diffusion-vit` is green again, and the gap was two different things**
   (ISSUE-032, ISSUE-040). The task's gate compared `twin.first_loss()` — one
   timestep for the whole batch, the pre-ISSUE-016 wiring — against a program

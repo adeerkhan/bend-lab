@@ -42,6 +42,9 @@ Machine: Linux-7.2.9-200.fc44.x86_64-x86_64-with-glibc2.43 · 28 CPUs · Bend 2.
 | `transformer-periodic` | periodic-0-7 (32x8) | `3fd593d8` | first_loss | 1 | 2.35914 | 2.35914 | 6.813e-07 | 0 | 26 | 26 | 41 | ok |
 | `transformer-periodic` | periodic-0-7 (32x8) | `3fd593d8` | final_loss | 1 | 0.00211434 | 0.1351 | - | 0 | 26 | 26 | 41 | ok |
 | `transformer-periodic` | periodic-0-7 (32x8) | `3fd593d8` | accuracy | 1 | 1 | 0.9375 | 0.0625 | 0 | 26 | 26 | 41 | ok |
+| `vit-first` | optdigits (1024x64) | `e1b683cc` | loss_at_0 | 1 | 1.00919 | 1.00919 | -6.271e-09 | 2 | 1010 | 1008 | 20 | ok |
+| `vit-first` | optdigits (1024x64) | `e1b683cc` | tgt_sq | 1 | 0.999309 | 0.999309 | 1.388e-08 | 2 | 1010 | 1008 | 20 | ok |
+| `vit-first` | optdigits (1024x64) | `e1b683cc` | out_sq | 1 | 0.00929036 | 0.00929036 | -5.166e-11 | 2 | 1010 | 1008 | 20 | ok |
 | `vit-step` | synthetic-vit-step (1024x64) | `8a7882ec` | loss_after_3 | 1 | 0.921376 | - | - | 0 | 31422 | 31422 | 0 | ok |
 | `wine-kmeans` | wine (6497x11) | `7dcde7c7` | inertia | 1 | 50645.6 | 50645.6 | -0.00456 | 1 | 2289 | 2288 | 1073 | ok |
 | `wine-kmeans` | wine (6497x11) | `7dcde7c7` | cluster_sizes | 1 | [2384, 990, 3123] | [2384, 990, 3123] | 0 | 1 | 2289 | 2288 | 1073 | ok |

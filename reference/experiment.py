@@ -222,6 +222,15 @@ def parse_diffusion_vit(out):
             **vals}
 
 
+def parse_vit_first(out):
+    """The ViT's step-0 window: its loss, the target's mean square, the model's."""
+    vals = {}
+    for key in ("loss_at_0", "tgt_sq", "out_sq"):
+        match = re.search(rf"^{key}: ([0-9.eE+-]+)$", out, re.M)
+        vals[key] = float(match.group(1)) if match else None
+    return vals
+
+
 def reference_diffusion_vit(context=None):
     """The twin's numbers for the ViT: the step-0 loss and the data's mean.
 
@@ -260,6 +269,21 @@ def reference_cifar_train(context=None):
     from test_cifar import train_answer
 
     return train_answer()
+
+
+def reference_vit_first(context=None):
+    """The twin's three numbers for the same step-0 window.
+
+    `loss_pieces(0)` is `loss_at(0)`'s own body with the two mean squares beside
+    the loss: the loss is dominated by the target's mean square, so a wrong
+    pairing moves it only in the fourth digit while `out_sq` moves in the
+    second. The three are gated together.
+    """
+    sys.path.insert(0, os.path.join(ROOT, "reference"))
+    import twin_vit as twin
+
+    loss, tgt_sq, out_sq = twin.loss_pieces(0)
+    return {"loss_at_0": loss, "tgt_sq": tgt_sq, "out_sq": out_sq}
 
 
 def reference_cifar(context=None):
@@ -435,6 +459,25 @@ TASKS = {
         "metrics": {
             "loss_drop": {"tolerance": 0.002, "mode": "relative"},
             "final_loss": {"tolerance": 0, "mode": "report"},
+        },
+    },
+    "vit-first": {
+        "description": "the ViT's step-0 window in a second: the loss, the target's mean square and the model's, against the twin (the cell for ISSUE-032 and ISSUE-040)",
+        "program": "bench/vit_first/main.bend",
+        "dataset": {"name": "optdigits", "rows": 1024, "features": 64,
+                    "source": "https://huggingface.co/datasets/mstz/optdigits",
+                    "files": ["https://huggingface.co/datasets/mstz/optdigits/resolve/4f20cc827b763fb69e2a80e18e892e4e11498aec/optdigits.data"], "expected_sha256": "e1b683cc211604fe8fd8c4417e6a69f31380e0c61d4af22e93cc21e9257ffedd"},
+        "seed": 0,
+        "parse": parse_vit_first,
+        "reference": reference_vit_first,
+        "metrics": {
+            "loss_at_0": {"tolerance": 0.000001, "mode": "relative"},
+            "tgt_sq": {"tolerance": 0.000001, "mode": "relative"},
+            # the sensitive one, and the plan's tolerance: the target's mean
+            # square dominates the loss, so the pairing shows up here (2.5e-3
+            # relative when the twin had the old levels) at 25x this gate,
+            # while the two implementations agree to 5.6e-09 today
+            "out_sq": {"tolerance": 0.0001, "mode": "relative"},
         },
     },
     "diffusion-vit": {

@@ -12,8 +12,8 @@ leaves the next one blind.
 **Where things stand.** `main` is green: `make validate --quick` passes (16 s,
 env-check and `check_all --fast`) and **`make check` 95/95** on this tree
 (`BEND_MEM=16G scripts/bend-guard.sh make check PY=reference/.venv-lucidrains/bin/python`;
-it rewrote five `results/*/run.json` timestamps, reverted per ISSUE-033). Four
-commits, plus a fifth for `diffusion-vit` (below):
+it rewrote five `results/*/run.json` timestamps, reverted per ISSUE-033). Five
+commits, plus a sixth for the regression cells and the matrix (below):
 
 - `7cdd515` — the CIFAR target's noise is bend-ml#23's `fill_gauss`
   (`bend-ml-tensor-gpu@0.1.5.0`). A step **143 ms → 128** (`bench/plumbing_cifar`,
@@ -39,6 +39,22 @@ commits, plus a fifth for `diffusion-vit` (below):
   **1.0062749** against the twin's 1.0069602 (delta 6.85e-04, gated at 2e-3
   relative). `final_loss` is report-only. `cifar-10` is unchanged and its
   description now says it is a plumbing check.
+
+**Every finding from this session is now a cell, and the matrix names every
+task** (the plan's B5 and appendix D; ISSUE-041). `vit-first` is a new task over
+`bench/vit_first/main.bend` — the ViT example's own `init_params` and
+`do_step(0)`, **1 s** — whose reference is the twin's `loss_pieces(0)` and whose
+three metrics are `loss_at_0` and `tgt_sq` at 1e-6 relative and **`out_sq`** at
+1e-4, and the last is the point: the loss is dominated by the target's mean
+square and moved only 1.15e-4 while `out_sq` moved 2.5e-3. With the pre-fix twin
+pairing the cell FAILs with exactly those deltas (the failing record is
+committed: `results/matrix/cells/vit-first-20261101T160503Z.json`) and passes
+restored. `reference/test_stages.py` is the cell for ISSUE-039 in 0.3 s: the
+stage environment carries `MLBEND_DATA` and a program that prints
+`the dataset failed` is refused. `make matrix` now reads **17 cells run, 17
+records, 0 failed**, with `diffusion-digits` (226 s) and `diffusion-vit`
+(724 s) as `no_cell` lines that name their cost and their test, and four `gpu`
+lanes declared absent. A failing cell now names its metric, not `run`.
 
 **`diffusion-vit` is green again** (ISSUE-032, ISSUE-040). The task's reference
 called `twin.first_loss()` — one timestep for the whole batch, the

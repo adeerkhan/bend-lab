@@ -4,6 +4,28 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### A cell per fixed finding, and a matrix that names every task
+
+The plan's rule is that a fixed issue becomes a cell that failed before and
+passes after. This session's three findings have one each.
+
+- **`vit-first`** is a new task: `bench/vit_first/main.bend` runs the ViT
+  example's own `init_params` and `do_step(0)` in **one second** and prints the
+  loss, the target's mean square and the model's; the reference is the twin's
+  `loss_pieces(0)`; `loss_at_0` and `tgt_sq` are gated at 1e-6 relative and
+  `out_sq` at 1e-4, the tolerance the plan set for it. It is the cell for
+  ISSUE-032 and ISSUE-040: with the pre-fix twin pairing it reads
+  `loss_at_0` **-1.149e-04** and `out_sq` **-2.5e-3 relative**, and with the fix
+  it reads 6.3e-09.
+- **`reference/test_stages.py`** is the cell for ISSUE-039, in 0.3 s inside
+  `make check`: the stage environment carries the runner's `MLBEND_DATA`, and a
+  program whose output says `the dataset failed` is refused rather than timed.
+- **The matrix names every task.** Sixteen tasks are now 15 cells and two
+  `no_cell` lines with their measured cost and the test that covers them
+  (`diffusion-digits` 226 s, `diffusion-vit` 724 s), plus the four `gpu` lanes
+  that have no measured tolerance yet. `SUMMARY.md` prints both lists, so no
+  task is silent. A cell that fails now names the metric, not `run`.
+
 ### `diffusion-vit` passes again: its gate compared the wrong twin window
 
 The task's reference called `twin_vit.first_loss()`, which uses **one timestep
