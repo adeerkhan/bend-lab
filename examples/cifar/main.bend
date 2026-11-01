@@ -299,13 +299,15 @@ def value(+i: Nat, +j: Nat, +seed: Nat) -> F32:
   F32.div(F32.sub(F32.from_nat(Nat.mod(Nat.add(Nat.add(Nat.mul(i, 3n), Nat.mul(j, 5n)),
     Nat.mul(seed, 7n)), 97n)), 48.0), 48.0)
 
+# a row of weights, consed and reversed once: appending a cell at a time is
+# quadratic in the fan-in, and 3080 is where that shows (6.4 s of the run)
 def row_vals(+c: Nat, +i: Nat, +j: Nat, +seed: Nat, +s: F32, acc: List<&2, F32>) -> List<&2, F32>:
   match c:
     case 0n:
       acc
     case 1n+rest:
       row_vals(rest, i, (1n + j : Nat), seed, s,
-        List.append(&2, F32, acc, Con{(s * value(i, j, seed) : F32), Nil{}}))
+        Con{(s * value(i, j, seed) : F32), acc})
 
 def rows_vals(+r: Nat, +c: Nat, +i: Nat, +seed: Nat, acc: List<&2, F32>) -> List<&2, F32>:
   match r:
@@ -314,7 +316,7 @@ def rows_vals(+r: Nat, +c: Nat, +i: Nat, +seed: Nat, acc: List<&2, F32>) -> List
     case 1n+rest:
       s = F32.div(1.0, F32.sqrt(F32.from_nat(c)))
       rows_vals(rest, c, (1n + i : Nat), seed,
-        List.append(&2, F32, acc, row_vals(c, i, 0n, seed, s, Nil{})))
+        List.append(&2, F32, acc, List.reverse(&2, F32, row_vals(c, i, 0n, seed, s, Nil{}))))
 
 def mat_of(+r: Nat, +c: Nat, +seed: Nat) -> TA.Mat<r, c>:
   TA.Mat.from_list(r, c, rows_vals(r, c, 0n, seed, Nil{}))
