@@ -4,6 +4,21 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### `diffusion-vit` passes again: its gate compared the wrong twin window
+
+The task's reference called `twin_vit.first_loss()`, which uses **one timestep
+for the whole batch** — the wiring from before ISSUE-016 — while the program
+runs **one level per image**. That is 1.0069675 against 1.0091865, 2.1e-3, and
+the task FAILed. The reference now calls `twin_vit.loss_at(0)`, and the twin
+mirrors the example's level pairing as well: `ab_img` and `te_img` reverse a
+list that is already ascending, so image *i* is trained at image *63 − i*'s
+level (a harmless permutation of which image draws which level). With both
+fixed the twin reads **1.0091865062713623** against the run's 1.0091865, a
+delta of **6.3e-09**, and `reference/test_diffusion_vit.py`'s first-loss
+tolerance is **tightened from 1e-3 to 1e-5** from that measurement. The
+task's own 1e-4 is unchanged, the example is unchanged, and its record is
+committed again.
+
 ### `cifar-train`: a CIFAR run whose loss can fall
 
 `examples/cifar_train` is `examples/cifar`'s denoiser over the same 256 images

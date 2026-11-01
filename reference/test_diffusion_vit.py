@@ -37,10 +37,10 @@ import twin_vit as twin
 import vit_gate
 
 RESULTS = os.path.join(ROOT, "results", "diffusion-vit", "run.json")
-# measured: Bend 1.0091743 against the twin's 1.0093014, a delta of 1.27e-4 with
-# the per-image levels (the old single-t window agreed to 1e-7). Set from that
-# measurement, not widened by feel.
-TOL_FIRST = 1e-3
+# measured: Bend 1.0091865 against the twin's 1.0091865, a delta of 6.3e-09 once
+# the twin mirrored the example's level reversal (ISSUE-040); it was 1.27e-4
+# before that, on the same window. Set from the measurement, not by feel.
+TOL_FIRST = 1e-5
 GATE_LEGIBILITY = 0.75
 _DATA = load()
 DATA_MEAN, DATA_STD = float(_DATA.mean()), float(_DATA.std())

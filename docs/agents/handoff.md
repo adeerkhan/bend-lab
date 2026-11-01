@@ -12,8 +12,8 @@ leaves the next one blind.
 **Where things stand.** `main` is green: `make validate --quick` passes (16 s,
 env-check and `check_all --fast`) and **`make check` 95/95** on this tree
 (`BEND_MEM=16G scripts/bend-guard.sh make check PY=reference/.venv-lucidrains/bin/python`;
-it rewrote five `results/*/run.json` timestamps, reverted per ISSUE-033). Three
-commits, plus a fourth that fixes the stage capture (ISSUE-039):
+it rewrote five `results/*/run.json` timestamps, reverted per ISSUE-033). Four
+commits, plus a fifth for `diffusion-vit` (below):
 
 - `7cdd515` — the CIFAR target's noise is bend-ml#23's `fill_gauss`
   (`bend-ml-tensor-gpu@0.1.5.0`). A step **143 ms → 128** (`bench/plumbing_cifar`,
@@ -39,6 +39,19 @@ commits, plus a fourth that fixes the stage capture (ISSUE-039):
   **1.0062749** against the twin's 1.0069602 (delta 6.85e-04, gated at 2e-3
   relative). `final_loss` is report-only. `cifar-10` is unchanged and its
   description now says it is a plumbing check.
+
+**`diffusion-vit` is green again** (ISSUE-032, ISSUE-040). The task's reference
+called `twin.first_loss()` — one timestep for the whole batch, the
+pre-ISSUE-016 wiring — against a program that runs one level per image
+(1.0069675 vs 1.0091865, 2.1e-3); it now calls `loss_at(0)`. The remaining
+1.15e-4 was the twin not mirroring the example's level reversal: `ab_img` and
+`te_img` reverse a list that is already ascending, so image *i* runs at image
+*63 − i*'s level (a harmless permutation; the example is unchanged). Mirroring
+it in `twin_vit.levels_of` gives **6.3e-09**, `TOL_FIRST` is **tightened 1e-3 →
+1e-5**, the one-second probe is `bench/vit_first`, and
+`make experiment TASK=diffusion-vit` PASSes (first_loss 1.00919, final 0.0711534,
+legibility 0.787/0.806 as recorded). The record is committed: the file that had
+been untracked since the FAIL is now `results/latest/diffusion-vit.json`.
 
 **What the fills were worth at CIFAR scale: 15 ms of a 143 ms step.** The
 generator was half the staging but the *list* is what the input pays for, so

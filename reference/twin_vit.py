@@ -254,6 +254,25 @@ def bend_init(seed=1):
     return from_flat(flat)
 
 
+def t_of(s, i):
+    """Bend's `t_img(s, i)`: (i + s*64) * 2654435761 in U32, >> 26, mod 64, plus 1."""
+    return 1 + ((((i + s * 64) * 2654435761) & 0xFFFFFFFF) >> 26) % 64
+
+
+def levels_of(s):
+    """The level each image gets in Bend's step `s`: image i takes `t_of(s, 63 - i)`.
+
+    `ab_img` and `te_img` both end in `List.reverse` over lists that are already
+    ascending (`ab_rev`/`te_rev` cons from the last image down), so the example
+    hands image 0 the pair and the time embedding of image 63, image 1 those of
+    image 62, and so on (ISSUE-040). The pairing of pixels, coefficients and
+    embedding is consistent within an image, so this is a permutation of which
+    level each image draws, not a wrong objective — but the twin has to mirror
+    it, because the loss is measured on that pairing.
+    """
+    return [t_of(s, 63 - i) for i in range(64)]
+
+
 def loss_at(s, seed=1):
     """The loss Bend's step `s` prints, with the per-image timesteps (ISSUE-016):
     chunk `(s div 64) mod 16`, a level per image from the same Weyl sequence,
@@ -263,8 +282,7 @@ def loss_at(s, seed=1):
     chunk = (s * 2246822519 // 1048576 % 16) * 64
     batch = x0[chunk:chunk + 64]
     nz = noise_of(s, 4096).reshape(64, 64)
-    # U32 wrap, as Bend does: (i + s*64)*a mod 2^32, then >> 26 mod 64
-    ts = [1 + ((((i + s * 64) * 2654435761) & 0xFFFFFFFF) >> 26) % 64 for i in range(64)]
+    ts = levels_of(s)
     ab = np.array([[np.sqrt(ALPHAS[t - 1]), np.sqrt(1.0 - ALPHAS[t - 1])] for t in ts], dtype=F)
     mixed = F(ab[:, 0:1] * batch + ab[:, 1:2] * nz)
     tok = patch(mixed).reshape(64, TK, PX)
@@ -276,8 +294,11 @@ def loss_at(s, seed=1):
 
 
 def first_loss(seed=1):
-    """The loss of step 0, on Bend's exact window: t = 1, the first 64 digits,
-    and noise_of(0)'s first 4096 values."""
+    """The loss of step 0 with ONE timestep for the whole batch (t = 1).
+
+    This is the pre-ISSUE-016 wiring, kept for `main`'s shape check: the
+    example has run one level per image since ISSUE-016, so the gate's window
+    is `loss_at(0)` and this function is not it."""
     from test_diffusion_digits import noise_of, load, ALPHAS
     x0 = load()
     batch = x0[:64]                                   # first 4096 pixels

@@ -226,13 +226,16 @@ def reference_diffusion_vit(context=None):
     """The twin's numbers for the ViT: the step-0 loss and the data's mean.
 
     The twin does not train (it is the gate, not a second run), so the
-    loss curve and the cloud are reported, not compared.
+    loss curve and the cloud are reported, not compared. The step-0 window is
+    `loss_at(0)`, the per-image levels the example runs (ISSUE-016); the
+    single-t `first_loss()` is the pre-ISSUE-016 wiring and is not what the
+    program computes.
     """
     sys.path.insert(0, os.path.join(ROOT, "reference"))
     import twin_vit as twin
     from test_diffusion_digits import load
 
-    first = twin.first_loss()[0]
+    first = twin.loss_at(0)
     return {"first_loss": float(first), "data_mean": float(load().mean()),
             "final_loss": None, "sample_mean": None, "sample_std": None}
 

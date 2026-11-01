@@ -5,6 +5,18 @@ relevant entry before changing performance-sensitive code or a law.
 
 ## 2026-11-01 — the CIFAR fills: the target, not the input
 
+- **`diffusion-vit` is green again, and the gap was two different things**
+  (ISSUE-032, ISSUE-040). The task's gate compared `twin.first_loss()` — one
+  timestep for the whole batch, the pre-ISSUE-016 wiring — against a program
+  that runs one level per image: 1.0069675 against 1.0091865, 2.1e-3. With the
+  gate on `loss_at(0)` the delta was still 1.15e-4, and a 1-second probe
+  (`bench/vit_first`: the example's own `init_params` and `do_step(0)`) named
+  the second cause: `ab_img`/`te_img` reverse a list that is already ascending,
+  so image i is trained at image 63-i's level. Mirroring that in the twin gives
+  **6.3e-09**, the first rows match value for value, and `TOL_FIRST` went from
+  1e-3 to **1e-5** (tightened, from the measurement). The example is unchanged:
+  the reversal is a harmless permutation of which image draws which level, and
+  removing it would move the published 0.7875/0.8110 for no gain.
 - **`cifar-train` is the first CIFAR task whose loss is a training
   measurement.** `examples/cifar_train` is the same denoiser over the same 256
   images with a level from {16, 32, 48} each step and lr 1e-3, 600 steps:
