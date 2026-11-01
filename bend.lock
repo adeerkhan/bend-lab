@@ -820,11 +820,12 @@ path = "main.bend"
 
 [[package]]
 name = "bend-ml-tensor-array"
-version = "0.1.16.0"
-hash = "0x0159e1f0f11cc1d285ac6a993d19ba8a"
+version = "0.1.18.0"
+hash = "0xf4dfe0b415f12cd7b6b3e20aa7cc5aa0"
 source = "hub"
 dependencies = []
 constructors = [
+    "AF",
     "AL",
     "BL",
     "BLeaf",
@@ -869,15 +870,15 @@ sha = "6ef84dd63aeee1961133c6d77bf2ce28a2a766a0d67e31eb7cf299bd020122a8"
 path = "LICENSE"
 
 [[package.files]]
-sha = "e967bdaec8b2472090b2619d98cdd882c1e9951f495929a1e71a8fc569879cf2"
+sha = "e11747d9a7eb3834260e196eafd3912c6643a0744c5454f9149ade57cf4eed66"
 path = "main.bend"
 
 [[package]]
 name = "bend-ml-tensor-fork"
-version = "0.1.4.0"
-hash = "0xd13098b0f80022977b3ddb83a57e3c50"
+version = "0.1.5.0"
+hash = "0x236efa65086abc5955a9e74563e24668"
 source = "hub"
-dependencies = ["bend-ml-tensor-array@0.1.16.0"]
+dependencies = ["bend-ml-tensor-array@0.1.18.0"]
 constructors = [
     "B2",
     "B3",
@@ -890,7 +891,7 @@ sha = "6ef84dd63aeee1961133c6d77bf2ce28a2a766a0d67e31eb7cf299bd020122a8"
 path = "LICENSE"
 
 [[package.files]]
-sha = "054aaf6c7ee4fdbe35c627f0a8c6b7e715313595c04388d1be10c650bc03056c"
+sha = "7bc3c0c511b75a3f5b4b8b0d75afca62540691de42c3d835bba83b668124943d"
 path = "main.bend"
 
 [[package]]
@@ -919,6 +920,36 @@ path = "LICENSE"
 
 [[package.files]]
 sha = "a66c3f82e0c3cd770a0c407b4b825d678af77d7bd26a0b54317d06dfd722451e"
+path = "main.bend"
+
+[[package]]
+name = "bend-ml-tensor-gpu"
+version = "0.1.5.0"
+hash = "0x6538b6a56d11b5a4d65ef7d8b18c1f9f"
+source = "hub"
+dependencies = ["bend-ml-tensor-array@0.1.18.0"]
+constructors = [
+    "ABC",
+    "E",
+    "FE",
+    "GR",
+    "O2",
+    "O3",
+    "O4",
+    "R1",
+    "R2",
+    "R3",
+    "R4",
+    "SC",
+    "T",
+]
+
+[[package.files]]
+sha = "6ef84dd63aeee1961133c6d77bf2ce28a2a766a0d67e31eb7cf299bd020122a8"
+path = "LICENSE"
+
+[[package.files]]
+sha = "9e87cef8a3967011e9b69e9cf1fb422ea982430c95af381b1a89d526f3e235a0"
 path = "main.bend"
 
 [[package]]
@@ -1144,7 +1175,7 @@ path = "main.bend"
 [[package]]
 name = "mlbend-datasets"
 version = "0.1.6.0"
-hash = "0xf3d145d639153c61b826e4f60d3c0dcd"
+hash = "0x43f00fa69fc1132fa416c0f389d0a503"
 source = "local"
 dependencies = []
 constructors = []
@@ -1154,7 +1185,7 @@ sha = "6ef84dd63aeee1961133c6d77bf2ce28a2a766a0d67e31eb7cf299bd020122a8"
 path = "LICENSE"
 
 [[package.files]]
-sha = "531df9a9bf5e7851d632569b7dc4a50ae412679845ebc33c823ab46fb3843e13"
+sha = "92b74bb5bb2e8c2d8e0d2d04b05827ec39a5997bff7c490f58f16aab1d4ff0c9"
 path = "main.bend"
 
 [[package]]
@@ -1192,7 +1223,7 @@ path = "main.bend"
 [[package]]
 name = "mlbend-metrics"
 version = "0.1.0.0"
-hash = "0x9afaa60ee4d17706cb14d6ec20d1d4ae"
+hash = "0xcffef0c9b0e924c8e74e1d965dfb4106"
 source = "local"
 dependencies = []
 constructors = []
@@ -1202,7 +1233,7 @@ sha = "6ef84dd63aeee1961133c6d77bf2ce28a2a766a0d67e31eb7cf299bd020122a8"
 path = "LICENSE"
 
 [[package.files]]
-sha = "603ce9258cd251b67a3710196423d8f5ba53716be33ae2d3faabe369005d1c61"
+sha = "19b19130d2b436121a8bba37fc64a19858c811cc7f3139bdcce84123bc75f223"
 path = "main.bend"
 
 [[package]]

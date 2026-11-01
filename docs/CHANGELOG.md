@@ -4,6 +4,31 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The CIFAR target's noise is one counter fill
+
+`examples/cifar/main.bend` asked for 786,432 Gaussians one at a time
+(`G.noise_of`) and handed the list to `Mat.from_list` on every step. The target
+is now bend-ml#23's `fill_gauss` (`bend-ml-tensor-gpu@0.1.5.0`), one bang over
+the same counter, wrapped as this project's `Mat`. The values are the same to a
+few ulp (`bench/fill_cross`: 2.09e-7 on the first eight, the gate 1.3e-6), and
+the gated numbers do not move:
+
+| metric | before | after | twin |
+|---|---:|---:|---:|
+| `first_loss` | 1.0014539 | 1.0014538 | 1.0014538764 |
+| `final_loss` | 1.0163207 | 1.0163177 | 1.0167508 |
+| `sample_std` | 0.42896575 | 0.42897448 | 0.428963 |
+
+The step (`bench/plumbing_cifar`, three runs; `full_step_x3_ms` 426/430/441
+before against 382/385/393 after, i.e. **143 ms a step against 128**) drops by
+the target's noise: 29 ms plus 3 ms of staging becomes 4 ms. The input keeps
+`gauss_at`: noising a pixel reads the noise by index, so that path needs a list,
+and turning the fill's 1,048,576-cell array into one costs 17-28 ms against the
+40 ms the whole input already costs with `gauss_at` inline (measured both ways:
+70 ms with the fill, 40 without). The version clash is real but does not block
+the fill: `bend-ml-tensor-array` 0.1.14.0 and 0.1.18.0 both resolve, and the
+`Array<F32>` that `fill_gauss` returns belongs to neither.
+
 ### The CIFAR example trains on the whole image
 
 `examples/cifar/main.bend` built its batch with the digits example's 64-pixel

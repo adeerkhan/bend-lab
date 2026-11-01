@@ -9,6 +9,7 @@ bend-ml-bpe-tokenizer = "*"
 bend-ml-tensor = "0.1.0.0"
 bend-ml-tensor-array = "*"
 bend-ml-tensor-fork = "*"
+bend-ml-tensor-gpu = "0.1.5.0"
 bendtorch = "1.1.1.0"
 bendtorch-gpu = "1.1.1.0"
 

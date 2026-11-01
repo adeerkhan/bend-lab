@@ -4,11 +4,12 @@
 #
 #   MLBEND_DATA=reference/.cache/datasets bendenv run -- bend bench/plumbing_cifar/main.bend
 #
-# `examples/cifar/main.bend`'s `do_step` builds 786,432 counter-Gaussians on the
-# host (`G.noise_of`), the 256 x 3080 input list, the 256 x 3072 target, then
-# `T.Train.step`. This probe times those pieces apart, so the host share of a
-# step is a number instead of an assumption. Every value is printed after its
-# timer, so the compiler cannot erase the work as unused.
+# `examples/cifar/main.bend`'s `do_step` makes 786,432 counter-Gaussians (one
+# `fill_gauss` bang for the target's Mat, one for the input's list), the
+# 256 x 3080 input list, then `T.Train.step`. This probe times those pieces
+# apart, so the host share of a step is a number instead of an assumption.
+# Every value is printed after its timer, so the compiler cannot erase the work
+# as unused.
 import Base
 import bendtorch@1.1.1.0/main.bend as T
 import bend-ml-tensor-array@0.1.14.0/main.bend as TA
@@ -19,6 +20,19 @@ import ../../examples/cifar/main.bend as M
 
 def show_ms(+name: String, +ms: Nat) -> IO(Unit):
   IO.print(String.append(name, String.append("_ms: ", Nat.show(ms))))
+
+# the flat values of a Mat of the input's shape (the ML record's list)
+def ml_list(ml: TA.ML<M.n(), M.inwidth()>) -> List<&2, F32>:
+  match ml:
+    case TA.ML{m, l}:
+      l
+
+# three cells of the input, read back off the timed matrix
+def show_cells(+inp: List<&2, F32>) -> IO(Unit):
+  do IO<Unit>:
+    Unit <- IO.print(String.append("input[0]: ", F32.show(M.at(inp, 0n))))
+    Unit <- IO.print(String.append("input[73728]: ", F32.show(M.at(inp, 73728n))))
+    IO.print(String.append("input[788479]: ", F32.show(M.at(inp, 788479n))))
 
 def step3(+left: Nat, tr: T.Train<M.B4P()>, +x0: List<&2, F32>) -> T.Train<M.B4P()>:
   match left:
@@ -37,20 +51,23 @@ def bench_with(+x0: List<&2, F32>) -> IO(Unit):
     Unit <- show_ms("init_params", Nat.sub(t1, t0))
 
     t2 : Nat <- IO.now()
-    noise : List<&2, F32> <- IO.pure(List<&2, F32>, M.noise_of(1n))
+    m_tgt0 : TA.Mat<M.n(), M.d()> <- IO.pure(TA.Mat<M.n(), M.d()>, M.noise_of(1n))
     t3 : Nat <- IO.now()
-    Unit <- show_ms("noise", Nat.sub(t3, t2))
+    Unit <- show_ms("noise_target", Nat.sub(t3, t2))
 
     t4 : Nat <- IO.now()
     m_in : TA.Mat<M.n(), M.inwidth()> <- IO.pure(TA.Mat<M.n(), M.inwidth()>,
-      TA.Mat.from_list(M.n(), M.inwidth(), M.input_of(1n, 1n, M.coef_a(1n), M.coef_b(1n), x0)))
+      TA.Mat.from_list(M.n(), M.inwidth(),
+        M.input_of(1n, 1n, M.coef_a(1n), M.coef_b(1n), x0)))
     t5 : Nat <- IO.now()
     Unit <- show_ms("input", Nat.sub(t5, t4))
 
-    noise2 : List<&2, F32> <- IO.pure(List<&2, F32>, M.noise_of(1n))
+    # the three cells the fills must not move (0, 73728, 788479), read back
+    # off the timed matrix so the probe does not depend on how the input was built
+    Unit <- show_cells(ml_list(TA.Mat.to_list(M.n(), M.inwidth(), m_in)))
+
     t6 : Nat <- IO.now()
-    m_tgt : TA.Mat<M.n(), M.d()> <- IO.pure(TA.Mat<M.n(), M.d()>,
-      TA.Mat.from_list(M.n(), M.d(), noise2))
+    m_tgt : TA.Mat<M.n(), M.d()> <- IO.pure(TA.Mat<M.n(), M.d()>, M.noise_of(1n))
     t7 : Nat <- IO.now()
     Unit <- show_ms("target", Nat.sub(t7, t6))
 

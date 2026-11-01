@@ -24,6 +24,7 @@
 import Base
 import bendtorch@1.1.1.0/main.bend as T
 import bend-ml-tensor-array@0.1.14.0/main.bend as TA
+import bend-ml-tensor-gpu@0.1.5.0/main.bend as TG
 import mlbend-generative@0.1.1.0/main.bend as G
 import mlbend-datasets@0.1.6.0/main.bend as Datasets
 import mlbend-huggingface@0.1.1.0/main.bend as Hf
@@ -166,6 +167,42 @@ def coef_a(+t: Nat) -> F32:
 def coef_b(+t: Nat) -> F32:
   F32.sqrt((1.0 - abar(t) : F32))
 
+# ---- the noise: one counter fill for the target ----
+#
+# `G.noise_of` asked for 786,432 values one at a time and built a list: 29 ms
+# for the target's noise, then 3 ms more to hand the list to a Mat, on every
+# step (ISSUE-018's plumbing). bend-ml#23's `fill_gauss`
+# (bend-ml-tensor-gpu@0.1.5.0) makes the same counter's numbers in one bang.
+# Its uniforms are the same arithmetic; its Gaussian is a polynomial
+# Box-Muller rather than the host's log/cos/sin, so the values agree to a few
+# ulp and not bit for bit (bench/fill_cross: 2.09e-7 on the first eight; the
+# gate is 1.3e-6). The target's noise is that array wrapped as this project's
+# Mat: 32 ms becomes 4 (bench/plumbing_cifar).
+#
+# A Mat cannot cross the package boundary — tensor-gpu imports
+# tensor-array@0.1.18.0 and this project pins 0.1.14.0, and a Mat is the
+# package's own type — but `Array<F32>` can: that is what `fill_gauss`
+# returns, and `Mat` is built from it.
+#
+# The input keeps `G.gauss_at`. Noising a pixel reads the noise by index, so
+# that path needs a list of the values; building it from the fill's array
+# costs 17-28 ms (the array is 2^cap_depth cells, 1,048,576 of them) and the
+# walk over it another 12, against 40 ms for the whole input with `gauss_at`
+# inline. Measured both ways in bench/plumbing_cifar: 70 ms with the fill, 40
+# without. The fill is worth the target, not the input.
+
+def counter(+s: Nat) -> U32:
+  U32.from_nat(s)
+
+# the counter's n()*d() Gaussians in an array of 2^cap_depth cells, one bang
+def noise_arr(+s: Nat) -> Array<F32>:
+  TG.fill_gauss(counter(s), Nat.mul(n(), d()), TA.cap_depth(Nat.mul(n(), d())))
+
+# the target's noise: the fill's array as this project's Mat, cell (r, p) =
+# the counter's value r*3072 + p
+def noise_of(+s: Nat) -> TA.Mat<n(), d()>:
+  TA.Mat{noise_arr(s)}
+
 # ---- the model input: the noised pixels beside the embedding ----
 #
 # One row is one image: its `width` pixels, noised, then the embedding's
@@ -174,8 +211,8 @@ def coef_b(+t: Nat) -> F32:
 # scale that is the step's whole cost (bend-ml#23). The rows are consed as
 # finished blocks; one flatten-cons walk and one reverse turn the blocks
 # into the flat row-major list. The noise index j rides across rows: pixel
-# p of row r pairs with counter index r*width + p, the same index the
-# target noise list holds.
+# p of row r pairs with counter index r*width + p, the same counter the
+# target's fill draws from.
 
 def row_temb_go(+te: List<&2, F32>, +k: Nat, +acc: List<&2, F32>) -> List<&2, F32>:
   match k:
@@ -329,14 +366,11 @@ def params() -> B4P():
     Unit{}},
   T.Lin{mat_of(d(), hidden(), 3n), TA.Mat.fill(1n, d(), 0.0)}}
 
-def noise_of(+s: Nat) -> List<&2, F32>:
-  G.noise_of(s, 786432n)
-
 def do_step(+s: Nat, tr: T.Train<B4P()>, +x0: List<&2, F32>) -> T.Train<B4P()>:
   +t = Nat.add(Nat.mod(s, 64n), 1n)
   T.Train.step(~B4P(), ~X(), ~Y(), ~B4S(n()), ~Y(), ~Model(n()), ~mse, cfg(), tr,
     TA.Mat.from_list(n(), inwidth(), input_of(s, t, coef_a(t), coef_b(t), x0)),
-    TA.Mat.from_list(n(), d(), noise_of(s)))
+    noise_of(s))
 
 def should_print(+i: Nat) -> Bool:
   Bool.or(Bool.or(Nat.is_eq(i, 1n), Nat.is_eq(Nat.mod((1n + i : Nat), 100n), 0n)),

@@ -1,22 +1,22 @@
 {
-  "created_at": "2026-11-01T09:01:20.504390+00:00",
+  "created_at": "2026-11-01T11:31:52.992375+00:00",
   "example": "examples/cifar/main.bend",
   "dataset": {
     "url": "https://huggingface.co/datasets/arwics/cifar10/resolve/f44619abdb57391606d732724f9fc40a684471bf/train.csv",
     "sha256": "80f3ca81e56946a0eabc65f68b69558b4fdc741e1aafb0d9f552fcee768b3161",
     "rows": 256
   },
-  "seconds": 65.64700555801392,
+  "seconds": 60.276121377944946,
   "bend": {
-    "first_loss": 1.0014539,
-    "final_loss": 1.0163207,
-    "sample_corr": 0.1097945210895423,
+    "first_loss": 1.0014538,
+    "final_loss": 1.0163177,
+    "sample_corr": 0.10981014648672491,
     "data_mean": 0.47485462,
     "data_std": 0.2513583,
-    "sample_mean": 0.49389824,
-    "sample_std": 0.42896575,
-    "ddim_mean": 0.49190256,
-    "ddim_std": 0.47059354
+    "sample_mean": 0.49389872,
+    "sample_std": 0.42897448,
+    "ddim_mean": 0.4919009,
+    "ddim_std": 0.4705909
   },
   "numpy": {
     "first_loss": 1.0014538764953613,

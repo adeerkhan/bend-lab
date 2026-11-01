@@ -3,6 +3,53 @@
 Every finding, every measurement and every discarded hypothesis, by date. Read the
 relevant entry before changing performance-sensitive code or a law.
 
+## 2026-11-01 — the CIFAR fills: the target, not the input
+
+- **The fill crosses the version clash.** `bend-ml-tensor-gpu@0.1.5.0` imports
+  `bend-ml-tensor-array@0.1.18.0` and this project pins 0.1.14.0; both resolve
+  (`bendenv lock`: two `bend-ml-tensor-array` entries, 0.1.14.0 and 0.1.18.0)
+  and a Mat of one is not a Mat of the other. What crosses is the return of
+  `fill_gauss`: a Base `Array<F32>`, which is no package's type.
+  `bench/fill_cross` builds `TA.Mat<2,4>{TG.fill_gauss(1, 8, 3)}` from the
+  0.1.14 every example uses, prints the eight values beside `G.gauss_at`,
+  multiplies it, and reads **max_diff 2.0861626e-7**. So the blocker the plan
+  feared is not a blocker, and the stack bump is not a workaround we need: it
+  stays its own change, for the packages that want one version.
+- **What the fill is worth, measured** (`bench/plumbing_cifar`, three runs;
+  the numbers are one run's, the run-to-run spread is ±15 ms on the step):
+  the target's noise was `G.noise_of` (786,432 `gauss_at` plus a list) at
+  **29 ms** and `Mat.from_list` at 3; as one fill it is **4-5 ms**. The step
+  falls from **143 ms** (426/430/441 for three) to **128** (382/385/393). The
+  input is unchanged at **40-41 ms** and the input cells do not move:
+  0.5865267, 1.0214669, 0.9998779 at cells 0, 73728, 788479 before and after.
+- **The input keeps `gauss_at`, and that is a measured negative.** Noising a
+  pixel reads the noise by index, so `input_of` needs a list, not an array.
+  Built from the fill (`arr_list_go` over the `Array`'s leaves, 17-28 ms for
+  1,048,576 cells: `cap_depth` rounds 786,432 up to 2^20) the input reads
+  **70 ms** against **40**; with the list built outside the timer the walk
+  alone is 53-58 against 40, i.e. matching two lists per pixel costs more than
+  the `gauss_at` it replaces. `Array.to_list` is not the way out either
+  (32-34 ms, and its `List<F32>` is a Type that cannot ride in a record with
+  `+` reuse).
+- **On the CUDA lane the fill is slower, not faster** (`CUDA_HOME` and
+  `LD_LIBRARY_PATH` at `~/.local/cuda-nvrtc`, `ldd` resolving
+  `libnvrtc.so.13`, `nvidia-smi --query-compute-apps` showing the process at
+  104 MiB, so it executes there): the first fill is **33-41 ms**, the warm one
+  17, and the step **159-165 ms** against 128 on the CPU threads. One bang
+  over 786,432 values is kernel work too small to pay the launch, and the
+  values still have to come back to the host for `Mat.from_list` and the row
+  walk. This is ISSUE-018's shape again: the device lane is not where this
+  step's seconds are.
+- **The gate held without a twin change**: `first_loss` 1.0014538 against the
+  twin's 1.0014538764 (7.65e-08) and `final_loss` 1.0163177, so the fill
+  mirrored nothing and no tolerance moved. `reference/test_cifar.py` prints
+  `ok the first loss agrees: 1.0014538 vs 1.0014538764`.
+- **The lock was already stale.** `bendenv lock --check` on the committed tree
+  said "the lock is not current" before this change: four local packages'
+  content hashes and `bend-ml-tensor-fork` (0.1.4.0, from `*`) had drifted. The
+  relock here carries that, and tensor-fork moves to 0.1.5.0; no import in the
+  tree uses it.
+
 ## 2026-10-29 (later) — the ViT reaches the gate, and the card is not the bottleneck
 
 - **M1 is met.** The ViT denoiser, with **one timestep per image** (the

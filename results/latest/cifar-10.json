@@ -1,6 +1,6 @@
 {
   "schema": "mlbend.experiment/3",
-  "created_at": "2026-11-01T09:10:43.267422+00:00",
+  "created_at": "2026-11-01T11:29:51.105883+00:00",
   "task": {
     "name": "cifar-10",
     "description": "a DDPM denoiser over the first 256 CIFAR-10 images, BendTorch against NumPy",
@@ -16,7 +16,7 @@
       "expected_sha256": "80f3ca81e56946a0eabc65f68b69558b4fdc741e1aafb0d9f552fcee768b3161",
       "bytes": 54902548,
       "sha256": "80f3ca81e56946a0eabc65f68b69558b4fdc741e1aafb0d9f552fcee768b3161",
-      "fetch_seconds": 0.098,
+      "fetch_seconds": 0.073,
       "cache": "/home/adeerkhan/github/bend/bend-lab/reference/.cache/datasets"
     },
     "seed": 0
@@ -32,7 +32,7 @@
     "bend": "2.0.38"
   },
   "git": {
-    "commit": "f0b6246",
+    "commit": "6c831f7",
     "branch": "main",
     "dirty": true
   },
@@ -77,18 +77,23 @@
     },
     {
       "name": "bend-ml-tensor-array",
-      "version": "0.1.16.0",
-      "hash": "0x0159e1f0f11cc1d285ac6a993d19ba8a"
+      "version": "0.1.18.0",
+      "hash": "0xf4dfe0b415f12cd7b6b3e20aa7cc5aa0"
     },
     {
       "name": "bend-ml-tensor-fork",
-      "version": "0.1.4.0",
-      "hash": "0xd13098b0f80022977b3ddb83a57e3c50"
+      "version": "0.1.5.0",
+      "hash": "0x236efa65086abc5955a9e74563e24668"
     },
     {
       "name": "bend-ml-tensor-gpu",
       "version": "0.1.2.1",
       "hash": "0x454d8eb5320624d5b121fdc9d78ee0a6"
+    },
+    {
+      "name": "bend-ml-tensor-gpu",
+      "version": "0.1.5.0",
+      "hash": "0x6538b6a56d11b5a4d65ef7d8b18c1f9f"
     },
     {
       "name": "bendtorch-gpu",
@@ -103,7 +108,7 @@
     {
       "name": "mlbend-datasets",
       "version": "0.1.6.0",
-      "hash": "0xf3d145d639153c61b826e4f60d3c0dcd"
+      "hash": "0x43f00fa69fc1132fa416c0f389d0a503"
     },
     {
       "name": "mlbend-generative",
@@ -118,7 +123,7 @@
     {
       "name": "mlbend-metrics",
       "version": "0.1.0.0",
-      "hash": "0x9afaa60ee4d17706cb14d6ec20d1d4ae"
+      "hash": "0xcffef0c9b0e924c8e74e1d965dfb4106"
     },
     {
       "name": "mlbend-pipeline",
@@ -155,16 +160,16 @@
     "numpy": "2.5.2"
   },
   "run": {
-    "build_seconds": 49.185,
-    "seconds_min": 69.621,
+    "build_seconds": 47.663,
+    "seconds_min": 59.625,
     "seconds_all": [
-      69.621
+      59.625
     ],
     "repeat": 1,
-    "fetch_seconds": 0.098,
-    "compute_seconds": 69.523,
-    "reference_seconds": 6.415,
-    "speed_ratio": 0.092
+    "fetch_seconds": 0.073,
+    "compute_seconds": 59.552,
+    "reference_seconds": 3.032,
+    "speed_ratio": 0.051
   },
   "stages": [],
   "stages_source": null,
@@ -214,9 +219,9 @@
       "seed": 0,
       "metrics": {
         "first_loss": {
-          "bend": 1.0014539,
+          "bend": 1.0014538,
           "reference": 1.0014538764953613,
-          "delta": 2.3504638679838763e-08,
+          "delta": -7.649536137854795e-08,
           "tolerance": 0.0001,
           "mode": "relative",
           "pass": true
@@ -230,33 +235,33 @@
           "pass": true
         },
         "final_loss": {
-          "bend": 1.0167489,
+          "bend": 1.0167474,
           "reference": 1.0167508125305176,
           "pass": true,
           "note": "different folds; reported, not compared"
         },
         "sample_mean": {
-          "bend": 0.49389824,
+          "bend": 0.49389872,
           "reference": 0.4938988983631134,
           "pass": true,
           "note": "different folds; reported, not compared"
         },
         "sample_std": {
-          "bend": 0.42896575,
+          "bend": 0.42897448,
           "reference": 0.4289633333683014,
           "pass": true,
           "note": "different folds; reported, not compared"
         }
       },
-      "run_seconds": 69.621,
-      "reference_seconds": 6.415
+      "run_seconds": 59.625,
+      "reference_seconds": 3.032
     }
   ],
   "metrics": {
     "first_loss": {
-      "bend": 1.0014539,
+      "bend": 1.0014538,
       "reference": 1.0014538764953613,
-      "delta": 2.3504638679838763e-08,
+      "delta": -7.649536137854795e-08,
       "tolerance": 0.0001,
       "mode": "relative",
       "pass": true,
@@ -278,7 +283,7 @@
       "n_seeds": 1
     },
     "final_loss": {
-      "bend": 1.0167489,
+      "bend": 1.0167474,
       "reference": 1.0167508125305176,
       "pass": true,
       "note": "different folds; reported, not compared",
@@ -289,7 +294,7 @@
       "n_seeds": 1
     },
     "sample_mean": {
-      "bend": 0.49389824,
+      "bend": 0.49389872,
       "reference": 0.4938988983631134,
       "pass": true,
       "note": "different folds; reported, not compared",
@@ -300,7 +305,7 @@
       "n_seeds": 1
     },
     "sample_std": {
-      "bend": 0.42896575,
+      "bend": 0.42897448,
       "reference": 0.4289633333683014,
       "pass": true,
       "note": "different folds; reported, not compared",
