@@ -1603,3 +1603,79 @@ Two findings came out of the gates, not out of reading:
   two orders differ by 9.6e-5, ten times the gate. The twin therefore mirrors
   the running sum and prints the exact mean beside it; the tolerance is
   unchanged.
+
+### The flat cifar-10 loss is the schedule, not the step (2026-11-01)
+
+The task trains 40 steps and its loss barely moves (`1.0014539` after the first
+update, `1.0163207` at the end), which reads as a step that does nothing. It is
+not: the same program, with the noise level held fixed, trains.
+
+`bench/cifar_learning/main.bend` steps the example's own model and its own
+`Train.step`, with two schedules and three learning rates. Bend 2.0.38, the
+cached data, one run each:
+
+| run | steps | lr | at step 50 | last |
+|---|---:|---:|---:|---:|
+| A. t = 1..40 cycling (the example) | 600 | 1e-2 | 1.3992742 | 1.0026302 |
+| B. fixed t = 32 | 600 | 1e-2 | 0.9728233 | 0.7803922 |
+| C1. fixed t = 32 | 150 | 1e-3 | 0.8405294 | **0.5791386** |
+| C2. fixed t = 32 | 150 | 1e-1 | 1.0839473 | 0.9990001 |
+| D. fixed t = 32 | 600 | 1e-3 | 0.8405294 | **0.5286835** |
+| E. t = 1..40 cycling | 600 | 1e-3 | 1.0016015 | 1.0006951 |
+
+Three things follow.
+
+- **The step works.** At t = 32 (`x_t = 0.7 x0 + 0.7 eps`) the loss falls from
+  0.841 at step 50 to 0.529 at step 600, starting near 1.0 (1.0015 after the
+  first update of the 1e-2 run). Gradients reach the weights, the optimizer
+  updates them, and the input carries the target's information: a misaligned
+  noise pair would hold the loss at 1.0, and it does not.
+- **The schedule is what does not.** Cycling t = 1..40 visits each noise level
+  15 times in 600 steps, and the loss stays at 1.0007, better only than the
+  1e-2 cycle (which spikes to 1.399 and settles back to 1.003). One gradient
+  step per level in sequence, each pulling a different way, leaves the weights
+  where they started.
+- **The example's lr is high for its budget.** At step 50 the 1e-3 runs are at
+  0.841 where the 1e-2 runs are at 0.973 (fixed level) and 1.399 (cycle): the
+  1e-2 step overshoots for the first tens of steps. The example is a 1e-2 run,
+  so its printed losses carry that overshoot.
+
+`final_loss` is report mode because 40 steps is a pipeline; that stays true. What
+this entry adds is that the number is not a measurement of whether the model
+learns, and that a task wanting to show learning needs a repeating level and a
+1e-3-scale lr, not 40 single visits. Recorded as ISSUE-036 in the local ledger.
+
+### The device lane trains the CIFAR step, 1.4e-3 from the CPU lane (2026-11-01)
+
+The same probe on BendTorch's device lane: `bench/cifar_learning_gpu/main.bend`
+keeps the example's parameter types and swaps the layer values for
+`bendtorch-gpu`'s `LinearFirstF`/`LinearF`/`SiLU` and its `MSE`. Fixed
+t = 32, lr 1e-3, 600 steps, the same init and the same inputs:
+
+| step | CPU lane (`torch/main.bend`) | device lane, CPU threads | device lane, RTX 5060 |
+|---:|---:|---:|---:|
+| 100 | 0.64049715 | 0.64049715 | 0.64050174 |
+| 200 | 0.5624825 | 0.5624825 | 0.5634144 |
+| 300 | 0.5463061 | 0.5463061 | 0.5547442 |
+| 400 | 0.53720737 | 0.53720737 | 0.53706175 |
+| 500 | 0.5315328 | 0.5315328 | 0.53129405 |
+| 600 | 0.5286835 | 0.5286835 | 0.52727836 |
+
+Two things, one expected and one worth writing down.
+
+- **The layer swap is exact on the CPU threads** — every printed loss is the
+  CPU lane's to the last digit — so `bendtorch-gpu` and `torch/main.bend` are
+  interchangeable as a training model, not only per layer.
+- **On the GPU the curve tracks and does not match**: 0.6405 against 0.6405 at
+  step 100, 0.5273 against 0.5287 at 600, a 1.4e-3 gap that compounds. This is
+  the documented exp-ulp policy, not a defect: `SiLU` is `x/(1+exp(-x))` and
+  the device's `exp` is a device function; `demo/gpu_layers_test.bend` already
+  prints 176128 ulps for its SiLU case, and 600 steps of 807,168 weights carry
+  that into the loss. A task that runs on the device lane therefore needs a
+  measured tolerance, not bit equality.
+
+**The device lane is not faster at this size.** 600 steps took 101.4 s on the
+CPU lane and 136.7 s on the RTX 5060 (1.35x slower; the forward is 0.2 GFLOP a
+step, and 600 steps of bangs cost more in launches than they save). That is the
+same shape as bend-ml#23's table: at CIFAR scale with batch 256, the device
+buys nothing until the work per step is much larger.
