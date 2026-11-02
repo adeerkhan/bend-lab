@@ -26,6 +26,8 @@ sidecar (model, config, packages, weights sha256, step), and
   `config.lr: 0.003 -> 0.004`; a width moved 128 -> 64 prints
   `model.declared`. The test asserts both and never launches the program on a
   mismatch.
+- **The upstream links** are collected in `docs/agents/upstream.md`: 12 open
+  (6 BendTorch, 2 bend-ml, 4 bendlang) and 6 closed.
 - **The default path is unchanged.** The 6,000-step curve and the sample
   mean/std equal `results/flow-matching/run.json` exactly; only the log's F32
   `data_mean`/`data_std` differ from the record's float64 ones, which were

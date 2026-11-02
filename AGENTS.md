@@ -36,6 +36,8 @@ engine. The only models that live here are gradient-free baselines.
   - `docs/agents/domain.md`: the vocabulary and the design rules.
   - `docs/agents/issue-tracker.md`: how the issues carry the work.
   - `docs/agents/adapters.md`: the task and adapter protocol, and the manifest.
+  - `docs/agents/upstream.md`: every issue and pull request filed upstream, with
+    its state and what it asks.
 
 ## How an agent works here
 
