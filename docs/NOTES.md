@@ -3,6 +3,33 @@
 Every finding, every measurement and every discarded hypothesis, by date. Read the
 relevant entry before changing performance-sensitive code or a law.
 
+## 2026-11-02 (later) — `make check` no longer leaves the tree dirty
+
+- **ISSUE-033 is fixed.** The five tests that write `results/<task>/` compared
+  nothing before writing, so every gate re-timed five committed records: the
+  numbers were identical and `created_at` and the wall `seconds` were not. Two
+  hand `git checkout --` reverts in the previous session were the workaround,
+  and the risk was committing a timestamp as a result.
+- **One writer, and the comparison is on content.** `reference/artifacts.py`
+  provides `save_text` (the loss tables and the SVG figures, byte for byte) and
+  `save_json` (the record, after dropping `created_at`, `git`, `machine`,
+  `process`, `seconds` and `*_seconds`, `speed_ratio` and `repeat`). A file is
+  written only when a number moved, and then the whole record is written,
+  clock included. All 15 write sites in the five tests go through it and print
+  `wrote` or `unchanged`; on this tree all five print `unchanged`.
+- **Measured.** `BEND_MEM=9G scripts/bend-guard.sh make check` → **97/97**
+  (`test_artifacts.py` is the 97th), `git status --short results` lists no
+  tracked file, and the five tests read `test_transformer` 6 s,
+  `test_diffusion` 58 s, `test_diffusion_digits` 185 s, `test_cifar` 127 s,
+  `test_cifar_train` 196 s. Before the fix the same gate left five modified
+  records; the two earlier full runs ended with a hand revert of the same five.
+- **The guard has a gate of its own.** `reference/test_artifacts.py` copies each
+  of the five committed records to a temporary directory and checks that an
+  identical record writes nothing, a moved `bend.first_loss` writes, and a new
+  `created_at` and `seconds` alone does not; it does the same for a loss table.
+  Without it, a wrong key in the volatile list would either dirty the tree
+  again (too small a list) or swallow a real change (too large a list).
+
 ## 2026-11-02 — `flowers-flow` is a task, and the port is neutral to three decimals
 
 - **The newest generative result is inside the experiment layer.**

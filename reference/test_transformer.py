@@ -18,7 +18,6 @@ optimizer round differently), so the comparison is of the curve and the final
 loss, not of every weight. Both must learn the cycle; the Bend program must
 fall from about log(8) to a small number.
 """
-import json
 import math
 import os
 import platform
@@ -30,6 +29,8 @@ import time
 from datetime import datetime, timezone
 
 import numpy as np
+
+import artifacts
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BEND = os.environ.get("BEND_BIN") or os.path.expanduser("~/.bend/bin/bend")
@@ -207,7 +208,7 @@ def svg(curves, path):
     parts.append(f'<line x1="{left}" y1="{height-bottom}" x2="{width-right}" y2="{height-bottom}" stroke="#333"/>')
     parts.append(f'<text x="{width/2}" y="{height-8}" text-anchor="middle" font-family="sans-serif" font-size="12">step</text>')
     parts.append("</svg>")
-    open(path, "w").write("\n".join(parts))
+    return artifacts.save_text(path, "\n".join(parts))
 
 
 def main():
@@ -242,11 +243,11 @@ def main():
     out_dir = os.path.join(ROOT, "results/transformer")
     os.makedirs(out_dir, exist_ok=True)
     n = min(len(bend), len(curve))
-    with open(os.path.join(out_dir, "loss.tsv"), "w") as f:
-        f.write("step\tbend\tnumpy\n")
-        for i in range(n):
-            f.write(f"{i+1}\t{bend[i]:.8f}\t{curve[i]:.8f}\n")
-    svg([bend[:n], curve[:n]], os.path.join(out_dir, "loss.svg"))
+    rows = ["step\tbend\tnumpy"]
+    for i in range(n):
+        rows.append(f"{i+1}\t{bend[i]:.8f}\t{curve[i]:.8f}")
+    wrote = artifacts.save_text(os.path.join(out_dir, "loss.tsv"), "\n".join(rows) + "\n")
+    wrote |= svg([bend[:n], curve[:n]], os.path.join(out_dir, "loss.svg"))
     manifest = {
         "created_at": datetime.now(timezone.utc).isoformat(),
         "example": "examples/transformers/periodic/main.bend",
@@ -260,9 +261,8 @@ def main():
                     "numpy": np.__version__},
         "passed": ok,
     }
-    with open(os.path.join(out_dir, "run.json"), "w") as f:
-        json.dump(manifest, f, indent=2)
-    print(f"wrote {out_dir}/loss.tsv, loss.svg, run.json")
+    wrote |= artifacts.save_json(os.path.join(out_dir, "run.json"), manifest)
+    print(f"{'wrote' if wrote else 'unchanged'} {out_dir}/loss.tsv, loss.svg, run.json")
     sys.exit(0 if ok else 1)
 
 

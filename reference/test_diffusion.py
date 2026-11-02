@@ -27,7 +27,6 @@ compares the curves:
 
 Writes results/diffusion/: loss.tsv, scatter.svg, run.json.
 """
-import json
 import os
 import platform
 import re
@@ -38,6 +37,8 @@ import time
 from datetime import datetime, timezone
 
 import numpy as np
+
+import artifacts
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BEND = os.environ.get("BEND_BIN") or os.path.expanduser("~/.bend/bin/bend")
@@ -337,7 +338,7 @@ def scatter_svg(path, data, bend_pts, numpy_pts, ddim_pts):
     for p in ddim_pts.reshape(N, 2):
         dot(p, "#1e8449")
     parts.append("</svg>")
-    open(path, "w").write("\n".join(parts))
+    return artifacts.save_text(path, "\n".join(parts))
 
 
 def loss_svg(path, steps_idx, bend_curve, numpy_curve):
@@ -358,7 +359,7 @@ def loss_svg(path, steps_idx, bend_curve, numpy_curve):
     parts.append(f'<line x1="50" y1="260" x2="{W-30}" y2="260" stroke="#333"/>'
                  '<text x="55" y="278" font-family="sans-serif" font-size="10" fill="#c0392b">Bend</text>'
                  '<text x="85" y="278" font-family="sans-serif" font-size="10" fill="#2471a3">NumPy</text></svg>')
-    open(path, "w").write("\n".join(parts))
+    return artifacts.save_text(path, "\n".join(parts))
 
 
 def numpy_answer():
@@ -417,27 +418,27 @@ def main():
 
     res = os.path.join(ROOT, "results/diffusion")
     os.makedirs(res, exist_ok=True)
-    with open(os.path.join(res, "loss.tsv"), "w") as f:
-        f.write("step\tbend\tnumpy\n")
-        for i, s in enumerate(idx):
-            f.write(f"{s}\t{losses[i]}\t{want[i]}\n")
-    scatter_svg(os.path.join(res, "scatter.svg"), x0, bend_samples, xs, bend_ddim)
-    loss_svg(os.path.join(res, "loss.svg"), idx, losses, want)
-    json.dump({"created_at": datetime.now(timezone.utc).isoformat(),
-               "example": "examples/diffusion/two_moons/main.bend",
-               "architecture": "linear(10,32), SiLU, linear(32,32), SiLU, linear(32,2)",
-               "process": f"DDPM, T={T}, linear beta 0.0001..0.3, eps-prediction; "
-                          "DDIM eta=0, every 4th rung (16 model calls)",
-               "machine": platform.platform(), "seconds": seconds,
-               "bend": {"first_loss": losses[0], "final_loss": final,
-                        "data_mean": pairs["data_mean"], "data_std": pairs["data_std"],
-                        "sample_mean": pairs["sample_mean"], "sample_std": pairs["sample_std"],
-                        "ddim_mean": pairs["ddim_mean"], "ddim_std": pairs["ddim_std"],
-                        "samples": [float(v) for v in bend_samples[:8]] + ["..."]},
-               "numpy": {"first_loss": curve[0], "final_loss": curve[-1],
-                         "data_stats": dm, "sample_stats": ss, "ddim_stats": sd}},
-              open(os.path.join(res, "run.json"), "w"), indent=2)
-    print(f"wrote {res}/loss.tsv, loss.svg, scatter.svg, run.json")
+    rows = ["step\tbend\tnumpy"]
+    for i, s in enumerate(idx):
+        rows.append(f"{s}\t{losses[i]}\t{want[i]}")
+    wrote = artifacts.save_text(os.path.join(res, "loss.tsv"), "\n".join(rows) + "\n")
+    wrote |= scatter_svg(os.path.join(res, "scatter.svg"), x0, bend_samples, xs, bend_ddim)
+    wrote |= loss_svg(os.path.join(res, "loss.svg"), idx, losses, want)
+    wrote |= artifacts.save_json(os.path.join(res, "run.json"), {
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "example": "examples/diffusion/two_moons/main.bend",
+        "architecture": "linear(10,32), SiLU, linear(32,32), SiLU, linear(32,2)",
+        "process": f"DDPM, T={T}, linear beta 0.0001..0.3, eps-prediction; "
+                   "DDIM eta=0, every 4th rung (16 model calls)",
+        "machine": platform.platform(), "seconds": seconds,
+        "bend": {"first_loss": losses[0], "final_loss": final,
+                 "data_mean": pairs["data_mean"], "data_std": pairs["data_std"],
+                 "sample_mean": pairs["sample_mean"], "sample_std": pairs["sample_std"],
+                 "ddim_mean": pairs["ddim_mean"], "ddim_std": pairs["ddim_std"],
+                 "samples": [float(v) for v in bend_samples[:8]] + ["..."]},
+        "numpy": {"first_loss": curve[0], "final_loss": curve[-1],
+                  "data_stats": dm, "sample_stats": ss, "ddim_stats": sd}})
+    print(f"{'wrote' if wrote else 'unchanged'} {res}/loss.tsv, loss.svg, scatter.svg, run.json")
 
     if fail:
         print(f"{fail} checks differ")

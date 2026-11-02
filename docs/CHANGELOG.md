@@ -4,6 +4,25 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### A check that leaves the tree clean
+
+`make check` rewrote five committed records on every run. The numbers were
+identical and the `created_at` and wall `seconds` were not, so the gate dirtied
+the tree it had just verified, and an agent that committed what it found could
+commit a re-timed artifact as a result (ISSUE-033).
+
+- **`reference/artifacts.py` is the writer.** `save_text` compares the loss
+  tables and the SVG figures byte for byte. `save_json` compares the record
+  after dropping the fields that are not results (`created_at`, `git`,
+  `machine`, `process`, `seconds` and `*_seconds`, `speed_ratio`, `repeat`);
+  when a number moved it writes the whole record, clock included.
+- **The five tests say what happened**: `wrote` when a number moved,
+  `unchanged` when the committed file already holds it. On this tree all five
+  print `unchanged`.
+- **`reference/test_artifacts.py` gates the guard**: an identical record writes
+  nothing, a moved number writes, a clock moved alone does not, on each of the
+  five records and on a loss table.
+
 ### `flowers-flow`: the 64x64 flow is a task
 
 `examples/diffusion/flowers_flow` was the lab's newest generative result and the

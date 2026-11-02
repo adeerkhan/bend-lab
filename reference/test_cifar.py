@@ -19,7 +19,6 @@ operation order, and compares:
 Writes results/cifar-10/: loss.tsv, grid.svg, run.json. `numpy_answer` is
 what `reference/experiment.py`'s cifar-10 task compares against.
 """
-import json
 import os
 import re
 import subprocess
@@ -29,6 +28,8 @@ import time
 from datetime import datetime, timezone
 
 import numpy as np
+
+import artifacts
 
 # The step algebra is one definition, mirrored once: mlbend-generative's
 # `sigma_of`, `step_of`, `ddim` and the strided walk over the same T = 64
@@ -348,7 +349,7 @@ def grid_svg(path, data, samples):
         draw(data[i] if i < len(data) else np.zeros(3 * img * img), ox, oy)
         draw(samples[i] if i < len(samples) else np.zeros(3 * img * img), ox + S * img + pad, oy)
     parts.append("</svg>")
-    open(path, "w").write("\n".join(parts))
+    return artifacts.save_text(path, "\n".join(parts))
 
 
 def legibility(samples, data):
@@ -411,23 +412,24 @@ def main():
     # again just before the last one; the base case prints the final loss
     idx = [i - 1 for i in range(STEPS)
            if i == 1 or (i + 1) % 100 == 0 or i + 1 == STEPS]
-    with open(os.path.join(res, "loss.tsv"), "w") as f:
-        f.write("step\tbend\tnumpy\n")
-        for j, s in enumerate(idx):
-            f.write(f"{s}\t{losses[j] if j < len(losses) else float('nan')}\t{curve[s]}\n")
-    grid_svg(os.path.join(res, "grid.svg"), x0.reshape(N, D)[:S], bend_samples.reshape(S, D))
-    json.dump({"created_at": datetime.now(timezone.utc).isoformat(),
-               "example": "examples/cifar/main.bend",
-               "dataset": {"url": URL, "sha256": SHA, "rows": N},
-               "seconds": seconds,
-               "bend": {"first_loss": losses[0], "final_loss": losses[-1],
-                         "sample_corr": corr_mean, **vals},
-               "numpy": {"first_loss": curve[0], "final_loss": curve[-1],
-                         "data_mean": dm,
-                         "sample_mean": float(xs.mean()), "sample_std": float(xs.std()),
-                         "ddim_mean": float(dxs.mean()), "ddim_std": float(dxs.std())}},
-              open(os.path.join(res, "run.json"), "w"), indent=2)
-    print(f"wrote {res}/loss.tsv, grid.svg, run.json")
+    rows = ["step\tbend\tnumpy"]
+    for j, s in enumerate(idx):
+        rows.append(f"{s}\t{losses[j] if j < len(losses) else float('nan')}\t{curve[s]}")
+    wrote = artifacts.save_text(os.path.join(res, "loss.tsv"), "\n".join(rows) + "\n")
+    wrote |= grid_svg(os.path.join(res, "grid.svg"), x0.reshape(N, D)[:S],
+                      bend_samples.reshape(S, D))
+    wrote |= artifacts.save_json(os.path.join(res, "run.json"), {
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "example": "examples/cifar/main.bend",
+        "dataset": {"url": URL, "sha256": SHA, "rows": N},
+        "seconds": seconds,
+        "bend": {"first_loss": losses[0], "final_loss": losses[-1],
+                 "sample_corr": corr_mean, **vals},
+        "numpy": {"first_loss": curve[0], "final_loss": curve[-1],
+                  "data_mean": dm,
+                  "sample_mean": float(xs.mean()), "sample_std": float(xs.std()),
+                  "ddim_mean": float(dxs.mean()), "ddim_std": float(dxs.std())}})
+    print(f"{'wrote' if wrote else 'unchanged'} {res}/loss.tsv, grid.svg, run.json")
     return 1 if fail else 0
 
 

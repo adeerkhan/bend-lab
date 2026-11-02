@@ -7,6 +7,45 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-02 (later) — the gate leaves the tree clean
+
+**Where things stand.** ISSUE-033 is fixed. `reference/artifacts.py` is the
+only writer for the five tests that write `results/<task>/` (`test_cifar`,
+`test_cifar_train`, `test_transformer`, `test_diffusion`,
+`test_diffusion_digits`): `save_text` compares the tables and figures exactly,
+and `save_json` compares the record after dropping the fields that are not
+results (`created_at`, `git`, `machine`, `process`, `seconds` and
+`*_seconds`, `speed_ratio`, `repeat`). A moved number writes the whole record;
+a new clock alone writes nothing. Each test prints `wrote` or `unchanged`, and
+on this tree all five print `unchanged`.
+
+- **Verified.** `BEND_MEM=9G scripts/bend-guard.sh make check` → **97/97**
+  (`reference/test_artifacts.py` is the 97th check), `git status --short
+  results` lists no tracked file afterwards, and the five tests take 6 / 58 /
+  185 / 127 / 196 s. Before the fix the same gate left five modified records
+  and cost two hand `git checkout --` reverts.
+- **The guard is gated.** `test_artifacts.py` copies each of the five committed
+  records to a temporary directory and checks that an identical record writes
+  nothing, a moved `bend.first_loss` writes, and a new `created_at` and
+  `seconds` alone does not; a loss table is checked the same way. That is what
+  keeps a wrong key in the volatile list from either dirtying the tree again or
+  swallowing a real change.
+- **Not touched.** `results/matrix/matrix.json` already keeps its `created_at`
+  on a `--summary-only` re-render (the note under ISSUE-033), and the other
+  `reference/*_results.py` writers run under `make`, not under the gate.
+- **The ledger** is 45 entries: 20 fixed, 2 open (034 ours, 037 upstream),
+  8 upstream requests, 15 other.
+
+**Next, in order.** 1. ISSUE-034: an example writes a checkpoint `.bin` +
+`.json` (`reference/checkpoints.py` identity), a resumed run continues the
+curve, and a mismatched config is refused by name (B9). 2. `flow64`'s twin
+(`probe_flow.bend` + `twin_flow.py`, one forward and one Euler step, then the
+Euler 8/16/32 comparison); the task is still gated by a measured expectation.
+3. The `~`-parameter message: a ten-line repro, then file on bendlang. 4.
+Watch: bend-lab pins `bendtorch@1.1.1.0`; a bump to 1.3.x inherits
+`Train.step`'s change and needs 31 call sites edited, in one change and after
+#24 is answered.
+
 ## 2026-11-02 — flowers-flow is a task, and the layer now carries 64x64
 
 **Where things stand.** `main` is green. `flowers-flow` is a task: 6,000 steps,

@@ -15,7 +15,6 @@ converged model, so the absolute loss is `report` mode.
 
 Writes results/cifar-train/{loss.tsv, run.json}.
 """
-import json
 import os
 import re
 import subprocess
@@ -26,6 +25,7 @@ from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import artifacts
 import test_cifar as twin
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -94,23 +94,21 @@ def main():
     print(f"     final_loss (report): {final} vs {answer['final_loss']:.7f}")
 
     os.makedirs(OUT, exist_ok=True)
-    with open(os.path.join(OUT, "loss.tsv"), "w") as f:
-        f.write("step\tloss\n")
-        for i, value in enumerate(losses):
-            f.write(f"{1 if i == 0 else i * 50}\t{value:.8g}\n")
-    with open(os.path.join(OUT, "run.json"), "w") as f:
-        json.dump({
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "example": "examples/cifar_train/main.bend",
-            "seconds": seconds,
-            "steps": twin.TRAIN_STEPS,
-            "levels": list(twin.TRAIN_LEVELS),
-            "lr": twin.TRAIN_LR,
-            "bend": {"first_loss": losses[0], "final_loss": final, "loss_drop": drop},
-            "numpy": answer,
-        }, f, indent=2)
-        f.write("\n")
-    print(f"wrote {OUT}/loss.tsv, run.json")
+    rows = ["step\tloss"]
+    for i, value in enumerate(losses):
+        rows.append(f"{1 if i == 0 else i * 50}\t{value:.8g}")
+    wrote = artifacts.save_text(os.path.join(OUT, "loss.tsv"), "\n".join(rows) + "\n")
+    wrote |= artifacts.save_json(os.path.join(OUT, "run.json"), {
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "example": "examples/cifar_train/main.bend",
+        "seconds": seconds,
+        "steps": twin.TRAIN_STEPS,
+        "levels": list(twin.TRAIN_LEVELS),
+        "lr": twin.TRAIN_LR,
+        "bend": {"first_loss": losses[0], "final_loss": final, "loss_drop": drop},
+        "numpy": answer,
+    })
+    print(f"{'wrote' if wrote else 'unchanged'} {OUT}/loss.tsv, run.json")
     sys.exit(1 if fail else 0)
 
 
