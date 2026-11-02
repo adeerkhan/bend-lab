@@ -4,6 +4,27 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The flow example writes and resumes a checkpoint
+
+`examples/diffusion/flow_matching` trained from a fixed init and kept no
+weights, so a checkpoint had an identity layer (`reference/checkpoints.py`) but
+no example that wrote one (ISSUE-034, B9).
+
+- **`--save` and `--resume` on the example.** `--save PATH` writes the training
+  state through `Train.save` (parameters, Adam's moments, `1 - b1^t`,
+  `1 - b2^t`); `--resume PATH` reads it back through `Train.restore`, and
+  `--start N` sets the global index of the first step. `--steps N` and
+  `--no-sample` make a short probe possible. Without flags the program prints
+  the same 6,000-step curve as before.
+- **The sidecar is written by `reference/flow_checkpoint.py`**, which names the
+  model, the config, the packages, the weights' sha256 and the step. Its
+  `--check` refuses a resume whose lr, model or packages moved, naming the
+  field, before the program is launched.
+- **The contract is the gate.** `reference/test_flow_checkpoint.py` runs 200
+  steps, then 100 + a resume for 100: the two segments print exactly the single
+  run's 200 losses, bit for bit. The checkpoint is 207,392 bytes (3 × 17,282
+  parameters + 2, float32), and a moved lr is refused at `config.lr`.
+
 ### A check that leaves the tree clean
 
 `make check` rewrote five committed records on every run. The numbers were

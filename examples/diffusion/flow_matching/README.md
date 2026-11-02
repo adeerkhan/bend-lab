@@ -44,3 +44,24 @@ probe's data has 4096 points and a different init draw.
 
 The frozen probe and its NumPy twin are still owed: the example is measured
 end to end, but there is no element-by-element gate yet.
+
+## Checkpoints
+
+`main.bend` takes `--steps N`, `--start N`, `--save PATH`, `--resume PATH` and
+`--no-sample`. `--save` writes the training state with `Train.save` — the
+parameters, Adam's first and second moments, then `1 - b1^t` and `1 - b2^t` —
+and `--resume` reads it back with `Train.restore`. A run stopped after k steps
+and resumed at step k prints the same losses, bit for bit, as a run that never
+stopped:
+
+```console
+$ bend -o /tmp/flow examples/diffusion/flow_matching/main.bend
+$ /tmp/flow --steps 1000 --save /tmp/flow.bin
+$ reference/.venv/bin/python reference/flow_checkpoint.py --write /tmp/flow.bin --step 1000
+$ /tmp/flow --steps 1000 --start 1000 --resume /tmp/flow.bin
+```
+
+The sidecar carries the model, the config, the packages and the weights'
+sha256; `--check` on it refuses a resume whose lr or model moved, naming the
+field, before the program starts. `reference/test_flow_checkpoint.py` gates
+this in `make check`.

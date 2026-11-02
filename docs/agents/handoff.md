@@ -7,6 +7,43 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-02 (later still) — a checkpoint writes, resumes and refuses
+
+**Where things stand.** ISSUE-034 (B9) is closed. The identity layer and
+BendTorch's `Train.save` / `Train.restore` existed but no example used them.
+`examples/diffusion/flow_matching` now takes `--save PATH`, `--resume PATH`,
+`--start N`, `--steps N` and `--no-sample`; without flags it prints the same
+6,000-step curve as before. `reference/flow_checkpoint.py` writes and checks the
+sidecar (model, config, packages, weights sha256, step), and
+`reference/test_flow_checkpoint.py` gates the path in `make check`.
+
+- **Measured.** 200 steps in one run against 100 steps + a resume at step 100:
+  the segments print the single run's 200 losses **bit for bit** (the stopped
+  run ends 0.9704682; the resumed run's first number is 0.9746805, the single
+  run's value). The checkpoint is **207,392 bytes** = 3 × 17,282 parameters + 2,
+  float32, and the sidecar's sha256 matches it.
+- **The refusal is before the first step.** A moved lr prints
+  `config.lr: 0.003 -> 0.004`; a width moved 128 -> 64 prints
+  `model.declared`. The test asserts both and never launches the program on a
+  mismatch.
+- **The default path is unchanged.** The 6,000-step curve and the sample
+  mean/std equal `results/flow-matching/run.json` exactly; only the log's F32
+  `data_mean`/`data_std` differ from the record's float64 ones, which were
+  never the record's source.
+- **Traps paid for, for the next example.** A `String` is linear
+  (`String.eq` consumes it: match `SNil`/`SCon` and rebuild); a `match` cannot
+  be a second match on an earlier binder (match in parameter order; match a
+  list head before its tail); a self-call's shrinking argument must be a direct
+  tail; a `Nat` reused twice needs `+`; `do IO<Train<..>>` is angle-bracketed
+  while the return type is `IO(Train<..>)`.
+
+**Next, in order.** 1. `flow64`'s twin: `probe_flow.bend` + `twin_flow.py` for
+one forward and one Euler step, then the Euler 8/16/32 comparison; the task is
+still gated by a measured expectation. 2. The `~`-parameter message: a
+ten-line repro, then file on bendlang. 3. Watch: bend-lab pins
+`bendtorch@1.1.1.0`; a bump to 1.3.x inherits `Train.step`'s change and needs
+31 call sites edited, in one change and after #24 is answered.
+
 ## 2026-11-02 (later) — the gate leaves the tree clean
 
 **Where things stand.** ISSUE-033 is fixed. `reference/artifacts.py` is the
@@ -33,18 +70,11 @@ on this tree all five print `unchanged`.
 - **Not touched.** `results/matrix/matrix.json` already keeps its `created_at`
   on a `--summary-only` re-render (the note under ISSUE-033), and the other
   `reference/*_results.py` writers run under `make`, not under the gate.
-- **The ledger** is 45 entries: 20 fixed, 2 open (034 ours, 037 upstream),
-  8 upstream requests, 15 other.
+- **The ledger** is 45 entries: 21 fixed, 1 open (037 upstream), 8 upstream
+  requests, 15 other.
 
-**Next, in order.** 1. ISSUE-034: an example writes a checkpoint `.bin` +
-`.json` (`reference/checkpoints.py` identity), a resumed run continues the
-curve, and a mismatched config is refused by name (B9). 2. `flow64`'s twin
-(`probe_flow.bend` + `twin_flow.py`, one forward and one Euler step, then the
-Euler 8/16/32 comparison); the task is still gated by a measured expectation.
-3. The `~`-parameter message: a ten-line repro, then file on bendlang. 4.
-Watch: bend-lab pins `bendtorch@1.1.1.0`; a bump to 1.3.x inherits
-`Train.step`'s change and needs 31 call sites edited, in one change and after
-#24 is answered.
+**Next after that.** The checkpoint work above closed ISSUE-034; the order from
+there is in the newest section.
 
 ## 2026-11-02 — flowers-flow is a task, and the layer now carries 64x64
 

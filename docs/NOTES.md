@@ -3,6 +3,39 @@
 Every finding, every measurement and every discarded hypothesis, by date. Read the
 relevant entry before changing performance-sensitive code or a law.
 
+## 2026-11-02 (later still) — the flow example writes, resumes and refuses a checkpoint
+
+- **ISSUE-034 (B9) is closed end to end.** The identity layer and `Train.dump` /
+  `Train.restore` existed, but no example wrote a checkpoint, so nothing had
+  exercised the path on a real model. `examples/diffusion/flow_matching` now
+  takes `--save PATH`, `--resume PATH`, `--start N`, `--steps N` and
+  `--no-sample`: `Train.save` writes the parameters, both Adam moments and
+  `1 - b1^t`, `1 - b2^t`; `Train.restore` reads them back. Without flags the
+  program is unchanged.
+- **The resume is the contract, measured.** `reference/test_flow_checkpoint.py`
+  (7.8 s, build included) runs 200 steps once, then 100 steps + a resume at step
+  100 for 100 more. The two segments print exactly the single run's 200 losses,
+  bit for bit; at step 100 the stopped run ended 0.9704682 and the resumed run's
+  first number is 0.9746805, the same value the single run printed. The file is
+  **207,392 bytes** = 3 × 17,282 parameters + 2, float32.
+- **The identity refuses before the first step.** `reference/flow_checkpoint.py`
+  writes the sidecar (model, config, packages, weights sha256, step) and
+  `--check` calls `checkpoints.refuse`: an lr moved 0.003 -> 0.004 prints
+  `config.lr: 0.003 -> 0.004`, a width moved 128 -> 64 prints
+  `model.declared`. The test asserts both and never launches the program on a
+  mismatch.
+- **The default run is bit-identical.** The 6,000-step curve and the sample
+  mean/std from the new binary equal `results/flow-matching/run.json` exactly;
+  the only differences are the log's F32 `data_mean`/`data_std` against the
+  record's float64 ones, which were never the record's source.
+- **Traps paid for, for the next example.** A `String` is linear: `String.eq`
+  consumes it, so emptiness is a `SNil`/`SCon` match that rebuilds the string
+  for the non-empty branch. A `match` cannot be the second statement on a
+  binder (match in parameter order, and match a list head before its tail); a
+  self-call's shrinking argument must be a direct tail, not `tail_of(rest)`; a
+  `Nat` reused twice needs `+` on the parameter (`+start`); `do IO<Train<..>>`
+  takes angle brackets while the return type takes `IO(Train<..>)`.
+
 ## 2026-11-02 (later) — `make check` no longer leaves the tree dirty
 
 - **ISSUE-033 is fixed.** The five tests that write `results/<task>/` compared

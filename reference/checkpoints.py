@@ -16,10 +16,12 @@ tensors asked for, a partial load reads only those it is given, and the identity
 still records every tensor the file holds. That is what a fine-tune over one
 block needs.
 
-Who writes a checkpoint: the training program. The flow and diffusion examples
-print their numbers and keep no weights yet, so this module is the identity and
-the loader they will use; `reference/checkpoints.py --identify` is how a
-person reads one.
+Who writes a checkpoint: the training program. `examples/diffusion/flow_matching`
+writes one with `--save` and reads it with `--resume` (through BendTorch's
+`Train.save` / `Train.restore`), and `reference/flow_checkpoint.py` writes its
+sidecar; the diffusion examples still print their numbers and keep no weights,
+so this module is the identity and the loader they will use.
+`reference/checkpoints.py --identify` is how a person reads one.
 
   reference/checkpoints.py --identify results/flow/flow.bin
   reference/checkpoints.py --verify results/flow/flow.json --against other.json
@@ -97,10 +99,10 @@ def identity(weights_path, model, config, packages, bend=None, git=None):
 def identity_only(model, config, packages, bend=None, git=None):
     """The identity of a run whose weights are not saved yet.
 
-    The flow and diffusion examples print their numbers and keep no weights
-    (ISSUE-034), so their identity can still be written and verified: a resume
-    between two configs is refused on the field that differs, and the moment the
-    example saves weights the same file grows a `weights` block.
+    A run that prints its numbers and keeps no weights can still write an
+    identity and verify it: a resume between two configs is refused on the
+    field that differs, and the moment the example saves weights the same file
+    grows a `weights` block.
     """
     return {
         "schema": SCHEMA,

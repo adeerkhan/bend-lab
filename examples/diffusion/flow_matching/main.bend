@@ -21,6 +21,17 @@
 # [-0.002, -0.000] / [0.583, 0.741], and 465/512 samples inside the data's
 # box. This example runs the same method on the repository's own 128-point
 # data, so its numbers are compared with its own data, not the probe's.
+#
+#   --steps N       steps to run (default 6000)
+#   --start N       the global index of the first step (default 0)
+#   --save PATH     write the training state to PATH with Train.save
+#   --resume PATH   restore it with Train.restore (the identity is checked by
+#                   reference/flow_checkpoint.py before this program starts)
+#   --no-sample     skip the Euler sample (a checkpoint probe does not need it)
+#
+# Without flags the program prints the same numbers as before. A run stopped
+# after k steps and resumed from its checkpoint computes the same bits as a
+# run that never stopped (BendTorch's Train.save/restore contract).
 import Base
 import bendtorch@1.1.1.0/main.bend as T
 import bend-ml-tensor-array@0.1.14.0/main.bend as TA
@@ -337,13 +348,152 @@ def report_sample(p: B4P(), +data: List<&2, F32>) -> IO(Unit):
     Unit <- show_pt("data_std:", D2.stds(data))
     report_x(x, data)
 
-def run_with(+data: List<&2, F32>) -> IO(Unit):
+# ---- a checkpoint: the state Train.save writes, and Train.restore reads ----
+
+def floats_at(+path: String) -> IO(List<&2, F32>):
+  do IO<List<&2, F32>>:
+    bs : List<&2, U32> <- T.read_all(path)
+    return T.f32s(bs)
+
+def fill_go(left: Nat, xs: List<&2, F32>, +i: U32, arr: Array<F32>) -> Array<F32>:
+  match left xs:
+    case 0n _:
+      arr
+    case 1n+rest Con{h, t}:
+      fill_go(rest, t, U32.add(i, U32.from_nat(1n)), Array.set(F32, arr, i, h))
+    case _ _:
+      arr
+
+# parameters, Adam's first and second moments, then 1 - b1^t and 1 - b2^t
+def floats_count() -> Nat:
+  Nat.add(Nat.mul(3n, U32.to_nat(T.Layer.count(B4P(), X(), Y(), B4S(), Model()))), 2n)
+
+def new_train() -> T.Train<B4P()>:
+  T.Train.new(~B4P(), ~X(), ~Y(), ~B4S(), ~Model(), cfg(), params())
+
+def restore_arr(xs: List<&2, F32>) -> T.Train<B4P()>:
+  T.Train.restore(~B4P(), ~X(), ~Y(), ~B4S(), ~Model(), new_train(),
+    fill_go(floats_count(), xs, U32.from_nat(0n), Array.new(F32, T.depth(floats_count()), 0.0)))
+
+def resumed(+path: String) -> IO(T.Train<B4P()>):
+  do IO<T.Train<B4P()>>:
+    xs : List<&2, F32> <- floats_at(path)
+    return restore_arr(xs)
+
+def save_tr(+path: String, tr: T.Train<B4P()>) -> IO(T.Train<B4P()>):
+  do IO<T.Train<B4P()>>:
+    kept : T.Train<B4P()> <- T.Train.save(~B4P(), ~X(), ~Y(), ~B4S(), ~Model(), path, tr)
+    Unit <- IO.print(String.append("saved: ", path))
+    return kept
+
+# ---- the flags: --steps N, --start N, --save PATH, --resume PATH, --no-sample ----
+
+type Run is Data:
+  Run{start: Nat, steps: Nat, save: String, resume: String, sample: Bool}
+
+def run_default() -> Run:
+  Run{0n, steps(), "", "", True{}}
+
+def nat_or(m: Maybe<&2, Nat>, d: Nat) -> Nat:
+  match m:
+    case Some{x}:
+      x
+    case None{}:
+      d
+
+def run_go(args: List<String>, r: Run) -> Run:
+  match args:
+    case Nil{}:
+      r
+    case Con{a, rest}:
+      match a:
+        case "--no-sample":
+          match r:
+            case Run{start, steps, save, resume, sample}:
+              run_go(rest, Run{start, steps, save, resume, False{}})
+        case "--save":
+          match rest:
+            case Nil{}:
+              r
+            case Con{b, more}:
+              match r:
+                case Run{start, steps, save, resume, sample}:
+                  run_go(more, Run{start, steps, b, resume, sample})
+        case "--resume":
+          match rest:
+            case Nil{}:
+              r
+            case Con{b, more}:
+              match r:
+                case Run{start, steps, save, resume, sample}:
+                  run_go(more, Run{start, steps, save, b, sample})
+        case "--start":
+          match rest:
+            case Nil{}:
+              r
+            case Con{b, more}:
+              match r:
+                case Run{start, steps, save, resume, sample}:
+                  run_go(more, Run{nat_or(Nat.read(b), start), steps, save, resume, sample})
+        case "--steps":
+          match rest:
+            case Nil{}:
+              r
+            case Con{b, more}:
+              match r:
+                case Run{start, steps, save, resume, sample}:
+                  run_go(more, Run{start, nat_or(Nat.read(b), steps), save, resume, sample})
+        case _:
+          run_go(rest, r)
+
+def run_of(args: List<String>) -> Run:
+  match args:
+    case Nil{}:
+      run_default()
+    case Con{program, rest}:
+      run_go(rest, run_default())
+
+# ---- the run ----
+
+def start_tr(resume: String) -> IO(T.Train<B4P()>):
+  match resume:
+    case SNil{}:
+      IO.pure(T.Train<B4P()>, new_train())
+    case SCon{h, t}:
+      resumed(SCon{h, t})
+
+# the first step at `start`, then the rest: one expression, as `loop` uses its index
+def train_steps(+start: Nat, +steps: Nat, tr0: T.Train<B4P()>,
+  +data: List<&2, F32>) -> IO(T.Train<B4P()>):
+  match steps:
+    case 0n:
+      IO.pure(T.Train<B4P()>, tr0)
+    case 1n+rest:
+      loop(rest, (1n + start : Nat), do_step(start, tr0, data), data)
+
+def save_if(save: String, tr: T.Train<B4P()>) -> IO(T.Train<B4P()>):
+  match save:
+    case SNil{}:
+      IO.pure(T.Train<B4P()>, tr)
+    case SCon{h, t}:
+      save_tr(SCon{h, t}, tr)
+
+def finish(save: String, sample: Bool, tr: T.Train<B4P()>, +data: List<&2, F32>) -> IO(Unit):
   do IO<Unit>:
-    T.OptCfg.check(cfg())
-    tr0 : T.Train<B4P()> <- IO.pure(T.Train<B4P()>,
-      do_step(0n, T.Train.new(~B4P(), ~X(), ~Y(), ~B4S(), ~Model(), cfg(), params()), data))
-    tr1 : T.Train<B4P()> <- loop(Nat.sub(steps(), 1n), 1n, tr0, data)
-    report_sample(train_params(tr1), data)
+    tr1 : T.Train<B4P()> <- save_if(save, tr)
+    Bool.pick(IO(Unit), sample, report_sample(train_params(tr1), data),
+      IO.pure(Unit, Unit{}))
+
+def run_with(+data: List<&2, F32>, r: Run) -> IO(Unit):
+  match r:
+    case Run{start, steps, save, resume, sample}:
+      do IO<Unit>:
+        T.OptCfg.check(cfg())
+        tr0 : T.Train<B4P()> <- start_tr(resume)
+        tr2 : T.Train<B4P()> <- train_steps(start, steps, tr0, data)
+        finish(save, sample, tr2, data)
 
 def main() -> IO(Unit):
-  run_with(norm(D2.moons()))
+  do IO<Unit>:
+    args : List<String> <- IO.args()
+    run_with(norm(D2.moons()), run_of(args))
