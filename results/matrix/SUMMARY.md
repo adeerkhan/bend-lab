@@ -28,6 +28,7 @@ A lane is a build fact: `gpu` links `libnvrtc`, `cpu` must not.
 
 - `diffusion-digits` — 226 s: 226 s a cell (build 77 + run 148); gated by reference/test_diffusion_digits.py
 - `diffusion-vit` — 724 s: 724 s a cell (build 100 + run 625, 3000 steps); gated by reference/test_diffusion_vit.py (first loss, forward, one step, DDIM, eta, legibility)
+- `flowers-flow` — 1204 s: 1,204 s a cell (build 28 + run 1,176, 6,000 steps at the corpus preset); the task run is its own gate, and `make experiment TASK=flowers-flow` names the same numbers on its page
 
 ## Cells a lane does not have
 
@@ -38,3 +39,4 @@ A lane is a build fact: `gpu` links `libnvrtc`, `cpu` must not.
 - `cifar-10` / gpu: the device lane's exp differs from the host's; the task has no measured device tolerance yet
 - `vit-first` / gpu: the twin is one host window and the device lane's exp is not the host's; no measured tolerance for out_sq there yet
 - `diffusion-2d` / gpu: the device lane's exp differs from the host's; no measured tolerance for this task's gate yet
+- `flowers-flow` / gpu: the example imports bendtorch only: there is no device path for a cell to link libnvrtc against

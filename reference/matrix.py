@@ -59,6 +59,10 @@ NO_CELL = (
     ("diffusion-vit", 724,
      "724 s a cell (build 100 + run 625, 3000 steps); gated by "
      "reference/test_diffusion_vit.py (first loss, forward, one step, DDIM, eta, legibility)"),
+    ("flowers-flow", 1204,
+     "1,204 s a cell (build 28 + run 1,176, 6,000 steps at the corpus preset); "
+     "the task run is its own gate, and `make experiment TASK=flowers-flow` names "
+     "the same numbers on its page"),
 )
 
 # The cells a lane does not have, and why. A program in plain Bend has no
@@ -75,7 +79,23 @@ ABSENT = (
                          "the host's; no measured tolerance for out_sq there yet"),
     ("diffusion-2d", "gpu", "the device lane's exp differs from the host's; no measured "
                             "tolerance for this task's gate yet"),
+    ("flowers-flow", "gpu", "the example imports bendtorch only: there is no device path "
+                            "for a cell to link libnvrtc against"),
 )
+
+
+def silent():
+    """Tasks that are neither a cell nor a `NO_CELL` line.
+
+    Appendix D's "the matrix never shrinks silently", as code: adding a task
+    without declaring it here fails the run instead of leaving a gap only a
+    reader would notice (ISSUE-041).
+    """
+    sys.path.insert(0, os.path.join(ROOT, "reference"))
+    import experiment
+
+    covered = {cell["task"] for cell in CELLS} | {task for task, _, _ in NO_CELL}
+    return sorted(set(experiment.TASKS) - covered)
 
 
 def lane_env(lane):
@@ -151,7 +171,7 @@ def run_cell(cell, seed, live):
             "lane_evidence": evidence, "failures": failures}
 
 
-def summary(cells, absent, no_cell, path_json, path_md, live):
+def summary(cells, absent, no_cell, path_json, path_md, live, created_at=None):
     ran = [c for c in cells if c["record"]]
     failed = [c for c in cells if c["failures"]]
     lines = [
@@ -188,7 +208,9 @@ def summary(cells, absent, no_cell, path_json, path_md, live):
         f.write("\n".join(lines))
     with open(path_json, "w") as f:
         json.dump({"schema": "mlbend.matrix/1",
-                   "created_at": datetime.now(timezone.utc).isoformat(),
+                   # a re-render keeps the measurement's timestamp: --summary-only
+                   # changes the page, not when the cells were measured
+                   "created_at": created_at or datetime.now(timezone.utc).isoformat(),
                    "references": "live" if live else "frozen",
                    "cells": cells,
                    "absent": [{"task": t, "lane": l, "why": w} for t, l, w in absent],
@@ -204,13 +226,19 @@ def main():
     parser.add_argument("--summary-only", action="store_true",
                         help="redo SUMMARY.md and matrix.json from the last cells, no run")
     args = parser.parse_args()
+    missing = silent()
+    if missing:
+        raise SystemExit("matrix: these tasks are neither a cell nor a NO_CELL line: "
+                         + ", ".join(missing))
     if args.summary_only:
         # the page from the artifact: a wording change in ABSENT or NO_CELL does
         # not need a 25-minute re-measure, and the two cannot drift
         data = json.load(open(os.path.join(OUT, "matrix.json")))
         path_md, failed = summary(data["cells"], ABSENT, NO_CELL,
                                   os.path.join(OUT, "matrix.json"),
-                                  os.path.join(OUT, "SUMMARY.md"), data.get("references") == "live")
+                                  os.path.join(OUT, "SUMMARY.md"),
+                                  data.get("references") == "live",
+                                  created_at=data.get("created_at"))
         print(open(path_md).read())
         print(f"summary: {os.path.relpath(path_md, ROOT)}")
         return 1 if failed else 0

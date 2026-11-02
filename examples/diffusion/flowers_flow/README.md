@@ -24,6 +24,11 @@ tokeniser takes one byte per pixel, so it was reading a scrambled raster until
 the grayscale conversion. `papers/TEM/data.py` is where the parquet's hash and
 the reduction are recorded.
 
+The directory is `MLBEND_DATA` when the experiment runner sets it
+(`reference/.cache/datasets/flowers/`) and `~/.cache/bend-lab/flowers`
+otherwise, so the program is not tied to one home directory. The task
+`flowers-flow` pins both exports by sha256 and refuses a different file.
+
 ## The model
 
 `config.bend` fixes the shapes before the compile, because a Bend program's

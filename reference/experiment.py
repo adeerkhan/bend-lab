@@ -271,6 +271,85 @@ def reference_cifar_train(context=None):
     return train_answer()
 
 
+# The 3,874 image corpus export and its 102-image holdout, as
+# `reference/flowers_export.py --split` wrote them (docs/NOTES.md 2026-10-31).
+FLOWERS_SHA = {
+    "flowers64-train-gray.u8": "1ff86747f9b070c3ed7b2058dd0c1f88317dfea931ed883379513f121385566e",
+    "flowers64-hold-gray.u8": "f08730fe6730aacf440526420dfd645cd78f2ed1ef3fa82dacb1d90f2b978cf8",
+}
+
+
+def _flowers_paths():
+    """The two flower exports, hash-checked: the runner's cache, then the machine's.
+
+    `reference/flowers_export.py --split` writes them to the machine cache; the
+    runner's `reference/.cache/datasets/flowers/` is a copy, so a run under
+    MLBEND_DATA and a run by hand read the same bytes. A run whose export is
+    not the pinned one is refused here, because the program's numbers are the
+    export's numbers.
+    """
+    cache = os.path.join(ROOT, "reference/.cache/datasets/flowers")
+    home = os.path.expanduser("~/.cache/bend-lab/flowers")
+    got = []
+    for name, want in FLOWERS_SHA.items():
+        near = os.path.join(cache, name)
+        path = near if os.path.exists(near) else os.path.join(home, name)
+        if not os.path.exists(path):
+            raise SystemExit(f"flowers64: {path} is missing; run "
+                             "`reference/.venv/bin/python reference/flowers_export.py --split`")
+        digest = hashlib.sha256(open(path, "rb").read()).hexdigest()
+        if digest != want:
+            raise SystemExit(f"flowers64: {path} is {digest}, pinned {want}")
+        got.append(path)
+    return got[0], got[1]
+
+
+def parse_flowers_flow(out):
+    """The run's numbers: parameters, loss, legibility trained and held out.
+
+    The legibility statistics are `reference/flowers_report.py`'s, the same ones
+    its human report prints, so the gate and the report cannot disagree.
+    """
+    sys.path.insert(0, os.path.join(ROOT, "reference"))
+    import flowers_report
+
+    train, hold = _flowers_paths()
+    got = flowers_report.answer(out, train_path=train, hold_path=hold)
+    for key in ("params", "first_loss", "final_loss", "legibility",
+                "legibility_heldout", "ceiling"):
+        got.setdefault(key, None)
+    return got
+
+
+def reference_flowers_flow(context=None):
+    """What the run has to reach: the ceiling, and 87% of it held out.
+
+    There is no NumPy twin of the 3-block flow yet (the flow's frozen probe is
+    owed on its own), so this reference is a *measured expectation*, not a
+    second implementation: `ceiling` is what a real held-out flower scores
+    against the training set, and the 3,874-image run reached 87% of it. The
+    task's gate is `legibility_heldout` within 0.05 of that; `ceiling` and
+    `final_loss` are reported.
+    """
+    sys.path.insert(0, os.path.join(ROOT, "reference"))
+    import flowers_report
+
+    train, hold = _flowers_paths()
+    if not (os.path.exists(train) and os.path.exists(hold)):
+        return {"params": None, "ceiling": None, "legibility_heldout": None,
+                "final_loss": None}
+    hb = open(hold, "rb").read()
+    import numpy as np
+    hx = np.frombuffer(hb, dtype=np.uint8).astype(np.float32) / np.float32(127.5) - np.float32(1.0)
+    edge = 64
+    holdx = hx.reshape(-1, edge * edge)
+    _, x, _ = flowers_report.data_stats(edge, 0, train)
+    trainx = x.reshape(-1, edge * edge)
+    ceiling = float(flowers_report.legibility(holdx, trainx).mean())
+    return {"params": 413440, "ceiling": ceiling,
+            "legibility_heldout": 0.87 * ceiling, "final_loss": None}
+
+
 def reference_vit_first(context=None):
     """The twin's three numbers for the same step-0 window.
 
@@ -458,6 +537,25 @@ TASKS = {
         "reference": reference_cifar_train,
         "metrics": {
             "loss_drop": {"tolerance": 0.002, "mode": "relative"},
+            "final_loss": {"tolerance": 0, "mode": "report"},
+        },
+    },
+    "flowers-flow": {
+        "description": "a rectified flow at 64x64 on 3,874 flowers: 6,000 steps, 32 Euler, held-out legibility against what a real unseen flower scores (no NumPy twin yet; the gate is the measured expectation)",
+        "program": "examples/diffusion/flowers_flow/main.bend",
+        "dataset": {"name": "flowers64", "rows": 3874, "features": 64,
+                    "source": "generated: reference/flowers_export.py --split from the pinned Oxford Flowers parquet",
+                    "files": []},
+        "seed": 0,
+        "stages": {"program": "bench/plumbing_flow64/main.bend",
+                   "note": "one step of the 64x64 flow, not the run; the input stage is the pair build (noise, mix, tokens)"},
+        "bounds": floors.flow64_step,
+        "parse": parse_flowers_flow,
+        "reference": reference_flowers_flow,
+        "metrics": {
+            "params": {"tolerance": 0, "mode": "exact"},
+            "legibility_heldout": {"tolerance": 0.05, "mode": "absolute"},
+            "ceiling": {"tolerance": 0, "mode": "report"},
             "final_loss": {"tolerance": 0, "mode": "report"},
         },
     },

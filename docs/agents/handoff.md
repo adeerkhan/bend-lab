@@ -7,6 +7,35 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-02 — flowers-flow is a task, and the layer now carries 64x64
+
+**Where things stand.** `main` is green. `flowers-flow` is a task: 6,000 steps,
+32 Euler, the `corpus` preset (413,440 parameters, 128 rows a step), **PASS**
+with `params` **413440 exact**, `legibility_heldout` **0.490093** against the
+reference's 0.489027 (0.87 × the 0.5621 ceiling), `final_loss` 0.289049. Those
+are the 2026-10-31 hand numbers to three decimals, which proves the port that
+made the export path portable (`MLBEND_DATA`, machine cache as fallback; the
+config generator writes the bare file name) moved nothing.
+
+- **Cost, from the record**: `build 28 s + compute 1,176 s`, a step 137.7 ms
+  (input 1, forward 32, loss + backward + optimizer 104.7), the 32-Euler sample
+  inside the run. So `flowers-flow` is a `NO_CELL` line (1,204 s a cell), and
+  NOTES' 47 minutes for the same preset is a load difference — quote the
+  record's `compute_seconds` from now on.
+- **The gate is a measured expectation, not a twin**: the ceiling from the 102
+  held-out images and the 87% of it the corpus reached, plus `params` exact to
+  pin the preset. The flow's frozen probe (one forward, one Euler step) is still
+  owed and is the next real measurement on this arm.
+- **The split**: `bench/plumbing_flow64` (batch read, pair build, forward, step,
+  one Euler step) with `floors.flow64_step`; `reference/stages.py` now handles a
+  program that builds its input and target in one pass (no `step_tgt`) and
+  honours a per-task `stages.note`.
+- **The matrix refuses silence in code**: `matrix.silent()` is checked by
+  `make matrix`, so a task that is neither a cell nor a `NO_CELL` line fails the
+  run instead of leaving a gap a reader has to notice. ISSUE-042 records the one
+  weakness this task carries: a generated export cannot be hashed by the
+  runner, so the pin is enforced by the parse, after the run.
+
 ## 2026-11-01 — the fills land for the target, cifar-train is real, and the config is upstream's
 
 **Where things stand.** `main` is green: `make validate --quick` passes (16 s,
@@ -199,9 +228,12 @@ path is proven: 512 images read in 44 ms and fill an array in 45 ms at depth
 
 ## What is next, in order
 
-1. **64x64 flowers flow on the GPU lane** — the rectified-flow ViT above, the
-   Euler-step comparison at 8/16/32, and a sample grid. The data path and the
-   device lane are ready; the model is not written.
+1. **The 64x64 flow's own gate, then its lanes** — `flowers-flow` is a task now
+   (done 2026-11-02), but it is gated by a measured expectation, not a twin:
+   write `probe_flow.bend` at the fixed init and `twin_flow.py` for one forward
+   and one Euler step, the way the ViT's gates work. Then the Euler-step
+   comparison at 8/16/32, a sample grid, and the lane question (the example
+   imports `bendtorch` only, so there is no device path to link `libnvrtc`).
 2. **Second migration** — package sources under `packages/`, `reference/` under
    `apparatus/`; `bend.toml`'s members, the intra-package imports,
    `check_all.py`'s package list and the Makefile. One commit, `make check`

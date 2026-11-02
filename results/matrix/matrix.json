@@ -1,6 +1,6 @@
 {
   "schema": "mlbend.matrix/1",
-  "created_at": "2026-11-01T17:28:01.659129+00:00",
+  "created_at": "2026-11-02T07:59:29.906418+00:00",
   "references": "frozen",
   "cells": [
     {
@@ -279,6 +279,11 @@
       "task": "diffusion-2d",
       "lane": "gpu",
       "why": "the device lane's exp differs from the host's; no measured tolerance for this task's gate yet"
+    },
+    {
+      "task": "flowers-flow",
+      "lane": "gpu",
+      "why": "the example imports bendtorch only: there is no device path for a cell to link libnvrtc against"
     }
   ],
   "no_cell": [
@@ -291,6 +296,11 @@
       "task": "diffusion-vit",
       "seconds": 724,
       "why": "724 s a cell (build 100 + run 625, 3000 steps); gated by reference/test_diffusion_vit.py (first loss, forward, one step, DDIM, eta, legibility)"
+    },
+    {
+      "task": "flowers-flow",
+      "seconds": 1204,
+      "why": "1,204 s a cell (build 28 + run 1,176, 6,000 steps at the corpus preset); the task run is its own gate, and `make experiment TASK=flowers-flow` names the same numbers on its page"
     }
   ]
 }

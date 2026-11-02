@@ -50,8 +50,11 @@ def B() -> Nat:
 def RES() -> Nat:
   {RES}n
 
+# the export's file name: the directory is the runner's MLBEND_DATA when it is
+# set and the machine's export cache otherwise, so the program is not tied to
+# one home directory (docs/agents/tasks.md)
 def DATA() -> String:
-  "/home/adeerkhan/.cache/bend-lab/flowers/{DATA}"
+  "{DATA}"
 
 # one token per row of pixels, so RES tokens per image
 def TK() -> Nat:

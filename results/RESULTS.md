@@ -34,6 +34,10 @@ Machine: Linux-7.2.9-200.fc44.x86_64-x86_64-with-glibc2.43 · 28 CPUs · Bend 2.
 | `diffusion-vit` | optdigits (1024x64) | `e1b683cc` | final_loss | 1 | 0.0711534 | - | - | 1 | 624838 | 624837 | 42 | ok |
 | `diffusion-vit` | optdigits (1024x64) | `e1b683cc` | sample_mean | 1 | 0.295717 | - | - | 1 | 624838 | 624837 | 42 | ok |
 | `diffusion-vit` | optdigits (1024x64) | `e1b683cc` | sample_std | 1 | 0.339538 | - | - | 1 | 624838 | 624837 | 42 | ok |
+| `flowers-flow` | flowers64 (3874x64) | `566936b6` | params | 1 | 413440 | 413440 | 0 | 0 | 1176149 | 1176149 | 172 | ok |
+| `flowers-flow` | flowers64 (3874x64) | `566936b6` | legibility_heldout | 1 | 0.490093 | 0.489027 | 0.001066 | 0 | 1176149 | 1176149 | 172 | ok |
+| `flowers-flow` | flowers64 (3874x64) | `566936b6` | ceiling | 1 | 0.5621 | 0.5621 | - | 0 | 1176149 | 1176149 | 172 | ok |
+| `flowers-flow` | flowers64 (3874x64) | `566936b6` | final_loss | 1 | 0.289049 | - | - | 0 | 1176149 | 1176149 | 172 | ok |
 | `heart-naive-bayes` | heart_failure (299x12) | `e0771c8c` | accuracy | 1 | 0.95 | 0.95 | 0 | 1 | 9 | 8 | 769 | ok |
 | `iris-crossval` | iris (150x4) | `6f608b71` | mean_accuracy | 5 | 0.930667 ± 0.006 | 0.930667 ± 0.006 | -5.867e-08 ± 1.4e-08 | 0 | 76 | 76 | 763 | ok |
 | `iris-crossval` | iris (150x4) | `6f608b71` | fold_min | 5 | 0.84 ± 0.037 | 0.84 ± 0.037 | -2e-08 ± 1.8e-08 | 0 | 76 | 76 | 763 | ok |

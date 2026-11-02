@@ -89,17 +89,18 @@ def tree(measure):
     init = measure.get("init_params_ms", 0.0)
     step_in = measure.get("step_in_ms", 0.0)
     forward = measure.get("forward_ms", 0.0)
-    target = measure.get("step_tgt_ms", 0.0)
-    rest = max(0.0, step - step_in - forward - target)
+    target = measure.get("step_tgt_ms", None)
+    rest = max(0.0, step - step_in - forward - (target or 0.0))
     stages = [
         stage("run", 0, init + step, "wall"),
         stage("run/init", 1, init, "once"),
         stage("run/step", 1, step, "wall"),
         stage("run/step/input", 2, step_in, "host"),
         stage("run/step/forward", 2, forward, "wall"),
-        stage("run/step/target", 2, target, "host"),
-        stage("run/step/loss_backward_opt", 2, rest, "wall"),
     ]
+    if target is not None:
+        stages.append(stage("run/step/target", 2, target, "host"))
+    stages.append(stage("run/step/loss_backward_opt", 2, rest, "wall"))
     counts = {
         "run/step/input": {
             "rows_ms": round(measure.get("rows_ms", 0.0), 3),
@@ -114,6 +115,9 @@ def tree(measure):
     ]
     if "params" in measure:
         notes.append(f"parameters {int(measure['params'])}")
+    if target is None:
+        notes.append("no separate target stage: this program builds its input and "
+                     "target in one pass, so the target is inside the input")
     return stages, counts, notes
 
 
@@ -131,7 +135,7 @@ def capture(cfg, repeats=3):
         "kind": "plumbing",
         "program": program,
         "repeats": repeats,
-        "note": "one step from this program, not the task's whole run",
+        "note": spec.get("note") or "one step from this program, not the task's whole run",
     }
     return stages, counts, notes, source
 

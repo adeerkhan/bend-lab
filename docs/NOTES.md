@@ -3,6 +3,38 @@
 Every finding, every measurement and every discarded hypothesis, by date. Read the
 relevant entry before changing performance-sensitive code or a law.
 
+## 2026-11-02 — `flowers-flow` is a task, and the port is neutral to three decimals
+
+- **The newest generative result is inside the experiment layer.**
+  `flowers-flow` (6,000 steps, 32 Euler, the `corpus` preset: 413,440
+  parameters, 128 rows a step) reads `params` **413440 exact**,
+  `legibility_heldout` **0.490093** against the reference's **0.489027**
+  (0.87 × the ceiling), `ceiling` **0.5621** and `final_loss` **0.289049**.
+  Those are the 2026-10-31 hand measurements (0.490 / 0.562 / 0.289) to three
+  decimals, which is the proof that making the export path portable moved
+  nothing: the same bytes, read through `MLBEND_DATA` instead of one machine's
+  absolute path.
+- **The cost, measured by the record rather than remembered.** `build 28 s +
+  compute 1,176 s` (19.6 min), so a cell is 1,204 s and `flowers-flow` is a
+  `NO_CELL` line. **NOTES' 2026-10-31 entry says 47 minutes for the same
+  preset**, which is a load/machine difference, not a delta: from now on the
+  record's `compute_seconds` is the number to quote, and the step's split says
+  where it goes — 137.7 ms a step: input 1, forward 32, loss + backward +
+  optimizer 104.7.
+- **What the gate is, and what it is not.** There is no NumPy twin of the
+  3-block flow, so the reference is a *measured expectation*: the ceiling from
+  the 102 held-out images (0.5621) and the 87% of it the corpus run reached.
+  `params` is exact, which pins the preset — the model's shape is one number, so
+  a preset change fails the task instead of silently measuring another model.
+  The frozen probe for one forward and one Euler step is still owed, and the
+  task's description says so.
+- **The matrix now refuses silence in code**, not prose: `matrix.silent()`
+  compares `TASKS` against `CELLS` + `NO_CELL` and `make matrix` exits naming
+  any task that is in neither (ISSUE-041's rule). `--summary-only` re-renders
+  the page from the artifact and keeps the measurement's `created_at`, so
+  fixing a line of `NO_CELL` prose does not dirty the tree or re-measure a cell
+  (the same shape as ISSUE-033, caught the first time it was used).
+
 ## 2026-11-01 — the CIFAR fills: the target, not the input
 
 - **Every finding from this session is now a cell** (the plan's B5 rule). The

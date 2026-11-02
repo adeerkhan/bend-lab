@@ -4,6 +4,35 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### `flowers-flow`: the 64x64 flow is a task
+
+`examples/diffusion/flowers_flow` was the lab's newest generative result and the
+experiment layer could not see it: measured by hand with `make flow64`, no pin,
+no page, no gate. It is now the task `flowers-flow`.
+
+- **The data is pinned and portable.** The 3,874-image training export and the
+  102-image holdout are named by sha256 (`1ff86747…`, `f08730fe…`), checked
+  before the numbers are read, and the program takes its directory from
+  `MLBEND_DATA` when the runner sets it with `~/.cache/bend-lab/flowers` as the
+  fallback, so the absolute path one machine had is gone.
+  `scripts/flow-config.py` writes the bare file name, so re-picking a preset
+  cannot re-pin a path.
+- **One implementation of the statistics.** `reference/flowers_report.py`'s
+  `answer()` is what the task parses and what the human report prints:
+  `legibility` against the training set, `legibility_heldout` against the 102
+  images the model never saw, and `ceiling`, what a real held-out flower scores
+  against the same reference set.
+- **The gate is the measured expectation.** `params` is **exact** — the model's
+  shape as one number, so a preset change fails loudly instead of measuring a
+  different model — and `legibility_heldout` is within 0.05 of **87% of the
+  ceiling**, the ratio the corpus run measured. `ceiling` and `final_loss` are
+  report mode. There is no NumPy twin of the 3-block flow yet; the flow's frozen
+  probe is its own change, and the description says so.
+- **The step has a split and a floor.** `bench/plumbing_flow64` times the batch
+  read, the pair build, the forward, the whole step and one Euler step, and
+  `reference/bounds.py`'s `flow64_step` gives the page its floors for the 64x64
+  shapes (413,440 parameters against 128 rows a step).
+
 ### A cell per fixed finding, and a matrix that names every task
 
 The plan's rule is that a fixed issue becomes a cell that failed before and

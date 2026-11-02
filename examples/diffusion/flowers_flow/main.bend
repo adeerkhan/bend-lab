@@ -59,8 +59,26 @@ def STEPS() -> Nat:
 def EULER() -> Nat:
   C.EULER()
 
-def path() -> String:
-  C.DATA()
+# The export directory: the runner's cache when MLBEND_DATA is set, the
+# machine's export cache otherwise. The file name is the config's, so a preset
+# picks the export and the environment picks where it lives.
+def cache_root() -> String:
+  "/home/adeerkhan/.cache/bend-lab"
+
+def root_of(e: Result<&1, &1, U32 & String, String>) -> IO(String):
+  match e:
+    case Fail{code}:
+      IO.pure(String, cache_root())
+    case Done{d}:
+      IO.pure(String, d)
+
+def export_dir() -> IO(String):
+  do IO<String>:
+    e : Result<&1, &1, U32 & String, String> <- IO.get_env("MLBEND_DATA")
+    root_of(e)
+
+def path(root: String) -> String:
+  String.append(root, String.append("/flowers/", C.DATA()))
 
 def M(r: Nat, c: Nat) -> Type:
   TA.Mat<r, c>
@@ -239,9 +257,9 @@ def rd_done(m: File & Result<&1, &1, U32 & String, List<&2, U32>>) -> IO(List<&2
         File.close(f)
         return bs
 
-def read_batch(+s: Nat) -> IO(List<&2, U32>):
+def read_batch(root: String, +s: Nat) -> IO(List<&2, U32>):
   do IO<List<&2, U32>>:
-    f : File <- IO.try(File, File.open(path(), "r"))
+    f : File <- IO.try(File, File.open(path(root), "r"))
     m : File & Result<&1, &1, U32 & String, List<&2, U32>> <-
       File.read_at(f, U32.from_nat(Nat.mul(Nat.mod(Nat.mul(s, B()), NIMG()), IMG())),
         U32.from_nat(BATCH()))
@@ -409,7 +427,7 @@ def print_or(sp: Bool, +l: F32) -> IO(Unit):
       do IO<Unit>:
         return Unit{}
 
-def loop(left: Nat, +i: Nat, tr: T.Train<ModelP()>) -> IO(T.Train<ModelP()>):
+def loop(+root: String, left: Nat, +i: Nat, tr: T.Train<ModelP()>) -> IO(T.Train<ModelP()>):
   match left tr:
     case 0n T.Train{p, g, st, q1, q2, +l}:
       do IO<T.Train<ModelP()>>:
@@ -417,9 +435,9 @@ def loop(left: Nat, +i: Nat, tr: T.Train<ModelP()>) -> IO(T.Train<ModelP()>):
         return T.Train{p, g, st, q1, q2, l}
     case 1n+rest T.Train{p, g, st, q1, q2, +l}:
       do IO<T.Train<ModelP()>>:
-        data : List<&2, U32> <- read_batch(i)
+        data : List<&2, U32> <- read_batch(root, i)
         Unit <- print_or(should_print(i), l)
-        loop(rest, (1n + i : Nat), do_step(i, T.Train{p, g, st, q1, q2, l}, data))
+        loop(root, rest, (1n + i : Nat), do_step(i, T.Train{p, g, st, q1, q2, l}, data))
 
 # ---- sampling: Euler from noise ----
 
@@ -530,7 +548,8 @@ def report(x: List<&2, F32>) -> IO(Unit):
 def main() -> IO(Unit):
   do IO<Unit>:
     T.OptCfg.check(cfg())
-    tr : T.Train<ModelP()> <- loop(STEPS(), 0n,
+    root : String <- export_dir()
+    tr : T.Train<ModelP()> <- loop(root, STEPS(), 0n,
       T.Train.new(~ModelP(), ~X(), ~Y(), ~ModelS(), ~Model(), cfg(), init_params()))
     p : ModelP() <- IO.pure(ModelP(), train_params(tr))
     report(sample_x(euler_go(EULER(), 0n, VS{p, G.noise_of(2000000n, BATCH())})))

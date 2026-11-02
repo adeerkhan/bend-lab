@@ -93,39 +93,77 @@ def grid(images, scale=4):
     return np.concatenate([top, bottom], axis=0)
 
 
+def parse_block(text):
+    """(params, losses, final, images, edge) from a run's stdout.
+
+    The sample block is one row of pixels per token: the column count is the
+    edge, and `edge` rows make one image. Both come from the run, so a preset
+    change needs no edit here.
+    """
+    losses = [float(v) for v in re.findall(r"^loss: ([0-9.eE+-]+)$", text, re.M)]
+    final = re.search(r"^final_loss: ([0-9.eE+-]+)$", text, re.M)
+    params = re.search(r"^params: (\d+)$", text, re.M)
+    block = re.search(r"^samples:\n(.*?)^samples_end$", text, re.M | re.S)
+    if not block:
+        raise SystemExit("no sample block: did the run reach the sampler?")
+    rows = [r for r in block.group(1).splitlines() if r.strip()]
+    v = np.array([[float(x) for x in r.split()] for r in rows], dtype=np.float32)
+    if v.shape[1] not in (32, 64):
+        raise SystemExit(f"{v.shape[1]} columns, expected 32 or 64")
+    edge = v.shape[1]
+    if len(rows) % edge:
+        raise SystemExit(f"{len(rows)} rows is not a whole number of {edge}-row images")
+    images = v.reshape(len(rows) // edge, edge, edge)
+    return (int(params.group(1)) if params else None, losses,
+            float(final.group(1)) if final else None, images, edge)
+
+
+def answer(text, train_path=None, hold_path=None, holdout=1):
+    """The numbers a run produced, as the experiment layer compares them.
+
+    One implementation of the statistics: `main` prints these and
+    `reference/experiment.py`'s `flowers-flow` task gates them. `legibility` is
+    scored against the training set (what the model remembered),
+    `legibility_heldout` against the images it never saw, and `ceiling` is what
+    a REAL held-out flower scores against the same reference set — the only
+    scale on which a max-over-correlations proxy means anything.
+    """
+    params, losses, final, images, edge = parse_block(text)
+    got = {"params": params, "first_loss": losses[0] if losses else None,
+           "final_loss": final, "loss_lines": len(losses), "edge": edge}
+    flat = images.reshape(len(images), edge * edge)
+    got["sample_mean"] = float(images.mean())
+    got["sample_std"] = float(images.std())
+    st = data_stats(edge, 0, train_path)
+    if st is None:
+        return got
+    _, x, _ = st
+    train = x.reshape(-1, edge * edge)
+    got["legibility"] = float(legibility(flat, train).mean())
+    if hold_path:
+        hb = open(hold_path, "rb").read()
+        hx = np.frombuffer(hb, dtype=np.uint8).astype(np.float32) / np.float32(127.5) - np.float32(1.0)
+        hold = hx.reshape(-1, edge * edge)
+        got["legibility_heldout"] = float(legibility(flat, hold).mean())
+        got["ceiling"] = float(legibility(hold, train).mean())
+        got["holdout_images"] = int(len(hold))
+    return got
+
+
 def main():
     if len(sys.argv) < 2:
         raise SystemExit(__doc__)
     text = open(sys.argv[1]).read()
 
-    losses = [float(v) for v in re.findall(r"^loss: ([0-9.eE+-]+)$", text, re.M)]
-    final = re.search(r"^final_loss: ([0-9.eE+-]+)$", text, re.M)
-    params = re.search(r"^params: (\d+)$", text, re.M)
-    block = re.search(r"^samples:\n(.*?)^samples_end$", text, re.M | re.S)
-
-    print(f"params: {params.group(1) if params else 'not printed'}")
+    params, losses, final, images, EDGE = parse_block(text)
+    IMAGES = len(images)
+    print(f"params: {params if params is not None else 'not printed'}")
     print(f"loss lines: {len(losses)}")
     if losses:
         print(f"  first {losses[0]:.4f}  last {losses[-1]:.4f}  min {min(losses):.4f}")
-    if final:
-        print(f"  final {float(final.group(1)):.4f}")
-    if not block:
-        raise SystemExit("no sample block: did the run reach the sampler?")
-
-    rows = [r for r in block.group(1).splitlines() if r.strip()]
-    v = np.array([[float(x) for x in r.split()] for r in rows], dtype=np.float32)
-    # the block is one row of pixels per token: columns are EDGE, and 64 rows
-    # make one image. Both are read from the run, so a preset change needs no
-    # edit here.
-    if v.shape[1] not in (32, 64):
-        raise SystemExit(f"{v.shape[1]} columns, expected 32 or 64")
-    global EDGE, IMAGES
-    EDGE = v.shape[1]
-    if len(rows) % EDGE:
-        raise SystemExit(f"{len(rows)} rows is not a whole number of {EDGE}-row images")
-    IMAGES = len(rows) // EDGE
-
-    images = v.reshape(IMAGES, EDGE, EDGE)
+    if final is not None:
+        print(f"  final {final:.4f}")
+    v = images.reshape(IMAGES, EDGE * EDGE)
     print(f"samples: n {v.size}  mean {v.mean():+.4f}  std {v.std():.4f}  "
           f"min {v.min():+.4f}  max {v.max():+.4f}  in [-1,1]: "
           f"{int(((v >= -1) & (v <= 1)).sum())}/{v.size}")

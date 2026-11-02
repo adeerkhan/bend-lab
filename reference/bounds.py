@@ -135,10 +135,37 @@ def cifar_step(params=807168, rows=256, fe=3080, px=3072):
     }
 
 
+def flow64_step(params=413440, rows=128, fe=80, px=64):
+    """One 64x64 rectified-flow step (examples/diffusion/flowers_flow).
+
+    `rows` is RW() = images per step x tokens per image (2 x 64 at the `corpus`
+    preset), `fe` = the token width (64 pixels + 8 time + 8 position) and `px`
+    the predicted pixels. The model is the ViT shape at 64 tokens: every row
+    meets every weight once per forward, so the dense floor is 2*params*rows
+    flops, doubled for the backward. `params` is the count the probe prints
+    (413,440). The Euler loop's repeated forward is not counted here; the
+    optimizer's own pass is not either.
+    """
+    return {
+        "run/step/input": {"read": rows * fe * BYTES, "write": rows * fe * BYTES, "flops": 0},
+        "run/step/forward": {
+            "read": (params + rows * fe) * BYTES,
+            "write": rows * px * BYTES,
+            "flops": 2 * params * rows,
+        },
+        "run/step/loss_backward_opt": {
+            "read": (params + rows * px) * BYTES,
+            "write": params * BYTES,
+            "flops": 4 * params * rows,
+        },
+    }
+
+
 TASK_BOUNDS = {
     "vit-step": vit_step,
     "diffusion-vit": vit_step,
     "cifar-train": cifar_step,
+    "flowers-flow": flow64_step,
 }
 
 
