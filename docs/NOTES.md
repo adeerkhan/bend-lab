@@ -3,6 +3,29 @@
 Every finding, every measurement and every discarded hypothesis, by date. Read the
 relevant entry before changing performance-sensitive code or a law.
 
+## 2026-11-04 — an outside corpus, and the gate that says it still agrees
+
+- **What QwenBend is, in one line:** a 0.8B model that writes a BendLite program
+  and then executes it inside its own weights (a 16-register CPU built from
+  one-hot rows, saturated SwiGLU gates and RMSNorm ballast, about 53M nonzero
+  weights). Its engineering is not our layer -- 9 GB, 20 tokens/s -- but its
+  *front end* is: Bend2's static rules reimplemented four times, each checked
+  against the last and finally against the compiler.
+- **What we took:** the corpus, not the model. 200 model-written programs, each
+  checked with real Bend2 upstream, vendored under
+  `reference/corpus/qwenbend/` (Apache-2.0, pinned by sha256; re-projecting the
+  upstream file reproduces our bytes exactly).
+- **Measured, and it agrees completely:** on `bend 2.0.38`, 116/116 accepted,
+  84/84 rejected, 116/116 values equal to Bend2's, 84/84 first diagnostic lines
+  equal. 36 s.
+- **The negative control is part of the gate.** A comparison that cannot fail
+  proves nothing, so the test corrupts one verdict, one output and one
+  diagnostic in turn and requires each to be reported. All three fire.
+- **What we did not take:** the in-weights executor, the LoRA, the checkpoint.
+  Also not taken: their benchmark claim, which is honest that this is *less*
+  accurate than asking the model directly (50% vs 70%) -- the win there is
+  exactness and a replayable trace, not answers.
+
 ## 2026-11-03 (night) — the forward's floor was 64x too small, and the attention is 3x its arithmetic
 
 - **ISSUE-049: `vit_step`'s bound counted tokens, not rows.** Every other bound

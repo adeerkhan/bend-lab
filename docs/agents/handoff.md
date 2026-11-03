@@ -7,6 +7,30 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-04 — the QwenBend corpus is a gate now
+
+**Where things stand.** `reference/corpus/qwenbend/` holds 200 Bend programs
+written by Qwen3.5-0.8B and checked against real Bend2 upstream; `make check`
+now runs them through the Bend we pin. All four checks agree (116/116 verdicts,
+84/84 rejections, 116/116 values, 84/84 diagnostics), and the test's own
+negative control corrupts a verdict, an output and a diagnostic to prove the
+comparison can fail. 36 s.
+
+- Why it matters: it is the first conformance test of the *checker* that we did
+  not write, and it fails on a Bend bump that changes the static rules or the
+  error messages.
+- Provenance: Apache-2.0, pinned by sha256, re-projectable from
+  `bendtune/logs/tuned400_test.jsonl`; the snippet is in the corpus README.
+- Not taken from that project: the in-weights executor, the LoRA, the 4B
+  checkpoint. Their benchmark is honest that it is less accurate than asking the
+  model directly (50% vs 70%); the win there is exactness and a replayable trace.
+
+**Next, in order.** 1. Watch #22; on merge, re-run our gates and start the UNet.
+2. On BendTorch 2.0.0's release, finish `devel-200` (11 call sites) and re-run
+the CIFAR sweep as acceptance. 3. The `FullAttention`-at-the-same-shape
+comparison for #28. 4. Consider a spine for the diagnostics: the corpus's 84
+rejections are a ready-made input for bendlang #1632 items 9-10.
+
 ## 2026-11-03 (night, later) — #27 lands, #22 is rebased, 2.0.0 is staged
 
 **Where things stand.** nuxyel answered all three open threads in one go.
