@@ -1,0 +1,58 @@
+{
+  "schema": "mlbend.peaks/2",
+  "created_at": "2026-11-03T09:53:03.287985+00:00",
+  "machine": {
+    "platform": "Linux-7.2.14-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "machine": "x86_64",
+    "processor": "",
+    "cpu_count": 28
+  },
+  "bend": "2.0.38",
+  "threads": null,
+  "clock_ms": 1,
+  "read_gbs": 12.027,
+  "write_gbs": 29.178,
+  "copy_gbs": 24.053,
+  "reduce_gbs": 10.076,
+  "flops_gflops": 10.038,
+  "flops_dtype": "f32",
+  "flops_threads": null,
+  "launch_us": null,
+  "source": {
+    "program": "bench/peaks/main.bend",
+    "bytes": 16777216,
+    "passes": 200,
+    "repeats": 3,
+    "flops": "results/bench-matmul.json ([128, 128] F32)"
+  },
+  "total_ms": {
+    "write": 115.0,
+    "read": 333.0,
+    "copy": 279.0
+  },
+  "pass_ms": {
+    "write": 0.575,
+    "read": 1.665,
+    "copy": 1.395
+  },
+  "checks": {
+    "read_le_write": true,
+    "reduce_le_read": true,
+    "sample_ms": {
+      "write": 115.0,
+      "read": 333.0,
+      "copy": 279.0
+    },
+    "sample_enough": true
+  },
+  "notes": [
+    "read, write and copy are through Array.get/Array.set, not raw DRAM",
+    "each phase is repeated inside one timed region: IO.now() counts whole ms",
+    "copy counts a read and a write of every byte; read_gbs charges a read at the copy's per-byte rate",
+    "reduce_gbs is a reducing walk (an F32 add chain), not a bandwidth",
+    "a sample under 100 ms is flagged in checks.sample_enough",
+    "threads is the runtime option the probe ran with; a record made at another count is not comparable",
+    "flops is bench/matmul's measured rate at its shape, with its thread count",
+    "launch latency needs a bang: unprobed"
+  ]
+}

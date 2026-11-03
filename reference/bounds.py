@@ -100,11 +100,13 @@ def vit_step(params=100736, rows=1024, fe=20, px=4, tokens=16):
             "read": (params + rows * fe) * BYTES,
             "write": rows * px * BYTES,
             "flops": 2 * params * tokens,
+            "counts": "matmul flops only",
         },
         "run/step/loss_backward_opt": {
             "read": (params + rows * px) * BYTES,
             "write": params * BYTES,
             "flops": 4 * params * tokens,
+            "counts": "matmul flops only",
         },
     }
 
@@ -125,12 +127,14 @@ def cifar_step(params=807168, rows=256, fe=3080, px=3072):
             "read": (params + rows * fe) * BYTES,
             "write": rows * px * BYTES,
             "flops": 2 * params * rows,
+            "counts": "matmul flops only",
         },
         "run/step/target": {"read": rows * px * BYTES, "write": rows * px * BYTES, "flops": 0},
         "run/step/loss_backward_opt": {
             "read": (params + rows * px) * BYTES,
             "write": params * BYTES,
             "flops": 4 * params * rows,
+            "counts": "matmul flops only",
         },
     }
 
@@ -152,11 +156,13 @@ def flow64_step(params=413440, rows=128, fe=80, px=64):
             "read": (params + rows * fe) * BYTES,
             "write": rows * px * BYTES,
             "flops": 2 * params * rows,
+            "counts": "matmul flops only",
         },
         "run/step/loss_backward_opt": {
             "read": (params + rows * px) * BYTES,
             "write": params * BYTES,
             "flops": 4 * params * rows,
+            "counts": "matmul flops only",
         },
     }
 
@@ -169,28 +175,61 @@ TASK_BOUNDS = {
 }
 
 
-def peaks_of(record):
-    """The record's peaks, or the file measured on the same machine.
+def refusal(record, peaks):
+    """Why this peaks block cannot score this record, or None when it can.
 
-    A record made before the probe ran has `peaks: {}`; scoring it against a
-    later measurement of the same machine is honest as long as the page names
-    the file, which it does.
+    A ceiling is only a ceiling for the machine, the Bend build and the thread
+    count it was measured at. Comparing across any of those is a banner, never
+    a floor: a stage run on one thread scored against a 16-thread peak is not
+    0.5% of anything.
     """
+    if not peaks:
+        return "no peaks file for this machine"
+    if peaks.get("schema") != "mlbend.peaks/2":
+        return ("peaks measured with the old probe (one cold pass, no thread count): "
+                "run `make peaks`")
+    checks = peaks.get("checks") or {}
+    if checks.get("sample_enough") is False:
+        return "the peaks samples are under the clock's resolution"
+    want_bend = (record.get("bend") or {}).get("version")
+    got_bend = peaks.get("bend")
+    if want_bend and got_bend and want_bend != got_bend:
+        return f"peaks measured with bend {got_bend}, this record with {want_bend}"
+    want_threads = (record.get("variant") or {}).get("threads")
+    got_threads = peaks.get("threads")
+    if want_threads is not None and got_threads is not None and want_threads != got_threads:
+        return f"peaks measured at {got_threads} threads, this record at {want_threads}"
+    return None
+
+
+def peaks_and_reason(record):
+    """(the peaks that may score this record, why not when they may not)."""
     own = record.get("peaks") or {}
-    if own:
-        return own
+    own_reason = refusal(record, own) if own else None
+    if own and not own_reason:
+        return own, None
     machine = machine_key(record.get("machine") or {})
+    reason = own_reason or "no peaks file for this machine"
     for path in sorted(glob.glob(os.path.join(ROOT, "results", "peaks-*.json"))):
         try:
             with open(path) as f:
                 found = json.load(f)
         except (OSError, ValueError):
             continue
-        if machine_key(found.get("machine") or {}) == machine:
-            found = dict(found)
-            found["source_file"] = os.path.relpath(path, ROOT)
-            return found
-    return {}
+        if machine_key(found.get("machine") or {}) != machine:
+            continue
+        found = dict(found)
+        found["source_file"] = os.path.relpath(path, ROOT)
+        bad = refusal(record, found)
+        if not bad:
+            return found, None
+        reason = bad
+    return {}, reason
+
+
+def peaks_of(record):
+    """The record's peaks, or a file measured on the same machine, same build."""
+    return peaks_and_reason(record)[0]
 
 
 def machine_key(info):

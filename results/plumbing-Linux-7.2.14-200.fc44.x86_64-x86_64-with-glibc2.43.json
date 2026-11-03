@@ -1,0 +1,72 @@
+{
+  "created_at": "2026-11-03T09:54:19.240084+00:00",
+  "program": "bench/plumbing/main.bend",
+  "what": "one ViT training step, split by IO.now()",
+  "params": 100736,
+  "repeats": 3,
+  "runs": [
+    {
+      "params": 100736.0,
+      "init_params_ms": 5.0,
+      "rows_ms": 6.0,
+      "rows_head": -1.2732701,
+      "step_in_ms": 6.0,
+      "forward_ms": 57.0,
+      "step_tgt_ms": 0.0,
+      "tgt_head": -1.6438867,
+      "train_new_ms": 1.0,
+      "full_step_x3_ms": 403.0,
+      "loss_after_3": 0.9213759
+    },
+    {
+      "params": 100736.0,
+      "init_params_ms": 7.0,
+      "rows_ms": 6.0,
+      "rows_head": -1.2732701,
+      "step_in_ms": 7.0,
+      "forward_ms": 52.0,
+      "step_tgt_ms": 1.0,
+      "tgt_head": -1.6438867,
+      "train_new_ms": 1.0,
+      "full_step_x3_ms": 402.0,
+      "loss_after_3": 0.9213759
+    },
+    {
+      "params": 100736.0,
+      "init_params_ms": 6.0,
+      "rows_ms": 6.0,
+      "rows_head": -1.2732701,
+      "step_in_ms": 7.0,
+      "forward_ms": 52.0,
+      "step_tgt_ms": 1.0,
+      "tgt_head": -1.6438867,
+      "train_new_ms": 0.0,
+      "full_step_x3_ms": 415.0,
+      "loss_after_3": 0.9213759
+    }
+  ],
+  "median_ms": {
+    "forward_ms": 52.0,
+    "full_step_x3_ms": 403.0,
+    "init_params_ms": 6.0,
+    "loss_after_3": 0.9213759,
+    "rows_head": -1.2732701,
+    "rows_ms": 6.0,
+    "step_in_ms": 7.0,
+    "step_tgt_ms": 1.0,
+    "tgt_head": -1.6438867,
+    "train_new_ms": 1.0
+  },
+  "derived_ms": {
+    "step_ms": 134.33333333333334,
+    "from_list_ms": 1.0,
+    "backward_update_ms": 74.33333333333334,
+    "plumbing_ms": 8.0,
+    "plumbing_share": 0.059553349875930514,
+    "backward_share": 0.5533498759305211,
+    "forward_share": 0.3870967741935484
+  },
+  "machine": "Linux-7.2.14-200.fc44.x86_64-x86_64-with-glibc2.43",
+  "cpus": 28,
+  "bend": "2.0.38"
+}

@@ -35,7 +35,10 @@ CELLS = (
     {"task": "vit-step", "lane": "cpu", "seeds": [0]},
     {"task": "vit-step", "lane": "gpu", "seeds": [0]},
     {"task": "iris-crossval", "lane": "cpu", "seeds": [42, 43, 44]},
-    {"task": "attention-parity", "lane": "cpu", "seeds": [0]},
+    # one task at two thread counts: the thread dimension is a variant, and a
+    # step measured at 1 thread is not comparable with a peak at 16
+    {"task": "attention-parity", "lane": "cpu", "seeds": [0], "threads": 1},
+    {"task": "attention-parity", "lane": "cpu", "seeds": [0], "threads": 16},
     {"task": "wine-pca", "lane": "cpu", "seeds": [0]},
     {"task": "cifar-train", "lane": "cpu", "seeds": [0]},
     {"task": "vit-first", "lane": "cpu", "seeds": [0]},
@@ -133,6 +136,8 @@ def run_cell(cell, seed, live):
            "--task", task, "--lane", lane, "--seeds", str(seed),
            "--references", "live" if live else "frozen",
            "--out", out_dir, "--no-latest"]
+    if cell.get("threads"):
+        cmd += ["--threads", str(cell["threads"])]
     started = datetime.now(timezone.utc)
     run = subprocess.run(cmd, capture_output=True, text=True, env=lane_env(lane), cwd=ROOT)
     record, record_path = None, None
@@ -168,7 +173,8 @@ def run_cell(cell, seed, live):
                 failures.append({"metric": name, "reason":
                                  f"bend {row.get('bend')} against reference {row.get('reference')}"
                                  f" (delta {row.get('delta')}, tolerance {row.get('tolerance')})"})
-    return {"task": task, "lane": lane, "seed": seed, "record": record_path,
+    return {"task": task, "lane": lane, "threads": cell.get("threads"), "seed": seed,
+            "record": record_path,
             "plan": " ".join(["CUDA_HOME=" + (evidence["cuda_home"] or "")
                               if lane == "gpu" else "env -u CUDA_HOME"] + cmd[1:]),
             "lane_evidence": evidence, "failures": failures}
@@ -185,14 +191,15 @@ def summary(cells, absent, no_cell, path_json, path_md, live, created_at=None):
         "",
         "A lane is a build fact: `gpu` links `libnvrtc`, `cpu` must not.",
         "",
-        "| task | lane | seed | linked | record | verdict |",
-        "|---|---|---:|---|---|---|",
+        "| task | lane | threads | seed | linked | record | verdict |",
+        "|---|---|---|---:|---|---|---|",
     ]
     for cell in cells:
         linked = ", ".join(cell["lane_evidence"]["linked_nvrtc"] or []) or "none"
+        threads = cell.get("threads") or "default"
         verdict = "ok" if not cell["failures"] else "FAIL"
         record = os.path.relpath(cell["record"], ROOT) if cell["record"] else "-"
-        lines.append(f"| `{cell['task']}` | {cell['lane']} | {cell['seed']} | {linked}"
+        lines.append(f"| `{cell['task']}` | {cell['lane']} | {threads} | {cell['seed']} | {linked}"
                      f" | `{record}` | {verdict} |")
     if failed:
         lines += ["", "## Failures", ""]

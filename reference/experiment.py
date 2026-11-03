@@ -753,12 +753,18 @@ def build_bend(task, cfg):
     return binary, seconds
 
 
-def run_binary(task, binary, seed=0, repeat=1):
-    """Run a built program; the seed is its first argument."""
+def rts(threads):
+    """The runtime's options: `--threads` is the program's, not the machine's."""
+    return [] if not threads else ["+RTS", "--threads", str(threads), "-RTS"]
+
+
+def run_binary(task, binary, seed=0, repeat=1, threads=None):
+    """Run a built program; the seed is its first argument, the threads its RTS flag."""
     times, output = [], None
     for _ in range(max(1, repeat)):
         start = time.perf_counter()
-        out = subprocess.run([binary, str(seed)], capture_output=True, text=True, env=ENV, cwd=ROOT)
+        out = subprocess.run([binary, str(seed)] + rts(threads), capture_output=True, text=True,
+                             env=ENV, cwd=ROOT)
         times.append(time.perf_counter() - start)
         if out.returncode != 0:
             raise SystemExit(f"{task}: the program did not run:\n{out.stdout}{out.stderr}")
@@ -766,10 +772,10 @@ def run_binary(task, binary, seed=0, repeat=1):
     return output, times
 
 
-def run_bend(task, cfg, repeat=1, seed=0):
+def run_bend(task, cfg, repeat=1, seed=0, threads=None):
     """Build and run once; the convenience the tests use."""
     binary, build_seconds = build_bend(task, cfg)
-    output, times = run_binary(task, binary, seed, repeat)
+    output, times = run_binary(task, binary, seed, repeat, threads)
     return output, build_seconds, times, min(times)
 
 
@@ -908,7 +914,7 @@ def frozen_error(task, seed):
 
 
 def evaluate(task, cfg, seed, repeat, trainer, binary, build_seconds,
-             reference_mode="live", frozen=None):
+             reference_mode="live", frozen=None, threads=None):
     """One seed: run the program (or the adapter), and compare its numbers."""
     ENV["MLBEND_SEED"] = str(seed)
     if trainer == "numpy" and reference_mode == "frozen":
@@ -916,7 +922,7 @@ def evaluate(task, cfg, seed, repeat, trainer, binary, build_seconds,
     if trainer == "numpy":
         times, parsed = [], None
     else:
-        out, times = run_binary(task, binary, seed, repeat)
+        out, times = run_binary(task, binary, seed, repeat, threads)
         parsed = cfg["parse"](out)
     if reference_mode == "live" and np is None:
         raise SystemExit("live references need NumPy, which is not installed here: "
@@ -1224,7 +1230,7 @@ def main():
             if not frozen:
                 raise SystemExit(frozen_error(name, seeds[0]))
         evals = [evaluate(name, cfg, seed, args.repeat, args.trainer, binary, build_seconds,
-                          reference_mode=args.references, frozen=frozen)
+                          reference_mode=args.references, frozen=frozen, threads=args.threads)
                  for seed in seeds]
         manifest = manifest_for(name, cfg, evals, args.repeat, probe, args.trainer,
                                 lane=args.lane, threads=args.threads,

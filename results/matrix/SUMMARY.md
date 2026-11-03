@@ -1,29 +1,30 @@
 # The matrix
 
-`make matrix` over the declared cells: 18 run, 18 wrote a record, 0 failed. References: frozen.
+`make matrix` over the declared cells: 19 run, 19 wrote a record, 0 failed. References: frozen.
 
 A lane is a build fact: `gpu` links `libnvrtc`, `cpu` must not.
 
-| task | lane | seed | linked | record | verdict |
-|---|---|---:|---|---|---|
-| `vit-step` | cpu | 0 | none | `results/matrix/cells/vit-step-20261102T192615Z.json` | ok |
-| `vit-step` | gpu | 0 | libnvrtc.so.13 | `results/matrix/cells/vit-step-20261102T193030Z.json` | ok |
-| `iris-crossval` | cpu | 42 | none | `results/matrix/cells/iris-crossval-20261102T193219Z.json` | ok |
-| `iris-crossval` | cpu | 43 | none | `results/matrix/cells/iris-crossval-20261102T193408Z.json` | ok |
-| `iris-crossval` | cpu | 44 | none | `results/matrix/cells/iris-crossval-20261102T193557Z.json` | ok |
-| `attention-parity` | cpu | 0 | none | `results/matrix/cells/attention-parity-20261102T193558Z.json` | ok |
-| `wine-pca` | cpu | 0 | none | `results/matrix/cells/wine-pca-20261102T193750Z.json` | ok |
-| `cifar-train` | cpu | 0 | none | `results/matrix/cells/cifar-train-20261102T194930Z.json` | ok |
-| `vit-first` | cpu | 0 | none | `results/matrix/cells/vit-first-20261102T195258Z.json` | ok |
-| `flow64-first` | cpu | 0 | none | `results/matrix/cells/flow64-first-20261102T195351Z.json` | ok |
-| `transformer-periodic` | cpu | 0 | none | `results/matrix/cells/transformer-periodic-20261102T195407Z.json` | ok |
-| `diffusion-2d` | cpu | 0 | none | `results/matrix/cells/diffusion-2d-20261102T195518Z.json` | ok |
-| `iris-mlp` | cpu | 0 | none | `results/matrix/cells/iris-mlp-20261102T195702Z.json` | ok |
-| `wine-kmeans` | cpu | 0 | none | `results/matrix/cells/wine-kmeans-20261102T195846Z.json` | ok |
-| `cancer-knn` | cpu | 0 | none | `results/matrix/cells/cancer-knn-20261102T200041Z.json` | ok |
-| `cancer-naive-bayes` | cpu | 0 | none | `results/matrix/cells/cancer-naive-bayes-20261102T200222Z.json` | ok |
-| `heart-naive-bayes` | cpu | 0 | none | `results/matrix/cells/heart-naive-bayes-20261102T200403Z.json` | ok |
-| `cifar-10` | cpu | 0 | none | `results/matrix/cells/cifar-10-20261102T200859Z.json` | ok |
+| task | lane | threads | seed | linked | record | verdict |
+|---|---|---|---:|---|---|---|
+| `vit-step` | cpu | default | 0 | none | `results/matrix/cells/vit-step-20261103T104755Z.json` | ok |
+| `vit-step` | gpu | default | 0 | libnvrtc.so.13 | `results/matrix/cells/vit-step-20261103T104955Z.json` | ok |
+| `iris-crossval` | cpu | default | 42 | none | `results/matrix/cells/iris-crossval-20261103T105041Z.json` | ok |
+| `iris-crossval` | cpu | default | 43 | none | `results/matrix/cells/iris-crossval-20261103T105141Z.json` | ok |
+| `iris-crossval` | cpu | default | 44 | none | `results/matrix/cells/iris-crossval-20261103T105231Z.json` | ok |
+| `attention-parity` | cpu | 1 | 0 | none | `results/matrix/cells/attention-parity-20261103T105232Z.json` | ok |
+| `attention-parity` | cpu | 16 | 0 | none | `results/matrix/cells/attention-parity-20261103T105233Z.json` | ok |
+| `wine-pca` | cpu | default | 0 | none | `results/matrix/cells/wine-pca-20261103T105322Z.json` | ok |
+| `cifar-train` | cpu | default | 0 | none | `results/matrix/cells/cifar-train-20261103T105829Z.json` | ok |
+| `vit-first` | cpu | default | 0 | none | `results/matrix/cells/vit-first-20261103T110010Z.json` | ok |
+| `flow64-first` | cpu | default | 0 | none | `results/matrix/cells/flow64-first-20261103T110037Z.json` | ok |
+| `transformer-periodic` | cpu | default | 0 | none | `results/matrix/cells/transformer-periodic-20261103T110044Z.json` | ok |
+| `diffusion-2d` | cpu | default | 0 | none | `results/matrix/cells/diffusion-2d-20261103T110122Z.json` | ok |
+| `iris-mlp` | cpu | default | 0 | none | `results/matrix/cells/iris-mlp-20261103T110216Z.json` | ok |
+| `wine-kmeans` | cpu | default | 0 | none | `results/matrix/cells/wine-kmeans-20261103T110310Z.json` | ok |
+| `cancer-knn` | cpu | default | 0 | none | `results/matrix/cells/cancer-knn-20261103T110403Z.json` | ok |
+| `cancer-naive-bayes` | cpu | default | 0 | none | `results/matrix/cells/cancer-naive-bayes-20261103T110444Z.json` | ok |
+| `heart-naive-bayes` | cpu | default | 0 | none | `results/matrix/cells/heart-naive-bayes-20261103T110525Z.json` | ok |
+| `cifar-10` | cpu | default | 0 | none | `results/matrix/cells/cifar-10-20261103T110725Z.json` | ok |
 
 ## Tasks with no cell, and why
 

@@ -40,6 +40,24 @@ def floor_ms(record, path):
     return None if value is None else value / 1000.0
 
 
+def floor_and_reason(record, path):
+    """(floor in ms, why it cannot be scored) — a missing floor is never a lever.
+
+    A stage with no floor is an upper bound on what a faster kernel could give
+    back, not a measurement of it: the worklist says `unavailable` and names the
+    reason instead of pointing upstream at a number nobody measured.
+    """
+    floor = floor_ms(record, path)
+    if floor is not None:
+        return floor, None
+    if bounds_mod is None:
+        return None, "bounds.py is not importable"
+    if not (bounds_mod.bounds_for(record).get(path)):
+        return None, "the task declares no bound for this stage"
+    _, why = bounds_mod.peaks_and_reason(record)
+    return None, why or "the declared bound has no peak to score it"
+
+
 def counts_of(record, path):
     return (record.get("counts") or {}).get(path) or {}
 
@@ -62,7 +80,7 @@ def entries(record, stages):
             continue
         path = entry["path"]
         ms = entry["ms"]
-        floor = floor_ms(record, path)
+        floor, no_floor = floor_and_reason(record, path)
         counts = counts_of(record, path)
         if entry.get("kind") == "once":
             out.append(Entry(ms, path, "less host work", "once per process (parameter initialisation)"))
@@ -86,13 +104,14 @@ def entries(record, stages):
                 out.append(Entry(rest, path, host_lever(path), why))
             continue
         if floor is None:
-            out.append(Entry(ms, path, "a faster kernel (upstream)",
-                             "no floor declared: this share is an upper bound"))
+            out.append(Entry(ms, path, "unavailable", f"no floor: {no_floor}"))
         else:
             gain = max(0.0, ms - floor)
             pct = 100.0 * floor / ms if ms else 0.0
+            basis = (bounds_mod.bounds_for(record).get(path) or {}).get("counts")
+            counts_note = f"; the floor counts {basis}" if basis else ""
             out.append(Entry(gain, path, "a faster kernel (upstream)",
-                             f"{pct:.1f}% of its floor; bend-ml/BendTorch"))
+                             f"{pct:.1f}% of its floor{counts_note}; bend-ml/BendTorch"))
     out.sort(key=lambda e: e.ms, reverse=True)
     return out
 

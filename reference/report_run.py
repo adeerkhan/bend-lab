@@ -109,15 +109,24 @@ def page(record, against=None):
             side = bounds_mod.sidecar(task_name)
             if os.path.isfile(side):
                 lines.append(f"bounds   from {os.path.relpath(side, ROOT)} (the task's declared floor)")
-        peaks = bounds_mod.peaks_of(record) if bounds_mod else (record.get("peaks") or {})
+        if bounds_mod:
+            peaks, why = bounds_mod.peaks_and_reason(record)
+        else:
+            peaks, why = (record.get("peaks") or {}), None
         if not peaks:
-            lines.append("peaks    not probed: no stage is scored, and no floor is printed")
+            lines.append(f"peaks    unavailable: {why or 'not probed'}"
+                         " — no stage is scored, and no floor is printed")
         else:
             lines.append(
                 f"peaks    {peaks.get('read_gbs', 'unprobed')} GB/s read,"
                 f" {peaks.get('write_gbs', 'unprobed')} GB/s written"
                 f" · {peaks.get('flops_gflops', 'unprobed')} GFLOP/s"
-                f" · launch {peaks.get('launch_us') if peaks.get('launch_us') else 'unprobed'}"
+                + (f" ({peaks['flops_threads']} threads)"
+                   if peaks.get("flops_threads") is not None else " (threads unrecorded)")
+                + (f" · {peaks.get('threads')} threads" if peaks.get("threads") is not None
+                   else " · the runtime default's thread count")
+                + (f" · flops at {(peaks.get('source') or {}).get('flops')}"
+                   if (peaks.get("source") or {}).get("flops") else "")
                 + (f" · {peaks['source_file']}" if peaks.get("source_file") else ""))
         lines.extend(notes(record))
         lines.append("")
@@ -208,9 +217,12 @@ def totals(record, stages, root):
 
 
 def ladder(record, stages, root):
-    peaks = bounds_mod.peaks_of(record) if bounds_mod else (record.get("peaks") or {})
+    if bounds_mod:
+        peaks, why = bounds_mod.peaks_and_reason(record)
+    else:
+        peaks, why = (record.get("peaks") or {}), None
     if not peaks:
-        return ["", "  how much is on the table   unavailable: no measured peaks (make peaks)"]
+        return ["", f"  how much is on the table   unavailable: {why or 'no measured peaks (make peaks)'}"]
     leaves = [entry for entry in stages
               if entry["depth"] > 0
               and not any(other["path"].startswith(entry["path"] + "/") for other in stages)]

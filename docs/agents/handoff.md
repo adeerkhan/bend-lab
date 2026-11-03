@@ -7,6 +7,51 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-03 (later still) — the floors were the fixture, so the worklist changed
+
+**Where things stand.** Burn's shape is fully in the lab (record v3, the page,
+`--against`, bounds, matrix, `make validate`, CI), and reading it against the
+numbers exposed two defects in the *denominators*, both fixed here. `make check`
+reads **99/99**.
+
+- **The peaks were one cold pass of 16 MB under a 1 ms clock** (medians 5.0 /
+  2.0 / 3.0 ms). `bench/peaks` now repeats every phase 200 times inside one timed
+  region: samples 115 / 333 / 279 ms, `checks.sample_enough`. Measured after:
+  read **12.027 GB/s** (copy-charged), write **29.178**, copy **24.053**, and the
+  reducing walk published separately as `reduce_gbs` **10.076**. The old numbers
+  were 3.355 / 8.389 / 11.185 — a cold pass reads a third of the warm rate.
+- **Nothing recorded the thread count**, so a stage could be scored against a
+  ceiling measured at another. `peaks.threads`, `flops_threads` and
+  `variant.threads` are recorded, `--threads` reaches the runtime
+  (`+RTS --threads N -RTS`), the matrix has a `threads` column and declares
+  `attention-parity` at 1 and 16, and `bounds.floor_us` refuses a peaks block
+  whose machine, Bend build or thread count differs — the page prints
+  `peaks unavailable: <reason>`.
+- **The worklist no longer points upstream at an unmeasured number.** A leaf
+  without a floor prints `unavailable` with the reason; a scored floor says what
+  it counts (`matmul flops only` for the ViT's forward and backward).
+- **`make plumbing` writes one record per machine** and the page prints one row
+  per machine: the same step measured 131 / 173 / 134 ms on three kernels, with
+  the 1.3.0.0 bump in between and no effect from it.
+- **Upstream, filed today.** BendTorch#26: a step's kernel launches cannot be
+  counted from a program (only under `nsys`), so `launches` and `unclaimed` are
+  permanently `unavailable`; asks for one count per `Train.step`. bend-ml#23:
+  the owed end-to-end comment — target noise **4 ms** against 29 + 3, the three
+  input cells and `first_loss` unchanged (-7.65e-08), posted with the command.
+- **The open question this leaves**: the ViT forward is still ~0.5% of a
+  10 GFLOP/s ceiling that `bench/matmul` measures at 128x128, and its bound
+  counts matmul flops only. Per-call cost or elementwise work is unresolved; the
+  probe that isolates one matmul inside the model is the next measurement, and
+  until it runs, "the kernels are slow" is not a claim we can file.
+
+**Next, in order.** 1. The matmul-inside-the-model probe (one `LinearNBF` of
+64x64 over 64 rows, timed alone) — it decides whether the 63 ms is overhead or
+arithmetic, and therefore whether anything is upstream's to fix. 2. The UNet
+task with its twin and cell, `Conv2d` arriving with BendTorch#22. 3. ISSUE-045
+(three `bench/` programs that do not type-check; `bench/` is in no gate) and
+ISSUE-046 (the runner rewrites `results/latest` with a new clock when no number
+moved). 4. Watch: #22 merge, #24's shape answer, #26.
+
 ## 2026-11-03 (later) — the pin is on 1.3.0.0, and #24 never blocked it
 
 **Where things stand.** The bump is done and it is 45 import lines: `bendtorch`

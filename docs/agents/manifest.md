@@ -18,7 +18,7 @@ string: a `1` record has no `stages`, `variant`, `peaks`, `bounds`, `counts` or
 | `task` | `name`, `description`, `program`, `dataset` (files, bytes, `sha256`, `expected_sha256`, `fetch_seconds`, cache), `seed` |
 | `seeds` | every seed the run covered |
 | `trainer` | `bend` or `numpy` |
-| `variant` | `trainer`, `lane` (`cpu`, `gpu`), `threads` (or `null` when not recorded), `bend` |
+| `variant` | `trainer`, `lane` (`cpu`, `gpu`), `threads` (`--threads` passed to the runtime; `null` when the program ran at the runtime's default), `bend` |
 | `git` | `commit`, `branch`, `dirty` |
 | `bend` | `version` |
 | `packages` | every `mlbend-*`, `bend-ml-*` and `bendtorch-*` package at its hub hash |
@@ -27,7 +27,7 @@ string: a `1` record has no `stages`, `variant`, `peaks`, `bounds`, `counts` or
 | `stages` | the pre-order stage list (below); `[]` when the task declares no split |
 | `stages_source` | `kind` (`plumbing`), `program`, `repeats`, `note`; `null` without stages |
 | `counts` | per stage path, the named numbers that are not milliseconds (`rows_ms`, `from_list_ms`, and later `launches`) |
-| `peaks` | the machine's measured rates, `{}` until `make peaks` writes them |
+| `peaks` | the machine's measured rates, `{}` until `make peaks` writes them; a block is only used when its machine, Bend build and `threads` match the record's |
 | `bounds` | per stage path, `{read, write, flops}`, `{}` until the task declares them |
 | `notes` | one line per caveat a reader must see |
 | `seed_runs` | per seed: the metric table and the run/reference times |
@@ -98,3 +98,24 @@ One real record (`diffusion-vit`, 2026-10-31), trimmed to the new fields:
 `run` is `init + step`; the step's children (input, forward, target,
 loss/backward/optimizer) sum to the step. The shares are the reader's: 166 /
 486.333 = 34.1 % for the forward.
+
+## Peaks: what makes a ceiling usable
+
+`make peaks` writes `results/peaks-<machine>.json` from `bench/peaks`, and the
+record carries it under `peaks`. Three rules decide whether a floor may be
+printed from it (`bounds.floor_us` refuses, and the page prints
+`peaks unavailable: <reason>`):
+
+- **the machine** (`platform`, `machine`, `cpu_count`) must be the record's;
+- **the Bend build** must be the record's (`peaks.bend` against `bend.version`);
+- **the thread count** must be the record's: `peaks.threads` is the runtime's
+  `--threads` the probe ran with, and `variant.threads` is the program's. A
+  record at 1 thread is not scored against a peak at 16.
+
+The file also records what makes the number a measurement rather than a guess:
+`clock_ms` (Bend's `IO.now` counts whole milliseconds), `passes` (every phase
+is repeated inside one timed region), `total_ms` (what was timed) and `pass_ms`
+(what a stage is charged), and `checks` (`read <= write`, `reduce <= read`,
+`sample_enough`: every sample at least 100 ms). A single cold pass of 16 MB is
+a 3 ms number; the same work repeated 200 times is a 300 ms one, and only the
+second can carry a floor.

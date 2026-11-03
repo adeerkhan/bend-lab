@@ -28,6 +28,7 @@ if os.path.isdir(ENV_DIR):
     ENV["BEND_LIB"] = ENV_DIR
 
 PROGRAM = os.path.join(ROOT, "bench/matmul/main.bend")
+THREADS = None
 SIZE = 128
 PRODUCTS = 50
 REPEATS = 5
@@ -42,9 +43,10 @@ def bend_time():
     if build.returncode != 0:
         raise SystemExit("the benchmark did not build:\n" + build.stdout + build.stderr)
     times, checksum = [], None
+    rts = [] if not THREADS else ["+RTS", "--threads", str(THREADS), "-RTS"]
     for _ in range(REPEATS):
         start = time.perf_counter()
-        out = subprocess.run([binary], capture_output=True, text=True, env=ENV, cwd=ROOT)
+        out = subprocess.run([binary] + rts, capture_output=True, text=True, env=ENV, cwd=ROOT)
         times.append(time.perf_counter() - start)
         if out.returncode != 0:
             raise SystemExit("the benchmark did not run:\n" + out.stdout + out.stderr)
@@ -68,6 +70,9 @@ def numpy_time():
 
 
 def main():
+    global THREADS
+    if "--threads" in sys.argv:
+        THREADS = int(sys.argv[sys.argv.index("--threads") + 1])
     bend_best, bend_all, bend_checksum = bend_time()
     numpy_best, numpy_all, numpy_checksum = numpy_time()
     if abs(bend_checksum - numpy_checksum) > 1e-3:
@@ -82,6 +87,7 @@ def main():
         "products": PRODUCTS,
         "dtype": "F32",
         "repeats": REPEATS,
+        "threads": THREADS,
         "checksum": bend_checksum,
         "bend": {
             "seconds_min": round(bend_best, 6),

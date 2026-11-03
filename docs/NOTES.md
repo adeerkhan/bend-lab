@@ -3,6 +3,44 @@
 Every finding, every measurement and every discarded hypothesis, by date. Read the
 relevant entry before changing performance-sensitive code or a law.
 
+## 2026-11-03 (later still) — the floors were the fixture, not the model
+
+- **The page said the ViT forward was 0.5% of its floor, and the floor was
+  wrong.** Two independent defects, both in the denominator:
+  - **The peaks were one cold pass of 16 MB.** `IO.now()` counts whole
+    milliseconds and one pass was 2-5 ms, so the medians were 5.0 / 2.0 / 3.0 ms
+    and the first pass carried the page faults of a freshly allocated array.
+    Repeating each phase 200 times inside one timed region gives 333 / 115 / 279
+    ms samples and **3.355 -> 12.027 GB/s read, 8.389 -> 29.178 write,
+    11.185 -> 24.053 copy**. The reducing read is now published separately
+    (`reduce_gbs` **10.076**) instead of being called a bandwidth: it pays an add
+    chain, and the copy's per-byte rate is the honest ceiling for a read-only
+    stage.
+  - **Nothing recorded the thread count**, so a stage could be scored against a
+    ceiling measured at another one. `peaks.threads`, `flops_threads` and
+    `variant.threads` are recorded now, `--threads` reaches the runtime
+    (`+RTS --threads N -RTS`), and `bounds.floor_us` refuses a mismatch with the
+    reason the page prints.
+- **What did not change: the forward is still ~0.5% of a 10 GFLOP/s ceiling.**
+  The flops peak comes from `bench/matmul` at 128x128 (its own record says so),
+  and the forward's bound counts matmul MACs only (3.22 MFLOP for 64 tokens of
+  100,736 parameters). The gap is not the memory fixture; it is per-call cost and
+  elementwise work the bound does not count. That is why the worklist now says
+  `matmul flops only` beside the percentage instead of implying a kernel number.
+- **The same step measured 131 / 173 / 134 ms on three kernels** (7.2.9 on
+  10-30, 7.2.13 on 11-01, 7.2.14 today), with the 1.3.0.0 bump in between and no
+  effect from it. `make plumbing` now writes one record per machine and the page
+  prints one row per machine: the step time is the machine's, not the model's.
+- **A lever needs a measurement.** `worklist.py` used to attach "a faster kernel
+  (upstream)" to every leaf without a floor, which is how a 0.5% came to look
+  like a kernel verdict. Without a floor it now prints `unavailable` and the
+  reason (e.g. `peaks measured with bend 9.9.9, this record with 2.0.38`).
+- **Verified:** `make peaks` (samples 115/333/279 ms, `sample_enough: true`,
+  `read <= write`, `reduce <= read`), `make plumbing` (one row, 134 ms),
+  `make report TASK=diffusion-vit`, `--threads 16` through
+  `reference/experiment.py` (`variant.threads: 16`), `test_report`,
+  `test_stages`, `test_artifacts`, `test_pipeline`.
+
 ## 2026-11-03 (later) — the pin moves to BendTorch 1.3.0.0, and it is 45 import lines
 
 - **The bump is imports only: 24 files, 45 lines** (`bendtorch@1.1.1.0` ->

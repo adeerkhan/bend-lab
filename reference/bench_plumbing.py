@@ -6,12 +6,17 @@ The GPU lane runs the model with the same wall time as the CPU lane
 (ISSUE-018). This benchmark splits a real step into its parts, using the
 example's own functions: parameter initialisation, the row build, the
 list-to-matrix conversion, one forward, the target build, and the full step.
-It writes `results/plumbing.json` and `results/PLUMBING.md`.
+It writes `results/plumbing-<machine>.json` and `results/PLUMBING.md`.
+
+A step time belongs to the machine and kernel it was measured on, so the record
+is keyed by machine and the page prints one row per machine: two rows are two
+machines, never a trend.
 """
 import json
 import os
 import platform
 import re
+import glob
 import statistics
 import subprocess
 import tempfile
@@ -40,6 +45,23 @@ def run_once(binary):
         if match:
             values[match.group(1)] = float(match.group(2))
     return values
+
+
+def slug():
+    return re.sub(r"[^A-Za-z0-9._-]+", "-", platform.platform()).strip("-")
+
+
+def history():
+    """Every machine's record, newest first, for the page's table."""
+    rows = []
+    for path in glob.glob(os.path.join(ROOT, "results", "plumbing-*.json")):
+        try:
+            with open(path) as f:
+                found = json.load(f)
+        except (OSError, ValueError):
+            continue
+        rows.append((found.get("created_at") or "", found))
+    return [row for _, row in sorted(rows, reverse=True)]
 
 
 def main():
@@ -80,11 +102,21 @@ def main():
         "cpus": os.cpu_count(),
         "bend": "2.0.38",
     }
-    with open(os.path.join(ROOT, "results/plumbing.json"), "w") as f:
+    machine_path = os.path.join(ROOT, "results", f"plumbing-{slug()}.json")
+    with open(machine_path, "w") as f:
         json.dump(record, f, indent=2)
         f.write("\n")
 
     m = median
+    rows = ["| machine | measured | step ms | forward ms | rows ms |", "|---|---|---:|---:|---:|"]
+    for found in history():
+        med = found.get("median_ms") or {}
+        if not med:
+            continue
+        rows.append(f"| `{found.get('machine', '?')}` | {(found.get('created_at') or '')[:10]} | "
+                    f"{(found.get('derived_ms') or {}).get('step_ms', 0):.0f} | "
+                    f"{med.get('forward_ms', 0):.0f} | {med.get('rows_ms', 0):.0f} |")
+    rows = "\n".join(rows)
     card = f"""# The plumbing split of one ViT training step
 
 `make plumbing` builds and runs `bench/plumbing/main.bend` {REPEATS} times and
@@ -108,12 +140,20 @@ Shares of the step: input and target construction **{plumbing / step:.0%}**,
 forward {m['forward_ms'] / step:.0%}, loss + backward + optimizer
 {backward / step:.0%}.
 
+## Every machine measured, newest first
+
+A step time is comparable only inside its own row: the kernel version, the CPU
+governor and the load are part of the number, and a row is the whole context.
+
+{rows}
+
 The step is now arithmetic. `step_in` and `step_tgt` together are
 {plumbing:.0f} ms of {step:.0f} ms ({plumbing / step:.0%}); the forward is
 {m['forward_ms']:.0f} ms and loss + backward + optimizer are {backward:.0f} ms.
 `init_params` costs {m['init_params_ms']:.0f} ms once per process.
 
-Before the builder fix (2026-10-30, the same program) a step was 543 ms, with
+The history below is quoted with its machine: 7.2.9 on 2026-10-30, not this
+one. Before the builder fix (that machine, the same program) a step was 543 ms, with
 77% in the input and target build, and `init_params` was 25.3 s. The builders
 appended into a growing list (O(n²)) and the tokeniser called `at()` 64 times
 per digit. With cons + one reverse and a linear 16-pixel tokeniser the build

@@ -4,6 +4,38 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### A floor is measured on its own machine, at its own thread count
+
+The page's percentages were computed from a peaks file whose samples were 2-5 ms
+long under a 1 ms clock, and from a flops rate whose thread count nobody
+recorded. Two of the report's totals were therefore artefacts of the fixture,
+not of the model.
+
+- **`bench/peaks` repeats every phase 200 times inside one timed region**, so a
+  sample is 115-333 ms instead of 2-5 ms, and the file records both the total it
+  measured and the per-pass figure a stage is charged. A sample under 100 ms is
+  flagged in `checks.sample_enough`.
+- **The numbers moved by 3x, and the old ones were cold passes.** Measured on
+  this machine: read **3.355 -> 12.027 GB/s**, write **8.389 -> 29.178**,
+  copy **11.185 -> 24.053**; the reducing walk is published separately as
+  `reduce_gbs` (**10.076**), because it pays an F32 add chain and is not a
+  bandwidth. The first pass of a freshly allocated array carried the page faults,
+  which is why one cold sample read as a third of the warm rate.
+- **A peak scores only its own machine, Bend build and thread count.**
+  `bounds.floor_us` refuses a mismatch and the page prints
+  `peaks unavailable: peaks measured with bend X, this record with Y` rather
+  than a floor.
+- **The worklist no longer points upstream at an unmeasured number.** A leaf
+  without a floor prints `unavailable` with the reason; a scored floor says what
+  it counts (`matmul flops only`, for the ViT's forward and backward).
+- **`--threads` is real.** The experiment runner passes it to the runtime
+  (`+RTS --threads N -RTS`) and the record carries it; `make matrix` has a
+  threads column and declares `attention-parity` at 1 and 16 threads.
+- **`make plumbing` writes one record per machine** (`results/plumbing-<machine>.json`)
+  and the page prints one row per machine, because the same program measured
+  131, 173 and 134 ms across three kernels and two loads. A row is the context;
+  two rows are not a trend.
+
 ### The pin moves to BendTorch 1.3.0.0, with no number moving
 
 The repository imported `bendtorch@1.1.1.0` and `bend-ml-tensor-array@0.1.14.0`,
