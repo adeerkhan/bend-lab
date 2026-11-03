@@ -1,0 +1,291 @@
+{
+  "schema": "mlbend.experiment/3",
+  "created_at": "2026-11-02T19:35:57.039549+00:00",
+  "task": {
+    "name": "iris-crossval",
+    "description": "logistic regression over iris, five stratified folds, scaler fitted on the training rows only",
+    "program": "examples/classification/crossval/main.bend",
+    "dataset": {
+      "name": "iris",
+      "rows": 150,
+      "features": 4,
+      "source": "https://huggingface.co/datasets/mstz/iris",
+      "files": [
+        "https://huggingface.co/datasets/mstz/iris/resolve/e99306d5df05d2ea66a188ea936037f6588a20e9/iris.data"
+      ],
+      "expected_sha256": "6f608b71a7317216319b4d27b4d9bc84e6abd734eda7872b71a458569e2656c0",
+      "bytes": 4551,
+      "sha256": "6f608b71a7317216319b4d27b4d9bc84e6abd734eda7872b71a458569e2656c0",
+      "fetch_seconds": 0.0,
+      "cache": "/home/adeerkhan/github/bend/bend-lab/reference/.cache/datasets"
+    },
+    "seed": 44
+  },
+  "seeds": [
+    44
+  ],
+  "trainer": "bend",
+  "variant": {
+    "trainer": "bend",
+    "lane": "cpu",
+    "threads": null,
+    "bend": "2.0.38"
+  },
+  "git": {
+    "commit": "49b63a7",
+    "branch": "main",
+    "dirty": true
+  },
+  "bend": {
+    "version": "2.0.38"
+  },
+  "packages": [
+    {
+      "name": "bend-ml-autograd",
+      "version": "0.1.1.0",
+      "hash": "0x0ed882696c6c048c64c66242a999a426"
+    },
+    {
+      "name": "bend-ml-bpe-tokenizer",
+      "version": "0.1.3.0",
+      "hash": "0x559a0abb492a951db15be435191b6d0a"
+    },
+    {
+      "name": "bend-ml-nat-lemmas",
+      "version": "0.1.0.0",
+      "hash": "0xa7aa06c09e97c6747c12cc64bb5203d9"
+    },
+    {
+      "name": "bend-ml-nat-lemmas",
+      "version": "0.1.1.0",
+      "hash": "0x2bbe4207657ea8b1158567d930651411"
+    },
+    {
+      "name": "bend-ml-nat-lemmas",
+      "version": "0.1.2.0",
+      "hash": "0x09966385f3a8541fb22fd49450cdf477"
+    },
+    {
+      "name": "bend-ml-tensor",
+      "version": "0.1.0.0",
+      "hash": "0xf9837737d2c3f58ae1d0c5df42255584"
+    },
+    {
+      "name": "bend-ml-tensor-array",
+      "version": "0.1.14.0",
+      "hash": "0x0f6479f09ada7ae614e64e31e8f5a730"
+    },
+    {
+      "name": "bend-ml-tensor-array",
+      "version": "0.1.18.0",
+      "hash": "0xf4dfe0b415f12cd7b6b3e20aa7cc5aa0"
+    },
+    {
+      "name": "bend-ml-tensor-fork",
+      "version": "0.1.5.0",
+      "hash": "0x236efa65086abc5955a9e74563e24668"
+    },
+    {
+      "name": "bend-ml-tensor-gpu",
+      "version": "0.1.2.1",
+      "hash": "0x454d8eb5320624d5b121fdc9d78ee0a6"
+    },
+    {
+      "name": "bend-ml-tensor-gpu",
+      "version": "0.1.5.0",
+      "hash": "0x6538b6a56d11b5a4d65ef7d8b18c1f9f"
+    },
+    {
+      "name": "bendtorch-gpu",
+      "version": "1.1.1.0",
+      "hash": "0x3c22148d676c2988827dae103c18f499"
+    },
+    {
+      "name": "mlbend-cluster",
+      "version": "0.1.0.0",
+      "hash": "0x0c4fbc7d44d2e3e47247a6c1f12c05e0"
+    },
+    {
+      "name": "mlbend-datasets",
+      "version": "0.1.6.0",
+      "hash": "0x43f00fa69fc1132fa416c0f389d0a503"
+    },
+    {
+      "name": "mlbend-generative",
+      "version": "0.1.1.0",
+      "hash": "0xd48e7ce018b6fa7dc613b629e4260a23"
+    },
+    {
+      "name": "mlbend-huggingface",
+      "version": "0.1.1.0",
+      "hash": "0x9f97047b6ffb57443a7a2a2f0adefcbd"
+    },
+    {
+      "name": "mlbend-metrics",
+      "version": "0.1.0.0",
+      "hash": "0xcffef0c9b0e924c8e74e1d965dfb4106"
+    },
+    {
+      "name": "mlbend-pipeline",
+      "version": "0.1.0.0",
+      "hash": "0xea73a86e2118529cadd597fb3727979b"
+    },
+    {
+      "name": "mlbend-preprocess",
+      "version": "0.1.0.0",
+      "hash": "0xa8182854f375cd61135ccd32993993cc"
+    },
+    {
+      "name": "mlbend-report",
+      "version": "0.1.0.0",
+      "hash": "0x97687e0483c49ddb64fe1ee5f5244927"
+    },
+    {
+      "name": "mlbend-select",
+      "version": "0.1.0.0",
+      "hash": "0xf6594aa2392363c8ab774bc81fb20b9d"
+    },
+    {
+      "name": "mlbend-split",
+      "version": "0.1.1.0",
+      "hash": "0xe8b7953f71ec5b441a90a08e0961269b"
+    }
+  ],
+  "machine": {
+    "platform": "Linux-7.2.13-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "machine": "x86_64",
+    "processor": "",
+    "cpu_count": 28,
+    "python": "3.14.8",
+    "numpy": "2.5.4"
+  },
+  "run": {
+    "build_seconds": 107.652,
+    "seconds_min": 0.181,
+    "seconds_all": [
+      0.181
+    ],
+    "repeat": 1,
+    "fetch_seconds": 0.0,
+    "compute_seconds": 0.181,
+    "reference_seconds": 0.0,
+    "speed_ratio": 0.0
+  },
+  "stages": [],
+  "stages_source": null,
+  "counts": {},
+  "peaks": {
+    "schema": "mlbend.peaks/1",
+    "created_at": "2026-10-31T21:08:08.983977+00:00",
+    "machine": {
+      "platform": "Linux-7.2.13-200.fc44.x86_64-x86_64-with-glibc2.43",
+      "machine": "x86_64",
+      "processor": "",
+      "cpu_count": 28
+    },
+    "bend": "2.0.38",
+    "read_gbs": 3.355,
+    "write_gbs": 8.389,
+    "copy_gbs": 11.185,
+    "flops_gflops": 10.038,
+    "flops_dtype": "f32",
+    "launch_us": null,
+    "source": {
+      "program": "bench/peaks/main.bend",
+      "bytes": 16777216,
+      "repeats": 3,
+      "flops": "results/bench-matmul.json ([128, 128] F32)"
+    },
+    "median_ms": {
+      "copy_head": 1.0,
+      "copy_ms": 3.0,
+      "n": 4194304.0,
+      "read_head": 4194304.0,
+      "read_ms": 5.0,
+      "write_head": 1.0,
+      "write_ms": 2.0
+    },
+    "notes": [
+      "read, write and copy are through Array.get/Array.set, not raw DRAM",
+      "copy counts a read and a write of every byte",
+      "flops is bench/matmul's measured rate at its shape",
+      "launch latency needs a bang: unprobed"
+    ]
+  },
+  "bounds": {},
+  "notes": [
+    "references: frozen from results/reference/iris-crossval.json; the reference functions did not run"
+  ],
+  "seed_runs": [
+    {
+      "seed": 44,
+      "metrics": {
+        "mean_accuracy": {
+          "bend": 0.9266666,
+          "reference": 0.9266666666666667,
+          "delta": -6.666666674259858e-08,
+          "tolerance": 1e-06,
+          "mode": "absolute",
+          "pass": true
+        },
+        "fold_min": {
+          "bend": 0.8,
+          "reference": 0.8,
+          "delta": 0.0,
+          "tolerance": 1e-06,
+          "mode": "absolute",
+          "pass": true
+        },
+        "fold_max": {
+          "bend": 1.0,
+          "reference": 1.0,
+          "delta": 0.0,
+          "tolerance": 1e-06,
+          "mode": "absolute",
+          "pass": true
+        }
+      },
+      "run_seconds": 0.181,
+      "reference_seconds": 0.0
+    }
+  ],
+  "metrics": {
+    "mean_accuracy": {
+      "bend": 0.9266666,
+      "reference": 0.9266666666666667,
+      "delta": -6.666666674259858e-08,
+      "tolerance": 1e-06,
+      "mode": "absolute",
+      "pass": true,
+      "bend_sd": null,
+      "reference_sd": null,
+      "delta_sd": null,
+      "n_seeds": 1
+    },
+    "fold_min": {
+      "bend": 0.8,
+      "reference": 0.8,
+      "delta": 0.0,
+      "tolerance": 1e-06,
+      "mode": "absolute",
+      "pass": true,
+      "bend_sd": null,
+      "reference_sd": null,
+      "delta_sd": null,
+      "n_seeds": 1
+    },
+    "fold_max": {
+      "bend": 1.0,
+      "reference": 1.0,
+      "delta": 0.0,
+      "tolerance": 1e-06,
+      "mode": "absolute",
+      "pass": true,
+      "bend_sd": null,
+      "reference_sd": null,
+      "delta_sd": null,
+      "n_seeds": 1
+    }
+  },
+  "passed": true
+}

@@ -1,19 +1,19 @@
 {
   "schema": "mlbend.matrix/1",
-  "created_at": "2026-11-02T07:59:29.906418+00:00",
+  "created_at": "2026-11-02T20:08:59.193517+00:00",
   "references": "frozen",
   "cells": [
     {
       "task": "vit-step",
       "lane": "cpu",
       "seed": 0,
-      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/vit-step-20261101T170451Z.json",
+      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/vit-step-20261102T192615Z.json",
       "plan": "env -u CUDA_HOME /home/adeerkhan/github/bend/bend-lab/reference/experiment.py --task vit-step --lane cpu --seeds 0 --references frozen --out /home/adeerkhan/github/bend/bend-lab/results/matrix/cells --no-latest",
       "lane_evidence": {
         "cuda_home": null,
         "linked_nvrtc": [],
         "exit": 0,
-        "started_at": "2026-11-01T17:03:19.235206+00:00"
+        "started_at": "2026-11-02T19:21:59.542791+00:00"
       },
       "failures": []
     },
@@ -21,7 +21,7 @@
       "task": "vit-step",
       "lane": "gpu",
       "seed": 0,
-      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/vit-step-20261101T170630Z.json",
+      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/vit-step-20261102T193030Z.json",
       "plan": "CUDA_HOME=/home/adeerkhan/.local/cuda-nvrtc /home/adeerkhan/github/bend/bend-lab/reference/experiment.py --task vit-step --lane gpu --seeds 0 --references frozen --out /home/adeerkhan/github/bend/bend-lab/results/matrix/cells --no-latest",
       "lane_evidence": {
         "cuda_home": "/home/adeerkhan/.local/cuda-nvrtc",
@@ -29,7 +29,7 @@
           "libnvrtc.so.13"
         ],
         "exit": 0,
-        "started_at": "2026-11-01T17:04:51.291177+00:00"
+        "started_at": "2026-11-02T19:26:15.154270+00:00"
       },
       "failures": []
     },
@@ -37,13 +37,13 @@
       "task": "iris-crossval",
       "lane": "cpu",
       "seed": 42,
-      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/iris-crossval-20261101T170712Z.json",
+      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/iris-crossval-20261102T193219Z.json",
       "plan": "env -u CUDA_HOME /home/adeerkhan/github/bend/bend-lab/reference/experiment.py --task iris-crossval --lane cpu --seeds 42 --references frozen --out /home/adeerkhan/github/bend/bend-lab/results/matrix/cells --no-latest",
       "lane_evidence": {
         "cuda_home": null,
         "linked_nvrtc": [],
         "exit": 0,
-        "started_at": "2026-11-01T17:06:30.388968+00:00"
+        "started_at": "2026-11-02T19:30:30.808313+00:00"
       },
       "failures": []
     },
@@ -51,13 +51,13 @@
       "task": "iris-crossval",
       "lane": "cpu",
       "seed": 43,
-      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/iris-crossval-20261101T170754Z.json",
+      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/iris-crossval-20261102T193408Z.json",
       "plan": "env -u CUDA_HOME /home/adeerkhan/github/bend/bend-lab/reference/experiment.py --task iris-crossval --lane cpu --seeds 43 --references frozen --out /home/adeerkhan/github/bend/bend-lab/results/matrix/cells --no-latest",
       "lane_evidence": {
         "cuda_home": null,
         "linked_nvrtc": [],
         "exit": 0,
-        "started_at": "2026-11-01T17:07:12.292232+00:00"
+        "started_at": "2026-11-02T19:32:19.802118+00:00"
       },
       "failures": []
     },
@@ -65,13 +65,13 @@
       "task": "iris-crossval",
       "lane": "cpu",
       "seed": 44,
-      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/iris-crossval-20261101T170836Z.json",
+      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/iris-crossval-20261102T193557Z.json",
       "plan": "env -u CUDA_HOME /home/adeerkhan/github/bend/bend-lab/reference/experiment.py --task iris-crossval --lane cpu --seeds 44 --references frozen --out /home/adeerkhan/github/bend/bend-lab/results/matrix/cells --no-latest",
       "lane_evidence": {
         "cuda_home": null,
         "linked_nvrtc": [],
         "exit": 0,
-        "started_at": "2026-11-01T17:07:54.638220+00:00"
+        "started_at": "2026-11-02T19:34:08.912466+00:00"
       },
       "failures": []
     },
@@ -79,13 +79,13 @@
       "task": "attention-parity",
       "lane": "cpu",
       "seed": 0,
-      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/attention-parity-20261101T170837Z.json",
+      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/attention-parity-20261102T193558Z.json",
       "plan": "env -u CUDA_HOME /home/adeerkhan/github/bend/bend-lab/reference/experiment.py --task attention-parity --lane cpu --seeds 0 --references frozen --out /home/adeerkhan/github/bend/bend-lab/results/matrix/cells --no-latest",
       "lane_evidence": {
         "cuda_home": null,
         "linked_nvrtc": [],
         "exit": 0,
-        "started_at": "2026-11-01T17:08:36.737586+00:00"
+        "started_at": "2026-11-02T19:35:57.204053+00:00"
       },
       "failures": []
     },
@@ -93,13 +93,13 @@
       "task": "wine-pca",
       "lane": "cpu",
       "seed": 0,
-      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/wine-pca-20261101T170919Z.json",
+      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/wine-pca-20261102T193750Z.json",
       "plan": "env -u CUDA_HOME /home/adeerkhan/github/bend/bend-lab/reference/experiment.py --task wine-pca --lane cpu --seeds 0 --references frozen --out /home/adeerkhan/github/bend/bend-lab/results/matrix/cells --no-latest",
       "lane_evidence": {
         "cuda_home": null,
         "linked_nvrtc": [],
         "exit": 0,
-        "started_at": "2026-11-01T17:08:37.459077+00:00"
+        "started_at": "2026-11-02T19:35:59.027213+00:00"
       },
       "failures": []
     },
@@ -107,13 +107,13 @@
       "task": "cifar-train",
       "lane": "cpu",
       "seed": 0,
-      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/cifar-train-20261101T171338Z.json",
+      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/cifar-train-20261102T194930Z.json",
       "plan": "env -u CUDA_HOME /home/adeerkhan/github/bend/bend-lab/reference/experiment.py --task cifar-train --lane cpu --seeds 0 --references frozen --out /home/adeerkhan/github/bend/bend-lab/results/matrix/cells --no-latest",
       "lane_evidence": {
         "cuda_home": null,
         "linked_nvrtc": [],
         "exit": 0,
-        "started_at": "2026-11-01T17:09:19.692028+00:00"
+        "started_at": "2026-11-02T19:37:50.751798+00:00"
       },
       "failures": []
     },
@@ -121,13 +121,27 @@
       "task": "vit-first",
       "lane": "cpu",
       "seed": 0,
-      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/vit-first-20261101T171455Z.json",
+      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/vit-first-20261102T195258Z.json",
       "plan": "env -u CUDA_HOME /home/adeerkhan/github/bend/bend-lab/reference/experiment.py --task vit-first --lane cpu --seeds 0 --references frozen --out /home/adeerkhan/github/bend/bend-lab/results/matrix/cells --no-latest",
       "lane_evidence": {
         "cuda_home": null,
         "linked_nvrtc": [],
         "exit": 0,
-        "started_at": "2026-11-01T17:13:38.895407+00:00"
+        "started_at": "2026-11-02T19:49:30.452966+00:00"
+      },
+      "failures": []
+    },
+    {
+      "task": "flow64-first",
+      "lane": "cpu",
+      "seed": 0,
+      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/flow64-first-20261102T195351Z.json",
+      "plan": "env -u CUDA_HOME /home/adeerkhan/github/bend/bend-lab/reference/experiment.py --task flow64-first --lane cpu --seeds 0 --references frozen --out /home/adeerkhan/github/bend/bend-lab/results/matrix/cells --no-latest",
+      "lane_evidence": {
+        "cuda_home": null,
+        "linked_nvrtc": [],
+        "exit": 0,
+        "started_at": "2026-11-02T19:52:58.264287+00:00"
       },
       "failures": []
     },
@@ -135,13 +149,13 @@
       "task": "transformer-periodic",
       "lane": "cpu",
       "seed": 0,
-      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/transformer-periodic-20261101T171501Z.json",
+      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/transformer-periodic-20261102T195407Z.json",
       "plan": "env -u CUDA_HOME /home/adeerkhan/github/bend/bend-lab/reference/experiment.py --task transformer-periodic --lane cpu --seeds 0 --references frozen --out /home/adeerkhan/github/bend/bend-lab/results/matrix/cells --no-latest",
       "lane_evidence": {
         "cuda_home": null,
         "linked_nvrtc": [],
         "exit": 0,
-        "started_at": "2026-11-01T17:14:56.015779+00:00"
+        "started_at": "2026-11-02T19:53:51.587118+00:00"
       },
       "failures": []
     },
@@ -149,13 +163,13 @@
       "task": "diffusion-2d",
       "lane": "cpu",
       "seed": 0,
-      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/diffusion-2d-20261101T171528Z.json",
+      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/diffusion-2d-20261102T195518Z.json",
       "plan": "env -u CUDA_HOME /home/adeerkhan/github/bend/bend-lab/reference/experiment.py --task diffusion-2d --lane cpu --seeds 0 --references frozen --out /home/adeerkhan/github/bend/bend-lab/results/matrix/cells --no-latest",
       "lane_evidence": {
         "cuda_home": null,
         "linked_nvrtc": [],
         "exit": 0,
-        "started_at": "2026-11-01T17:15:01.724842+00:00"
+        "started_at": "2026-11-02T19:54:07.507190+00:00"
       },
       "failures": []
     },
@@ -163,13 +177,13 @@
       "task": "iris-mlp",
       "lane": "cpu",
       "seed": 0,
-      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/iris-mlp-20261101T171608Z.json",
+      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/iris-mlp-20261102T195702Z.json",
       "plan": "env -u CUDA_HOME /home/adeerkhan/github/bend/bend-lab/reference/experiment.py --task iris-mlp --lane cpu --seeds 0 --references frozen --out /home/adeerkhan/github/bend/bend-lab/results/matrix/cells --no-latest",
       "lane_evidence": {
         "cuda_home": null,
         "linked_nvrtc": [],
         "exit": 0,
-        "started_at": "2026-11-01T17:15:28.710314+00:00"
+        "started_at": "2026-11-02T19:55:18.989357+00:00"
       },
       "failures": []
     },
@@ -177,13 +191,13 @@
       "task": "wine-kmeans",
       "lane": "cpu",
       "seed": 0,
-      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/wine-kmeans-20261101T171649Z.json",
+      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/wine-kmeans-20261102T195846Z.json",
       "plan": "env -u CUDA_HOME /home/adeerkhan/github/bend/bend-lab/reference/experiment.py --task wine-kmeans --lane cpu --seeds 0 --references frozen --out /home/adeerkhan/github/bend/bend-lab/results/matrix/cells --no-latest",
       "lane_evidence": {
         "cuda_home": null,
         "linked_nvrtc": [],
         "exit": 0,
-        "started_at": "2026-11-01T17:16:08.516793+00:00"
+        "started_at": "2026-11-02T19:57:02.986398+00:00"
       },
       "failures": []
     },
@@ -191,13 +205,13 @@
       "task": "cancer-knn",
       "lane": "cpu",
       "seed": 0,
-      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/cancer-knn-20261101T171734Z.json",
+      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/cancer-knn-20261102T200041Z.json",
       "plan": "env -u CUDA_HOME /home/adeerkhan/github/bend/bend-lab/reference/experiment.py --task cancer-knn --lane cpu --seeds 0 --references frozen --out /home/adeerkhan/github/bend/bend-lab/results/matrix/cells --no-latest",
       "lane_evidence": {
         "cuda_home": null,
         "linked_nvrtc": [],
         "exit": 0,
-        "started_at": "2026-11-01T17:16:49.238325+00:00"
+        "started_at": "2026-11-02T19:58:46.853268+00:00"
       },
       "failures": []
     },
@@ -205,13 +219,13 @@
       "task": "cancer-naive-bayes",
       "lane": "cpu",
       "seed": 0,
-      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/cancer-naive-bayes-20261101T171813Z.json",
+      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/cancer-naive-bayes-20261102T200222Z.json",
       "plan": "env -u CUDA_HOME /home/adeerkhan/github/bend/bend-lab/reference/experiment.py --task cancer-naive-bayes --lane cpu --seeds 0 --references frozen --out /home/adeerkhan/github/bend/bend-lab/results/matrix/cells --no-latest",
       "lane_evidence": {
         "cuda_home": null,
         "linked_nvrtc": [],
         "exit": 0,
-        "started_at": "2026-11-01T17:17:34.861121+00:00"
+        "started_at": "2026-11-02T20:00:41.597978+00:00"
       },
       "failures": []
     },
@@ -219,13 +233,13 @@
       "task": "heart-naive-bayes",
       "lane": "cpu",
       "seed": 0,
-      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/heart-naive-bayes-20261101T171852Z.json",
+      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/heart-naive-bayes-20261102T200403Z.json",
       "plan": "env -u CUDA_HOME /home/adeerkhan/github/bend/bend-lab/reference/experiment.py --task heart-naive-bayes --lane cpu --seeds 0 --references frozen --out /home/adeerkhan/github/bend/bend-lab/results/matrix/cells --no-latest",
       "lane_evidence": {
         "cuda_home": null,
         "linked_nvrtc": [],
         "exit": 0,
-        "started_at": "2026-11-01T17:18:13.577898+00:00"
+        "started_at": "2026-11-02T20:02:22.121538+00:00"
       },
       "failures": []
     },
@@ -233,13 +247,13 @@
       "task": "cifar-10",
       "lane": "cpu",
       "seed": 0,
-      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/cifar-10-20261101T172041Z.json",
+      "record": "/home/adeerkhan/github/bend/bend-lab/results/matrix/cells/cifar-10-20261102T200859Z.json",
       "plan": "env -u CUDA_HOME /home/adeerkhan/github/bend/bend-lab/reference/experiment.py --task cifar-10 --lane cpu --seeds 0 --references frozen --out /home/adeerkhan/github/bend/bend-lab/results/matrix/cells --no-latest",
       "lane_evidence": {
         "cuda_home": null,
         "linked_nvrtc": [],
         "exit": 0,
-        "started_at": "2026-11-01T17:18:52.488661+00:00"
+        "started_at": "2026-11-02T20:04:03.205382+00:00"
       },
       "failures": []
     }
@@ -283,7 +297,7 @@
     {
       "task": "flowers-flow",
       "lane": "gpu",
-      "why": "the example imports bendtorch only: there is no device path for a cell to link libnvrtc against"
+      "why": "no device run is measured: the example's own build links no libnvrtc (ldd on the probe binary), and the twin is one host window"
     }
   ],
   "no_cell": [
@@ -300,7 +314,7 @@
     {
       "task": "flowers-flow",
       "seconds": 1204,
-      "why": "1,204 s a cell (build 28 + run 1,176, 6,000 steps at the corpus preset); the task run is its own gate, and `make experiment TASK=flowers-flow` names the same numbers on its page"
+      "why": "1,204 s a cell (build 28 + run 1,176, 6,000 steps at the corpus preset): the forward and the sampler are gated elementwise by reference/test_flow64.py, whose cheap cell is `flow64-first` (52 s); the 6,000-step run's legibility stays the task's own measured gate"
     }
   ]
 }

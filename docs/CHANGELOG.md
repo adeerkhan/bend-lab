@@ -4,6 +4,46 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The 64x64 flow has a twin, and its forward and sampler are gated
+
+`flowers-flow` was the only task gated by a measured expectation rather than a
+second implementation: its `params` and its held-out legibility say a run
+reproduced a number, not that the forward and the Euler sampler are the same
+computation (ISSUE-043).
+
+- **`reference/probe_flow64.bend`** prints the frozen model's flat
+  `Layer.dump` (413,440 weights in eight parts), the first two tokens' features,
+  one forward at t = 0.5 on the fixed noise, one Euler step at t = 0, and the
+  8-, 16- and 32-step endpoints. No dataset, so it is cheap: the build is the
+  preset's, `reference/test_flow64.py` caches the binary by mtime and the whole
+  gate is 9 s on a built binary (56 s with the build).
+- **`reference/twin_flow64.py`** mirrors the model and the sampler in float32 at
+  the same operation order: 128 rows of 64 pixels with 8 position and 8 time
+  features, embed 80 -> 128, three blocks (LayerNorm, causal attention over two
+  windows of 64 rows, scale 0.125, then 128 -> 256 -> 128 GELU), head LayerNorm
+  and 128 -> 64, then `x <- x + v/32` at `t = i/32`. `from_flat` consumes the
+  probe's dump, so neither side's initialisation is trusted.
+- **The gates are elementwise, at 1e-5**, ~20x above the measurement: the first
+  two tokens' features **1.19e-07**, the forward **2.68e-07**, one Euler step
+  **3.58e-07**, and the 8/16/32 endpoints **3.58e-07 / 4.77e-07 / 4.77e-07**.
+  The 8- and 16-step states are prefixes of the 32-step one (their distances to
+  it are 0.477 and 0.324), because `step_vs` divides the level by the preset's
+  `EULER`, not by the number of steps it is handed.
+- **The task has a cheap cell.** `bench/flow64_first` prints the count and three
+  mean squares (0.0288806, 1.0198, 1.0434) in 3.8 s, 52 s with the build, and
+  `make matrix` records it as `flow64-first/cpu/0` against a frozen reference in
+  `results/reference/flow64-first.json`. The matrix is 18 cells.
+- **`flowers-flow` stays out of the matrix at 1,204 s** and its `NO_CELL` line
+  now says so with the twin beside it; the `gpu` line for it was corrected to
+  what was measured (the example's build links no `libnvrtc`, so there is no
+  device lane to record), rather than the stale "imports bendtorch only".
+- **One observation, mirrored rather than fixed** (ISSUE-044): the token builder
+  never increments `img`, so its `8n` branch is unreachable, rows 64..127 of the
+  second image read positions 1.0..1.98 rather than 0..0.98, and both images
+  take `level(s, 0)`. The twin reproduces that to 1.19e-07 on the input; fixing
+  it would move every published number for a model that trained on this
+  pairing.
+
 ### The flow example writes and resumes a checkpoint
 
 `examples/diffusion/flow_matching` trained from a fixed init and kept no
@@ -66,8 +106,9 @@ no page, no gate. It is now the task `flowers-flow`.
   shape as one number, so a preset change fails loudly instead of measuring a
   different model — and `legibility_heldout` is within 0.05 of **87% of the
   ceiling**, the ratio the corpus run measured. `ceiling` and `final_loss` are
-  report mode. There is no NumPy twin of the 3-block flow yet; the flow's frozen
-  probe is its own change, and the description says so.
+  report mode. There is now a NumPy twin of the 3-block flow's forward and
+  sampler (`reference/twin_flow64.py`, gated by `reference/test_flow64.py`); the
+  section above has the measurements.
 - **The step has a split and a floor.** `bench/plumbing_flow64` times the batch
   read, the pair build, the forward, the whole step and one Euler step, and
   `reference/bounds.py`'s `flow64_step` gives the page its floors for the 64x64

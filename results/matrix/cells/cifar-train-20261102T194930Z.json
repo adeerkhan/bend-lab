@@ -1,0 +1,347 @@
+{
+  "schema": "mlbend.experiment/3",
+  "created_at": "2026-11-02T19:49:30.284841+00:00",
+  "task": {
+    "name": "cifar-train",
+    "description": "the CIFAR-10 denoiser trained at a repeating level, BendTorch against NumPy",
+    "program": "examples/cifar_train/main.bend",
+    "dataset": {
+      "name": "cifar10",
+      "rows": 256,
+      "features": 3072,
+      "source": "https://huggingface.co/datasets/arwics/cifar10",
+      "files": [
+        "https://huggingface.co/datasets/arwics/cifar10/resolve/f44619abdb57391606d732724f9fc40a684471bf/train.csv"
+      ],
+      "expected_sha256": "80f3ca81e56946a0eabc65f68b69558b4fdc741e1aafb0d9f552fcee768b3161",
+      "bytes": 54902548,
+      "sha256": "80f3ca81e56946a0eabc65f68b69558b4fdc741e1aafb0d9f552fcee768b3161",
+      "fetch_seconds": 0.179,
+      "cache": "/home/adeerkhan/github/bend/bend-lab/reference/.cache/datasets"
+    },
+    "seed": 0
+  },
+  "seeds": [
+    0
+  ],
+  "trainer": "bend",
+  "variant": {
+    "trainer": "bend",
+    "lane": "cpu",
+    "threads": null,
+    "bend": "2.0.38"
+  },
+  "git": {
+    "commit": "49b63a7",
+    "branch": "main",
+    "dirty": true
+  },
+  "bend": {
+    "version": "2.0.38"
+  },
+  "packages": [
+    {
+      "name": "bend-ml-autograd",
+      "version": "0.1.1.0",
+      "hash": "0x0ed882696c6c048c64c66242a999a426"
+    },
+    {
+      "name": "bend-ml-bpe-tokenizer",
+      "version": "0.1.3.0",
+      "hash": "0x559a0abb492a951db15be435191b6d0a"
+    },
+    {
+      "name": "bend-ml-nat-lemmas",
+      "version": "0.1.0.0",
+      "hash": "0xa7aa06c09e97c6747c12cc64bb5203d9"
+    },
+    {
+      "name": "bend-ml-nat-lemmas",
+      "version": "0.1.1.0",
+      "hash": "0x2bbe4207657ea8b1158567d930651411"
+    },
+    {
+      "name": "bend-ml-nat-lemmas",
+      "version": "0.1.2.0",
+      "hash": "0x09966385f3a8541fb22fd49450cdf477"
+    },
+    {
+      "name": "bend-ml-tensor",
+      "version": "0.1.0.0",
+      "hash": "0xf9837737d2c3f58ae1d0c5df42255584"
+    },
+    {
+      "name": "bend-ml-tensor-array",
+      "version": "0.1.14.0",
+      "hash": "0x0f6479f09ada7ae614e64e31e8f5a730"
+    },
+    {
+      "name": "bend-ml-tensor-array",
+      "version": "0.1.18.0",
+      "hash": "0xf4dfe0b415f12cd7b6b3e20aa7cc5aa0"
+    },
+    {
+      "name": "bend-ml-tensor-fork",
+      "version": "0.1.5.0",
+      "hash": "0x236efa65086abc5955a9e74563e24668"
+    },
+    {
+      "name": "bend-ml-tensor-gpu",
+      "version": "0.1.2.1",
+      "hash": "0x454d8eb5320624d5b121fdc9d78ee0a6"
+    },
+    {
+      "name": "bend-ml-tensor-gpu",
+      "version": "0.1.5.0",
+      "hash": "0x6538b6a56d11b5a4d65ef7d8b18c1f9f"
+    },
+    {
+      "name": "bendtorch-gpu",
+      "version": "1.1.1.0",
+      "hash": "0x3c22148d676c2988827dae103c18f499"
+    },
+    {
+      "name": "mlbend-cluster",
+      "version": "0.1.0.0",
+      "hash": "0x0c4fbc7d44d2e3e47247a6c1f12c05e0"
+    },
+    {
+      "name": "mlbend-datasets",
+      "version": "0.1.6.0",
+      "hash": "0x43f00fa69fc1132fa416c0f389d0a503"
+    },
+    {
+      "name": "mlbend-generative",
+      "version": "0.1.1.0",
+      "hash": "0xd48e7ce018b6fa7dc613b629e4260a23"
+    },
+    {
+      "name": "mlbend-huggingface",
+      "version": "0.1.1.0",
+      "hash": "0x9f97047b6ffb57443a7a2a2f0adefcbd"
+    },
+    {
+      "name": "mlbend-metrics",
+      "version": "0.1.0.0",
+      "hash": "0xcffef0c9b0e924c8e74e1d965dfb4106"
+    },
+    {
+      "name": "mlbend-pipeline",
+      "version": "0.1.0.0",
+      "hash": "0xea73a86e2118529cadd597fb3727979b"
+    },
+    {
+      "name": "mlbend-preprocess",
+      "version": "0.1.0.0",
+      "hash": "0xa8182854f375cd61135ccd32993993cc"
+    },
+    {
+      "name": "mlbend-report",
+      "version": "0.1.0.0",
+      "hash": "0x97687e0483c49ddb64fe1ee5f5244927"
+    },
+    {
+      "name": "mlbend-select",
+      "version": "0.1.0.0",
+      "hash": "0xf6594aa2392363c8ab774bc81fb20b9d"
+    },
+    {
+      "name": "mlbend-split",
+      "version": "0.1.1.0",
+      "hash": "0xe8b7953f71ec5b441a90a08e0961269b"
+    }
+  ],
+  "machine": {
+    "platform": "Linux-7.2.13-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "machine": "x86_64",
+    "processor": "",
+    "cpu_count": 28,
+    "python": "3.14.8",
+    "numpy": "2.5.4"
+  },
+  "run": {
+    "build_seconds": 117.094,
+    "seconds_min": 261.891,
+    "seconds_all": [
+      261.891
+    ],
+    "repeat": 1,
+    "fetch_seconds": 0.179,
+    "compute_seconds": 261.712,
+    "reference_seconds": 0.0,
+    "speed_ratio": 0.0
+  },
+  "stages": [
+    {
+      "path": "run",
+      "depth": 0,
+      "ms": 8972.0,
+      "kind": "wall"
+    },
+    {
+      "path": "run/init",
+      "depth": 1,
+      "ms": 8614.0,
+      "kind": "once"
+    },
+    {
+      "path": "run/step",
+      "depth": 1,
+      "ms": 358.0,
+      "kind": "wall"
+    },
+    {
+      "path": "run/step/input",
+      "depth": 2,
+      "ms": 108.0,
+      "kind": "host"
+    },
+    {
+      "path": "run/step/forward",
+      "depth": 2,
+      "ms": 99.0,
+      "kind": "wall"
+    },
+    {
+      "path": "run/step/target",
+      "depth": 2,
+      "ms": 10.0,
+      "kind": "host"
+    },
+    {
+      "path": "run/step/loss_backward_opt",
+      "depth": 2,
+      "ms": 141.0,
+      "kind": "wall"
+    }
+  ],
+  "stages_source": {
+    "kind": "plumbing",
+    "program": "bench/plumbing_cifar/main.bend",
+    "repeats": 3,
+    "note": "one step from this program, not the task's whole run"
+  },
+  "counts": {
+    "run/step/input": {
+      "rows_ms": 0.0,
+      "from_list_ms": 108.0
+    }
+  },
+  "peaks": {
+    "schema": "mlbend.peaks/1",
+    "created_at": "2026-10-31T21:08:08.983977+00:00",
+    "machine": {
+      "platform": "Linux-7.2.13-200.fc44.x86_64-x86_64-with-glibc2.43",
+      "machine": "x86_64",
+      "processor": "",
+      "cpu_count": 28
+    },
+    "bend": "2.0.38",
+    "read_gbs": 3.355,
+    "write_gbs": 8.389,
+    "copy_gbs": 11.185,
+    "flops_gflops": 10.038,
+    "flops_dtype": "f32",
+    "launch_us": null,
+    "source": {
+      "program": "bench/peaks/main.bend",
+      "bytes": 16777216,
+      "repeats": 3,
+      "flops": "results/bench-matmul.json ([128, 128] F32)"
+    },
+    "median_ms": {
+      "copy_head": 1.0,
+      "copy_ms": 3.0,
+      "n": 4194304.0,
+      "read_head": 4194304.0,
+      "read_ms": 5.0,
+      "write_head": 1.0,
+      "write_ms": 2.0
+    },
+    "notes": [
+      "read, write and copy are through Array.get/Array.set, not raw DRAM",
+      "copy counts a read and a write of every byte",
+      "flops is bench/matmul's measured rate at its shape",
+      "launch latency needs a bang: unprobed"
+    ]
+  },
+  "bounds": {
+    "run/step/input": {
+      "read": 3153920,
+      "write": 3153920,
+      "flops": 0
+    },
+    "run/step/forward": {
+      "read": 6382592,
+      "write": 3145728,
+      "flops": 413270016
+    },
+    "run/step/target": {
+      "read": 3145728,
+      "write": 3145728,
+      "flops": 0
+    },
+    "run/step/loss_backward_opt": {
+      "read": 6374400,
+      "write": 3228672,
+      "flops": 826540032
+    }
+  },
+  "notes": [
+    "clock: IO.now is milliseconds; a stage below 1 ms prints <1 ms",
+    "init_params 8614 ms once per process (in run/init)",
+    "rows 0 ms and the matrix conversion 108 ms sit inside step_in",
+    "parameters 807168",
+    "the stage split is one step, not the whole run",
+    "references: frozen from results/reference/cifar-train.json; the reference functions did not run"
+  ],
+  "seed_runs": [
+    {
+      "seed": 0,
+      "metrics": {
+        "loss_drop": {
+          "bend": 1.0062749,
+          "reference": 1.006960155030209,
+          "delta": -0.0006852550302089977,
+          "tolerance": 0.002,
+          "mode": "relative",
+          "pass": true
+        },
+        "final_loss": {
+          "bend": 0.9960275,
+          "reference": 0.9953497052192688,
+          "pass": true,
+          "note": "different folds; reported, not compared"
+        }
+      },
+      "run_seconds": 261.891,
+      "reference_seconds": 0.0
+    }
+  ],
+  "metrics": {
+    "loss_drop": {
+      "bend": 1.0062749,
+      "reference": 1.006960155030209,
+      "delta": -0.0006852550302089977,
+      "tolerance": 0.002,
+      "mode": "relative",
+      "pass": true,
+      "bend_sd": null,
+      "reference_sd": null,
+      "delta_sd": null,
+      "n_seeds": 1
+    },
+    "final_loss": {
+      "bend": 0.9960275,
+      "reference": 0.9953497052192688,
+      "pass": true,
+      "note": "different folds; reported, not compared",
+      "bend_sd": null,
+      "reference_sd": null,
+      "delta": null,
+      "delta_sd": null,
+      "n_seeds": 1
+    }
+  },
+  "passed": true
+}

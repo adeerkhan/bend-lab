@@ -39,6 +39,7 @@ CELLS = (
     {"task": "wine-pca", "lane": "cpu", "seeds": [0]},
     {"task": "cifar-train", "lane": "cpu", "seeds": [0]},
     {"task": "vit-first", "lane": "cpu", "seeds": [0]},
+    {"task": "flow64-first", "lane": "cpu", "seeds": [0]},
     {"task": "transformer-periodic", "lane": "cpu", "seeds": [0]},
     {"task": "diffusion-2d", "lane": "cpu", "seeds": [0]},
     {"task": "iris-mlp", "lane": "cpu", "seeds": [0]},
@@ -60,9 +61,10 @@ NO_CELL = (
      "724 s a cell (build 100 + run 625, 3000 steps); gated by "
      "reference/test_diffusion_vit.py (first loss, forward, one step, DDIM, eta, legibility)"),
     ("flowers-flow", 1204,
-     "1,204 s a cell (build 28 + run 1,176, 6,000 steps at the corpus preset); "
-     "the task run is its own gate, and `make experiment TASK=flowers-flow` names "
-     "the same numbers on its page"),
+     "1,204 s a cell (build 28 + run 1,176, 6,000 steps at the corpus preset): "
+     "the forward and the sampler are gated elementwise by "
+     "reference/test_flow64.py, whose cheap cell is `flow64-first` (52 s); the "
+     "6,000-step run's legibility stays the task's own measured gate"),
 )
 
 # The cells a lane does not have, and why. A program in plain Bend has no
@@ -79,8 +81,9 @@ ABSENT = (
                          "the host's; no measured tolerance for out_sq there yet"),
     ("diffusion-2d", "gpu", "the device lane's exp differs from the host's; no measured "
                             "tolerance for this task's gate yet"),
-    ("flowers-flow", "gpu", "the example imports bendtorch only: there is no device path "
-                            "for a cell to link libnvrtc against"),
+    ("flowers-flow", "gpu", "no device run is measured: the example's own build links "
+                            "no libnvrtc (ldd on the probe binary), and the twin is one "
+                            "host window"),
 )
 
 

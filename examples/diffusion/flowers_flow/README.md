@@ -49,6 +49,28 @@ same function matching two costs 6 MB. `scripts/bend-guard.sh` runs every build
 in a memory cgroup with swap off, so a runaway compile is killed instead of
 taking the desktop with it.
 
+## The gates
+
+Two references cover this example. The task's gate is measured: `params` is
+exact and the held-out legibility is within 0.05 of 87% of the ceiling.
+Beside it, `reference/twin_flow64.py` is a NumPy twin of the model and the
+sampler, and `reference/test_flow64.py` compares it elementwise with
+`reference/probe_flow64.bend`: the frozen model's own `Layer.dump`, one forward
+at t = 0.5, one Euler step at t = 0, and the 8-, 16- and 32-step endpoints.
+
+| gate | measured maxabs |
+|---|---|
+| the first two tokens' features (pixels, position, time) | 1.19e-07 |
+| the forward at t = 0.5 | 2.68e-07 |
+| one Euler step | 3.58e-07 |
+| 8 / 16 / 32 steps | 3.58e-07 / 4.77e-07 / 4.77e-07 |
+
+Every gate sits at 1e-5, about 20x above its measurement: the deltas are
+float32 summation order and `F32.show`'s round trip, not a different
+computation. `bench/flow64_first` is the same model in a 4-second run (52 s
+with the build) and `make matrix` records it as the `flow64-first` cell, so the
+forward or the sampler cannot drift from the twin without a cell failing.
+
 ## Measured
 
 All runs: 2000 steps, 32 Euler steps, 28 cores. `legibility` is the best

@@ -34,6 +34,10 @@ Machine: Linux-7.2.9-200.fc44.x86_64-x86_64-with-glibc2.43 · 28 CPUs · Bend 2.
 | `diffusion-vit` | optdigits (1024x64) | `e1b683cc` | final_loss | 1 | 0.0711534 | - | - | 1 | 624838 | 624837 | 42 | ok |
 | `diffusion-vit` | optdigits (1024x64) | `e1b683cc` | sample_mean | 1 | 0.295717 | - | - | 1 | 624838 | 624837 | 42 | ok |
 | `diffusion-vit` | optdigits (1024x64) | `e1b683cc` | sample_std | 1 | 0.339538 | - | - | 1 | 624838 | 624837 | 42 | ok |
+| `flow64-first` | flowers64-noise (2x4096) | `ab9a8682` | params | 1 | 413440 | 413440 | 0 | 0 | 3845 | 3845 | 539 | ok |
+| `flow64-first` | flowers64-noise (2x4096) | `ab9a8682` | out_sq | 1 | 0.0288806 | 0.0288807 | -1.877e-08 | 0 | 3845 | 3845 | 539 | ok |
+| `flow64-first` | flowers64-noise (2x4096) | `ab9a8682` | step_sq | 1 | 1.0198 | 1.0198 | -2.404e-07 | 0 | 3845 | 3845 | 539 | ok |
+| `flow64-first` | flowers64-noise (2x4096) | `ab9a8682` | euler32_sq | 1 | 1.0434 | 1.0434 | -1.049e-06 | 0 | 3845 | 3845 | 539 | ok |
 | `flowers-flow` | flowers64 (3874x64) | `566936b6` | params | 1 | 413440 | 413440 | 0 | 0 | 1176149 | 1176149 | 172 | ok |
 | `flowers-flow` | flowers64 (3874x64) | `566936b6` | legibility_heldout | 1 | 0.490093 | 0.489027 | 0.001066 | 0 | 1176149 | 1176149 | 172 | ok |
 | `flowers-flow` | flowers64 (3874x64) | `566936b6` | ceiling | 1 | 0.5621 | 0.5621 | - | 0 | 1176149 | 1176149 | 172 | ok |

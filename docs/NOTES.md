@@ -3,6 +3,55 @@
 Every finding, every measurement and every discarded hypothesis, by date. Read the
 relevant entry before changing performance-sensitive code or a law.
 
+## 2026-11-03 — the 64x64 flow's twin: the shapes that made it match on the first build
+
+- **ISSUE-043 is closed.** `reference/probe_flow64.bend` prints the frozen
+  model's dump and four states; `reference/twin_flow64.py` mirrors the model and
+  the Euler sampler in float32; `reference/test_flow64.py` gates them elementwise
+  at 1e-5. Measured: features **1.19e-07**, forward **2.68e-07**, one Euler step
+  **3.58e-07**, 8/16/32 endpoints **3.58e-07 / 4.77e-07 / 4.77e-07**, parameters
+  413,440 on both sides. The whole gate is 9 s on a built probe (56 s with the
+  build), and it passed on its first build — which is the point of writing the
+  twin from the type-level shapes rather than from the paper.
+- **The four facts that had to be read off the code, not assumed.** One: the
+  model is 128 rows, not 2 x 64 — `B() = 2` with `TK() = 64` makes `RW() = 128`,
+  and the tokens are rows 0..127 of a 128-row sequence. Two: the feature order
+  per token is the 64 pixels, then **position** (sin/cos of `k/TK` at 0.5, 1, 2
+  and 4 turns), then **time** at the same frequencies — `feats` conses time in
+  front of position and `lr_of` reverses the whole list, so both blocks come out
+  ascending, position first. Three: the attention is **causal** and **batched in
+  two windows of 64 rows** (`Attention`'s `b = 2`, `t = 64`, one head, head dim
+  128), with `sc = 0.125` fixed rather than `1/sqrt(head dim)`, which is 0.0884
+  at this width. Four: the sampler's `dt` is **0.03125 in `upd`, not
+  `1/EULER()`**, so the 8- and 16-step runs are prefixes of the 32-step one, not
+  coarser samplers.
+- **The last of those is a latent coupling, not a live bug.** Every preset in
+  `scripts/flow-config.py` sets `EULER = 32`, so the hardcoded `1/32` is the
+  preset's step today and the published numbers are consistent. A preset with
+  `EULER = 16` would divide the level by 32 while taking 16 steps: half the
+  interval, silently. `1.0 / F32.from_nat(EULER())` is bit-identical at 32
+  (0.03125 is exact in binary), so it can be cleaned up in a change that moves
+  no number; it was left alone here so this change stays a measurement.
+- **ISSUE-044, measured and mirrored.** `tok_go` passes `img` unchanged, so its
+  `case 8n _` branch is unreachable and rows 64..127 read `k/TK` for
+  `k = 64..127` — positions 1.0..1.98 rather than restarting at 0 — while both
+  images take `level(s, 0)`. The twin reproduces it and the forward agrees to
+  2.68e-07, which is the evidence that this is what the program computes. It is
+  the ISSUE-040 pattern: a permutation that costs nothing statistically, mirrored
+  in the twin, not fixed under a published run.
+- **The cell.** `bench/flow64_first` (3.8 s, 52 s with the build) prints the
+  count and three mean squares; the task `flow64-first` compares them with the
+  twin's own numbers, frozen in `results/reference/flow64-first.json`. Deltas:
+  `out_sq` 1.9e-08, `step_sq` 2.4e-07, `euler32_sq` 1.0e-06, all relative 1e-4
+  (the value the `vit-first` cell uses for the same reason: a mean square is
+  summed in a different order on the two sides). The matrix is 18 cells.
+- **Bend traps paid for here.** A `List<&2, F32>` read twice needs `+` on the
+  *callee's* parameter (`+xs`), or the second reader sees "consumed more than
+  once"; a two-value match must name the binders in parameter order (`match xs
+  left`, not `match left xs`); a recursive `IO` call is the do-block's last
+  expression, never `return f(...)` (that asks for `Unit` and gets an `IO.OP`);
+  and a dump that big wants eight lines, not one 413k-value `String`.
+
 ## 2026-11-02 (later still) — the flow example writes, resumes and refuses a checkpoint
 
 - **ISSUE-034 (B9) is closed end to end.** The identity layer and `Train.dump` /

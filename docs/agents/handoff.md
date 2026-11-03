@@ -7,6 +7,48 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-03 — the 64x64 flow has a twin, so 99/99
+
+**Where things stand.** The handoff's first item is closed (ISSUE-043): the flow
+was the one task gated by a measured expectation rather than a second
+implementation, and it now has both. `make check` reads **99/99** on this tree
+(the run took 47 minutes here; the machine was swapping).
+
+- **What exists now.** `reference/probe_flow64.bend` (frozen dump in eight
+  parts, the first two tokens' features, the forward at t = 0.5, one Euler step,
+  the 8/16/32 endpoints), `reference/twin_flow64.py` (float32, same operation
+  order, `from_flat` on the probe's dump), `reference/test_flow64.py` (five
+  elementwise gates), `bench/flow64_first` and the `flow64-first` task with its
+  frozen reference and matrix cell.
+- **Measured.** Features **1.19e-07**, forward **2.68e-07**, one Euler step
+  **3.58e-07**, the 8/16/32 endpoints **3.58e-07 / 4.77e-07 / 4.77e-07**, and
+  `params` 413,440 on both sides. Gates are at 1e-5, ~20x the measurement. The
+  gate costs 9 s on a built binary and 56 s with the build (cached by mtime in
+  `/tmp/mlbend-flow64-frozen`). The cell is 3.8 s of run and 48.6 s of build,
+  52 s total; its three mean squares agree to 1.0e-06 relative against a 1e-4
+  gate. The matrix is 18 cells.
+- **Two shapes the twin had to read off the code**, and the reason it matched on
+  its first build: 128 rows (not 2 x 64), and per token the pixels, then
+  position, then time. `feats` conses time in front of position and `lr_of`
+  reverses, so both blocks come out ascending, position first. The attention is
+  causal in two windows of 64 rows with `sc = 0.125` (not `1/sqrt(128)`), and
+  `upd`'s `dt` is the literal 0.03125, so the 8- and 16-step runs are prefixes
+  of the 32-step one. Details in `docs/NOTES.md` under 2026-11-03.
+- **Left as measured, not fixed.** ISSUE-044: `tok_go` never increments `img`,
+  so the `8n` branch is dead, rows 64..127 read positions 1.0..1.98, and both
+  images take `level(s, 0)`. The twin mirrors it (the forward agrees), so the
+  published run trained on this pairing; changing it is a behaviour change with
+  a re-run, not a cleanup. The latent `1/EULER()` in `upd` is the same kind of
+  thing: bit-identical at the only preset (32), so it can be cleaned up in a
+  change that moves no number, and it was not touched here.
+
+**Next, in order.** 1. The `~`-parameter message: the ten-line repro, then file
+on bendlang (about an hour, no dependencies). 2. Optionally, `upd`'s `dt` from
+`EULER()` — bit-identical at 32, so a no-number cleanup, worth doing the next
+time the example is open. 3. Watch, not poll: bend-lab pins
+`bendtorch@1.1.1.0`; the bump waits on BendTorch#24, and #22/#23 wait on
+review.
+
 ## 2026-11-02 (later still) — a checkpoint writes, resumes and refuses
 
 **Where things stand.** ISSUE-034 (B9) is closed. The identity layer and

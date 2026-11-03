@@ -231,6 +231,20 @@ def parse_vit_first(out):
     return vals
 
 
+def parse_flow64_first(out):
+    """The 64x64 flow's cheap summary: the count and three mean squares."""
+    vals = {}
+    for key in ("params", "out_sq", "step_sq", "euler32_sq"):
+        match = re.search(rf"^{key}: ([0-9.eE+-]+)$", out, re.M)
+        if not match:
+            vals[key] = None
+        elif key == "params":
+            vals[key] = int(float(match.group(1)))
+        else:
+            vals[key] = float(match.group(1))
+    return vals
+
+
 def reference_diffusion_vit(context=None):
     """The twin's numbers for the ViT: the step-0 loss and the data's mean.
 
@@ -324,12 +338,12 @@ def parse_flowers_flow(out):
 def reference_flowers_flow(context=None):
     """What the run has to reach: the ceiling, and 87% of it held out.
 
-    There is no NumPy twin of the 3-block flow yet (the flow's frozen probe is
-    owed on its own), so this reference is a *measured expectation*, not a
-    second implementation: `ceiling` is what a real held-out flower scores
-    against the training set, and the 3,874-image run reached 87% of it. The
-    task's gate is `legibility_heldout` within 0.05 of that; `ceiling` and
-    `final_loss` are reported.
+    The 3-block flow's forward and sampler have a NumPy twin
+    (`reference/twin_flow64.py`, gated by `reference/test_flow64.py`), but the
+    trained run is not a second implementation of itself: `ceiling` is what a
+    real held-out flower scores against the training set, and the 3,874-image
+    run reached 87% of it. The task's gate is `legibility_heldout` within 0.05
+    of that; `ceiling` and `final_loss` are reported.
     """
     sys.path.insert(0, os.path.join(ROOT, "reference"))
     import flowers_report
@@ -363,6 +377,31 @@ def reference_vit_first(context=None):
 
     loss, tgt_sq, out_sq = twin.loss_pieces(0)
     return {"loss_at_0": loss, "tgt_sq": tgt_sq, "out_sq": out_sq}
+
+
+def reference_flow64_first(context=None):
+    """The twin's numbers for the same frozen window: no dataset, no training.
+
+    `twin_flow64` mirrors the probe on the example's own `init_params` (the
+    weights the cell uses): one forward at t = 0.5, one Euler step at t = 0,
+    and the preset's 32 steps. `reference/test_flow64.py` gates the same three
+    states elementwise against the probe; this is the cheap summary a cell can
+    compare in one run.
+    """
+    sys.path.insert(0, os.path.join(ROOT, "reference"))
+    import numpy as np
+
+    import twin_flow64 as twin
+
+    x0 = twin.noise()
+    p = twin.bend_init()
+    v = twin.forward(p, twin.tokens_of(np.float32(0.5), x0)).reshape(-1)
+    x1 = twin.euler(p, x0, 1)
+    x32 = twin.euler(p, x0, 32)
+    return {"params": twin.count(),
+            "out_sq": float(np.mean(np.float32(v * v))),
+            "step_sq": float(np.mean(np.float32(x1 * x1))),
+            "euler32_sq": float(np.mean(np.float32(x32 * x32)))}
 
 
 def reference_cifar(context=None):
@@ -541,7 +580,7 @@ TASKS = {
         },
     },
     "flowers-flow": {
-        "description": "a rectified flow at 64x64 on 3,874 flowers: 6,000 steps, 32 Euler, held-out legibility against what a real unseen flower scores (no NumPy twin yet; the gate is the measured expectation)",
+        "description": "a rectified flow at 64x64 on 3,874 flowers: 6,000 steps, 32 Euler, held-out legibility against what a real unseen flower scores (the forward and the sampler are gated by reference/test_flow64.py; the legibility is the measured expectation)",
         "program": "examples/diffusion/flowers_flow/main.bend",
         "dataset": {"name": "flowers64", "rows": 3874, "features": 64,
                     "source": "generated: reference/flowers_export.py --split from the pinned Oxford Flowers parquet",
@@ -576,6 +615,21 @@ TASKS = {
             # relative when the twin had the old levels) at 25x this gate,
             # while the two implementations agree to 5.6e-09 today
             "out_sq": {"tolerance": 0.0001, "mode": "relative"},
+        },
+    },
+    "flow64-first": {
+        "description": "the 64x64 flow's forward and sampler in seconds: the parameter count and three mean squares against the twin (the cell for the flow's missing gate)",
+        "program": "bench/flow64_first/main.bend",
+        "dataset": {"name": "flowers64-noise", "rows": 2, "features": 4096,
+                    "source": "generated: mlbend-generative's noise_of(2000000, 8192), the frozen starting cloud"},
+        "seed": 0,
+        "parse": parse_flow64_first,
+        "reference": reference_flow64_first,
+        "metrics": {
+            "params": {"tolerance": 0, "mode": "exact"},
+            "out_sq": {"tolerance": 0.0001, "mode": "relative"},
+            "step_sq": {"tolerance": 0.0001, "mode": "relative"},
+            "euler32_sq": {"tolerance": 0.0001, "mode": "relative"},
         },
     },
     "diffusion-vit": {
