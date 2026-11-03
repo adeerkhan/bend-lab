@@ -15,7 +15,7 @@
 # If B and C move and A does not, the schedule is the reason: 40 steps visit
 # 40 different noise levels once each. If nothing moves, the step is broken.
 import Base
-import bendtorch@1.3.0.0/main.bend as T
+import ../../../bendtorch/torch/main.bend as T
 import bend-ml-tensor-array@0.1.18.0/main.bend as TA
 import mlbend-datasets@0.1.6.0/main.bend as Datasets
 import mlbend-huggingface@0.1.1.0/main.bend as Hf
@@ -49,29 +49,31 @@ def s_of(+mode: Nat, +i: Nat) -> Nat:
 def cfg_lr(+lr: F32) -> T.OptCfg:
   T.CAdamW{lr, 0.9, 0.999, 0.00000001, 0.0, 0.1, 0.001}
 
-# `M.do_step`, with the config as a parameter
-def step_at(+s: Nat, +lr: F32, tr: T.Train<M.B4P()>, +x0: List<&2, F32>) -> T.Train<M.B4P()>:
+# `M.do_step`, and the config is not a parameter any more: the Train carries it
+# (BendTorch 2.0.0, #24/#27), so the lr given to `Train.new` below is the one
+# that acts.
+def step_at(+s: Nat, tr: T.Train<M.B4P()>, +x0: List<&2, F32>) -> T.Train<M.B4P()>:
   +t = Nat.add(Nat.mod(s, 64n), 1n)
-  T.Train.step(~M.B4P(), ~M.X(), ~M.Y(), ~M.B4S(M.n()), ~M.Y(), ~M.Model(M.n()), ~M.mse, cfg_lr(lr), tr,
+  T.Train.step(~M.B4P(), ~M.X(), ~M.Y(), ~M.B4S(M.n()), ~M.Y(), ~M.Model(M.n()), ~M.mse, tr,
     TA.Mat.from_list(M.n(), M.inwidth(), M.input_of(s, t, M.coef_a(t), M.coef_b(t), x0)),
     M.noise_of(s))
 
-def loop(+mode: Nat, +lr: F32, +left: Nat, +i: Nat, tr: T.Train<M.B4P()>, +x0: List<&2, F32>) ->
+def loop(+mode: Nat, +left: Nat, +i: Nat, tr: T.Train<M.B4P()>, +x0: List<&2, F32>) ->
   IO(T.Train<M.B4P()>):
   match left tr:
-    case 0n T.Train{p, g, st, q1, q2, +l}:
+    case 0n T.Train{p, g, st, c, q1, q2, +l}:
       do IO<T.Train<M.B4P()>>:
         Unit <- show_maybe(every50(i), i, l)
-        return T.Train{p, g, st, q1, q2, l}
-    case 1n+rest T.Train{p, g, st, q1, q2, +l}:
+        return T.Train{p, g, st, c, q1, q2, l}
+    case 1n+rest T.Train{p, g, st, c, q1, q2, +l}:
       do IO<T.Train<M.B4P()>>:
         Unit <- show_maybe(every50(i), i, l)
-        loop(mode, lr, rest, (1n + i : Nat),
-          step_at(s_of(mode, i), lr, T.Train{p, g, st, q1, q2, l}, x0), x0)
+        loop(mode, rest, (1n + i : Nat),
+          step_at(s_of(mode, i), T.Train{p, g, st, c, q1, q2, l}, x0), x0)
 
 def print_end(tr: T.Train<M.B4P()>) -> IO(Unit):
   match tr:
-    case T.Train{p, g, st, q1, q2, +l}:
+    case T.Train{p, g, st, c, q1, q2, +l}:
       IO.print(String.append("  end loss ", F32.show(l)))
 
 def run(+name: String, +mode: Nat, +lr: F32, +steps: Nat) -> IO(Unit):
@@ -84,17 +86,17 @@ def run(+name: String, +mode: Nat, +lr: F32, +steps: Nat) -> IO(Unit):
     p0 : M.B4P() <- IO.pure(M.B4P, M.params())
     tr0 : T.Train<M.B4P()> <- IO.pure(T.Train<M.B4P()>,
       T.Train.new(~M.B4P(), ~M.X(), ~M.Y(), ~M.B4S(M.n()), ~M.Model(M.n()), cfg_lr(lr), p0))
-    tr1 : T.Train<M.B4P()> <- loop(mode, lr, steps, 0n, tr0, x0)
+    tr1 : T.Train<M.B4P()> <- loop(mode, steps, 0n, tr0, x0)
     tt1 : Nat <- IO.now()
     Unit <- IO.print(String.append("  wall_ms ", Nat.show(Nat.sub(tt1, tt0))))
     print_end(tr1)
 
 def main() -> IO(Unit):
   do IO<Unit>:
-    Unit <- run("A. schedule t=1..40, lr 0.01, 600 steps", 0n, 0.01, 600n)
-    Unit <- run("B. fixed t=32, lr 0.01, 600 steps", 1n, 0.01, 600n)
-    Unit <- run("C1. fixed t=32, lr 0.001, 150 steps", 1n, 0.001, 150n)
-    Unit <- run("C2. fixed t=32, lr 0.1, 150 steps", 1n, 0.1, 150n)
-    Unit <- run("D. fixed t=32, lr 0.001, 600 steps", 1n, 0.001, 600n)
-    Unit <- run("E. schedule t=1..40, lr 0.001, 600 steps", 0n, 0.001, 600n)
+    # the sweep that found ISSUE-037: one learning rate, given once to
+    # `Train.new`, and 150 steps. On bendtorch 1.3.0.0 all three rows read
+    # 0.84698695; with 2.0.0's `Train` they are three runs.
+    Unit <- run("lr 0.001, 150 steps", 1n, 0.001, 150n)
+    Unit <- run("lr 0.01,  150 steps", 1n, 0.01, 150n)
+    Unit <- run("lr 0.1,   150 steps", 1n, 0.1, 150n)
     return Unit{}

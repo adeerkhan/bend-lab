@@ -22,7 +22,7 @@
 # thread through the sampling loop (Layer.fwd returns them), and every
 # "random" number is a counter.
 import Base
-import bendtorch@1.3.0.0/main.bend as T
+import ../../../bendtorch/torch/main.bend as T
 import bend-ml-tensor-array@0.1.18.0/main.bend as TA
 import bend-ml-tensor-gpu@0.1.5.0/main.bend as TG
 import mlbend-generative@0.1.1.0/main.bend as G
@@ -366,15 +366,12 @@ def params() -> B4P():
     Unit{}},
   T.Lin{mat_of(d(), hidden(), 3n), TA.Mat.fill(1n, d(), 0.0)}}
 
-# The config is a parameter, not `cfg()` in the body: `Train.step` derives the
-# optimizer from the config it is handed and ignores the one `Train.new` was
-# given (ISSUE-037, BendTorch#24), so the call site is the only place an lr
-# lives. Threaded here, a probe or a task can step at a rate of its own without
-# copying `do_step`; the loop below passes `cfg()` and the numbers are the same
-# bit for bit.
-def do_step(+s: Nat, +c: T.OptCfg, tr: T.Train<B4P()>, +x0: List<&2, F32>) -> T.Train<B4P()>:
+# The Train carries its config (BendTorch 2.0.0, #24/#27): a step reads the
+# configuration the Train was made with, so this call site names none, and an lr
+# lives in exactly one place. A deliberate mid-run change is `Train.with_cfg`.
+def do_step(+s: Nat, tr: T.Train<B4P()>, +x0: List<&2, F32>) -> T.Train<B4P()>:
   +t = Nat.add(Nat.mod(s, 64n), 1n)
-  T.Train.step(~B4P(), ~X(), ~Y(), ~B4S(n()), ~Y(), ~Model(n()), ~mse, c, tr,
+  T.Train.step(~B4P(), ~X(), ~Y(), ~B4S(n()), ~Y(), ~Model(n()), ~mse, tr,
     TA.Mat.from_list(n(), inwidth(), input_of(s, t, coef_a(t), coef_b(t), x0)),
     noise_of(s))
 
@@ -394,14 +391,14 @@ def print_or(sp: Bool, +l: F32) -> IO(Unit):
 
 def loop(rows_left: Nat, +i: Nat, +x0: List<&2, F32>, tr: T.Train<B4P()>) -> IO(T.Train<B4P()>):
   match rows_left tr:
-    case 0n T.Train{p, g, st, q1, q2, +l}:
+    case 0n T.Train{p, g, st, c, q1, q2, +l}:
       do IO<T.Train<B4P()>>:
         IO.print(String.append("final_loss: ", F32.show(l)))
-        return T.Train{p, g, st, q1, q2, l}
-    case 1n+rest T.Train{p, g, st, q1, q2, +l}:
+        return T.Train{p, g, st, c, q1, q2, l}
+    case 1n+rest T.Train{p, g, st, c, q1, q2, +l}:
       do IO<T.Train<B4P()>>:
         Unit <- print_or(should_print(i), l)
-        loop(rest, (1n + i : Nat), x0, do_step(i, cfg(), T.Train{p, g, st, q1, q2, l}, x0))
+        loop(rest, (1n + i : Nat), x0, do_step(i, T.Train{p, g, st, c, q1, q2, l}, x0))
 
 # ---- the sample: 64 fresh digits by the ancestral loop ----
 #
@@ -622,7 +619,7 @@ def ddim_sample(p: B4P(), +eta_now: F32, +k: Nat, draw: Bool, +salt: Nat) -> PS:
 
 def params_of(tr: T.Train<B4P()>) -> B4P():
   match tr:
-    case T.Train{p, g, st, q1, q2, l}:
+    case T.Train{p, g, st, c, q1, q2, l}:
       p
 
 # ---- the statistics and the grid, printed ----
