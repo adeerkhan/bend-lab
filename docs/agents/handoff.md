@@ -7,6 +7,39 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-03 (night, later) — #27 lands, #22 is rebased, 2.0.0 is staged
+
+**Where things stand.** nuxyel answered all three open threads in one go.
+
+- **#24 → #27, merged to `devel`, shipping as 2.0.0.** `Train` carries its
+  config, `Train.step` drops the argument, `Train.with_cfg` changes it, and
+  `Opt.guard` refuses a kind mismatch with a NaN optimizer (four laws). He built
+  all four candidate fixes on branches before choosing ours, and found the worse
+  half we had missed: a kind mismatch used to keep the loss and raise nothing.
+- **Our sweep on it** (`devel@211ae84`, 150 steps, one lr at `Train.new`):
+  **0.5790425 / 0.87949044 / 0.99899477** where 1.3.0.0 read 0.84698695 three
+  times. The rows match the old per-step form to the digit, so adopting it moves
+  no number. Posted on #27 with three review notes (the guard is the only shape
+  a pure step can have; `with_cfg` keeping `p1`/`p2` is what makes a mid-run
+  change safe; and a question about `dump`/`restore` carrying `cfg`, so a 1.3.0
+  checkpoint and a 2.0.0 one are different payloads).
+- **#22 is rebased** on `devel@211ae84` and pushed as `a876e57`: `LAWS.bend`
+  keeps both law sets (34 laws), the README says `159/159` and **34** — devel's
+  badge said 33 while its file holds 32 obligations, so 32 + our 2 = 34. He runs
+  the gates and merges; that is what unblocks `Conv2d` and the UNet.
+- **#15**: he closes it when #22 merges, and opens a follow-up for the general
+  `k = s` round trip and the adjoint law.
+- **Staged, not merged**: branch `devel-200` (pushed) ports the two files the
+  sweep needed to the 2.0.0 API, importing `../bendtorch` by path. 11 call sites
+  remain; the whole thing lands the day 2.0.0 is on the hub.
+
+**Next, in order.** 1. Watch #22: on merge, re-run our gates and start the UNet
+(`GroupNorm`, `FullAttention` and `Conv2d` are all in then). 2. On 2.0.0's
+release, finish `devel-200` (11 call sites), switch the import to
+`bendtorch@2.0.0.0`, and re-run the sweep as the acceptance. 3. The
+`FullAttention`-at-the-same-shape comparison for #28. 4. bendlang #1632 items
+9-10.
+
 ## 2026-11-03 (night) — the floor was 64x too small; the attention is where the ms are
 
 **Where things stand.** Two more fixes and the first located performance finding.
