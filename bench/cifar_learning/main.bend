@@ -54,7 +54,7 @@ def step_at(+s: Nat, +lr: F32, tr: T.Train<M.B4P()>, +x0: List<&2, F32>) -> T.Tr
   +t = Nat.add(Nat.mod(s, 64n), 1n)
   T.Train.step(~M.B4P(), ~M.X(), ~M.Y(), ~M.B4S(M.n()), ~M.Y(), ~M.Model(M.n()), ~M.mse, cfg_lr(lr), tr,
     TA.Mat.from_list(M.n(), M.inwidth(), M.input_of(s, t, M.coef_a(t), M.coef_b(t), x0)),
-    TA.Mat.from_list(M.n(), M.d(), M.noise_of(s)))
+    M.noise_of(s))
 
 def loop(+mode: Nat, +lr: F32, +left: Nat, +i: Nat, tr: T.Train<M.B4P()>, +x0: List<&2, F32>) ->
   IO(T.Train<M.B4P()>):

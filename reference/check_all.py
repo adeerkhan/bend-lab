@@ -158,6 +158,15 @@ def main():
                     print("     want:\n     " + want.replace("\n", "\n     "))
                     print("     got:\n     " + got.replace("\n", "\n     "))
 
+    # 4b. every bench program type-checks. `bench/` is not run by the gate, and
+    # three of its programs had rotted until someone compiled them (ISSUE-045).
+    for dirpath, _, files in os.walk(os.path.join(ROOT, "bench")):
+        for name in sorted(files):
+            if name != "main.bend":
+                continue
+            f = os.path.relpath(os.path.join(dirpath, name), ROOT)
+            run(f"{f}: type-checks", BEND.split() + [f, "--check-only"], verdict_ok)
+
     # 5. the numbers, against NumPy and scikit-learn
     for name in sorted(os.listdir(os.path.join(ROOT, "reference"))):
         if not (name.startswith("test_") and name.endswith(".py")):

@@ -87,25 +87,30 @@ def knn(n_query, n_train, d, k):
 def vit_step(params=100736, rows=1024, fe=20, px=4, tokens=16):
     """One ViT training step at the plumbing benchmark's sizes.
 
-    The model is token-parallel: every weight meets every token once per
-    forward, so the dense lower bound is 2·params·tokens flops. The backward is
-    counted at one more forward (4·params·tokens including the forward), and the
-    optimizer's own pass is not counted. The embedding rows a token selects are
-    ignored (they are read once, not once per weight). Excludes attention's
-    quadratic term (16 tokens: small) and every temporary a kernel keeps.
+    Every weight meets every **row** once per forward, and a row is one token
+    of one image: `rows` is 1024 (64 images x 16 tokens), not 16. The dense
+    lower bound is 2·params·rows flops; the backward is counted at one more
+    forward (4·params·rows including the forward), and the optimizer's own pass
+    is not counted. The embedding rows a token selects are ignored (they are
+    read once, not once per weight). Excludes attention's quadratic term (16
+    tokens per image: small) and every temporary a kernel keeps.
+
+    Counting `tokens` here instead of `rows` understated the floor by 64x and
+    made the page read "0.5% of its floor" for a forward that is at a third of
+    it; corrected 2026-11-03 (ISSUE-049).
     """
     return {
         "run/step/input": {"read": rows * fe * BYTES, "write": rows * fe * BYTES, "flops": 0},
         "run/step/forward": {
             "read": (params + rows * fe) * BYTES,
             "write": rows * px * BYTES,
-            "flops": 2 * params * tokens,
+            "flops": 2 * params * rows,
             "counts": "matmul flops only",
         },
         "run/step/loss_backward_opt": {
             "read": (params + rows * px) * BYTES,
             "write": params * BYTES,
-            "flops": 4 * params * tokens,
+            "flops": 4 * params * rows,
             "counts": "matmul flops only",
         },
     }
@@ -246,15 +251,19 @@ def sidecar(task):
 
 
 def bounds_for(record):
-    """The bounds of a record: its own, else the task's sidecar, else {}."""
-    own = record.get("bounds") or {}
-    if own:
-        return own
+    """The bounds of a task: its sidecar (the current declaration) first.
+
+    A bound is a formula over the task's shapes, not a measurement, so a fixed
+    formula has to reach every page: the record keeps the copy it was made with
+    as evidence, and the page names the sidecar it used. Falling back to the
+    record's own copy would keep a corrected floor invisible until the task was
+    re-run.
+    """
     task = (record.get("task") or {}).get("name")
     if task and os.path.isfile(sidecar(task)):
         with open(sidecar(task)) as f:
             return json.load(f)
-    return {}
+    return record.get("bounds") or {}
 
 
 def floor_us(record, path):

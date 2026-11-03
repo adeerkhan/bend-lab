@@ -107,9 +107,10 @@ def main() -> IO(Unit):
     Unit <- IO.print(String.append("max_diff: ", F32.show(max_diff(filled()))))
     IO.print(String.append("matmul:", list_of(4n, product(), "")))
 
-# the array as a reusable list: the type tells whether to_list yields List<&2, F32>
-def lens(xs: List<&2, F32>) -> Nat:
-  List.length(&2, F32, xs)
+# the array as a read-once list: `Array.to_list` yields List<&1, F32>, so the
+# length has to be read at that kind
+def lens(xs: List<&1, F32>) -> Nat:
+  List.length(&1, F32, xs)
 
 def check_list() -> Nat:
   lens(Array.to_list(F32, filled()))

@@ -7,6 +7,44 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-03 (night) — the floor was 64x too small; the attention is where the ms are
+
+**Where things stand.** Two more fixes and the first located performance finding.
+`make check` reads **112/112** (99 + 13 bench programs, which the gate now
+type-checks).
+
+- **ISSUE-049: `vit_step` counted `tokens` (16, one image) where `cifar_step`
+  and `flow64_step` count `rows` (1024 = 64 images x 16).** The forward's dense
+  floor was 64x too small, so the page read "0.5% of its floor" for a forward at
+  **32.6%**. Fixed: forward floor **20.55 ms** against 63, `loss_backward_opt`
+  **43.1%**, "how much is on the table" **96.7 ms** of kernels (was 151.4).
+  `bounds_for` now reads the task's sidecar (the declaration) before the
+  record's copy, so a corrected formula reaches every page.
+- **ISSUE-050: `make call-cost`** (`bench/call_cost/main.bend`) times the
+  model's own shapes: `Mat.matmul(1024x64 . 64x64)` **0.9 ms** against its
+  0.84 ms floor; the same through `Layer.fwd(LinearNBF)` **0.7 ms**; one
+  `LayerNorm` **0.18**; one `Mlp` **3.2** against 3.3; one `AttBlk` **11.2**
+  against 3.5 — **3.2x**. The per-call-overhead hypothesis is dead, and the
+  forward's 42.5 ms of headroom is the attention block's score/softmax path
+  (~7.5 ms per block, ~8,704 `exp` calls per batch). Filed as BendTorch#28 with
+  the table and the repro.
+- **ISSUE-045 fixed**: `bench/cifar_learning`, `bench/cifar_learning_gpu` and
+  `bench/fill_cross` type-check again (a `Mat` wrapped in `Mat.from_list`, and
+  `Array.to_list`'s `&1` read at `&2`), and `check_all.py` type-checks every
+  `bench/**/main.bend`, so rot is a failing check now.
+- **ISSUE-046 fixed**: `write_report` routes the `latest` card through
+  `artifacts.save_json`; a re-run that only moved the clock leaves the file
+  byte-identical (verified). The timestamped record is still a new file per run,
+  by design.
+- **Upstream today**: #26 (launches cannot be counted), #28 (the attention
+  block), the bend-ml#23 comment with the fill numbers.
+
+**Next, in order.** 1. `FullAttention` at the same shape as `AttBlk` — it is the
+comparison #28 asks for, and it decides whether the causal per-query path is the
+cost or the block's wiring. 2. The UNet task, twin and cell first (`Conv2d`
+arrives with #22; `GroupNorm` and full attention are in 1.3.0.0). 3. Watch: #22,
+#24, #26, #28.
+
 ## 2026-11-03 (later still) — the floors were the fixture, so the worklist changed
 
 **Where things stand.** Burn's shape is fully in the lab (record v3, the page,

@@ -4,6 +4,23 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The ViT's floor was 64x too small, and the attention is where the time is
+
+- **`vit_step` counted `tokens` where every other bound counts `rows`.** A
+  forward multiplies every weight against all 1024 rows of the batch, so its
+  dense floor is **206.3 MFLOP (20.55 ms)**, not 3.2 MFLOP (0.32 ms). The page
+  now reads the forward at **32.6%** of its floor and loss+backward at
+  **43.1%**, and "how much is on the table" is 96.7 ms of kernels, not 151.4.
+- **`bounds_for` reads the sidecar first.** A bound is a declaration over the
+  task's shapes, not a measurement, so a corrected formula reaches every page;
+  the record keeps its copy as evidence.
+- **`make call-cost`** (`bench/call_cost/main.bend`) times the model's own
+  shapes: one `Mat.matmul(1024x64 · 64x64)` at **0.9 ms** against a 0.84 ms
+  floor, the same through `Layer.fwd(LinearNBF)` at **0.7 ms**, one `AttBlk` at
+  **11.2 ms** against 3.5, and one `Mlp` at **3.2 ms** against 3.3. The per-call
+  cost is nothing; the attention block is 3.2x its arithmetic, which is where
+  the forward's headroom lives.
+
 ### A floor is measured on its own machine, at its own thread count
 
 The page's percentages were computed from a peaks file whose samples were 2-5 ms

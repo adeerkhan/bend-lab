@@ -7,11 +7,13 @@
   "run/step/forward": {
     "read": 484864,
     "write": 16384,
-    "flops": 3223552
+    "flops": 206307328,
+    "counts": "matmul flops only"
   },
   "run/step/loss_backward_opt": {
     "read": 419328,
     "write": 402944,
-    "flops": 6447104
+    "flops": 412614656,
+    "counts": "matmul flops only"
   }
 }

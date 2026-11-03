@@ -3,6 +3,42 @@
 Every finding, every measurement and every discarded hypothesis, by date. Read the
 relevant entry before changing performance-sensitive code or a law.
 
+## 2026-11-03 (night) — the forward's floor was 64x too small, and the attention is 3x its arithmetic
+
+- **ISSUE-049: `vit_step`'s bound counted tokens, not rows.** Every other bound
+  (`cifar_step`, `flow64_step`) uses `rows` — the rows a forward actually
+  multiplies — but the ViT's used `tokens = 16`, one image's token count, where
+  the batch is `rows = 1024` (64 images x 16). The forward's dense bound was
+  3.22 MFLOP instead of **206.3 MFLOP**, so the page read "0.5% of its floor"
+  for a forward that is at **32.6%**: floor **20.55 ms** against 63 ms, and
+  `loss_backward_opt` **43.1%** (floor 41.11 ms against 95.3). "How much is on
+  the table" moved from 151.4 ms of kernels to **96.7**.
+- **A bound is a declaration, so the sidecar now wins.** `bounds_for` reads
+  `results/bounds-<task>.json` first and the record's own copy only as evidence:
+  a corrected formula has to reach every page without re-running a 10-minute
+  task, and the page already names the sidecar it used.
+- **ISSUE-050: the attention block is 3.2x its arithmetic, and it is not the
+  matmul.** `make call-cost` (new, `bench/call_cost/main.bend`, 20 passes each,
+  median of 3 runs) times the model's own shapes:
+  | phase | per pass | its floor | ratio |
+  |---|---:|---:|---:|
+  | one `Mat.matmul(1024x64 · 64x64)` | 0.9 ms | 0.84 ms | 1.07x |
+  | the same as `Layer.fwd(LinearNBF)` | 0.7 ms | 0.84 ms | 0.83x |
+  | one `LayerNorm(1024x64)` | 0.18 ms | - | - |
+  | one `AttBlk` | **11.2 ms** | 3.5 ms | **3.2x** |
+  | one `Mlp` | **3.2 ms** | 3.3 ms | 0.97x |
+  The MLP is at its floor and the matmul is at 10.5 GFLOP/s, so the forward's
+  42 ms of headroom is **the attention block**: 3 x ~8 ms beyond its projections,
+  in the per-query score/softmax path (`qrow`/`prow` build and softmax i+1
+  scores per query, per image). That is a number to take upstream, and it is the
+  first time the worklist's "a faster kernel" has a location.
+- **What this retires.** The "per-call overhead" hypothesis is dead: the
+  `LinearNBF` wrapper costs nothing and the matmul runs at peak. The 40 ms was
+  never a toll.
+- **Verified:** `make call-cost` (3 runs, 11.2 / 3.2 ms stable to 0.2),
+  `make report TASK=diffusion-vit` (32.6% / 43.1%, ladder 118.7 ms),
+  `make bounds TASK=vit-step` and `TASK=diffusion-vit`.
+
 ## 2026-11-03 (later still) — the floors were the fixture, not the model
 
 - **The page said the ViT forward was 0.5% of its floor, and the floor was

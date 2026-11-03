@@ -59,6 +59,11 @@ prune:            ## keep the newest records per task and everything RESULTS.md 
 matrix:           ## run the declared cells (task, lane, seed), one record each, and a summary
 	$(PY) reference/matrix.py $(if $(LIVE),--live,) $(if $(TASK),--task $(TASK),)
 
+call-cost:        ## what a small matmul costs, and what its call costs, at the ViT's shapes
+	@mkdir -p .scratch
+	BEND_MEM=$(or $(MEM),6G) scripts/bend-guard.sh $(BEND) -o .scratch/call_cost bench/call_cost/main.bend
+	.scratch/call_cost
+
 peaks:            ## the machine's measured ceilings (read, write, copy, flops), saved under results/
 	$(PY) reference/bench_peaks.py
 

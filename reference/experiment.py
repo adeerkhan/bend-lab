@@ -1110,11 +1110,14 @@ def write_report(manifest, out_dir, latest=True):
     os.makedirs(latest_dir, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     path = os.path.join(out_dir, f"{manifest['task']['name']}-{stamp}.json")
-    targets = (path,) if not latest else (path, os.path.join(latest_dir,
-                                                             manifest["task"]["name"] + ".json"))
-    for target in targets:
-        with open(target, "w") as f:
-            json.dump(manifest, f, indent=2)
+    # the raw record is a new file every run, by design; the latest card is one
+    # file that a re-run must not touch when only its clock moved (ISSUE-046)
+    with open(path, "w") as f:
+        json.dump(manifest, f, indent=2)
+    if latest:
+        import artifacts
+        artifacts.save_json(os.path.join(latest_dir, manifest["task"]["name"] + ".json"),
+                            manifest)
     return path
 
 
