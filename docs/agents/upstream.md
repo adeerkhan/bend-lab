@@ -9,11 +9,10 @@ with no entry here was fixed in this repository.
 | Artifact | What it asks |
 |---|---|
 | [BendTorch#24](https://github.com/nuxyel/BendTorch/issues/24) | `Train.step`'s config silently overrides `Train.new`'s; a step at 0.001 on a Train made at 0.1 reads the same loss for every Train. |
-| [BendTorch#22](https://github.com/nuxyel/BendTorch/pull/22) | `Conv2d` in both lanes, with im2col and col2im on the device. Rebased on v1.3.0; waiting on review. |
-| [BendTorch#23](https://github.com/nuxyel/BendTorch/pull/23) | The full-attention demo runs in `make check`. |
+| [BendTorch#22](https://github.com/nuxyel/BendTorch/pull/22) | `Conv2d` in both lanes, with im2col and col2im on the device. Rebased on v1.3.0 at `1a37d12`; the maintainer ran `make check`, `make gpu` and `make mutate` green on `70484d9` and asked for three wording notes, which are in `88d3961`. Waiting on his merge. |
 | [BendTorch#18](https://github.com/nuxyel/BendTorch/issues/18) | RoPE: the only rotation is 1D over rows, so an image transformer cannot rotate by (y, x). |
 | [BendTorch#19](https://github.com/nuxyel/BendTorch/issues/19) | adaLN: no layer broadcasts a per-image vector over its tokens. |
-| [BendTorch#15](https://github.com/nuxyel/BendTorch/issues/15) | `Conv2d` and `GroupNorm` (the UNet work). |
+| [BendTorch#15](https://github.com/nuxyel/BendTorch/issues/15) | `Conv2d` and `GroupNorm` (the UNet work). GroupNorm and full attention shipped in v1.3.0; `Conv2d` is #22; what is left for an UNet is RoPE2d (#18) and adaLN (#19). |
 | [bend-ml#26](https://github.com/nuxyel/bend-ml/issues/26) | The value law (get after set) as a Base question. We adopt nuxyel's proof; the PR waits on his word. |
 | [bend-ml#23](https://github.com/nuxyel/bend-ml/issues/23) | A counter-RNG fill bang (uniform/gauss) for tensor-gpu; the CIFAR step's target noise now uses it. |
 | [bendlang/bend#1632](https://github.com/bendlang/bend/issues/1632) | Clearer diagnostics for common mistakes. Items 9 and 10 are ours; item 11 is the Nat past 2^48 - 1 stop with no location. |
@@ -26,6 +25,7 @@ with no entry here was fixed in this repository.
 | Artifact | Outcome |
 |---|---|
 | [BendTorch#17](https://github.com/nuxyel/BendTorch/issues/17) | Closed by `FullAttention` in v1.3.0. |
+| [BendTorch#23](https://github.com/nuxyel/BendTorch/pull/23) | Closed 2026-11-03 as agreed: v1.3.0 wired `demo/fullattn_test.bend` and `reference/test_fullattn.py` into `make check` differently, and kept `fullattn_lane` as its own check; nothing in ours was worth a rebase. |
 | [BendTorch#12](https://github.com/nuxyel/BendTorch/issues/12) | Retracted and closed by us: `package.sh` does publish the fast and gpu lanes. |
 | [bend-ml#27](https://github.com/nuxyel/bend-ml/pull/27) | The tensor-array round trip at 64x64 and what a shape test can see. |
 | [bend-ml#20](https://github.com/nuxyel/bend-ml/issues/20) | The autodiff design question; closed, BendTorch is the answer. |
