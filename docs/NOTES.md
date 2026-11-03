@@ -3,6 +3,46 @@
 Every finding, every measurement and every discarded hypothesis, by date. Read the
 relevant entry before changing performance-sensitive code or a law.
 
+## 2026-11-03 (later) — the pin moves to BendTorch 1.3.0.0, and it is 45 import lines
+
+- **The bump is imports only: 24 files, 45 lines** (`bendtorch@1.1.1.0` ->
+  `@1.3.0.0` in 19, `bendtorch-gpu` in 3, `bend-ml-tensor-array@0.1.14.0` /
+  `@0.1.16.0` -> `@0.1.18.0` in 23). Every one of the 24 programs type-checks
+  against the new pins; `bend-ml-tensor-gpu` and `bend-ml-tensor-fork` were
+  already at `0.1.5.0`, which is 1.3.0's pair, so they do not move.
+- **The "31 call sites" the handoff carried was wrong.** `type Train`,
+  `Train.new` and `Train.step` are **byte-identical** between the pinned
+  `1.1.1.0` (lines 901/919/946) and `devel` at `1a37d12` (902/920/947): a diff
+  of the whole block is 0 lines. The repository has 13 `Train.step(` call
+  sites, not 31. So BendTorch#24 does not block the bump; it blocks only the
+  *later* signature change the issue proposes (option 1, dropping `step`'s
+  `+cfg`). The bump inherits the bug unchanged, which the repro now shows on
+  `devel` too (`built 0.1 stepped 0.001` and `built 0.001 stepped 0.001` both
+  6.5033846).
+- **Measured inert, not assumed.** With the new pins: `reference/test_flow64.py`
+  passes with the same deltas to the digit (4.77e-07 on the 32-step endpoint,
+  0.477 / 0.324 for the prefixes); the `flow64-first` cell reads -1.877e-08 /
+  -2.404e-07 / -1.049e-06, the same three numbers as before the bump; and
+  `vit-first` — the training step, the path `Train.step` runs — reads
+  `loss_at_0` 1.00919 against 1.00919, **-6.271e-09**, the same delta the twin
+  recorded on 1.1.1.0.
+- **v1.3.0 is what the UNet needed.** `FullAttention` and `GroupNorm` are in it
+  (`#17` closed, `#15`'s GroupNorm half done), so after `#22`'s `Conv2d` there is
+  no upstream dependency left for an unconditional UNet: RoPE2d (`#18`) and
+  adaLN (`#19`) are for a conditional one. The pin was the last thing on our
+  side standing between the repository and that model.
+- **ISSUE-045, found by the bump.** `bench/cifar_learning`,
+  `bench/cifar_learning_gpu` and `bench/fill_cross` do **not** type-check, and
+  did not before the bump either (stashed and re-checked on `main`): `bench/`
+  is in no gate — `check_all.py` runs the packages' `tests/` and
+  `reference/test_*.py`, never a bench program. Rot went unnoticed because
+  nothing compiles those files.
+- **A clock, still.** `make experiment` rewrote `results/latest/vit-first.json`
+  and `flow64-first.json` with a new `created_at`/`fetch_seconds`/branch while
+  every number stayed equal: the class of write ISSUE-033 closed for the five
+  tests is still open for the runner's latest record. Reverted here so the bump
+  is imports and documentation only.
+
 ## 2026-11-03 — the 64x64 flow's twin: the shapes that made it match on the first build
 
 - **ISSUE-043 is closed.** `reference/probe_flow64.bend` prints the frozen

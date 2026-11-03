@@ -17,9 +17,9 @@
 # RGB export by reference/flowers_export.py and pinned itself at
 # 6b9c4c66ad5c03939875557d8a77af02845bf924849b4964bcd46b69300a4956.
 import Base
-import bendtorch@1.1.1.0/main.bend as T
-import bendtorch-gpu@1.1.1.0/main.bend as F
-import bend-ml-tensor-array@0.1.14.0/main.bend as TA
+import bendtorch@1.3.0.0/main.bend as T
+import bendtorch-gpu@1.3.0.0/main.bend as F
+import bend-ml-tensor-array@0.1.18.0/main.bend as TA
 import mlbend-generative@0.1.1.0/main.bend as G
 import ./config.bend as C
 

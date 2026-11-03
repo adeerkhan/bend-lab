@@ -22,8 +22,8 @@
 # example's `ab_img`/`te_img` reverse an already-ascending list. With the twin
 # mirroring that (`twin_vit.levels_of`) both read 1.0091865, to 6.3e-09.
 import Base
-import bendtorch@1.1.1.0/main.bend as T
-import bend-ml-tensor-array@0.1.14.0/main.bend as TA
+import bendtorch@1.3.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.18.0/main.bend as TA
 import mlbend-datasets@0.1.6.0/main.bend as Datasets
 import mlbend-huggingface@0.1.1.0/main.bend as Hf
 import ../../examples/diffusion/vit/main.bend as V

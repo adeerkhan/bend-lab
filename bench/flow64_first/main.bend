@@ -18,8 +18,8 @@
 # reference, so `make matrix` compares them; `reference/test_flow64.py` is the
 # elementwise gate on the same model, weights and states.
 import Base
-import bendtorch@1.1.1.0/main.bend as T
-import bend-ml-tensor-array@0.1.14.0/main.bend as TA
+import bendtorch@1.3.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.18.0/main.bend as TA
 import mlbend-generative@0.1.1.0/main.bend as G
 import ../../examples/diffusion/flowers_flow/main.bend as M
 

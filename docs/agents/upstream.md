@@ -8,7 +8,7 @@ with no entry here was fixed in this repository.
 
 | Artifact | What it asks |
 |---|---|
-| [BendTorch#24](https://github.com/nuxyel/BendTorch/issues/24) | `Train.step`'s config silently overrides `Train.new`'s; a step at 0.001 on a Train made at 0.1 reads the same loss for every Train. |
+| [BendTorch#24](https://github.com/nuxyel/BendTorch/issues/24) | `Train.step`'s config silently overrides `Train.new`'s; a step at 0.001 on a Train made at 0.1 reads the same loss for every Train. Still true on `devel@1a37d12`; a paste-runnable repro and one shape question were posted 2026-11-03. **It does not block the pin bump**: the `Train` API is byte-identical across 1.1.1.0 and 1.3.0. |
 | [BendTorch#22](https://github.com/nuxyel/BendTorch/pull/22) | `Conv2d` in both lanes, with im2col and col2im on the device. Rebased on v1.3.0 at `1a37d12`; the maintainer ran `make check`, `make gpu` and `make mutate` green on `70484d9` and asked for three wording notes, which are in `88d3961`. Waiting on his merge. |
 | [BendTorch#18](https://github.com/nuxyel/BendTorch/issues/18) | RoPE: the only rotation is 1D over rows, so an image transformer cannot rotate by (y, x). |
 | [BendTorch#19](https://github.com/nuxyel/BendTorch/issues/19) | adaLN: no layer broadcasts a per-image vector over its tokens. |

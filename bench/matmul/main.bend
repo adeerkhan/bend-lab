@@ -7,7 +7,7 @@
 # times this program and the same products in NumPy, and writes the
 # comparison to results/bench-matmul.json.
 import Base
-import bend-ml-tensor-array@0.1.14.0/main.bend as TA
+import bend-ml-tensor-array@0.1.18.0/main.bend as TA
 
 # The first number of a list, or 0 when it is empty.
 def first(xs: List<&2, F32>) -> F32:

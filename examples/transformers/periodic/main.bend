@@ -1,5 +1,5 @@
 # A one-block transformer trained on a periodic sequence, with the real
-# BendTorch (`bendtorch@1.1.1.0`), not the old `bendtorch-core` tape.
+# BendTorch (`bendtorch@1.3.0.0`), not the old `bendtorch-core` tape.
 #
 #   bendenv run -- bend examples/transformer/main.bend
 #
@@ -10,13 +10,13 @@
 # is the evidence: it falls from log(8) toward zero as the model learns the
 # cycle.
 #
-# The library is nuxyel/BendTorch (`bendtorch@1.1.1.0`), which has
+# The library is nuxyel/BendTorch (`bendtorch@1.3.0.0`), which has
 # `Attention`, `RMSNorm`, `Embedding`, `CrossEntropy`, `AdamW` and
 # `Train`; the old `bendtorch-core` line has none of these. This file is
 # the first task on the maintained library.
 import Base
-import bendtorch@1.1.1.0/main.bend as T
-import bend-ml-tensor-array@0.1.14.0/main.bend as TA
+import bendtorch@1.3.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.18.0/main.bend as TA
 
 # The shape: two sequences of sixteen positions, width sixteen, vocabulary
 # eight, one attention head.

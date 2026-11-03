@@ -11,8 +11,8 @@
 # lr, stepped with their own: the three losses separate. The first table is the
 # bug, the second is the control.
 import Base
-import bendtorch@1.1.1.0/main.bend as T
-import bend-ml-tensor-array@0.1.14.0/main.bend as TA
+import bendtorch@1.3.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.18.0/main.bend as TA
 
 def one() -> Nat:
   1n

@@ -1,5 +1,5 @@
 # A diffusion model trained and sampled in Bend, with the real BendTorch
-# (`bendtorch@1.1.1.0`).
+# (`bendtorch@1.3.0.0`).
 #
 #   bendenv run -- bend examples/diffusion/main.bend
 #
@@ -20,8 +20,8 @@
 # samples move as List<&2, F32> (duplicable); only the model's matrices
 # are bend-ml-tensor-array's, at the edges.
 import Base
-import bendtorch@1.1.1.0/main.bend as T
-import bend-ml-tensor-array@0.1.14.0/main.bend as TA
+import bendtorch@1.3.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.18.0/main.bend as TA
 import mlbend-generative@0.1.1.0/main.bend as G
 
 # The shape: 128 points of 2 features, a time embedding of 8, a hidden

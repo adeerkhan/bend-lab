@@ -25,9 +25,9 @@
 #              therefore attended as a causal sequence; a bidirectional mask
 #              is not expressible in this package today.
 import Base
-import bendtorch@1.1.1.0/main.bend as T
-import bendtorch-gpu@1.1.1.0/main.bend as F
-import bend-ml-tensor-array@0.1.14.0/main.bend as TA
+import bendtorch@1.3.0.0/main.bend as T
+import bendtorch-gpu@1.3.0.0/main.bend as F
+import bend-ml-tensor-array@0.1.18.0/main.bend as TA
 import mlbend-generative@0.1.1.0/main.bend as G
 import mlbend-datasets@0.1.6.0/main.bend as Datasets
 import mlbend-huggingface@0.1.1.0/main.bend as Hf

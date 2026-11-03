@@ -4,6 +4,26 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The pin moves to BendTorch 1.3.0.0, with no number moving
+
+The repository imported `bendtorch@1.1.1.0` and `bend-ml-tensor-array@0.1.14.0`,
+which predates full attention and `GroupNorm`.
+
+- **24 files, 45 import lines**: `bendtorch` and `bendtorch-gpu` to `1.3.0.0`,
+  `tensor-array` to `0.1.18.0`. `tensor-gpu` and `tensor-fork` were already at
+  `0.1.5.0`, the pair 1.3.0 uses.
+- **No call site changes.** `Train`, `Train.new` and `Train.step` are
+  byte-identical between the two versions, so the "31 call sites" the handoff
+  expected were not there; the repository has 13, and none moves.
+- **Measured inert.** `reference/test_flow64.py` passes with the same deltas to
+  the digit, the `flow64-first` cell reads the same three mean squares, and
+  `vit-first`'s trained window reads `loss_at_0` 1.00919 to **-6.271e-09** — the
+  same delta as on 1.1.1.0.
+- **What it buys**: full attention and `GroupNorm`, which with the `Conv2d` in
+  BendTorch#22 leaves an unconditional UNet with no upstream dependency.
+- **Found on the way** (ISSUE-045): three `bench/` programs do not type-check and
+  did not before the bump; `bench/` is in no gate.
+
 ### The 64x64 flow has a twin, and its forward and sampler are gated
 
 `flowers-flow` was the only task gated by a measured expectation rather than a

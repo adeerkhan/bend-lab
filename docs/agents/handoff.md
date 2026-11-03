@@ -7,6 +7,43 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-03 (later) — the pin is on 1.3.0.0, and #24 never blocked it
+
+**Where things stand.** The bump is done and it is 45 import lines: `bendtorch`
+and `bendtorch-gpu` to `1.3.0.0` in 22 files, `bend-ml-tensor-array` to
+`0.1.18.0` in 23. `make check` on this tree reads **99/99**.
+
+- **The handoff's last entry predicted 31 `Train.step` call sites.** That was
+  wrong: `type Train`, `Train.new` and `Train.step` are byte-identical between
+  `1.1.1.0` (901/919/946) and `devel@1a37d12` (902/920/947) -- a diff of the
+  block is 0 lines -- and the repository has 13 call sites. BendTorch#24 is
+  real and still open, but it blocks only the signature change the issue
+  proposes, not the bump.
+- **Measured inert.** `test_flow64.py` passes with the same deltas to the digit;
+  `flow64-first` reads -1.877e-08 / -2.404e-07 / -1.049e-06; `vit-first`, which
+  runs `Train.step`, reads `loss_at_0` **-6.271e-09**, the same as on 1.1.1.0.
+- **What it buys.** `FullAttention` and `GroupNorm` are in 1.3.0, so after
+  BendTorch#22's `Conv2d` there is no upstream dependency left for an
+  unconditional UNet. RoPE2d (#18) and adaLN (#19) are for a conditional one.
+- **Upstream today.** #23 closed as agreed (v1.3.0 did it differently); #22 is
+  mergeable, the three wording notes are in `88d3961` and answered, and it waits
+  on nuxyel's merge; #24 got a paste-runnable repro (also green on `devel`) and
+  one question -- is shape (1) still what he would take -- so the signature is
+  settled before we edit call sites.
+- **Found on the way.** ISSUE-045: `bench/cifar_learning`,
+  `bench/cifar_learning_gpu` and `bench/fill_cross` do not type-check, and did
+  not before the bump; `bench/` is in no gate. Also, `make experiment` still
+  rewrites `results/latest/*.json` with a new clock when no number moved, which
+  ISSUE-033 closed for the five tests but not for the runner.
+
+**Next, in order.** 1. **The UNet** (ours, unblocked): `examples/diffusion/unet`
+with its twin and cell first, the way `flow64` landed; `Conv2d` arrives with
+#22, `GroupNorm` and full attention are already here. 2. Answer-driven: if
+nuxyel takes shape (1) on #24, send the PR with the repro as its test, then
+adopt the new signature across the 13 call sites in one change. 3. Then
+`~`-parameter message on bendlang (#1632 items 9-10), and the three rotted
+bench programs (ISSUE-045) either fixed or deleted.
+
 ## 2026-11-03 — the 64x64 flow has a twin, so 99/99
 
 **Where things stand.** The handoff's first item is closed (ISSUE-043): the flow
@@ -85,8 +122,10 @@ sidecar (model, config, packages, weights sha256, step), and
 one forward and one Euler step, then the Euler 8/16/32 comparison; the task is
 still gated by a measured expectation. 2. The `~`-parameter message: a
 ten-line repro, then file on bendlang. 3. Watch: bend-lab pins
-`bendtorch@1.1.1.0`; a bump to 1.3.x inherits `Train.step`'s change and needs
-31 call sites edited, in one change and after #24 is answered.
+`bendtorch@1.1.1.0`. (The "31 call sites" this line used to predict was
+measured on 2026-11-03 and is wrong: the `Train` API is byte-identical between
+1.1.1.0 and 1.3.0, the bump is 45 import lines, and it does not wait on #24 --
+see the newest entry.)
 
 ## 2026-11-02 (later) — the gate leaves the tree clean
 

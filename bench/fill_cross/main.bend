@@ -18,7 +18,7 @@
 # bits on every lane); `gauss_at` calls the host's F32.log/cos/sin, so the two
 # agree to a few ulp, not bit for bit. The task's gate is 1.3e-6.
 import Base
-import bend-ml-tensor-array@0.1.14.0/main.bend as TA
+import bend-ml-tensor-array@0.1.18.0/main.bend as TA
 import bend-ml-tensor-gpu@0.1.5.0/main.bend as TG
 import mlbend-generative@0.1.1.0/main.bend as G
 

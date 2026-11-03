@@ -19,7 +19,7 @@
 import Base
 import ../../../../bendtorch/torch/main.bend as T
 import ../../../../bendtorch/torch/gpu.bend as F
-import bend-ml-tensor-array@0.1.14.0/main.bend as TA
+import bend-ml-tensor-array@0.1.18.0/main.bend as TA
 import mlbend-generative@0.1.1.0/main.bend as G
 import ./config.bend as C
 
