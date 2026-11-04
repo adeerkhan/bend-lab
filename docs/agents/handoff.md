@@ -11,19 +11,19 @@ leaves the next one blind.
 
 **Where things stand.** The finished work is in review, not on a branch:
 
-- **nuxyel/BendTorch#32** `im2col-roundtrip` (from `adeerkhan/BendTorch`): `conv_roundtrip_ks`,
+- **nuxyel/BendTorch#32** `im2col-roundtrip` (4 commits, from `adeerkhan/BendTorch`): `conv_roundtrip_ks`,
   `conv_roundtrip_window` (the general law, with `_ks` proved as its instance), the division lemma
   `divmod_go_spec`/`divmod_spec` beside `divmod_one`, and the decode. +621/−12. Green on
   `--verdict`, `make laws` (37 in all), `make build`, and both reference checks rebuilt from source.
   Closes the law half of #29.
-- **nuxyel/BendTorch#33** `rope2d`: `RoPE2d`, its three laws, its `Nat` addressing defs (called
+- **nuxyel/BendTorch#33** `rope2d` (3 commits): `RoPE2d`, its three laws, its `Nat` addressing defs (called
   through `U32.from_nat`), and `reference/rope2d_check.py`. +483/−7. Green on `--verdict`,
   `make laws` (38 in all), `make build`, `1.192e-07` / `1.192e-07` / PASS.
 - **#29's comment is posted** (`#issuecomment-6634286240`): the two answers, the window law, the
   runs, the adjoint's blocker.
 - Both branches come off `devel@57af13a`. Whichever PR merges second needs a one-line law-count
   recount; that is in #33's body.
-- **CI is green on both**: #32 in 1m19s; #33 in 28m19s, after a second attempt (its first run's steps all
+- **CI is green on both**: #32 in 1m26s; #33 in 24m19s, after a second attempt (its first run's steps all
   passed but GitHub never finalised the run, and a contributor cannot rerun another user's workflow — a
   comment-only commit re-armed the full affected set on a fresh head, which finalised properly).
 
