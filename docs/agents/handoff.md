@@ -63,10 +63,12 @@ the smallest honest U (64x64 -> 32x32 -> 64x64, 2 channels, one additive skip,
 **Next, in order.** 1. Close ISSUE-051 (the 1.86e-4), then rename `unet_gate.py`
 to `test_unet.py` and let it into the gate. 2. The rest of the UNet: the second
 down/up level, the bottleneck, a `Layer` composition (Seq/Fork/Both/Add2/Id, so
-the backward comes free), then the probe/twin/cell and a flowers64 run. 3. BendTorch #29: **the `k = s` round trip is done** (`conv_roundtrip_ks`, with
-`divmod_go_spec`/`divmod_spec` beside `divmod_one`, BendTorch `a0ecfdd`). What is
-left is Conv2d's adjoint law (that `col2im` is the transpose of the gather), in
-`LAWS.bend`/`PROOF.bend` with `--verdict`.
+the backward comes free), then the probe/twin/cell and a flowers64 run. 3. BendTorch #29: **done, at any stride and padding** — `conv_roundtrip_window`
+(BendTorch `a2732c7`) says slot `(ch, ky, kx)` of `(oy, ox)` is image cell
+`(oy·s + ky − p, ox·s + kx − p)`, and `conv_roundtrip_ks` is its instance. What is
+left in the conv line is Conv2d's adjoint (#15), which needs `torch/spec.bend` to
+grow indexed accumulation (`nth`/`set_at`) first: `col2im` writes into an array
+by index and the checker cannot follow that (`docs/limitations.md`).
 
 ## 2026-11-04 (night) — the UNet's decoder block exists and is gated
 

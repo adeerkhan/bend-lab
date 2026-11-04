@@ -2169,3 +2169,24 @@ buys nothing until the work per step is much larger.
   second law (the law is the round trip).
 - **Left:** `s ≠ k` and `p > 0` are not stated, and Conv2d's adjoint (that
   `col2im` is the transpose of the gather) is the next piece of #29.
+
+## 2026-11-04 (later) — the conv round trip at the geometry the layers actually use
+
+- **BendTorch `a2732c7`** (`test/im2col-ks`): `conv_roundtrip_window` — for
+  every kernel, stride and padding, slot `(ch, ky, kx)` of output position
+  `(oy, ox)` is image cell `(oy·s + ky − p, ox·s + kx − p)`, channel `ch`. The
+  decode does not mention `s` or `p` at all, so it is one subtraction lemma
+  (`(p + t) − p = t`) away from `conv_roundtrip_ks`, which is now *proved as an
+  instance* of it (`s = k`, `p = 0`) — the subsumption is kernel-checked, not a
+  comment.
+- **This is the conv the UNet runs**: `k = 3, s = 2, p = 1`. The numbers were
+  rebuilt and rerun, not carried: `reference/conv2d_check.py` gives `0.000e+00`
+  on y, dx, dW and db for all three shapes, `c1`/`c2` being `k = 3, p = 1, s = 2`.
+- **`make laws` green on that tree, 37 laws.**
+- **The adjoint (#15) is a project, not an afternoon:** `col2im` accumulates
+  into an array by index and the checker cannot follow that, so the law must be
+  stated over `spec.bend`, and `spec.bend` has dots and matrix products over
+  whole lists but no indexed access (`nth`/`set_at`). For `s = k` the reindexing
+  is a bijection the decode already gives; for overlapping windows it is a fiber
+  sum, which needs `Nat` equality reasoning the codebase does not have. Recorded
+  in `docs/limitations.md` and BendTorch `NOTES.md`.

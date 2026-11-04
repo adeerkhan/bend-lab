@@ -6,14 +6,19 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ### The UNet's forward, composed and confronted with a twin
 
-### The conv round trip at any stride that tiles the image
+### The conv round trip at any stride and padding
 
-- **`conv_roundtrip_ks`** in BendTorch (`a0ecfdd`): with a stride equal to the
-  kernel size and no padding, slot `(ch, ky, kx)` of a patch row is image cell
-  `(oy·k + ky, ox·k + kx)`, channel `ch`, so the gather and the scatter name the
-  same cell for every `k`. It rests on `divmod_go_spec`, Bend's division meeting
-  its spec, and on the mixed-radix decode; `make laws` and `--verdict` are green.
-  A conv at `3x3`, stride 3 or at `4x4`, stride 4 now has a law, not only a test.
+- **`conv_roundtrip_window`** in BendTorch (`a2732c7`): for every kernel, stride
+  and padding, slot `(ch, ky, kx)` of output position `(oy, ox)` is image cell
+  `(oy·s + ky − p, ox·s + kx − p)`, channel `ch` — the gather and the scatter name
+  the same cell, `p_src` both times. That is the geometry the UNet runs
+  (`k = 3, s = 2, p = 1`), and the numbers agree with PyTorch exactly on three
+  shapes.
+- It sits on the mixed-radix decode and on `divmod_go_spec`, Bend's division
+  meeting its spec; the narrower `conv_roundtrip_ks` (`s = k`, `p = 0`) is now a
+  kernel-checked instance of it. `make laws` and `--verdict` are green, 37 laws.
+- **Still owed:** Conv2d's adjoint (#15), which needs a spec model with indexed
+  accumulation; `docs/limitations.md` says exactly what is missing.
 
 - **`examples/diffusion/unet/main.bend`** is the smallest honest U: `Conv2d`
   stride 2 down, `GroupNorm`, `SiLU`, the `Up2` block, `Conv2d` stride 1,
