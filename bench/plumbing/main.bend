@@ -19,7 +19,7 @@
 # Every measured value is printed after its timer, so the compiler cannot drop
 # the work as unused: a pure phase that returns Unit is erased and times as 0.
 import Base
-import bendtorch@1.3.0.0/main.bend as T
+import bendtorch@2.0.0.0/main.bend as T
 import bend-ml-tensor-array@0.1.18.0/main.bend as TA
 import mlbend-generative@0.1.1.0/main.bend as G
 import ../../examples/diffusion/vit/main.bend as M
@@ -54,7 +54,7 @@ def step_n(left: Nat, +i: Nat, tr: T.Train<M.ModelP()>,
 
 def train_loss(tr: T.Train<M.ModelP()>) -> F32:
   match tr:
-    case T.Train{p, g, st, p1, p2, l}:
+    case T.Train{p, g, st, c, p1, p2, l}:
       l
 
 def bench_with(+x0: List<&2, F32>) -> IO(Unit):

@@ -1,5 +1,5 @@
 # A one-block transformer trained on a periodic sequence, with the real
-# BendTorch (`bendtorch@1.3.0.0`), not the old `bendtorch-core` tape.
+# BendTorch (`bendtorch@2.0.0.0`), not the old `bendtorch-core` tape.
 #
 #   bendenv run -- bend examples/transformer/main.bend
 #
@@ -10,12 +10,12 @@
 # is the evidence: it falls from log(8) toward zero as the model learns the
 # cycle.
 #
-# The library is nuxyel/BendTorch (`bendtorch@1.3.0.0`), which has
+# The library is nuxyel/BendTorch (`bendtorch@2.0.0.0`), which has
 # `Attention`, `RMSNorm`, `Embedding`, `CrossEntropy`, `AdamW` and
 # `Train`; the old `bendtorch-core` line has none of these. This file is
 # the first task on the maintained library.
 import Base
-import bendtorch@1.3.0.0/main.bend as T
+import bendtorch@2.0.0.0/main.bend as T
 import bend-ml-tensor-array@0.1.18.0/main.bend as TA
 
 # The shape: two sequences of sixteen positions, width sixteen, vocabulary
@@ -249,19 +249,19 @@ def ce(z: Y, labels: List<&2, Nat>) -> T.LossOut<Y>:
   T.CrossEntropy(rows(), vocab(), z, labels)
 
 def step(+cfg: T.OptCfg, tr: T.Train<P>) -> T.Train<P>:
-  T.Train.step(~P, ~X, ~Y, ~S, ~List<&2, Nat>, ~Model, ~ce, cfg, tr,
+  T.Train.step(~P, ~X, ~Y, ~S, ~List<&2, Nat>, ~Model, ~ce, tr,
     xs(), ys())
 
 def loop(n: Nat, +i: Nat, +cfg: T.OptCfg, tr: T.Train<P>) -> IO(T.Train<P>):
   match n tr:
-    case 0n T.Train{p, g, st, p1, p2, +l}:
+    case 0n T.Train{p, g, st, c, p1, p2, +l}:
       do IO<T.Train<P>>:
         IO.print(String.append("loss: ", F32.show(l)))
-        return T.Train{p, g, st, p1, p2, l}
-    case 1n+rest T.Train{p, g, st, p1, p2, +l}:
+        return T.Train{p, g, st, c, p1, p2, l}
+    case 1n+rest T.Train{p, g, st, c, p1, p2, +l}:
       do IO<T.Train<P>>:
         IO.print(String.append("loss: ", F32.show(l)))
-        loop(rest, Nat.add(i, 1n), cfg, step(cfg, T.Train{p, g, st, p1, p2, l}))
+        loop(rest, Nat.add(i, 1n), cfg, step(cfg, T.Train{p, g, st, c, p1, p2, l}))
 
 def cfg() -> T.OptCfg:
   T.CAdamW{0.01, 0.9, 0.999, 0.00000001, 0.0, 0.1, 0.001}
@@ -305,7 +305,7 @@ def accuracy_fwd(r: T.Fwd<P, Y, S>) -> F32:
 
 def accuracy(tr: T.Train<P>) -> F32:
   match tr:
-    case T.Train{p, g, st, p1, p2, l}:
+    case T.Train{p, g, st, c, p1, p2, l}:
       accuracy_fwd(T.Layer.fwd(P, X, Y, S, Model(), p, xs()))
 
 def main() -> IO(Unit):

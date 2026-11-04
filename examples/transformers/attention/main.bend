@@ -14,7 +14,7 @@
 # The weights are a fixed small pattern, generated the same way in the
 # PyTorch reference, so the two programs compute the same function and the
 # outputs can be compared number by number (reference/test_attention.py).
-# This is the forward pass. The maintained BendTorch (`bendtorch@1.3.0.0`)
+# This is the forward pass. The maintained BendTorch (`bendtorch@2.0.0.0`)
 # has recorded attention and softmax; the trained transformer is
 # `examples/transformer`.
 import Base

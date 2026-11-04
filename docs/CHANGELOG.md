@@ -4,6 +4,33 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The pin is `bendtorch@2.0.0.0`
+
+`bendtorch` 2.0.0 (2026-11-03) moves the optimizer configuration into the
+`Train` and adds `Conv2d`. Both breaking changes are mechanical here.
+
+- **21 imports, 13 `Train.step` call sites, 59 `T.Train{…}` patterns** across 22
+  files, in one change: the pin moves, the step loses its configuration
+  argument, and the record gains `c` after `st`.
+- **No number moved.** `make check` 113/113, and the learning-rate sweep on the
+  released package reads the same three rows it read on `devel`:
+  **0.5790425 / 0.87949044 / 0.99899477** where 1.3.0.0 read `0.84698695` three
+  times. Posted on BendTorch#24, which is now closed.
+- **The trap is not `Train.step`.** A wrapper that passes the configuration one
+  call up (`M.do_step(0n, cfg(), tr, x0)`) hides it from `grep Train.step`;
+  `--check-only` names each one with `expected T.Train<…>` / `observed T.OptCfg`.
+- **`Conv2d` arrives with it**, which with `GroupNorm` and `FullAttention`
+  leaves an unconditional UNet with no upstream dependency (BendTorch#15 is
+  closed for that reason).
+
+### `Attention` against `FullAttention` at the block's shape
+
+BendTorch#28 asked whether the causal per-query softmax is what costs. It is
+not: at 1024 rows of width 64, 64 images of 16 tokens, masked full attention is
+**9.55 ms** a pass against causal's **10.65 ms** — 10% *cheaper*. The cost is the
+core at this size, 64 tiny 16x16 products rather than one big one, so the lever
+is fewer, larger calls rather than the mask. `make call-cost` measures it.
+
 ### An outside corpus for the compiler, with a gate that can fail
 
 - **`reference/corpus/qwenbend/`**: 200 small Bend programs written by

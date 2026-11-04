@@ -22,7 +22,7 @@
 # example's `ab_img`/`te_img` reverse an already-ascending list. With the twin
 # mirroring that (`twin_vit.levels_of`) both read 1.0091865, to 6.3e-09.
 import Base
-import bendtorch@1.3.0.0/main.bend as T
+import bendtorch@2.0.0.0/main.bend as T
 import bend-ml-tensor-array@0.1.18.0/main.bend as TA
 import mlbend-datasets@0.1.6.0/main.bend as Datasets
 import mlbend-huggingface@0.1.1.0/main.bend as Hf
@@ -45,7 +45,7 @@ def start() -> T.Train<V.ModelP()>:
 
 def show(tr: T.Train<V.ModelP()>) -> IO(Unit):
   match tr:
-    case T.Train{p, g, st, q1, q2, +l}:
+    case T.Train{p, g, st, c, q1, q2, +l}:
       IO.print(String.append("loss_at_0: ", F32.show(l)))
 
 def mse_at(y: TA.Mat<V.RW(), V.PX()>, t: TA.Mat<V.RW(), V.PX()>) -> T.LossOut<TA.Mat<V.RW(), V.PX()>>:

@@ -17,8 +17,8 @@
 # RGB export by reference/flowers_export.py and pinned itself at
 # 6b9c4c66ad5c03939875557d8a77af02845bf924849b4964bcd46b69300a4956.
 import Base
-import bendtorch@1.3.0.0/main.bend as T
-import bendtorch-gpu@1.3.0.0/main.bend as F
+import bendtorch@2.0.0.0/main.bend as T
+import bendtorch-gpu@2.0.0.0/main.bend as F
 import bend-ml-tensor-array@0.1.18.0/main.bend as TA
 import mlbend-generative@0.1.1.0/main.bend as G
 import ./config.bend as C
@@ -408,7 +408,7 @@ def init_params() -> ModelP():
 def step_lr(lr: LR, tr: T.Train<ModelP()>) -> T.Train<ModelP()>:
   match lr:
     case LR{inp, tgt}:
-      T.Train.step(~ModelP(), ~X(), ~Y(), ~ModelS(), ~Y(), ~Model(), ~mse, cfg(), tr,
+      T.Train.step(~ModelP(), ~X(), ~Y(), ~ModelS(), ~Y(), ~Model(), ~mse, tr,
         TA.Mat.from_list(RW(), FE(), inp), TA.Mat.from_list(RW(), PX(), tgt))
 
 def do_step(+s: Nat, tr: T.Train<ModelP()>, data: List<&2, U32>) -> T.Train<ModelP()>:
@@ -429,15 +429,15 @@ def print_or(sp: Bool, +l: F32) -> IO(Unit):
 
 def loop(+root: String, left: Nat, +i: Nat, tr: T.Train<ModelP()>) -> IO(T.Train<ModelP()>):
   match left tr:
-    case 0n T.Train{p, g, st, q1, q2, +l}:
+    case 0n T.Train{p, g, st, c, q1, q2, +l}:
       do IO<T.Train<ModelP()>>:
         IO.print(String.append("final_loss: ", F32.show(l)))
-        return T.Train{p, g, st, q1, q2, l}
-    case 1n+rest T.Train{p, g, st, q1, q2, +l}:
+        return T.Train{p, g, st, c, q1, q2, l}
+    case 1n+rest T.Train{p, g, st, c, q1, q2, +l}:
       do IO<T.Train<ModelP()>>:
         data : List<&2, U32> <- read_batch(root, i)
         Unit <- print_or(should_print(i), l)
-        loop(root, rest, (1n + i : Nat), do_step(i, T.Train{p, g, st, q1, q2, l}, data))
+        loop(root, rest, (1n + i : Nat), do_step(i, T.Train{p, g, st, c, q1, q2, l}, data))
 
 # ---- sampling: Euler from noise ----
 
@@ -496,7 +496,7 @@ def euler_go(+left: Nat, +i: Nat, st: VS) -> VS:
 
 def train_params(tr: T.Train<ModelP()>) -> ModelP():
   match tr:
-    case T.Train{p, g, st, q1, q2, l}:
+    case T.Train{p, g, st, c, q1, q2, l}:
       p
 
 def sample_x(st: VS) -> List<&2, F32>:

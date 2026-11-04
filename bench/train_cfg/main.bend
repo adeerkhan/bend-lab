@@ -11,7 +11,7 @@
 # lr, stepped with their own: the three losses separate. The first table is the
 # bug, the second is the control.
 import Base
-import bendtorch@1.3.0.0/main.bend as T
+import bendtorch@2.0.0.0/main.bend as T
 import bend-ml-tensor-array@0.1.18.0/main.bend as TA
 
 def one() -> Nat:
@@ -46,15 +46,15 @@ def cfg_lr(+lr: F32) -> T.OptCfg:
 
 # one step, the config named at the call site the way the examples do it
 def step(+lr: F32, tr: T.Train<P()>) -> T.Train<P()>:
-  T.Train.step(~P(), ~X(), ~Y(), ~Y(), ~Y(), ~Mdl(), ~mse, cfg_lr(lr), tr,
+  T.Train.step(~P(), ~X(), ~Y(), ~Y(), ~Y(), ~Mdl(), ~mse, tr,
     TA.Mat.from_list(one(), w(), vals()), TA.Mat.from_list(one(), w(), vals()))
 
 def loop(+lr: F32, +left: Nat, tr: T.Train<P()>) -> F32:
   match left tr:
-    case 0n T.Train{p, g, st, q1, q2, +l}:
+    case 0n T.Train{p, g, st, c, q1, q2, +l}:
       l
-    case 1n+rest T.Train{p, g, st, q1, q2, +l}:
-      loop(lr, rest, step(lr, T.Train{p, g, st, q1, q2, l}))
+    case 1n+rest T.Train{p, g, st, c, q1, q2, +l}:
+      loop(lr, rest, step(lr, T.Train{p, g, st, c, q1, q2, l}))
 
 # the Train's own lr is `built`; the step's is `stepped`
 def run(+built: F32, +stepped: F32) -> IO(Unit):

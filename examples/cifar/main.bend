@@ -22,7 +22,7 @@
 # thread through the sampling loop (Layer.fwd returns them), and every
 # "random" number is a counter.
 import Base
-import ../../../bendtorch/torch/main.bend as T
+import bendtorch@2.0.0.0/main.bend as T
 import bend-ml-tensor-array@0.1.18.0/main.bend as TA
 import bend-ml-tensor-gpu@0.1.5.0/main.bend as TG
 import mlbend-generative@0.1.1.0/main.bend as G

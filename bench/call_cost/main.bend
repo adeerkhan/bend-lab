@@ -15,8 +15,8 @@
 # 8.4 MFLOP / the measured GFLOP/s says whether the kernel reaches its floor.
 # Every phase prints its value after the timer, so nothing is erased.
 import Base
-import bendtorch@1.3.0.0/main.bend as T
-import bendtorch-gpu@1.3.0.0/main.bend as F
+import bendtorch@2.0.0.0/main.bend as T
+import bendtorch-gpu@2.0.0.0/main.bend as F
 import ../../examples/diffusion/vit/main.bend as M
 import bend-ml-tensor-array@0.1.18.0/main.bend as TA
 
@@ -170,6 +170,54 @@ def mlp_of_p(p: M.ModelP()) -> M.MlpP():
             case T.Two{att, mlp}:
               mlp
 
+# ---- the attention core alone: causal against full (BendTorch#28) ----
+# The projections are 3.3 ms of the block's 11.2; this times what is left —
+# the scores, the softmax and P.V — at b = 64 images of t = 16 tokens, width 64.
+def qkv() -> T.Two<X(), T.Two<X(), X()>>:
+  T.Two{TA.Mat.fill(1024n, 64n, 0.1),
+    T.Two{TA.Mat.fill(1024n, 64n, 0.2), TA.Mat.fill(1024n, 64n, 0.3)}}
+
+type CW is Type:
+  CW{y: X(), s: T.AttnS}
+
+def cw_of(f: T.Fwd<Unit, X(), T.AttnS>) -> CW:
+  match f:
+    case T.Fwd{p, y, s}:
+      CW{y, s}
+
+def att_state() -> T.AttnS:
+  T.AttnS{Array.new(F32, TA.cap_depth(65536n), 0.0),
+    Array.new(F32, TA.cap_depth(65536n), 0.0),
+    Array.new(F32, TA.cap_depth(65536n), 0.0)}
+
+def att_causal(w: CW) -> CW:
+  match w:
+    case CW{y, s}:
+      cw_of(T.Layer.fwd(Unit, T.Two<X(), T.Two<X(), X()>>(), X(), T.AttnS(),
+        F.Attention(1024n, 64n, 64n, 64n, 16n, 1n, 1n, 64n, 0.125, {==}, {==}, {==}),
+        Unit{}, qkv()))
+
+def att_full(w: CW) -> CW:
+  match w:
+    case CW{y, s}:
+      cw_of(T.Layer.fwd(Unit, T.Two<X(), T.Two<X(), X()>>(), X(), T.AttnS(),
+        F.FullAttention(1024n, 64n, 64n, 64n, 16n, 1n, 1n, 64n, 0.125, {==}, {==}, {==}),
+        Unit{}, qkv()))
+
+def causal_r(+left: Nat, w: CW) -> F32:
+  match left w:
+    case 0n CW{y, s}:
+      head_of(y)
+    case 1n+rest CW{y, s}:
+      causal_r(rest, att_causal(CW{y, s}))
+
+def full_r(+left: Nat, w: CW) -> F32:
+  match left w:
+    case 0n CW{y, s}:
+      head_of(y)
+    case 1n+rest CW{y, s}:
+      full_r(rest, att_full(CW{y, s}))
+
 def main() -> IO(Unit):
   do IO<Unit>:
     Unit <- IO.print(String.append("rows: ", Nat.show(rows())))
@@ -210,6 +258,20 @@ def main() -> IO(Unit):
     d : F32 <- IO.pure(F32, mlp_r(N(), MW{mlp_of_p(M.init_params()), TA.Mat.fill(1024n, 64n, 0.25)}))
     t9 : Nat <- IO.now()
     Unit <- IO.print(String.append("mlp_ms: ", Nat.show(Nat.sub(t9, t8))))
-    IO.print(String.append("mlp_head: ", F32.show(d)))
+    Unit <- IO.print(String.append("mlp_head: ", F32.show(d)))
+
+    Unit <- IO.print(String.append("att_state_cells: ", Nat.show(65536n)))
+    t10 : Nat <- IO.now()
+    e : F32 <- IO.pure(F32, causal_r(N(), CW{TA.Mat.fill(1024n, 64n, 0.25), att_state()}))
+    t11 : Nat <- IO.now()
+    Unit <- IO.print(String.append("att_causal_ms: ", Nat.show(Nat.sub(t11, t10))))
+    Unit <- IO.print(String.append("att_causal_head: ", F32.show(e)))
+
+    t12 : Nat <- IO.now()
+    g : F32 <- IO.pure(F32, full_r(N(), CW{TA.Mat.fill(1024n, 64n, 0.25), att_state()}))
+    t13 : Nat <- IO.now()
+    Unit <- IO.print(String.append("att_full_ms: ", Nat.show(Nat.sub(t13, t12))))
+    IO.print(String.append("att_full_head: ", F32.show(g)))
     return Unit{}
+
 

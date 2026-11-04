@@ -9,7 +9,7 @@ target** (`bendtorch@2.0.0.0`, tensor-array `0.1.18.0`).
 
 | Artifact | What it asks |
 |---|---|
-| [BendTorch#28](https://github.com/nuxyel/BendTorch/issues/28) | The attention **block** is 3.2x its arithmetic at the ViT's shapes (11.2 ms against 3.5), while `Mat.matmul` is at peak and `Mlp` at its floor; asks whether the causal per-query `prow` softmax is the cost, and for a `FullAttention` comparison at the same shape. |
+| [BendTorch#28](https://github.com/nuxyel/BendTorch/issues/28) | The attention **block** is 3.2x its arithmetic at the ViT's shapes. **Answered:** masked full attention is **9.55 ms** a pass against causal's **10.65 ms**, so the mask is not the cost — the core is 64 tiny 16x16 products instead of one large one, and the lever is fewer, larger calls. |
 | [BendTorch#26](https://github.com/nuxyel/BendTorch/issues/26) | A step's kernel launches cannot be counted from a program, only under `nsys`: the report's `launches` and `unclaimed` lines are permanently `unavailable`, so "fewer launches" cannot be a measured lever. Asks for one count per `Train.step`. |
 | [BendTorch#18](https://github.com/nuxyel/BendTorch/issues/18) | RoPE: the only rotation is 1D over rows, so an image transformer cannot rotate by (y, x). Needed only by a conditional UNet. |
 | [BendTorch#19](https://github.com/nuxyel/BendTorch/issues/19) | adaLN: no layer broadcasts a per-image vector over its tokens. Needed only by a conditional UNet. |

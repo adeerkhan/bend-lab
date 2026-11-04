@@ -11,7 +11,7 @@
 # Every value is printed after its timer, so the compiler cannot erase the work
 # as unused.
 import Base
-import bendtorch@1.3.0.0/main.bend as T
+import bendtorch@2.0.0.0/main.bend as T
 import bend-ml-tensor-array@0.1.18.0/main.bend as TA
 import mlbend-generative@0.1.1.0/main.bend as G
 import mlbend-datasets@0.1.6.0/main.bend as Datasets
@@ -51,7 +51,7 @@ def fwd_loss(r: T.Fwd<M.B4P(), M.Y(), M.B4S(M.n())>, tgt: TA.Mat<M.n(), M.d()>) 
 def step3(+left: Nat, tr: T.Train<M.B4P()>, +x0: List<&2, F32>) -> T.Train<M.B4P()>:
   match left:
     case 0n: tr
-    case 1n+p: step3(p, M.do_step(0n, M.cfg(), tr, x0), x0)
+    case 1n+p: step3(p, M.do_step(0n, tr, x0), x0)
 
 def bench_with(+x0: List<&2, F32>) -> IO(Unit):
   do IO<Unit>:

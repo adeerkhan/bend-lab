@@ -9,7 +9,7 @@
 # an assumption. Every value is printed after its timer, so the compiler cannot
 # erase the work as unused.
 import Base
-import bendtorch@1.3.0.0/main.bend as T
+import bendtorch@2.0.0.0/main.bend as T
 import bend-ml-tensor-array@0.1.18.0/main.bend as TA
 import mlbend-generative@0.1.1.0/main.bend as G
 import ../../examples/diffusion/two_moons/main.bend as D2
@@ -20,7 +20,7 @@ def show_ms(+name: String, +ms: Nat) -> IO(Unit):
 
 def loss_of(tr: T.Train<M.B4P()>) -> F32:
   match tr:
-    case T.Train{p, g, st, q1, q2, +l}: l
+    case T.Train{p, g, st, c, q1, q2, +l}: l
 
 def step3(+left: Nat, tr: T.Train<M.B4P()>, +data: List<&2, F32>) -> T.Train<M.B4P()>:
   match left:

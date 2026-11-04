@@ -9,8 +9,8 @@
 # Fixed t = 32, lr 1e-3, 600 steps. `bench/cifar_learning`'s CPU run reads
 # 0.8405294 at step 50 and 0.5286835 at 600.
 import Base
-import bendtorch@1.3.0.0/main.bend as T
-import bendtorch-gpu@1.3.0.0/main.bend as G
+import bendtorch@2.0.0.0/main.bend as T
+import bendtorch-gpu@2.0.0.0/main.bend as G
 import bend-ml-tensor-array@0.1.18.0/main.bend as TA
 import mlbend-datasets@0.1.6.0/main.bend as Datasets
 import mlbend-huggingface@0.1.1.0/main.bend as Hf
@@ -52,26 +52,26 @@ def mse(y: M.Y(), tgt: M.Y()) -> T.LossOut<M.Y()>:
 
 def step_at(+s: Nat, +lr: F32, tr: T.Train<M.B4P()>, +x0: List<&2, F32>) -> T.Train<M.B4P()>:
   +t = Nat.add(Nat.mod(s, 64n), 1n)
-  T.Train.step(~M.B4P(), ~M.X(), ~M.Y(), ~M.B4S(M.n()), ~M.Y(), ~Model(M.n()), ~mse, cfg_lr(lr), tr,
+  T.Train.step(~M.B4P(), ~M.X(), ~M.Y(), ~M.B4S(M.n()), ~M.Y(), ~Model(M.n()), ~mse, tr,
     TA.Mat.from_list(M.n(), M.inwidth(), M.input_of(s, t, M.coef_a(t), M.coef_b(t), x0)),
     M.noise_of(s))
 
 def loop(+lr: F32, +left: Nat, +i: Nat, tr: T.Train<M.B4P()>, +x0: List<&2, F32>) ->
   IO(T.Train<M.B4P()>):
   match left tr:
-    case 0n T.Train{p, g, st, q1, q2, +l}:
+    case 0n T.Train{p, g, st, c, q1, q2, +l}:
       do IO<T.Train<M.B4P()>>:
         Unit <- show_maybe(every100(i), i, l)
-        return T.Train{p, g, st, q1, q2, l}
-    case 1n+rest T.Train{p, g, st, q1, q2, +l}:
+        return T.Train{p, g, st, c, q1, q2, l}
+    case 1n+rest T.Train{p, g, st, c, q1, q2, +l}:
       do IO<T.Train<M.B4P()>>:
         Unit <- show_maybe(every100(i), i, l)
         loop(lr, rest, (1n + i : Nat),
-          step_at(31n, lr, T.Train{p, g, st, q1, q2, l}, x0), x0)
+          step_at(31n, lr, T.Train{p, g, st, c, q1, q2, l}, x0), x0)
 
 def print_end(tr: T.Train<M.B4P()>) -> IO(Unit):
   match tr:
-    case T.Train{p, g, st, q1, q2, +l}:
+    case T.Train{p, g, st, c, q1, q2, +l}:
       IO.print(String.append("  end loss ", F32.show(l)))
 
 def main() -> IO(Unit):

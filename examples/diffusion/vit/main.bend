@@ -25,8 +25,8 @@
 #              therefore attended as a causal sequence; a bidirectional mask
 #              is not expressible in this package today.
 import Base
-import bendtorch@1.3.0.0/main.bend as T
-import bendtorch-gpu@1.3.0.0/main.bend as F
+import bendtorch@2.0.0.0/main.bend as T
+import bendtorch-gpu@2.0.0.0/main.bend as F
 import bend-ml-tensor-array@0.1.18.0/main.bend as TA
 import mlbend-generative@0.1.1.0/main.bend as G
 import mlbend-datasets@0.1.6.0/main.bend as Datasets
@@ -574,7 +574,7 @@ def step_tgt(+s: Nat) -> TA.Mat<RW(), PX()>:
 
 def do_step(+s: Nat, tr: T.Train<ModelP()>, +x0: List<&2, F32>) -> T.Train<ModelP()>:
   T.Train.step(~ModelP(), ~TA.Mat<RW(), FE()>, ~TA.Mat<RW(), PX()>(), ~ModelS(),
-    ~TA.Mat<RW(), PX()>(), ~Model(), ~mse, cfg(), tr,
+    ~TA.Mat<RW(), PX()>(), ~Model(), ~mse, tr,
     step_in(s, x0), step_tgt(s))
 
 # `l` is the loss of the step before the call, so i = 1 carries step 0's loss —
@@ -596,16 +596,16 @@ def print_or(sp: Bool, +l: F32) -> IO(Unit):
 def train_go(left: Nat, +i: Nat, +x0: List<&2, F32>,
   tr: T.Train<ModelP()>) -> IO(ModelP()):
   match left tr:
-    case 0n T.Train{p, g, st, p1, p2, +l}:
+    case 0n T.Train{p, g, st, c, p1, p2, +l}:
       do IO<ModelP()>:
         IO.print(String.append("final_loss: ", F32.show(l)))
         return p
-    case 1n+rest T.Train{p, g, st, p1, p2, +l}:
+    case 1n+rest T.Train{p, g, st, c, p1, p2, +l}:
       do IO<ModelP()>:
         Unit <- print_or(should_print(i), l)
         train_go(rest, (1n + i : Nat), x0,
-          do_step(i, T.Train{p, g, st, p1, p2, l}, x0))
-    case _ T.Train{p, g, st, p1, p2, l}:
+          do_step(i, T.Train{p, g, st, c, p1, p2, l}, x0))
+    case _ T.Train{p, g, st, c, p1, p2, l}:
       do IO<ModelP()>:
         return p
 

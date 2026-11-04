@@ -11,7 +11,7 @@
 # and the forward/backward is BendTorch's. Every value is printed after its
 # timer, so the compiler cannot erase the work as unused.
 import Base
-import bendtorch@1.3.0.0/main.bend as T
+import bendtorch@2.0.0.0/main.bend as T
 import bend-ml-tensor-array@0.1.18.0/main.bend as TA
 import mlbend-generative@0.1.1.0/main.bend as G
 import ../../examples/diffusion/flowers_flow/main.bend as F

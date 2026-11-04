@@ -15,7 +15,7 @@
 # If B and C move and A does not, the schedule is the reason: 40 steps visit
 # 40 different noise levels once each. If nothing moves, the step is broken.
 import Base
-import ../../../bendtorch/torch/main.bend as T
+import bendtorch@2.0.0.0/main.bend as T
 import bend-ml-tensor-array@0.1.18.0/main.bend as TA
 import mlbend-datasets@0.1.6.0/main.bend as Datasets
 import mlbend-huggingface@0.1.1.0/main.bend as Hf

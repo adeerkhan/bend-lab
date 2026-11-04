@@ -33,7 +33,7 @@
 # after k steps and resumed from its checkpoint computes the same bits as a
 # run that never stopped (BendTorch's Train.save/restore contract).
 import Base
-import bendtorch@1.3.0.0/main.bend as T
+import bendtorch@2.0.0.0/main.bend as T
 import bend-ml-tensor-array@0.1.18.0/main.bend as TA
 import mlbend-generative@0.1.1.0/main.bend as G
 import ../two_moons/main.bend as D2
@@ -227,25 +227,25 @@ def mse(y: Y(), tgt: Y()) -> T.LossOut<Y()>:
 
 def do_step(+s: Nat, tr: T.Train<B4P()>, +data: List<&2, F32>) -> T.Train<B4P()>:
   +x0 = G.noise_of(s, 256n)
-  T.Train.step(~B4P(), ~X(), ~Y(), ~B4S(), ~Y(), ~Model(), ~mse, cfg(), tr,
+  T.Train.step(~B4P(), ~X(), ~Y(), ~B4S(), ~Y(), ~Model(), ~mse, tr,
     TA.Mat.from_list(n(), inw(), input_of(s, x0, data)),
     TA.Mat.from_list(n(), d(), target_of(x0, data)))
 
 def loop(left: Nat, +i: Nat, tr: T.Train<B4P()>,
   +data: List<&2, F32>) -> IO(T.Train<B4P()>):
   match left tr:
-    case 0n T.Train{p, g, st, q1, q2, +l}:
+    case 0n T.Train{p, g, st, c, q1, q2, +l}:
       do IO<T.Train<B4P()>>:
         IO.print(String.append("final_loss: ", F32.show(l)))
-        return T.Train{p, g, st, q1, q2, l}
-    case 1n+rest T.Train{p, g, st, q1, q2, +l}:
+        return T.Train{p, g, st, c, q1, q2, l}
+    case 1n+rest T.Train{p, g, st, c, q1, q2, +l}:
       do IO<T.Train<B4P()>>:
         IO.print(String.append("loss: ", F32.show(l)))
-        loop(rest, (1n + i : Nat), do_step(i, T.Train{p, g, st, q1, q2, l}, data), data)
+        loop(rest, (1n + i : Nat), do_step(i, T.Train{p, g, st, c, q1, q2, l}, data), data)
 
 def train_params(tr: T.Train<B4P()>) -> B4P():
   match tr:
-    case T.Train{p, g, st, q1, q2, l}:
+    case T.Train{p, g, st, c, q1, q2, l}:
       p
 
 # ---- Euler sampling: x <- x + v(x, t) * dt ----

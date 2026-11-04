@@ -21,7 +21,7 @@
 # training run, not a trained model: no sampler runs here, and the images it
 # would draw are the cifar example's business.
 import Base
-import bendtorch@1.3.0.0/main.bend as T
+import bendtorch@2.0.0.0/main.bend as T
 import bend-ml-tensor-array@0.1.18.0/main.bend as TA
 import mlbend-datasets@0.1.6.0/main.bend as Datasets
 import mlbend-huggingface@0.1.1.0/main.bend as Hf
@@ -46,7 +46,7 @@ def cfg() -> T.OptCfg:
 # BendTorch#24)
 def do_step(+s: Nat, tr: T.Train<M.B4P()>, +x0: List<&2, F32>) -> T.Train<M.B4P()>:
   +t = level(s)
-  T.Train.step(~M.B4P(), ~M.X(), ~M.Y(), ~M.B4S(M.n()), ~M.Y(), ~M.Model(M.n()), ~M.mse, cfg(), tr,
+  T.Train.step(~M.B4P(), ~M.X(), ~M.Y(), ~M.B4S(M.n()), ~M.Y(), ~M.Model(M.n()), ~M.mse, tr,
     TA.Mat.from_list(M.n(), M.inwidth(), M.input_of(s, t, M.coef_a(t), M.coef_b(t), x0)),
     M.noise_of(s))
 
@@ -72,16 +72,16 @@ def print_or(sp: Bool, +l: F32) -> IO(Unit):
 def loop(rows_left: Nat, +i: Nat, +first: F32, +x0: List<&2, F32>, tr: T.Train<M.B4P()>) ->
   IO(T.Train<M.B4P()>):
   match rows_left tr:
-    case 0n T.Train{p, g, st, q1, q2, +l}:
+    case 0n T.Train{p, g, st, c, q1, q2, +l}:
       do IO<T.Train<M.B4P()>>:
         IO.print(String.append("final_loss: ", F32.show(l)))
         IO.print(String.append("loss_drop: ", F32.show((first / l : F32))))
-        return T.Train{p, g, st, q1, q2, l}
-    case 1n+rest T.Train{p, g, st, q1, q2, +l}:
+        return T.Train{p, g, st, c, q1, q2, l}
+    case 1n+rest T.Train{p, g, st, c, q1, q2, +l}:
       do IO<T.Train<M.B4P()>>:
         Unit <- print_or(should_print(i), l)
         loop(rest, (1n + i : Nat), first_after(i, l, first), x0,
-          do_step(i, T.Train{p, g, st, q1, q2, l}, x0))
+          do_step(i, T.Train{p, g, st, c, q1, q2, l}, x0))
 
 def cifar_of(r: Result<&1, &1, Hf.Err, Datasets.Table>) -> IO(List<&2, F32>):
   match r:
