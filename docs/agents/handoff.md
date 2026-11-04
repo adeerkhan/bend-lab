@@ -23,6 +23,9 @@ leaves the next one blind.
   runs, the adjoint's blocker.
 - Both branches come off `devel@57af13a`. Whichever PR merges second needs a one-line law-count
   recount; that is in #33's body.
+- **CI is green on both**: #32 in 1m19s; #33 in 28m19s, after a second attempt (its first run's steps all
+  passed but GitHub never finalised the run, and a contributor cannot rerun another user's workflow — a
+  comment-only commit re-armed the full affected set on a fresh head, which finalised properly).
 
 **Lessons from the rebase** (ISSUE-056 in `.local/issues-hit.md`): the branch was 27 behind; a
 conflict's "ours" side carried #32's laws into #33 (39 laws where 37 were due) and the fix was to
