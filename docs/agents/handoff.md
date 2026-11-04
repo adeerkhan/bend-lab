@@ -7,6 +7,22 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-04 (later) — `RoPE2d` is in; its law is blocked, and why
+
+**Where things stand.** Item 2 of the queue (#18) has its layer, exact against a hand-built 2D rotation
+(`reference/rope2d_check.py`: `1.192e-07` forward, `1.192e-07` backward, tolerance `1e-6`). `make laws` (37 laws) and
+`make build` are green on the BendTorch branch `test/im2col-ks`.
+
+- **Not done, and recorded as ISSUE-055:** the four laws #18 asks for. Three are `F32` statements, and laws here are
+  `Nat`/`Bool` only. The one address law (agreement with `RoPE` at `tw = 1`, `half_x = 0`) needs
+  `U32.mod(x, k) < k` — absent. Two honest routes are in the ledger.
+- **Also not done:** the device twin (`gpu.bend`) — no CUDA toolkit on this machine, so it was deferred rather than
+  committed untested; and `make check` (it trains; the layer is covered by the new reference check and the build).
+- **Next item in the queue:** `Tile` (#19) — promised after `RoPE2d`, `Mat<b,c>` to `Mat<b*t,c>`, backward sums the
+  `t` rows, two laws, PyTorch `repeat_interleave` + autograd, then the `Tile; Mul2` vs fused `Modulate` timings to
+  report on the issue. #19's laws are `Nat`/`Bool` (row counts and which rows are summed), so they do not hit
+  ISSUE-055's wall.
+
 ## 2026-11-04 — everything we filed is closed; the pin is 2.0.0
 
 **Where things stand.** `bendtorch@2.0.0.0` is on BendHub with its three lanes
