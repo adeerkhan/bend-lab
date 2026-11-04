@@ -27,6 +27,24 @@ relevant entry before changing performance-sensitive code or a law.
 - **`Conv2d` is in the pin**, so an unconditional UNet has no upstream
   dependency left (#15 closed for that reason). It is the next task.
 
+## 2026-11-04 (late) — #29: the invariant is tested, the proof is not done
+
+- **The lemma's statement is now evidence, not a guess.** The mixed-radix decode
+  needs Bend's unary division (`Nat.divmod.go`, repeated subtraction) to meet its
+  spec, and the induction carries: with `b` the original divisor, at every step
+  `a = n + d·b + r` **and** `b = m + r + 1`, hence at `n = 0` `a = d·b + r` with
+  `r < b`. Instrumented over 41 `(a, b)` pairs and **860 steps: 0 failures**.
+- **The proof itself did not land.** Two attempts got the case split and the
+  invariant through and stopped on one arithmetic ordering the kernel rejects
+  (`1 + (np + X)` against `np + (1 + X)`), which needs the `NL.add_succ` /
+  `add_comm` chain spelled out step by step. `PROOF.bend` is unchanged and
+  `--verdict` reads ALL PROOFS CHECK; no half-proved law was committed.
+- **What #29 has from us now:** the tested ground widened to `k = 1`, `k = s = 2`,
+  `k = s = 3` and `k = s = 4`, all `0.000e+00`, plus the invariant above as the
+  first lemma to prove. The two questions on the issue (the form of a general law
+  over `k`, and whether the decode lemma is a `law` or a `def` beside
+  `divmod_one`) still gate the write-up.
+
 ## 2026-11-04 (night) — the UNet's 1.86e-4 was three twin bugs, and k = s is exact at 2, 3 and 4
 
 - **ISSUE-051 closed: 5.96e-08.** The UNet forward (`Conv2d` s2 -> `GroupNorm` ->
