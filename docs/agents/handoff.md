@@ -7,29 +7,38 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
-## 2026-11-04 (later) — #18 is closed except its device twin
+## 2026-11-04 (later) — both PRs are up; the next item is Tile
 
-**Where things stand.** `RoPE2d` has its laws, BendTorch `bd8273c` on `test/im2col-ks`:
+**Where things stand.** The finished work is in review, not on a branch:
 
-- **Three laws** about the addressing **defs in `torch/main.bend`** — `rope2_ht`, `rope2_yy`/`rope2_xx` (the row's y
-  and x on the grid), `rope2_yaddr`, `rope2_xaddr`, `rope2_yentry`, `rope2_xentry` — which `rope2_yone`/`rope2_xone`
-  call through `U32.from_nat`: no comparison, no pick, no `U32` arithmetic in the addressing. `rope2_partition` (the
-  two runs tile the head), `rope2_is_rope` / `rope2_is_rope_tab` (at `tw = 1`, `half_x = 0` the y run is `RoPE`).
-  `make laws` green, **39 laws** (40 in all); `--verdict` green; `make build` green.
-- **The layer walks two runs** over disjoint dimensions, so it never picks per pair and calls one `F32.pow` instead of
-  two. The move of the formulas into defs is free: 20 passes at `1024x64` take **0.02 s before and 0.02 s after**.
-- **Bits did not move**: `reference/rope2d_check.py` is `1.192e-07` / `1.192e-07` / PASS, identical at every step.
-- **Deliberately still tests:** the two `F32` claims (identity at `(0,0)`; `(y,x)` then `(-y,-x)`), because laws
-  here are `Nat`/`Bool` and never `F32`.
-- **The only thing left in #18 is the device twin** — `make gpu` is unavailable here (no `nvcc`, no `CUDA_HOME`), so
-  `gpu.bend`'s copy is deferred rather than committed untested. Copy `rope2_run` + `rope2_go2`; the addressing defs are
-  `T.rope2_*` and are reusable from the device lane as they stand.
-- ISSUE-055 is closed, with the addendum recording the move into `main.bend` and the timing.
+- **nuxyel/BendTorch#32** `im2col-roundtrip` (from `adeerkhan/BendTorch`): `conv_roundtrip_ks`,
+  `conv_roundtrip_window` (the general law, with `_ks` proved as its instance), the division lemma
+  `divmod_go_spec`/`divmod_spec` beside `divmod_one`, and the decode. +621/−12. Green on
+  `--verdict`, `make laws` (37 in all), `make build`, and both reference checks rebuilt from source.
+  Closes the law half of #29.
+- **nuxyel/BendTorch#33** `rope2d`: `RoPE2d`, its three laws, its `Nat` addressing defs (called
+  through `U32.from_nat`), and `reference/rope2d_check.py`. +483/−7. Green on `--verdict`,
+  `make laws` (38 in all), `make build`, `1.192e-07` / `1.192e-07` / PASS.
+- **#29's comment is posted** (`#issuecomment-6634286240`): the two answers, the window law, the
+  runs, the adjoint's blocker.
+- Both branches come off `devel@57af13a`. Whichever PR merges second needs a one-line law-count
+  recount; that is in #33's body.
 
-**Next item in the queue:** `Tile` (#19) — promised after `RoPE2d`. `Mat<b,c>` to `Mat<b*t,c>`, the backward sums
-each image's `t` rows, two `Nat`/`Bool` laws (tile + `Mul2` is scaling a row; the backward is the row sum, not the last
-row), PyTorch `repeat_interleave` + autograd, then measure `Tile; Mul2` against a fused `Modulate` and report on #19.
-State its index arithmetic as `Nat` defs in `main.bend` from the start — that is the pattern this item settled.
+**Lessons from the rebase** (ISSUE-056 in `.local/issues-hit.md`): the branch was 27 behind; a
+conflict's "ours" side carried #32's laws into #33 (39 laws where 37 were due) and the fix was to
+count `grep -c '^law '` against what each branch should have; the laws badge now counts
+`LAWS.bend` + `unpair_pair` as devel does.
+
+**What is not done.** `make check` not run on either branch (it trains); `make gpu` unavailable
+(no `nvcc`), so #33's device twin is deferred and its body says so. #29's adjoint is not in #32: it
+needs the array laws plus a frame lemma, and `ASet.Apart` on perfect trees still needs four U32 bit
+facts.
+
+**Next item in the queue:** `Tile` (#19) — `Mat<b,c>` to `Mat<b*t,c>`, the backward sums each
+image's `t` rows, two `Nat`/`Bool` laws, PyTorch `repeat_interleave` + autograd (64×64, 3×5, 1×N;
+a 3×5 vs 5×3 pair is shape-blind), then `Tile; Mul2` vs a fused `Modulate` timings on #19. State
+the index arithmetic as `Nat` defs in `main.bend` from the start. After that: the U32 bit-lemma
+library, then bend-ml#26's corollary, then #29's adjoint.
 
 ## 2026-11-04 — everything we filed is closed; the pin is 2.0.0
 
