@@ -9,26 +9,27 @@ leaves the next one blind.
 
 ## 2026-11-04 (later) — #18 is closed except its device twin
 
-**Where things stand.** `RoPE2d` has its laws now, BendTorch `1ee5368` on `test/im2col-ks`:
+**Where things stand.** `RoPE2d` has its laws, BendTorch `bd8273c` on `test/im2col-ks`:
 
-- **Three laws**, stated over the addressing model in `torch/spec.bend` (not over the layer's `U32` arithmetic, which
-  is bit-level and cannot be reasoned about here): `rope2_partition` (the two runs tile the head), `rope2_is_rope` and
-  `rope2_is_rope_tab` (at `tw = 1`, `half_x = 0` the y run is `RoPE`). `make laws` green, **39 laws** in `LAWS.bend`
-  (40 in all); `--verdict` green; `make build` green.
-- **The layer walks two runs** over disjoint dimensions instead of one run with a per-pair `Bool.pick`; that also
-  removes one `F32.pow` per pair. **The bits did not move**: `reference/rope2d_check.py` is `1.192e-07` /
-  `1.192e-07` / PASS, identical before and after the refactor.
+- **Three laws** about the addressing **defs in `torch/main.bend`** — `rope2_ht`, `rope2_yy`/`rope2_xx` (the row's y
+  and x on the grid), `rope2_yaddr`, `rope2_xaddr`, `rope2_yentry`, `rope2_xentry` — which `rope2_yone`/`rope2_xone`
+  call through `U32.from_nat`: no comparison, no pick, no `U32` arithmetic in the addressing. `rope2_partition` (the
+  two runs tile the head), `rope2_is_rope` / `rope2_is_rope_tab` (at `tw = 1`, `half_x = 0` the y run is `RoPE`).
+  `make laws` green, **39 laws** (40 in all); `--verdict` green; `make build` green.
+- **The layer walks two runs** over disjoint dimensions, so it never picks per pair and calls one `F32.pow` instead of
+  two. The move of the formulas into defs is free: 20 passes at `1024x64` take **0.02 s before and 0.02 s after**.
+- **Bits did not move**: `reference/rope2d_check.py` is `1.192e-07` / `1.192e-07` / PASS, identical at every step.
 - **Deliberately still tests:** the two `F32` claims (identity at `(0,0)`; `(y,x)` then `(-y,-x)`), because laws
   here are `Nat`/`Bool` and never `F32`.
-- **The only thing left in #18 is the device twin** — `make gpu` is unavailable on this machine (no `nvcc`, no
-  `CUDA_HOME`), so `gpu.bend`'s copy is deferred rather than committed untested. It needs a GPU session; the walk to
-  copy is `rope2_run` + `rope2_go2` in `torch/main.bend`.
-- **ISSUE-055 is closed** with those runs, route 2 (the model) rather than route 1 (`U32.mod_lt`).
+- **The only thing left in #18 is the device twin** — `make gpu` is unavailable here (no `nvcc`, no `CUDA_HOME`), so
+  `gpu.bend`'s copy is deferred rather than committed untested. Copy `rope2_run` + `rope2_go2`; the addressing defs are
+  `T.rope2_*` and are reusable from the device lane as they stand.
+- ISSUE-055 is closed, with the addendum recording the move into `main.bend` and the timing.
 
 **Next item in the queue:** `Tile` (#19) — promised after `RoPE2d`. `Mat<b,c>` to `Mat<b*t,c>`, the backward sums
-each image's `t` rows, two `Nat`/`Bool` laws (tile+`Mul2` is scaling a row; the backward is the row sum, not the last
+each image's `t` rows, two `Nat`/`Bool` laws (tile + `Mul2` is scaling a row; the backward is the row sum, not the last
 row), PyTorch `repeat_interleave` + autograd, then measure `Tile; Mul2` against a fused `Modulate` and report on #19.
-Its laws are index arithmetic like this item's, so `spec.bend` is the place they should be stated too.
+State its index arithmetic as `Nat` defs in `main.bend` from the start — that is the pattern this item settled.
 
 ## 2026-11-04 — everything we filed is closed; the pin is 2.0.0
 
