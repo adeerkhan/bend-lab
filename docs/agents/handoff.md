@@ -7,41 +7,28 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
-## 2026-11-04 (later) — both PRs are up; the next item is Tile
+## 2026-11-04 (later still) — three PRs are up; next is the U32 bit-lemma library
 
-**Where things stand.** The finished work is in review, not on a branch:
+**Where things stand.** Three PRs against `nuxyel/BendTorch:devel`, all from `adeerkhan/BendTorch`, all green on CI
+and on the local gates:
 
-- **nuxyel/BendTorch#32** `im2col-roundtrip` (4 commits, from `adeerkhan/BendTorch`): `conv_roundtrip_ks`,
-  `conv_roundtrip_window` (the general law, with `_ks` proved as its instance), the division lemma
-  `divmod_go_spec`/`divmod_spec` beside `divmod_one`, and the decode. +621/−12. Green on
-  `--verdict`, `make laws` (37 in all), `make build`, and both reference checks rebuilt from source.
-  Closes the law half of #29.
-- **nuxyel/BendTorch#33** `rope2d` (3 commits): `RoPE2d`, its three laws, its `Nat` addressing defs (called
-  through `U32.from_nat`), and `reference/rope2d_check.py`. +483/−7. Green on `--verdict`,
-  `make laws` (38 in all), `make build`, `1.192e-07` / `1.192e-07` / PASS.
-- **#29's comment is posted** (`#issuecomment-6634286240`): the two answers, the window law, the
-  runs, the adjoint's blocker.
-- Both branches come off `devel@57af13a`. Whichever PR merges second needs a one-line law-count
-  recount; that is in #33's body.
-- **CI is green on both**: #32 in 1m26s; #33 in 24m19s, after a second attempt (its first run's steps all
-  passed but GitHub never finalised the run, and a contributor cannot rerun another user's workflow — a
-  comment-only commit re-armed the full affected set on a fresh head, which finalised properly).
+- **#32** `im2col-roundtrip` (4 commits): `conv_roundtrip_ks`, `conv_roundtrip_window`, `divmod_go_spec`/`divmod_spec`,
+  the decode. 37 laws in all.
+- **#33** `rope2d` (3 commits): `RoPE2d`, its three laws, its `Nat` addressing defs, `reference/rope2d_check.py`. 38.
+- **#34** `tile` (1 commit): `Tile`, its two laws (`tile_row`, `tile_sum`), `reference/tile_check.py`, and the timings
+  comment on #19 (`#issuecomment-6638085831`). 37.
 
-**Lessons from the rebase** (ISSUE-056 in `.local/issues-hit.md`): the branch was 27 behind; a
-conflict's "ours" side carried #32's laws into #33 (39 laws where 37 were due) and the fix was to
-count `grep -c '^law '` against what each branch should have; the laws badge now counts
-`LAWS.bend` + `unpair_pair` as devel does.
+**#19's timings, which closed its open question:** at 512 x 128, 20,000 iterations, medians of three — one elementwise
+pass 1.49 s (74.5 µs a step), `Tile` then the same pass 1.45 s (72.5 µs a step). The broadcast is not measurably
+slower, so a fused `Modulate` buys nothing at this shape; #19's cost was the host staging, and `Tile` removes it.
 
-**What is not done.** `make check` not run on either branch (it trains); `make gpu` unavailable
-(no `nvcc`), so #33's device twin is deferred and its body says so. #29's adjoint is not in #32: it
-needs the array laws plus a frame lemma, and `ASet.Apart` on perfect trees still needs four U32 bit
-facts.
+**The conflict to expect:** all three touch `LAWS.bend`, `PROOF.bend` and the same docs lines. Whichever merges second
+needs a one-line law-count recount (37/38/37 in all, and the badge), and third needs two. All three PR bodies say so.
 
-**Next item in the queue:** `Tile` (#19) — `Mat<b,c>` to `Mat<b*t,c>`, the backward sums each
-image's `t` rows, two `Nat`/`Bool` laws, PyTorch `repeat_interleave` + autograd (64×64, 3×5, 1×N;
-a 3×5 vs 5×3 pair is shape-blind), then `Tile; Mul2` vs a fused `Modulate` timings on #19. State
-the index arithmetic as `Nat` defs in `main.bend` from the start. After that: the U32 bit-lemma
-library, then bend-ml#26's corollary, then #29's adjoint.
+**Next item in the queue:** the **U32 bit-lemma library** (the four facts: `ASet.J(j,2^d) == j`, `U32.shr(2^d) ==
+2^(d-1)`, `ASet.Z(j,2^d)` is bit `d-1`, `U32.sub(j,2^(d-1)) < 2^(d-1)`), as a standalone file first in the pattern of
+nuxyel's `docs/upstream/array_set_laws.bend`; then `ASet.Apart` on perfect trees and `Mat.to_list(Mat.of_list xs) == xs`
+for bend-ml#26; then #29's adjoint. After that: the UNet's second level, and the lab's ISSUE-040/044 fixes.
 
 ## 2026-11-04 — everything we filed is closed; the pin is 2.0.0
 
