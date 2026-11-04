@@ -2140,3 +2140,32 @@ CPU lane and 136.7 s on the RTX 5060 (1.35x slower; the forward is 0.2 GFLOP a
 step, and 600 steps of bangs cost more in launches than they save). That is the
 same shape as bend-ml#23's table: at CIFAR scale with batch 256, the device
 buys nothing until the work per step is much larger.
+
+## 2026-11-04 (late) — #29's law is in, and the lemma under it
+
+- **BendTorch `a0ecfdd`** (`test/im2col-ks`, pushed): `conv_roundtrip_ks`, the
+  im2col/col2im round trip at `s = k` and `p = 0`, proved and `--verdict` green;
+  `make laws` green on that tree (36 laws). The numbers did not move — `k = 1`,
+  `k = s = 2`, `k = s = 4`, `k = s = 3` (6x6) are all `0.000e+00`, rerun from
+  `reference/im2col_check.py` after the proof.
+- **The lemma beside `divmod_one`:** `divmod_go_spec` (`a = n + d·b + r` and
+  `b = m + r + 1` at every step, so `a = d·b + r` at the end) and
+  `divmod_spec`. The statement had been instrumented over 41 `(a,b)` pairs and
+  860 steps first, so the induction was not guessed.
+- **What had really blocked it — two things, both mechanical:** the ordering
+  rewrite is `NL.add_succ` (`1 + (np + X) = np + (1 + X)`), and a proof used
+  twice in one branch needs `+e`/`+f` on its parameters or the kernel says
+  "consumed more than once". ISSUE-054 is closed with that.
+- **What the decode needed:** each level of `i = (ch·k + ky)·k + kx` is a block
+  count plus a rest (`go_count`, `go_blocks`, `div_blocks` generalised to give
+  both halves), the index split (`split_idx`), and the room `k·k` leaves the
+  inner cell (`radix_bound`: `k·k = 1 + ((ky·k + kx) + (k·a + b))`). The bounds
+  are hypotheses, `k = 1 + ky + a` and `k = 1 + kx + b`, the way `gqa_head`
+  writes one: Bend has no order predicate to assume, and a decode genuinely
+  needs them.
+- **The two questions on #29 are answered by the shape of what landed:** the law
+  is one law over `k` with `s = k` in the statement (not a `k = 2` statement
+  generalised), and the decode is a set of `def`s beside `divmod_one`, not a
+  second law (the law is the round trip).
+- **Left:** `s ≠ k` and `p > 0` are not stated, and Conv2d's adjoint (that
+  `col2im` is the transpose of the gather) is the next piece of #29.
