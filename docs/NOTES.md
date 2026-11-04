@@ -3,6 +3,30 @@
 Every finding, every measurement and every discarded hypothesis, by date. Read the
 relevant entry before changing performance-sensitive code or a law.
 
+## 2026-11-04 (later) — the pin is on 2.0.0.0, and nothing moved
+
+- **Adopted `bendtorch@2.0.0.0`** (released 2026-11-03): 22 files, 21 imports,
+  13 `Train.step` call sites that lose their configuration argument, 59
+  `T.Train{…}` patterns that gain `c` after `st`. `tensor-array` stays at
+  `0.1.18.0`.
+- **The trap is the wrapper, not the step.** `bench/plumbing_cifar` called
+  `M.do_step(0n, cfg(), tr, x0)`, so the configuration was one call up and
+  invisible to `grep Train.step`; `--check-only` reported it as
+  `- expected : T.Train<…>` / `- observed : T.OptCfg`, which is how all 13 were
+  found.
+- **No number moved.** `make check` **113/113** on the migrated tree (all frozen
+  references), and the sweep on the hub package reads 0.5790425 / 0.87949044 /
+  0.99899477, the same three rows `devel@211ae84` gave. Posted on #24, which is
+  closed.
+- **#28 is answered.** At the block's shape (1024 rows, 64 wide, 64 images of 16
+  tokens, one head) masked full attention is **9.55 ms** a pass against causal's
+  **10.65 ms**: the mask is not the cost. The core is 64 tiny 16x16 products
+  rather than one large one, so the lever is fewer, larger calls — a layer design
+  question, not a bug. Numbers are comparable within a run only: the same build
+  read a block at 13.8-15.5 ms today against 11.2 yesterday, under load.
+- **`Conv2d` is in the pin**, so an unconditional UNet has no upstream
+  dependency left (#15 closed for that reason). It is the next task.
+
 ## 2026-11-04 — an outside corpus, and the gate that says it still agrees
 
 - **What QwenBend is, in one line:** a 0.8B model that writes a BendLite program

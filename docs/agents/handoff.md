@@ -37,6 +37,34 @@ counted) and **#28** (the attention block is 3.2x its arithmetic).
 twin and cell first. 3. `FullAttention` at `AttBlk`'s shape for #28. 4. bendlang
 #1632 items 9–10, with the corpus's 84 rejections as the input.
 
+## 2026-11-04 (later) — on 2.0.0.0, matrix pending, UNet next
+
+**Where things stand.** The pin is `bendtorch@2.0.0.0` and the migration is
+done: 22 files, 21 imports, 13 `Train.step` call sites, 59 record patterns, in
+one commit. `make check` **113/113**; the learning-rate sweep on the hub package
+reads 0.5790425 / 0.87949044 / 0.99899477 (posted on #24, closed). `make matrix`
+was started at the end of the session — **check `results/matrix/SUMMARY.md` for
+whether the 19 cells finished** before quoting it.
+
+- **#28 answered** with a measurement: masked full attention is **9.55 ms** a
+  pass against causal's **10.65 ms** at the block's shape, so the causal mask is
+  not the cost; the core is 64 tiny 16x16 products and the lever is fewer,
+  larger calls. Posted.
+- **The one thing left from the plan is the UNet**, and it is 1-2 sessions:
+  `Conv2d` (2.0.0), `GroupNorm` and `FullAttention` are all in the pin, #15 is
+  closed with "an unconditional UNet is expressible", and the shape is
+  `k=3, s=2, p=1` at 64x64 with `hs = ws = 63` (the release notes' own example).
+- **No upstream issue of ours is open on a decision**: #26 and #28 are the two
+  performance findings, both answered or waiting on their reading; bendlang
+  #1632 items 9-10 are ours to write, with the corpus's 84 rejections as input.
+
+**Next, in order.** 1. The UNet: `reference/probe_unet.bend` (frozen weights, one
+forward, one Euler step, the 8/16/32 endpoints), `reference/twin_unet.py`,
+`reference/test_unet.py`, `bench/unet_first` + a `unet-first` task and cell, then
+a flowers64 run. Start at `tiny` (base 16, two downs, two ups) — a 3-block flow
+reached 9 GB to compile, so `make doctor` picks the preset before the build.
+2. The matrix, if it did not finish. 3. A diagnostics spine from the corpus.
+
 ## 2026-11-04 — the QwenBend corpus is a gate now
 
 **Where things stand.** `reference/corpus/qwenbend/` holds 200 Bend programs
