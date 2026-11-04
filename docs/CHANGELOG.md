@@ -4,6 +4,25 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The UNet's decoder block, invented and gated
+
+BendTorch 2.0.0 has `Conv2d`, `GroupNorm`, `SiLU` and `FullAttention`, but no
+transposed convolution and no channel concatenation, so a UNet's decoder needs an
+upsampler that does not exist in the package.
+
+- **`examples/diffusion/unet/main.bend`** holds `Up2`: a parameterless layer
+  whose forward repeats every pixel 2x2 (vertical pass, then horizontal) and
+  whose backward is its exact adjoint, the sum of the four cells that came from
+  one input cell. Both work on the flat `Mat` layout Conv2d uses (rows are
+  pixels, channels last).
+- **`reference/test_up2.py`** gates it without a tolerance: the forward must
+  equal NumPy's repeat on a 2x2 image of 2 channels, the adjoint identity
+  `<Up2(x), y> == <x, down(y)>` must hold exactly (816 = 816), and one cell moved
+  in the expectation must be rejected, so the gate can fail.
+- **Why it matters**: this is the only piece of a UNet that BendTorch cannot
+  express today; with it, `Conv2d` (stride 2 down, stride 1 up), `GroupNorm` and
+  additive skips compose the decoder, and the model is the next change.
+
 ### The pin is `bendtorch@2.0.0.0`
 
 `bendtorch` 2.0.0 (2026-11-03) moves the optimizer configuration into the

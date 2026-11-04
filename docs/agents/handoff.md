@@ -37,6 +37,32 @@ counted) and **#28** (the attention block is 3.2x its arithmetic).
 twin and cell first. 3. `FullAttention` at `AttBlk`'s shape for #28. 4. bendlang
 #1632 items 9–10, with the corpus's 84 rejections as the input.
 
+## 2026-11-04 (night) — the UNet's decoder block exists and is gated
+
+**Where things stand.** The UNet is started at its hardest point and stopped at a
+tested boundary, not mid-file.
+
+- **`Up2`** (`examples/diffusion/unet/main.bend`): the 2x nearest-neighbour
+  upsample a UNet's decoder needs, because BendTorch has `Conv2d` but no
+  transposed convolution and no channel concat. Forward repeats each pixel 2x2
+  (vertical pass then horizontal, over the flat row-major `Mat`); backward is the
+  exact adjoint, summing the four cells.
+- **`reference/test_up2.py`** (in `make check`): forward equals NumPy's repeat on
+  a 2x2 image of 2 channels, `<up(x), y> == <x, down(y)>` exactly (816 = 816),
+  and a one-cell error is rejected — the gate can fail.
+- **What is left for the model**: compose `Conv2d(1->16, stride 2)` →
+  `GroupNorm` → `SiLU` → `Conv2d(16->32, stride 2)` → bottleneck (`Conv2d` +
+  `FullAttention` at 16x16) → `Up2` + `Conv2d(32->32)` + an **additive** skip
+  (channels must match, since there is no concat) → `Up2` + `Conv2d(32->16)` +
+  skip → `Conv2d(1x1, 16->1)`. Then the probe, the twin, the cell
+  (`bench/unet_first` + a `unet-first` task, matrix 19 → 20) and a flowers64 run.
+- **BendTorch #29 is not started**: two proofs (the general `k = s` round trip
+  and Conv2d's adjoint), with Lean 4.34.0 available locally so `--verdict` can
+  check them here. It is the next session's first item.
+
+**Next, in order.** 1. The UNet's model composition (the block list above), then
+its probe/twin/cell. 2. BendTorch #29's two proofs. 3. bendlang #1632 items 9–10.
+
 ## 2026-11-04 (later still) — 2.0.0 landed, #28 answered, the UNet's first fact checked
 
 **Done this session.**
