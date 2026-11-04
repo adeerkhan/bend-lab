@@ -37,6 +37,33 @@ counted) and **#28** (the attention block is 3.2x its arithmetic).
 twin and cell first. 3. `FullAttention` at `AttBlk`'s shape for #28. 4. bendlang
 #1632 items 9–10, with the corpus's 84 rejections as the input.
 
+## 2026-11-04 (later still) — 2.0.0 landed, #28 answered, the UNet's first fact checked
+
+**Done this session.**
+
+- **The pin is `bendtorch@2.0.0.0`**: 22 files, 21 imports, 13 `Train.step` calls
+  without their configuration, 59 record patterns with `c`, in one commit.
+  `make check` **113/113** and `make matrix` **19 cells, 0 failed** on the
+  migrated tree — no recorded number moved. The sweep on the hub package reads
+  **0.5790425 / 0.87949044 / 0.99899477** (posted on #24, closed).
+- **#28 is answered**: masked full attention is **9.55 ms** a pass against
+  causal's **10.65 ms** at the block's shape, so the mask is not the cost — the
+  core is 64 tiny 16x16 products, and the lever is fewer, larger calls. Posted
+  with the caveat that today's machine is slower: compare within a run.
+- **The UNet's hardest fact is checked**: `Conv2d(1, 1, 8, 3, 63, 63, 1, 1, 0)`
+  on one 64x64 image is `Mat<4096,1>` -> `Mat<1024,8>` (oh=ow=32) with an
+  im2col state of `Mat<1024,9>`, and it runs: a constant image gives **0.4** at
+  the first cell, exactly 4 of the 9 weights, which is what a padded corner
+  should read. The UNet itself is the next session's work, not this one's.
+
+**Next, in order.** 1. The UNet: probe (`reference/probe_unet.bend`, frozen
+weights, forward + one Euler step + the 8/16/32 endpoints), twin, gate, cell
+(`bench/unet_first`, `unet-first` task, matrix 20 cells), then a flowers64 run.
+Start at `tiny` (base 16, two downs, two ups) and let `make doctor` pick the
+preset before the build. The block is `Conv2d(k=3, hs=63, ws=63, p=1, s1=1)` ->
+`GroupNorm` -> `FullAttention`; the corner-cell check above is the shape's own
+unit test. 2. bendlang #1632 items 9-10 from the corpus's 84 rejections.
+
 ## 2026-11-04 (later) — on 2.0.0.0, matrix pending, UNet next
 
 **Where things stand.** The pin is `bendtorch@2.0.0.0` and the migration is
