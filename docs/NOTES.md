@@ -27,6 +27,35 @@ relevant entry before changing performance-sensitive code or a law.
 - **`Conv2d` is in the pin**, so an unconditional UNet has no upstream
   dependency left (#15 closed for that reason). It is the next task.
 
+## 2026-11-04 (night) — the UNet's 1.86e-4 was three twin bugs, and k = s is exact at 2, 3 and 4
+
+- **ISSUE-051 closed: 5.96e-08.** The UNet forward (`Conv2d` s2 -> `GroupNorm` ->
+  `SiLU` -> `Up2` -> `Conv2d` s1 -> `GroupNorm` -> `SiLU` -> `+ x`) now matches
+  its NumPy twin on the first eight cells to float32 rounding, and
+  `reference/test_unet.py` gates it at 1e-6. Three causes, all in the twin:
+  - **`GroupNorm(ng=1, cg=2)` is torch's**: mean and variance over the group's
+    channels **and all its pixels, per sample**, i.e. axes 0, 1 and 2 of
+    `(h, w, c)`. Read out of the program: `m = 13.903`, `var = 140.246`. A
+    per-pixel LayerNorm (`axis=-1`) and a per-channel one (`axis=(0,1)`) both
+    reproduce nothing, and the second *looks* global on a 3-D array — which is
+    why it survived a round.
+  - **The weight matrix is row-major `(co, c*k*k)`**, settled by one matmul:
+    `Mat.from_list(2, 3, [1..6]) @ [1,0,0] = [1, 4]`, not `[1, 2]`.
+  - **A zero `GroupNorm` scale makes a channel uninformative.** `lnp` built its
+    scale from `gen`, giving `[0.0, -0.01]`; channel 0's output was `0.5`
+    whatever the conv did, so the first entry's "channel 0 matches exactly"
+    proved nothing. Both scales are 0.5 now, and the earlier claim is corrected.
+- **ISSUE-052, small:** `reference/im2col_check.py` builds the probe only when
+  the binary is missing, so running it by hand after an edit reads a stale one
+  and dies on the extra lines it now expects. `make check` is unaffected (it
+  passes the built path); the fix is to rebuild when the source is newer.
+- **BendTorch#29's tested ground widened:** the `k = s` round trip is exact at
+  **k = 1, k = s = 2, k = s = 4 and k = s = 3** (6x6 image, the mixed-radix
+  case), all `0.000e+00` against the input. Branch `test/im2col-ks`, and the
+  issue carries the two questions I need answered before writing the law itself:
+  the form of a general law (over `k`, with `s = k` in the statement) and whether
+  the decode lemma belongs in `LAWS.bend` or beside `divmod_one`.
+
 ## 2026-11-04 — an outside corpus, and the gate that says it still agrees
 
 - **What QwenBend is, in one line:** a 0.8B model that writes a BendLite program

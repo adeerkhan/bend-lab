@@ -224,8 +224,11 @@ def gen(+left: Nat, +i: Nat, +acc: List<&2, F32>) -> List<&2, F32>:
 def mat(+r: Nat, +c: Nat) -> TA.Mat<r, c>:
   TA.Mat.from_list(r, c, gen(Nat.mul(r, c), 0n, Nil{}))
 
+# both scales non-zero and moderate: `gen` would give [0, -0.01], and a zero
+# scale makes that channel's GroupNorm output independent of the conv, so it
+# could not test anything (2026-11-04)
 def lnp(s: Nat) -> T.LN<2n>:
-  T.LN{mat(1n, 2n), TA.Mat.fill(1n, 2n, (0.5 + 0.0 * F32.from_nat(s) : F32))}
+  T.LN{TA.Mat.fill(1n, 2n, 0.5), TA.Mat.fill(1n, 2n, (0.5 + 0.0 * F32.from_nat(s) : F32))}
 
 def params() -> P():
   P{T.Lin{mat(2n, 18n), TA.Mat.fill(1n, 2n, 0.05)}, lnp(0n),
@@ -247,6 +250,22 @@ def show_go4(xs: List<&2, F32>) -> String:
       ""
     case Con{h, t}:
       String.append(F32.show(h), String.append(" ", show_go4(t)))
+
+def gn_of_params(p: P()) -> String:
+  match p:
+    case P{c1, g1, c2, g2}:
+      show_go4(head8(list_mid(TA.Mat.to_list(1024n, 2n, gn1(g1, conv1(c1, x_in()))))))
+
+def gn8() -> String:
+  gn_of_params(params())
+
+def raw_of_params(p: P()) -> String:
+  match p:
+    case P{c1, g1, c2, g2}:
+      show_go4(head8(list_mid(TA.Mat.to_list(1024n, 2n, conv1(c1, x_in())))))
+
+def raw8() -> String:
+  raw_of_params(params())
 
 def z_of_params(p: P()) -> String:
   match p:
@@ -275,6 +294,8 @@ def main() -> IO(Unit):
     Unit <- IO.print(String.append("up: ", show_go(up0())))
     Unit <- IO.print(String.append("left:  ", F32.show(dot(up0(), up0(), 0.0))))
     Unit <- IO.print(String.append("right: ", F32.show(dot(x0(), down_list(2n, 2n, 2n, up0()), 0.0))))
+    Unit <- IO.print(String.append("conv1: ", raw8()))
+    Unit <- IO.print(String.append("gn: ", gn8()))
     Unit <- IO.print(String.append("z: ", z8()))
     Unit <- IO.print(String.append("y: ", y8()))
     Unit <- IO.print(String.append("out: ", out8()))
