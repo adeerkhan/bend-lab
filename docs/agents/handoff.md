@@ -37,6 +37,36 @@ counted) and **#28** (the attention block is 3.2x its arithmetic).
 twin and cell first. 3. `FullAttention` at `AttBlk`'s shape for #28. 4. bendlang
 #1632 items 9–10, with the corpus's 84 rejections as the input.
 
+## 2026-11-04 (night, later) — the UNet's forward runs; one channel is 1.88e-4 out
+
+**Where things stand.** `examples/diffusion/unet/main.bend` now composes and runs
+the smallest honest U (64x64 -> 32x32 -> 64x64, 2 channels, one additive skip,
+80 parameters: `Conv2d` s2 -> `GroupNorm` -> `SiLU` -> `Up2` -> `Conv2d` s1 ->
+`GroupNorm` -> `SiLU` -> `+ x`). `reference/unet_gate.py` rebuilds it in NumPy.
+
+- **What matches**: channel 0 of every cell, exactly. That pins the flat row
+  order, the channels-last patch, the stride-2 surplus, `Up2`'s order and the
+  skip — an error in any of them would move both channels.
+- **What does not**: channel 1, by **1.86e-4**, whose `GroupNorm` scale is
+  `-0.01` so its normalised value is ~19.9 and residuals are amplified ~100x.
+  ISSUE-051 lists the three candidates: the group's variance/`rstd` order, the
+  conv's 18-term accumulation, and where the bias enters.
+- **It is a probe, not a gate** — the file is `unet_gate.py`, not `test_unet.py`,
+  because a tolerance wide enough to pass would hide an unexplained difference.
+  `make check` stays at **113/113**; `test_up2.py` (the decoder's upsample) is
+  the UNet's one green gate, with the adjoint identity exact.
+- **BendTorch #29's two proofs are not started.** Lean 4.34.0 is on this machine
+  (`~/.elan/bin/lean`, put it on `PATH`); `bend PROOF.bend --verdict` reads ALL
+  PROOFS CHECK on the current branch, so the proofs can be written and checked
+  here rather than in CI.
+
+**Next, in order.** 1. Close ISSUE-051 (the 1.86e-4), then rename `unet_gate.py`
+to `test_unet.py` and let it into the gate. 2. The rest of the UNet: the second
+down/up level, the bottleneck, a `Layer` composition (Seq/Fork/Both/Add2/Id, so
+the backward comes free), then the probe/twin/cell and a flowers64 run. 3.
+BendTorch #29: the mixed-radix decode for the `k = s` round trip, then Conv2d's
+adjoint law, both in `LAWS.bend`/`PROOF.bend` with `--verdict`.
+
 ## 2026-11-04 (night) — the UNet's decoder block exists and is gated
 
 **Where things stand.** The UNet is started at its hardest point and stopped at a

@@ -4,6 +4,25 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The UNet's forward, composed and confronted with a twin
+
+- **`examples/diffusion/unet/main.bend`** is the smallest honest U: `Conv2d`
+  stride 2 down, `GroupNorm`, `SiLU`, the `Up2` block, `Conv2d` stride 1,
+  `GroupNorm`, `SiLU`, and an additive skip from the input — `Mat<4096,2>` in,
+  `Mat<4096,2>` out, 80 parameters, all deterministic.
+- **`reference/unet_gate.py`** rebuilds that forward in NumPy: the strided
+  window, the `(c, kh, kw)` patch order, the group over both channels, `SiLU`,
+  the 2x2 repeat, the skip. **Channel 0 of every cell matches exactly; channel 1
+  is 1.86e-4 apart**, so it is a probe, not a gate, and the file is deliberately
+  not named `test_*` (ISSUE-051).
+- **What that already proves**: the flat row order, the channels-last patch, the
+  stride-2 surplus, `Up2`'s vertical-then-horizontal order and the additive skip
+  are all right — an error in any of them would move both channels.
+- **Why channel 1 is the hard one**: its `GroupNorm` scale is `-0.01`, so the
+  normalised value there is ~19.9 and any residual is amplified 100x; the
+  candidates are the group's variance order, the conv's 18-term accumulation, and
+  where the bias enters.
+
 ### The UNet's decoder block, invented and gated
 
 BendTorch 2.0.0 has `Conv2d`, `GroupNorm`, `SiLU` and `FullAttention`, but no
