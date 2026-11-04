@@ -4,6 +4,22 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### An outside corpus for the compiler, with a gate that can fail
+
+- **`reference/corpus/qwenbend/`**: 200 small Bend programs written by
+  Qwen3.5-0.8B, each one independently checked against real Bend2 by the author
+  of [qwenbend](https://github.com/voidash/qwenbend), with its verdict, its value
+  and its first diagnostic line. Apache-2.0, pinned by sha256, and we wrote none
+  of them.
+- **`reference/test_corpus.py`** asks whether the Bend we pin behaves like the
+  language everyone else checked against: it accepts exactly the 116 programs
+  Bend2 accepted, rejects the 84 it rejected, runs the accepted ones to the same
+  number, and matches the first rule line of every rejection. 36 s, in
+  `make check`.
+- **A gate that cannot fail is not a gate**: the last three checks corrupt one
+  expectation each (a verdict, an output, a diagnostic) and require the
+  comparator to report it.
+
 ### The ViT's floor was 64x too small, and the attention is where the time is
 
 - **`vit_step` counted `tokens` where every other bound counts `rows`.** A

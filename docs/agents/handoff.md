@@ -7,6 +7,93 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-04 — everything we filed is closed; the pin is 2.0.0
+
+**Where things stand.** `bendtorch@2.0.0.0` is on BendHub with its three lanes
+(v2.0.0, 2026-11-03). #27 merged (the config lives in the `Train`), #22 merged
+(`Conv2d`), #24 and #15 closed, 35 laws, 167 mutants; the release notes credit
+the Conv2d work to "by or with @adeerkhan". Our two remaining upstream issues
+are both performance findings from yesterday: **#26** (launches cannot be
+counted) and **#28** (the attention block is 3.2x its arithmetic).
+
+- **The next change is the 2.0.0 migration, and its scope is measured, not
+  guessed**: 21 files import `bendtorch@1.3.0.0`, 13 `Train.step` calls lose an
+  argument, 59 `T.Train{…}` patterns gain `c` after `st`. `tensor-array` stays
+  at `0.1.18.0`; nothing else moves. Two files (`examples/cifar/main.bend`,
+  `bench/cifar_learning`) are already ported on branch `devel-200` against a path
+  import — they need the import swapped to the hub package.
+- **Owed to nuxyel, twice asked**: the CIFAR sweep on the released
+  `2.0.0.0` (we ran it on `devel@211ae84`: 0.5790425 / 0.87949044 / 0.99899477
+  against 1.3.0.0's 0.84698695 three times).
+- **The UNet is unblocked** and is the next task after the migration:
+  `Conv2d` (2.0.0), `GroupNorm` and `FullAttention` (1.3.0) are all in the pin;
+  #15 is closed with "an unconditional UNet is expressible".
+- **New gate**: `reference/corpus/qwenbend/` + `reference/test_corpus.py` (200
+  model-written programs, 116/116 values, 84/84 diagnostics, three negative
+  controls). `make check` is **113/113**.
+
+**Next, in order.** 1. The 2.0.0 migration in one change (21 imports, 13 calls,
+59 patterns), then the sweep on the hub package, posted on #24. 2. The UNet task,
+twin and cell first. 3. `FullAttention` at `AttBlk`'s shape for #28. 4. bendlang
+#1632 items 9–10, with the corpus's 84 rejections as the input.
+
+## 2026-11-04 — the QwenBend corpus is a gate now
+
+**Where things stand.** `reference/corpus/qwenbend/` holds 200 Bend programs
+written by Qwen3.5-0.8B and checked against real Bend2 upstream; `make check`
+now runs them through the Bend we pin. All four checks agree (116/116 verdicts,
+84/84 rejections, 116/116 values, 84/84 diagnostics), and the test's own
+negative control corrupts a verdict, an output and a diagnostic to prove the
+comparison can fail. 36 s.
+
+- Why it matters: it is the first conformance test of the *checker* that we did
+  not write, and it fails on a Bend bump that changes the static rules or the
+  error messages.
+- Provenance: Apache-2.0, pinned by sha256, re-projectable from
+  `bendtune/logs/tuned400_test.jsonl`; the snippet is in the corpus README.
+- Not taken from that project: the in-weights executor, the LoRA, the 4B
+  checkpoint. Their benchmark is honest that it is less accurate than asking the
+  model directly (50% vs 70%); the win there is exactness and a replayable trace.
+
+**Next, in order.** 1. Watch #22; on merge, re-run our gates and start the UNet.
+2. On BendTorch 2.0.0's release, finish `devel-200` (11 call sites) and re-run
+the CIFAR sweep as acceptance. 3. The `FullAttention`-at-the-same-shape
+comparison for #28. 4. Consider a spine for the diagnostics: the corpus's 84
+rejections are a ready-made input for bendlang #1632 items 9-10.
+
+## 2026-11-03 (night, later) — #27 lands, #22 is rebased, 2.0.0 is staged
+
+**Where things stand.** nuxyel answered all three open threads in one go.
+
+- **#24 → #27, merged to `devel`, shipping as 2.0.0.** `Train` carries its
+  config, `Train.step` drops the argument, `Train.with_cfg` changes it, and
+  `Opt.guard` refuses a kind mismatch with a NaN optimizer (four laws). He built
+  all four candidate fixes on branches before choosing ours, and found the worse
+  half we had missed: a kind mismatch used to keep the loss and raise nothing.
+- **Our sweep on it** (`devel@211ae84`, 150 steps, one lr at `Train.new`):
+  **0.5790425 / 0.87949044 / 0.99899477** where 1.3.0.0 read 0.84698695 three
+  times. The rows match the old per-step form to the digit, so adopting it moves
+  no number. Posted on #27 with three review notes (the guard is the only shape
+  a pure step can have; `with_cfg` keeping `p1`/`p2` is what makes a mid-run
+  change safe; and a question about `dump`/`restore` carrying `cfg`, so a 1.3.0
+  checkpoint and a 2.0.0 one are different payloads).
+- **#22 is rebased** on `devel@211ae84` and pushed as `a876e57`: `LAWS.bend`
+  keeps both law sets (34 laws), the README says `159/159` and **34** — devel's
+  badge said 33 while its file holds 32 obligations, so 32 + our 2 = 34. He runs
+  the gates and merges; that is what unblocks `Conv2d` and the UNet.
+- **#15**: he closes it when #22 merges, and opens a follow-up for the general
+  `k = s` round trip and the adjoint law.
+- **Staged, not merged**: branch `devel-200` (pushed) ports the two files the
+  sweep needed to the 2.0.0 API, importing `../bendtorch` by path. 11 call sites
+  remain; the whole thing lands the day 2.0.0 is on the hub.
+
+**Next, in order.** 1. Watch #22: on merge, re-run our gates and start the UNet
+(`GroupNorm`, `FullAttention` and `Conv2d` are all in then). 2. On 2.0.0's
+release, finish `devel-200` (11 call sites), switch the import to
+`bendtorch@2.0.0.0`, and re-run the sweep as the acceptance. 3. The
+`FullAttention`-at-the-same-shape comparison for #28. 4. bendlang #1632 items
+9-10.
+
 ## 2026-11-03 (night) — the floor was 64x too small; the attention is where the ms are
 
 **Where things stand.** Two more fixes and the first located performance finding.
