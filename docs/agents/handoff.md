@@ -21,14 +21,18 @@ nothing to do:** #32/#33/#34 are MERGEABLE with 0 reviews.
 
 **Item 4, where it actually starts.** The four U32 facts are a `Word` bit-vector library: Base has only
 `U32.add_comm`, and the facts (`J(j,2^d) == j`, `shr(2^(d+1)) == 2^d`, `Z` is bit `d-1`, the subtraction bound) each
-need word inductions. **Four lemmas are proved** in `bend-lab/.local/u32_bits.bend` (local only), `--verdict` green: A
-(`shr(shl(w)) == ctop(w)`), B (`ctop(w) == w` when `top(w) == False`), C1 (`init(shl(w)) == shl.put(False, init(w))`)
-and `top(shl(w)) == top(init(w))` (via `top_put`/`top_cons`/`init_put_eq`). `init_p` and `shl.put` are the same
-recursion at different lengths — that is what makes C1 go. Next: **C** (`top(2^d) == False`, `d <= 30`) = fact 2; it
-needs `top_zero`, `weaken`, `drop_last` and an `above(d, w)` predicate (the index `31-d` needs either `Nat.sub` or a
-stop at position `d` via `Nat.is_eq` through a def). Then **D** the mask fact, **E** `Z` is bit `d-1`, **F** the
-subtraction bound, then `ASet.Apart` on perfect trees, `Mat.to_list(Mat.of_list xs) == xs`, and #29's adjoint. Oracle:
-`tensor-array/tests/apart.bend`, 21,590 pairs, 0 failures.
+need word inductions. **Six lemmas are proved** in `bend-lab/.local/u32_bits.bend` (local only), `--verdict` green: A
+(`shr(shl(w)) == ctop(w)`), B (`ctop(w) == w` when `top(w) == False`), C1 (`init(shl(w)) == shl.put(False, init(w))`),
+`top_shl`, and the canonical `2^d` — `p2(d,n)` (`d` zeros, a one, then zeros) with `shl_p2`. The builder had to match
+`d` first and `n` inside the branches: matching `d` after `n` is the match-order trap, and two defs are mutual
+recursion, which is forbidden. `init_p` and `shl.put` are the same recursion at different lengths.
+
+**C's wall, precisely:** `top(p2(d,32)) == False` (`d <= 30`) closes as `Q(K,d) = top(p2(d,d+K)) == False` by
+induction on `d`, but at 32 it needs `K = 32-d`, i.e. `Nat.add(d, Nat.sub(32,d)) == 32`, and Base states no `Nat.sub`
+law. **D/F are a separate layer, not a longer induction:** Base has no law for `Word.and`, `Word.sub` or `Word.cmp`
+(only `Word.adc`, `Word.add_comm`), so D needs `sub(2^d,1) = ones(d)`, a mask law and a comparison law; F needs
+subtraction-without-borrow. Then `ASet.Apart` on perfect trees, `Mat.to_list(Mat.of_list xs) == xs`, and #29's adjoint.
+Oracle: `tensor-array/tests/apart.bend`, 21,590 pairs, 0 failures.
 
 **Lean:** 4.34.0 **is installed** (`~/.elan/bin/lean`), just not on the shell PATH — use
 `PATH=$HOME/.elan/bin:$PATH bend FILE --verdict`. The earlier "no Lean here" note was the PATH.

@@ -2338,10 +2338,17 @@ Base states only `U32.add_comm`, and `Word` is a little-endian bit list, so the 
 inductions. **Four lemmas are proved** — A (`shr(shl(w)) == ctop(w)`), B (`ctop(w) == w` when the top bit is False), C1
 (`init(shl(w)) == shl.put(False, init(w))`, i.e. dropping the top bit commutes with shifting up) and
 `top(shl(w)) == top(init(w))` — and `--verdict` is green; the draft with the derivations is
-`bend-lab/.local/u32_bits.bend` (local only). The wall is `top(2^d) == False`: A and B make it the same statement as
-fact 2, and both need the index `31-d`, so the next pieces are `top_zero`, `weaken`, `drop_last` and an `above(d, w)`
-predicate that stops at position `d`. A useful structural fact fell out: `init_p` (drop the top bit) and `shl.put`
-(shift one bit in) are the *same recursion*, differing only at length 0.
+`bend-lab/.local/u32_bits.bend` (local only). **Six lemmas are proved** and `--verdict` is green, including a canonical `2^d`: `p2(d, n)` is `d` zeros, a one, then
+zeros, and `shl_p2` says `shl(p2(d,n)) == p2(d+1,n)`. Two Bend restrictions shaped it: matching `d` after `n` is the
+match-order trap, and splitting the builder into two defs is mutual recursion, which the language forbids; matching `d`
+first and `n` inside the branches is what works. The structural facts that made the earlier lemmas go: `init_p` (drop
+the top bit) and `shl.put` (shift one bit in) are the *same recursion*, differing only at length 0.
+
+The remaining wall is now precise. `top(p2(d, 32)) == False` for `d <= 30` closes as `Q(K,d) = top(p2(d, d+K)) == False`
+by induction on `d`, but applying it at 32 needs `K = 32-d`, and Base states no `Nat.sub` law. And the mask and
+subtraction facts (D, F) are a separate layer, not a longer induction: Base has **no** law for `Word.and`, `Word.sub`
+or `Word.cmp` (only `Word.adc` and `Word.add_comm`), so D needs `sub(2^d,1) = ones(d)`, a mask law, and a comparison
+law, each over bit lists with borrow.
 
 Two facts worth keeping: **Lean 4.34.0 is installed** at `~/.elan/bin/lean` and is simply not on the shell PATH, so
 `PATH=$HOME/.elan/bin:$PATH bend FILE --verdict` proves locally (the earlier "no Lean here" note was the PATH, not the
