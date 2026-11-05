@@ -2349,8 +2349,9 @@ the top bit) and `shl.put` (shift one bit in) are the *same recursion*, differin
 32-bit instantiation, `top(32, p2(d,32))`, which needs `d + (2+j) == 32` — the bound `d <= 30`, and that is the array
 law's to carry (a U32 holds `2^d`, so `d <= 31`; the top bit is exactly the `d = 31` edge). No standalone bit lemma can
 supply it. D and F remain a separate layer: Base has **no** law for `Word.and`, `Word.sub` or `Word.cmp` (only
-`Word.adc` and `Word.add_comm`), so D needs `sub(2^d,1) = ones(d)`, a mask law, and a comparison law, each over bit
-lists with borrow.
+`Word.adc` and `Word.add_comm`). The `and` half is started: `and_ones`, `and_zeros`, `and_idem` are proved in the same
+draft, over `ones`/`zeros`. What D still needs is the borrow chain (`sub(2^d,1) = ones(d)` through `Word.adc`) and the
+`Word.cmp` bound; F needs subtraction without borrow on top of both.
 
 Two facts worth keeping: **Lean 4.34.0 is installed** at `~/.elan/bin/lean` and is simply not on the shell PATH, so
 `PATH=$HOME/.elan/bin:$PATH bend FILE --verdict` proves locally (the earlier "no Lean here" note was the PATH, not the
