@@ -1,12 +1,18 @@
-# The UNet's first building block, and the check that it is the layer a UNet
-# needs: BendTorch has Conv2d, GroupNorm, SiLU and FullAttention, but no
-# transposed convolution and no channel concatenation. So the decoder upsamples
-# with a parameterless layer whose forward repeats every pixel 2x2 and whose
-# backward is its exact adjoint (sum the four cells that came from one input
-# cell). `main` prints the adjoint identity for a 2x2 image of 2 channels, and
-# `reference/test_up2.py` compares the forward against NumPy.
+# The UNet's smallest honest U, two levels deep: 64x64 -> 32x32 -> 16x16 ->
+# 32x32 -> 64x64, with two additive skips. BendTorch has Conv2d, GroupNorm, SiLU
+# and FullAttention, but no transposed convolution and no channel concatenation,
+# so the decoder upsamples with a parameterless layer whose forward repeats
+# every pixel 2x2 and whose backward is its exact adjoint (sum the four cells
+# that came from one input cell).
 #
 #   bendenv run -- bend examples/diffusion/unet/main.bend
+#   /tmp/mlbend-unet --dump        the whole y/z/out planes, for the torch check
+#
+# The gates: `reference/test_up2.py` compares the upsample against NumPy,
+# `reference/test_unet.py` rebuilds the two-level forward (first eight cells of
+# y, z and out), and `reference/compare_unet_torch.py` checks the whole planes in
+# PyTorch. `reference/unet_results.py` writes the record under
+# results/diffusion-unet/; the numbers and pictures are in RESULTS.md.
 #
 # Adjacent facts a reader needs: the image is flat (h rows of w*c cells, row
 # major), the channels are last (Conv2d's layout), and the two passes are
@@ -102,8 +108,15 @@ def CST1() -> Type:
 def CST2() -> Type:
   TA.Mat<4096n, 18n>
 
+# the second level: 32x32 down to 16x16 and back (ISSUE-061)
+def LOW() -> Type:
+  TA.Mat<256n, 2n>
+
+def CST3() -> Type:
+  TA.Mat<256n, 18n>
+
 type P is Type:
-  P{c1: CP(), g1: T.LN<2n>, c2: CP(), g2: T.LN<2n>}
+  P{c1: CP(), g1: T.LN<2n>, c3: CP(), g3: T.LN<2n>, c4: CP(), g4: T.LN<2n>, c2: CP(), g2: T.LN<2n>}
 
 def list_mid(m: TA.ML<1024n, 2n>) -> List<&2, F32>:
   match m:
@@ -116,6 +129,41 @@ def list_in(m: TA.ML<4096n, 2n>) -> List<&2, F32>:
       l
 
 def mid_of(f: T.Fwd<CP(), MID(), CST1()>) -> MID():
+  match f:
+    case T.Fwd{p, y, s}:
+      y
+
+def list_low(m: TA.ML<256n, 2n>) -> List<&2, F32>:
+  match m:
+    case TA.ML{mat, l}:
+      l
+
+def low_of(f: T.Fwd<CP(), LOW(), CST3()>) -> LOW():
+  match f:
+    case T.Fwd{p, y, s}:
+      y
+
+def glmid_of(f: T.Fwd<T.LN<2n>, MID(), MID()>) -> MID():
+  match f:
+    case T.Fwd{p, y, s}:
+      y
+
+def glof(f: T.Fwd<T.LN<2n>, LOW(), LOW()>) -> LOW():
+  match f:
+    case T.Fwd{p, y, s}:
+      y
+
+def gl_conv(f: T.Fwd<CP(), MID(), CST1()>) -> MID():
+  match f:
+    case T.Fwd{p, y, s}:
+      y
+
+def slof(f: T.Fwd<Unit, LOW(), LOW()>) -> LOW():
+  match f:
+    case T.Fwd{p, y, s}:
+      y
+
+def smid2_of(f: T.Fwd<Unit, MID(), MID()>) -> MID():
   match f:
     case T.Fwd{p, y, s}:
       y
@@ -165,16 +213,44 @@ def silu_mid(y: MID()) -> MID():
 def silu_in(y: IN()) -> IN():
   sin_of(T.Layer.fwd(Unit, IN(), IN(), IN(), T.SiLU(4096n, 2n), Unit{}, y))
 
+# ---- the second level (ISSUE-061) ----
+# down 2: 32x32 -> 16x16 with k=3, p=1, stride 2 (hs = ws = 31, so cimg = 32)
+def conv3(p: CP(), x: MID()) -> LOW():
+  low_of(T.Layer.fwd(CP(), MID(), LOW(), CST3(), T.Conv2d(1n, 2n, 2n, 3n, 31n, 31n, 1n, 1n, 0n), p, x))
+
+# up 2: 16x16 -> 32x32, then a same-shape conv (k=3, p=1, stride 1)
+def up_l(y: LOW()) -> MID():
+  TA.Mat.from_list(1024n, 2n, up_list(16n, 16n, 2n, list_low(TA.Mat.to_list(256n, 2n, y))))
+
+def conv4(p: CP(), x: MID()) -> MID():
+  gl_conv(T.Layer.fwd(CP(), MID(), MID(), CST1(), T.Conv2d(1n, 2n, 2n, 3n, 31n, 31n, 1n, 0n, 0n), p, x))
+
+def gn3(g: T.LN<2n>, y: MID()) -> MID():
+  glmid_of(T.Layer.fwd(T.LN<2n>, MID(), MID(), MID(), T.GroupNorm(1n, 1024n, 1n, 2n, 1.0), g, y))
+
+def gn4(g: T.LN<2n>, y: LOW()) -> LOW():
+  glof(T.Layer.fwd(T.LN<2n>, LOW(), LOW(), LOW(), T.GroupNorm(1n, 256n, 1n, 2n, 1.0), g, y))
+
+def silu_low(y: LOW()) -> LOW():
+  slof(T.Layer.fwd(Unit, LOW(), LOW(), LOW(), T.SiLU(256n, 2n), Unit{}, y))
+
+def silu_mid2(y: MID()) -> MID():
+  smid2_of(T.Layer.fwd(Unit, MID(), MID(), MID(), T.SiLU(1024n, 2n), Unit{}, y))
+
 def up_m(y: MID()) -> IN():
   TA.Mat.from_list(4096n, 2n, up_list(32n, 32n, 2n, list_mid(TA.Mat.to_list(1024n, 2n, y))))
 
-# the skip needs x twice, and a Mat is linear: `Mat.dup` hands both copies to a
-# def that matches the pair, which is the same trick `Fork` uses inside the layer
-# combinators
+# the 32x32 stage needs y twice (the second level and its skip), and a Mat is linear: `Mat.dup` hands both
+# copies to a def that matches the pair, the same trick as `Fork` and the input's skip
+def mid_pair(c3: CP(), g3: T.LN<2n>, c4: CP(), g4: T.LN<2n>, d: T.Two<MID(), MID()>) -> MID():
+  match d:
+    case T.Two{a, b}:
+      T.Mat.sum2(1024n, 2n, silu_mid2(gn3(g3, conv4(c4, up_l(silu_low(gn4(g4, conv3(c3, a))))))), b)
+
 def fwd_pair(p: P(), d: T.Two<IN(), IN()>) -> IN():
   match p d:
-    case P{c1, g1, c2, g2} T.Two{a, b}:
-      T.Mat.sum2(4096n, 2n, silu_in(gn2(g2, conv2(c2, up_m(silu_mid(gn1(g1, conv1(c1, a))))))), b)
+    case P{c1, g1, c3, g3, c4, g4, c2, g2} T.Two{a, b}:
+      T.Mat.sum2(4096n, 2n, silu_in(gn2(g2, conv2(c2, up_m(mid_pair(c3, g3, c4, g4, T.Mat.dup(1024n, 2n, silu_mid(gn1(g1, conv1(c1, a))))))))), b)
 
 def fwd(p: P(), x: IN()) -> IN():
   fwd_pair(p, T.Mat.dup(4096n, 2n, x))
@@ -232,7 +308,9 @@ def lnp(s: Nat) -> T.LN<2n>:
 
 def params() -> P():
   P{T.Lin{mat(2n, 18n), TA.Mat.fill(1n, 2n, 0.05)}, lnp(0n),
-    T.Lin{mat(2n, 18n), TA.Mat.fill(1n, 2n, 0.07)}, lnp(1n)}
+    T.Lin{mat(2n, 18n), TA.Mat.fill(1n, 2n, 0.06)}, lnp(1n),
+    T.Lin{mat(2n, 18n), TA.Mat.fill(1n, 2n, 0.07)}, lnp(2n),
+    T.Lin{mat(2n, 18n), TA.Mat.fill(1n, 2n, 0.08)}, lnp(3n)}
 
 def x_in() -> IN():
   mat(4096n, 2n)
@@ -253,7 +331,7 @@ def show_go4(xs: List<&2, F32>) -> String:
 
 def gn_of_params(p: P()) -> String:
   match p:
-    case P{c1, g1, c2, g2}:
+    case P{c1, g1, c3, g3, c4, g4, c2, g2}:
       show_go4(head8(list_mid(TA.Mat.to_list(1024n, 2n, gn1(g1, conv1(c1, x_in()))))))
 
 def gn8() -> String:
@@ -261,7 +339,7 @@ def gn8() -> String:
 
 def raw_of_params(p: P()) -> String:
   match p:
-    case P{c1, g1, c2, g2}:
+    case P{c1, g1, c3, g3, c4, g4, c2, g2}:
       show_go4(head8(list_mid(TA.Mat.to_list(1024n, 2n, conv1(c1, x_in())))))
 
 def raw8() -> String:
@@ -269,15 +347,16 @@ def raw8() -> String:
 
 def z_of_params(p: P()) -> String:
   match p:
-    case P{c1, g1, c2, g2}:
-      show_go4(head8(list_in(TA.Mat.to_list(4096n, 2n, silu_in(gn2(g2, conv2(c2, up_m(silu_mid(gn1(g1, conv1(c1, x_in())))))))))))
+    case P{c1, g1, c3, g3, c4, g4, c2, g2}:
+      show_go4(head8(list_mid(TA.Mat.to_list(1024n, 2n, mid_pair(c3, g3, c4, g4, T.Mat.dup(1024n, 2n,
+        silu_mid(gn1(g1, conv1(c1, x_in())))))))))
 
 def z8() -> String:
   z_of_params(params())
 
 def y_of_params(p: P()) -> String:
   match p:
-    case P{c1, g1, c2, g2}:
+    case P{c1, g1, c3, g3, c4, g4, c2, g2}:
       show_go4(head8(list_mid(TA.Mat.to_list(1024n, 2n, silu_mid(gn1(g1, conv1(c1, x_in())))))))
 
 def y8() -> String:
@@ -286,8 +365,55 @@ def y8() -> String:
 def out8() -> String:
   show_go4(head8(list_in(TA.Mat.to_list(4096n, 2n, fwd(params(), x_in())))))
 
+def dump_go(args: List<String>, +dump: Bool) -> Bool:
+  match args:
+    case Nil{}:
+      dump
+    case Con{a, rest}:
+      match a:
+        case "--dump":
+          dump_go(rest, True{})
+        case _:
+          dump_go(rest, dump)
+
+def dump_of(args: List<String>) -> Bool:
+  match args:
+    case Nil{}:
+      False{}
+    case Con{program, rest}:
+      dump_go(rest, False{})
+
+# `--dump` prints the whole planes, one line each, so the PyTorch comparison covers 8,192 numbers of
+# `out` and 2,048 of each intermediate instead of eight; the eight-cell lines above stay the gates
+# that localise a mismatch, because a full-plane diff says only "somewhere"
+def dump_y(p: P()) -> IO(Unit):
+  match p:
+    case P{c1, g1, c3, g3, c4, g4, c2, g2}:
+      IO.print(String.append("y_all: ",
+        show_go(list_mid(TA.Mat.to_list(1024n, 2n, silu_mid(gn1(g1, conv1(c1, x_in()))))))))
+
+def dump_z(p: P()) -> IO(Unit):
+  match p:
+    case P{c1, g1, c3, g3, c4, g4, c2, g2}:
+      IO.print(String.append("z_all: ",
+        show_go(list_mid(TA.Mat.to_list(1024n, 2n, mid_pair(c3, g3, c4, g4,
+          T.Mat.dup(1024n, 2n, silu_mid(gn1(g1, conv1(c1, x_in()))))))))))
+
+def dump_out(p: P()) -> IO(Unit):
+  match p:
+    case P{c1, g1, c3, g3, c4, g4, c2, g2}:
+      IO.print(String.append("out_all: ",
+        show_go(list_in(TA.Mat.to_list(4096n, 2n, fwd(p, x_in()))))))
+
+def dump_all() -> IO(Unit):
+  do IO<Unit>:
+    Unit <- dump_y(params())
+    Unit <- dump_z(params())
+    dump_out(params())
+
 def main() -> IO(Unit):
   do IO<Unit>:
+    args : List<String> <- IO.args()
     Unit <- IO.print(String.append("in cells: ", Nat.show(List.length(&2, F32, x0()))))
     Unit <- IO.print(String.append("up cells: ", Nat.show(List.length(&2, F32, up0()))))
     Unit <- IO.print(String.append("down cells: ", Nat.show(List.length(&2, F32, down_list(2n, 2n, 2n, up0())))))
@@ -299,6 +425,6 @@ def main() -> IO(Unit):
     Unit <- IO.print(String.append("z: ", z8()))
     Unit <- IO.print(String.append("y: ", y8()))
     Unit <- IO.print(String.append("out: ", out8()))
+    Bool.pick(IO(Unit), dump_of(args), dump_all(), IO.pure(Unit, Unit{}))
     IO.print(String.append("adjoint: ",
       verdict(F32.is_eq(dot(up0(), up0(), 0.0), dot(x0(), down_list(2n, 2n, 2n, up0()), 0.0)))))
-    return Unit{}
