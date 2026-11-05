@@ -7,28 +7,29 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
-## 2026-11-05 (latest) — the UNet's second level, and the flow's "width win" was a bug
+## 2026-11-05 (latest) — UNet level 2, the flow re-measured, item 4 opened
 
-**The UNet's second level landed.** `examples/diffusion/unet/main.bend` is a two-level U: 64x64 -> 32x32 -> 16x16 ->
-32x32 -> 64x64, four `Conv2d`, four `GroupNorm`, two `up2` and two additive skips (`P` has eight fields;
-`LOW()`/`CST3()` are the 16x16 stage). The trap: a conv's `Fwd` state type is the im2col matrix, not the output image —
-`conv4` needs `CST1()` (`1024x18`) where the output is `MID()` (`1024x2`); `y` is needed twice, so `T.Mat.dup` feeds
-`mid_pair`. Gates: `test_unet.py` (two-level NumPy twin, `y`/`z`/`out` at **5.96e-08** vs 1e-6), `--dump` for whole
-planes, and `compare_unet_torch.py` (torch, `y`/`z` 1.19e-06, `out` 7.63e-06 inside `2e-6 + 1e-6*|v|`). Record:
-`reference/unet_results.py` writes `results/diffusion-unet/{run.json,level.svg,features.svg,stats.svg}`; write-up in
-`examples/diffusion/unet/RESULTS.md` (ISSUE-061).
+**Done and pushed.** The UNet's two-level U (`2e02ece`): 64→32→16→32→64, four `Conv2d`, four `GroupNorm`, two
+`up2`, two skips; gates **5.96e-08** (NumPy) and **1.19e-06 / 7.63e-06** (torch, whole plane). The flow's "width win"
+was a batch-size bug (`n()` had become 256, so half the targets were zero): with `n()` restored, **no setting beats the
+baseline** (0.8360 final, 0.8859 last 100), and `compare_flow2d.py` now **passes** — first loss 1.476769 vs 1.476769
+(8.97e-08) after fixing the data order, the per-step noise and the init scale (`0f6898a`). `reference/flow_config.py`
+is the one reader of `hidden()`/`steps()`/`euler()` (`b4c1b49` for the docs). `make check` **116/116**, fast 31/31.
 
-**The flow sweep was wrong, and is corrected.** The width edit had also changed `def n()` (batch 128 -> 256), so the
-"256 wide" runs trained with half their targets zero: the 0.4318 was that, not width. With `n()` restored, **no setting
-beats the baseline** (0.8360 final, 0.8859 last 100; 256 wide 0.8471, 12,000 steps 0.8630). The confounded run is kept
-as `variants/zeropad-artifact.json`. `compare_flow2d.py` now **PASSES**: first loss 1.476769 vs 1.476769 (8.97e-08)
-after fixing the data order (interleaved moons), the per-step noise (`noise_of(s)`) and the init scale
-(`1/sqrt(cols - j)`); ISSUE-060 is closed, the printed-loss convention was never wrong. `reference/flow_config.py` is
-the single reader of `hidden()`/`steps()`/`euler()`, so `test_flow2d`, `compare_flow2d` and `flow_checkpoint.MODEL`
-follow a width change (ISSUE-062).
+**Item 3 is blocked:** BendTorch PR #34 (`Tile`) is OPEN, so `LayerNormMod` + the gated residual wait. **Item 5,
+nothing to do:** #32/#33/#34 are MERGEABLE with 0 reviews.
 
-**Next in the queue:** the U32 bit-lemma library (four facts), then `ASet.Apart`/`Mat.to_list` (bend-ml#26), then #29's
-adjoint. `LayerNormMod` + gated residual still waits on the Tile PR (#34); PRs #32, #33, #34 await review.
+**Item 4, where it actually starts.** The four U32 facts are a `Word` bit-vector library: Base has only
+`U32.add_comm`, and the facts (`J(j,2^d) == j`, `shr(2^(d+1)) == 2^d`, `Z` is bit `d-1`, the subtraction bound) each
+need word inductions. **Lemma A is proved** — `shr(shl(w)) == ctop(w)`, "shifting up and back down clears the top
+bit" — in `bend-lab/.local/u32_bits.bend` (local only), with `--verdict` green; `top`/`top_p` helpers are there too.
+Next, in order: **B.** `ctop(w) == w` when `top(w) == False`; **C.** `top(2^d) == False` for `d <= 30` (the hard one:
+`shl` moves the set bit, so carry the canonical pattern of `shln(1,d)`); **D.** the mask fact; **E.** `Z` is bit `d-1`;
+**F.** the subtraction bound. Then `ASet.Apart` on perfect trees, `Mat.to_list(Mat.of_list xs) == xs`, and #29's
+adjoint. The measured oracle is `tensor-array/tests/apart.bend`: 21,590 pairs, 0 failures.
+
+**Lean:** 4.34.0 **is installed** (`~/.elan/bin/lean`), just not on the shell PATH — use
+`PATH=$HOME/.elan/bin:$PATH bend FILE --verdict`. The earlier "no Lean here" note was the PATH.
 
 ## 2026-11-05 (earlier) — both examples fixed and re-recorded
 

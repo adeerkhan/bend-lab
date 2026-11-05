@@ -2329,3 +2329,18 @@ The printed-loss convention was never wrong: Bend prints the step's own loss wit
 `test_flow_checkpoint` expected `3 × 17,282 + 2` bytes. Both now read `reference/flow_config.py`, the single reader of
 `hidden()`/`steps()`/`euler()` from the example's source, which `compare_flow2d` and `flow_checkpoint.MODEL` use too.
 `make check` is 116/116 with them.
+
+## 2026-11-05 — item 4 opened: the U32 facts are a Word library, and Lean is here
+
+The next item after the UNet and the flow is the four U32 bit facts that `ASet.Apart` on perfect trees needs
+(`J(j, 2^d) == j`, `shr(2^(d+1)) == 2^d`, `Z` is bit `d-1`, and the subtraction bound). They are not four one-liners:
+Base states only `U32.add_comm`, and `Word` is a little-endian bit list, so the library has to start with word
+inductions. **Lemma A is proved** — `shr(shl(w)) == ctop(w)`, "shifting up and back down clears the top bit" — and
+`--verdict` is green; the draft, with the derivation and the remaining lemmas B–F in order, is
+`bend-lab/.local/u32_bits.bend` (local only). The hard one is `top(2^d) == False`: `shl` moves the single set bit, so
+the induction must carry the whole canonical pattern of `shln(1, d)`, not just the top bit.
+
+Two facts worth keeping: **Lean 4.34.0 is installed** at `~/.elan/bin/lean` and is simply not on the shell PATH, so
+`PATH=$HOME/.elan/bin:$PATH bend FILE --verdict` proves locally (the earlier "no Lean here" note was the PATH, not the
+machine). And the oracle `tensor-array/tests/apart.bend` checks **21,590 pairs through depth 7 with 0 failures**; the
+symbolic proof is what is missing, not the evidence.
