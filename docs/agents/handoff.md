@@ -7,6 +7,30 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-05 — our own debt: one fixed, one found deeper, the rest recorded
+
+**Fixed and pushed (`bend-lab` main).** **ISSUE-042**: a generated dataset's pin now lives in the task
+(`dataset.pin: roots + name -> sha256`), `check_pins` enforces it and `run_bend` calls it **before the build**;
+`--check-dataset TASK` runs that check alone. Tested both ways — `flowers-flow: 2 pinned file(s) ok`, and a
+one-byte-flipped copy in a temporary root refused with both digests. `_flowers_paths()` now calls the same function, so
+the pre-run check and the parse cannot drift.
+
+**Recorded.** ISSUE-011 closed (`FullAttention`, v1.3.0); ISSUE-026 narrowed to `LayerNormMod` + the gated residual
+(RoPE2d is PR #33, Tile is PR #34); ISSUE-038 accepted with the decision written down (the target's fill landed; the
+input's path needs a list, which a fill cannot produce).
+
+**ISSUE-040 is deeper than the ledger said, and was reverted.** Dropping the two `List.reverse`s and setting
+`twin_vit.levels_of(s) = t_of(s, i)` takes the twin's step-0 loss to 1.0093014 against Bend's 1.00921 — a **9.2e-5**
+gap, where the pre-fix pair matched to **6.3e-9**. Reversing a 128-value row also swaps each pixel's `(a, b)` pair, and
+`twin_vit`'s token order was derived from the reversed rows. So the fix needs `twin_vit.tokens_of` re-derived first,
+then the example re-run and `vit_results.py` re-recorded. The tree is green (`first loss: ... delta 6.27e-09`) and the
+finding is in ISSUE-040.
+
+**ISSUE-044 is the one left, with its plan in the ledger**: rewrite `tok_go`/`stok_go` as images → rows → columns
+chains (killing the stale `case 8n _` guard, restarting the row per image), `pair_of` passing `level(s, img)`, the twin's
+`tokens_of`/`feats` following, then `make experiment TASK=flowers-flow` (6,000 steps) and `reference/test_flow64.py`.
+Do 040 and 044 in one change so the two decisions are consistent.
+
 ## 2026-11-04 (later still) — three PRs are up; next is the U32 bit-lemma library
 
 **Where things stand.** Three PRs against `nuxyel/BendTorch:devel`, all from `adeerkhan/BendTorch`, all green on CI
