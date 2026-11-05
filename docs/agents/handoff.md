@@ -7,23 +7,24 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
-## 2026-11-05 (latest) — the UNet is trained: gates exact, samples weak (ISSUE-065)
+## 2026-11-05 (latest) — the UNet is trained; the gates are exact and the samples are noise
 
-`examples/diffusion/unet/{model,train}.bend` train the two-level U (64→32→16→32→64, 16 channels, one skip) on 512
-flowers with the flow objective, with `--steps/--start/--save/--resume/--no-sample/--probe` and a `--probe` that prints
-the flat weights and one whole forward. Gates: NumPy twin **4.47e-08**, torch twin **4.47e-08** (1e-6), checkpoint
-**bit-identical** (40 == 20 + 20, 5,489 weights, 65,876 bytes). Record: `reference/unet_flowers_results.py` →
-`results/diffusion-unet/{run.json,loss.svg,samples.svg,stats.svg}`, write-up `examples/diffusion/unet/TRAINED.md`.
+`examples/diffusion/unet/{model,train}.bend`: the two-level U (64→32→16→32→64, 16 channels, a group norm before every
+activation, the 32×32 skip, a 1×1 head) trained on 512 flowers by rectified flow, with
+`--steps/--start/--save/--resume/--no-sample/--probe`. Record: `results/diffusion-unet/trained/{run.json,loss.svg,
+samples.svg,stats.svg}` from 3,000 steps; write-up `examples/diffusion/unet/TRAINED.md`.
 
-**The open work is the learning, not the plumbing.** Loss 1.1279 → 0.8131 against a zero predictor at 1.0645, but the
-16 draws are noise (std 0.992 vs the data's 0.226). Three architectures measured: GN + linear head (0.813, kept),
-no GN (0.90 at 600), outer skip (diverged, std 2.68). lr 1e-2 == 3e-3 at 600 steps. **ISSUE-065** lists the levers:
-CH 32, 8 images a step, 20k steps, and a channel-0 skip without the 5-channel dilution (a custom layer; `Residual`
-needs equal channel counts).
+**Gates, all exact:** NumPy twin on the whole forward **1.01e-06** (gate 1e-5, measured reason in the file), torch twin
+**1.13e-06**, checkpoint **bit-identical** (40 == 20 + 20, 5,489 weights).
 
-**Two Bend limits found:** a `Nat.mul(...)` in a type argument to a polymorphic def overflows the checker (literals
-work), and a 300-line model plus its IO in one module overflows it too (splitting `model.bend` fixed that). Both are in
-ISSUE-064.
+**The open half is the learning** (ISSUE-065): loss 1.1284 → 0.8364 against a zero predictor at 1.0645, draws of std
+1.012 against the data's 0.226. Eight variants measured; a *single 1×1 convolution* reaches **0.086**, so the marginal
+field is linear and the deep stack is stuck in the mean-field basin. The next lever is a learned linear bypass (5→1
+added to the head), then 32 channels, 8 images a step, 20k steps.
+
+**Two of our own bugs fixed on the way:** `init_arr` scrambled the weights (offsets from the first two-channel layout
+zeroed real weights), and `drawn` read the sampler's state in pairs (halving and scrambling every picture). Both are in
+the ledger; the second is why an earlier "noise" grid looked worse than the model.
 
 ## 2026-11-05 (latest) — UNet level 2, the flow re-measured, item 4 opened
 

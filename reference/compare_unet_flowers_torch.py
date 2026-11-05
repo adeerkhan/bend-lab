@@ -29,7 +29,7 @@ HW, NIMG, C = 4096, 2, 16
 # measured first, then set: torch and Bend agree to 4.29e-06 over 16,384 cells
 # after four convolutions (144-term sums) and four group norms at eps = 1e-5,
 # and the NumPy twin is 4.65e-06 from Bend; the allowance sits ~2x above that.
-ATOL, RTOL = 1e-6, 1e-6
+ATOL, RTOL = 1e-5, 1e-6
 
 
 def forward(flat, inp):

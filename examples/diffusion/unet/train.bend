@@ -183,7 +183,7 @@ def pair_of(+s: Nat, bytes: List<&2, U32>) -> RS:
 # ---- the step --------------------------------------------------------------
 
 def cfg() -> T.OptCfg:
-  T.CAdamW{0.01, 0.9, 0.999, 0.00000001, 0.0, 0.1, 0.001}
+  T.CAdamW{0.001, 0.9, 0.999, 0.00000001, 0.0, 0.1, 0.001}
 
 def mse(y: OUT(), tgt: OUT()) -> T.LossOut<OUT()>:
   T.MSE(NN(), 1n, y, tgt)
@@ -223,22 +223,32 @@ def scale_go(xs: List<&2, F32>, +acc: List<&2, F32>) -> List<&2, F32>:
 def count() -> Nat:
   U32.to_nat(T.Layer.count(ModelP(), IN(), OUT(), ModelS(), Model()))
 
+# The flat order is the model's forward order. With no group norms the only
+# constants are the four conv biases, which start at zero:
+#   conv1 w 720, b 16 -> 720..735
+#   conv3 w 2304, b 16 -> 3040..3055
+#   conv4 w 2304, b 16 -> 5360..5375
+#   head  w 80,  b 5  -> 5456..5460
+# The flat order is the model's forward order. The four conv biases start at zero,
+# the three group norms' scales at one and their biases at zero:
+#   conv1 w 720, b 720..735;  gn1 g 736..751, b 752..767
+#   conv3 w 2304, b 3072..3087;  gn4 g 3088..3103, b 3104..3119
+#   conv4 w 2304, b 5424..5439;  gn3 g 5440..5455, b 5456..5471
+#   head  w 80,  b 5552..5556
 def init_arr() -> Array<F32>:
   +n = count()
   arr0 = fill_go(n, scale_go(G.noise_of(1n, n), Nil{}), U32.from_nat(0n),
     Array.new(F32, T.depth(n), 0.0))
-  arr1 = zeros_at(arr0, 288n, 16n, 0.0)
-  arr2 = zeros_at(arr1, 304n, 16n, 1.0)
-  arr3 = zeros_at(arr2, 320n, 16n, 0.0)
-  arr4 = zeros_at(arr3, 2640n, 16n, 0.0)
-  arr5 = zeros_at(arr4, 2656n, 16n, 1.0)
-  arr6 = zeros_at(arr5, 2672n, 16n, 0.0)
-  arr7 = zeros_at(arr6, 4992n, 16n, 0.0)
-  arr8 = zeros_at(arr7, 5008n, 16n, 1.0)
-  arr9 = zeros_at(arr8, 5024n, 16n, 0.0)
-  arr10 = zeros_at(arr9, 5328n, 2n, 0.0)
-  arr11 = zeros_at(arr10, 5330n, 2n, 1.0)
-  zeros_at(arr11, 5332n, 2n, 0.0)
+  arr1 = zeros_at(arr0, 720n, 16n, 0.0)
+  arr2 = zeros_at(arr1, 736n, 16n, 1.0)
+  arr3 = zeros_at(arr2, 752n, 16n, 0.0)
+  arr4 = zeros_at(arr3, 3072n, 16n, 0.0)
+  arr5 = zeros_at(arr4, 3088n, 16n, 1.0)
+  arr6 = zeros_at(arr5, 3104n, 16n, 0.0)
+  arr7 = zeros_at(arr6, 5424n, 16n, 0.0)
+  arr8 = zeros_at(arr7, 5440n, 16n, 1.0)
+  arr9 = zeros_at(arr8, 5456n, 16n, 0.0)
+  zeros_at(arr9, 5552n, 5n, 0.0)
 
 def un_pa(pa: T.PA<ModelP()>) -> ModelP():
   match pa:

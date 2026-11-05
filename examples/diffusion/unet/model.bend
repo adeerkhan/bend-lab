@@ -1,5 +1,10 @@
 # The trained UNet's shape, as one layer: 64x64 -> 32x32 -> 16x16 -> 32x32 -> 64x64,
-# CH channels at each level, an up2 upsample and additive skips at both levels.
+# 16 channels at each level, a group norm before every activation, an up2 at each
+# level, a skip at 32x32, and a skip from the input to the 5-channel linear head.
+#
+# Both parts are load-bearing. A SiLU on the raw input crushes the negative half of
+# the velocity (it is bounded below), so the norms come first; and the outer skip is
+# the only path that carries the image's amplitude, which the norms would remove.
 #
 #   bend examples/diffusion/unet/train.bend
 #
@@ -102,16 +107,11 @@ def Up2(+rows: Nat, +w: Nat, +c: Nat) -> T.Layer<Unit, TA.Mat<Nat.mul(rows, w), 
     p => xs => off => T.PA{p, xs, off},
     u => 0}
 
-# ---- the model's types ------------------------------------------------------
-
 def INW() -> Nat:
   5n
 
 def IN() -> Type:
   TA.Mat<8192n, 5n>
-
-def OUT() -> Type:
-  TA.Mat<8192n, 1n>
 
 def MID() -> Type:
   TA.Mat<2048n, 16n>
@@ -119,17 +119,20 @@ def MID() -> Type:
 def LOW() -> Type:
   TA.Mat<512n, 16n>
 
+def UP() -> Type:
+  TA.Mat<8192n, 16n>
+
+def OUT() -> Type:
+  TA.Mat<8192n, 1n>
+
 def CP1() -> Type:
-  T.Lin<45n, CH()>
-
-def CP3() -> Type:
-  T.Lin<144n, CH()>
-
-def HEAD() -> Type:
-  T.Lin<16n, 1n>
+  T.Lin<45n, 16n>
 
 def S1() -> Type:
   TA.Mat<2048n, 45n>
+
+def CP3() -> Type:
+  T.Lin<144n, 16n>
 
 def S3() -> Type:
   TA.Mat<512n, 144n>
@@ -137,176 +140,111 @@ def S3() -> Type:
 def S4() -> Type:
   TA.Mat<2048n, 144n>
 
+def CHP() -> Type:
+  T.Lin<16n, 1n>
+
 def SH() -> Type:
   TA.Mat<8192n, 16n>
 
-# ---- the four convolutions and the four norms ------------------------------
-
 def conv1() -> T.Layer<CP1(), IN(), MID(), S1()>:
-  T.Conv2d(B(), INW(), CH(), 3n, 63n, 63n, 1n, 1n, 0n)
+  T.Conv2d(2n, INW(), 16n, 3n, 63n, 63n, 1n, 1n, 0n)
 
-def gn1() -> T.Layer<T.LN<CH()>, MID(), MID(), MID()>:
-  T.GroupNorm(B(), HW2(), 1n, CH(), 0.00001)
+def gn1() -> T.Layer<T.LN<16n>, MID(), MID(), MID()>:
+  T.GroupNorm(2n, 1024n, 1n, 16n, 0.00001)
 
 def silu1() -> T.Layer<Unit, MID(), MID(), MID()>:
-  T.SiLU(Nat.mul(B(), HW2()), CH())
+  T.SiLU(2048n, 16n)
 
 def conv3() -> T.Layer<CP3(), MID(), LOW(), S3()>:
-  T.Conv2d(B(), CH(), CH(), 3n, 31n, 31n, 1n, 1n, 0n)
+  T.Conv2d(2n, 16n, 16n, 3n, 31n, 31n, 1n, 1n, 0n)
 
-def gn4() -> T.Layer<T.LN<CH()>, LOW(), LOW(), LOW()>:
-  T.GroupNorm(B(), HW4(), 1n, CH(), 0.00001)
+def gn4() -> T.Layer<T.LN<16n>, LOW(), LOW(), LOW()>:
+  T.GroupNorm(2n, 256n, 1n, 16n, 0.00001)
 
 def silu4() -> T.Layer<Unit, LOW(), LOW(), LOW()>:
-  T.SiLU(Nat.mul(B(), HW4()), CH())
-
-# the row counts are literals because a `Nat.mul` in a type argument here blows
-# the checker's stack; the layer's type still says LOW() -> MID(), so a B other
-# than 2 fails to compile instead of building the wrong shape
-def upL() -> T.Layer<Unit, LOW(), MID(), Unit>:
-  Up2(32n, 16n, CH())
+  T.SiLU(512n, 16n)
 
 def conv4() -> T.Layer<CP3(), MID(), MID(), S4()>:
-  T.Conv2d(B(), CH(), CH(), 3n, 31n, 31n, 1n, 0n, 0n)
+  T.Conv2d(2n, 16n, 16n, 3n, 31n, 31n, 1n, 0n, 0n)
 
-def gn3() -> T.Layer<T.LN<CH()>, MID(), MID(), MID()>:
-  T.GroupNorm(B(), HW2(), 1n, CH(), 0.00001)
+def gn3() -> T.Layer<T.LN<16n>, MID(), MID(), MID()>:
+  T.GroupNorm(2n, 1024n, 1n, 16n, 0.00001)
 
 def silu3() -> T.Layer<Unit, MID(), MID(), MID()>:
-  T.SiLU(Nat.mul(B(), HW2()), CH())
+  T.SiLU(2048n, 16n)
 
-def upM() -> T.Layer<Unit, MID(), TA.Mat<8192n, 16n>, Unit>:
-  Up2(64n, 32n, CH())
+def head() -> T.Layer<CHP(), UP(), OUT(), SH()>:
+  T.Conv2d(2n, 16n, 1n, 1n, 63n, 63n, 0n, 0n, 0n)
 
-# the head is a 1x1 conv: a linear map from 16 channels to the velocity, with no
-# activation, so the field can be negative at t = 0 (a SiLU bottom would clip it)
-def head() -> T.Layer<HEAD(), TA.Mat<8192n, 16n>, OUT(), SH()>:
-  T.Conv2d(B(), CH(), 1n, 1n, 63n, 63n, 0n, 0n, 0n)
+def P2C() -> Type:
+  T.Two<T.Two<CP3(), T.LN<16n>>, Unit>
 
+def S2C() -> Type:
+  T.Two<T.Two<S4(), MID()>, MID()>
 
+def DownP() -> Type:
+  T.Two<T.Two<CP1(), T.LN<16n>>, Unit>
 
-# ---- the two levels, as one layer each -------------------------------------
+def DownS() -> Type:
+  T.Two<T.Two<S1(), MID()>, MID()>
 
-def L1P() -> Type:
-  T.Two<CP3(), T.LN<CH()>>
+def Down() -> T.Layer<DownP(), IN(), MID(), DownS()>:
+  T.Seq(~T.Two<CP1(), T.LN<16n>>, ~Unit, ~IN(), ~MID(), ~MID(), ~(T.Two<S1(), MID()>), ~MID(),
+    T.Seq(~CP1(), ~T.LN<16n>, ~IN(), ~MID(), ~MID(), ~S1(), ~MID(), conv1(), gn1()), silu1())
 
-def L1S() -> Type:
-  T.Two<S3(), LOW()>
+def LowP() -> Type:
+  T.Two<T.Two<CP3(), T.LN<16n>>, Unit>
 
-def L1() -> T.Layer<L1P(), MID(), LOW(), L1S()>:
-  T.Seq(~CP3(), ~T.LN<CH()>, ~MID(), ~LOW(), ~LOW(), ~S3(), ~LOW(), conv3(), gn4())
+def LowS() -> Type:
+  T.Two<T.Two<S3(), LOW()>, LOW()>
 
-def L2P() -> Type:
-  T.Two<L1P(), Unit>
+def Low() -> T.Layer<LowP(), MID(), LOW(), LowS()>:
+  T.Seq(~T.Two<CP3(), T.LN<16n>>, ~Unit, ~MID(), ~LOW(), ~LOW(), ~(T.Two<S3(), LOW()>), ~LOW(),
+    T.Seq(~CP3(), ~T.LN<16n>, ~MID(), ~LOW(), ~LOW(), ~S3(), ~LOW(), conv3(), gn4()), silu4())
 
-def L2S() -> Type:
-  T.Two<L1S(), LOW()>
+def UpP() -> Type:
+  T.Two<Unit, P2C()>
 
-def L2() -> T.Layer<L2P(), MID(), LOW(), L2S()>:
-  T.Seq(~L1P(), ~Unit, ~MID(), ~LOW(), ~LOW(), ~L1S(), ~LOW(), L1(), silu4())
+def UpS() -> Type:
+  T.Two<Unit, S2C()>
 
-def L3P() -> Type:
-  T.Two<L2P(), Unit>
-
-def L3S() -> Type:
-  T.Two<L2S(), Unit>
-
-def L3() -> T.Layer<L3P(), MID(), MID(), L3S()>:
-  T.Seq(~L2P(), ~Unit, ~MID(), ~LOW(), ~MID(), ~L2S(), ~Unit, L2(), upL())
-
-def L4P() -> Type:
-  T.Two<L3P(), CP3()>
-
-def L4S() -> Type:
-  T.Two<L3S(), S4()>
-
-def L4() -> T.Layer<L4P(), MID(), MID(), L4S()>:
-  T.Seq(~L3P(), ~CP3(), ~MID(), ~MID(), ~MID(), ~L3S(), ~S4(), L3(), conv4())
-
-def L5P() -> Type:
-  T.Two<L4P(), T.LN<CH()>>
-
-def L5S() -> Type:
-  T.Two<L4S(), MID()>
-
-def L5() -> T.Layer<L5P(), MID(), MID(), L5S()>:
-  T.Seq(~L4P(), ~T.LN<CH()>, ~MID(), ~MID(), ~MID(), ~L4S(), ~MID(), L4(), gn3())
-
-def L6P() -> Type:
-  T.Two<L5P(), Unit>
-
-def L6S() -> Type:
-  T.Two<L5S(), MID()>
-
-def L6() -> T.Layer<L6P(), MID(), MID(), L6S()>:
-  T.Seq(~L5P(), ~Unit, ~MID(), ~MID(), ~MID(), ~L5S(), ~MID(), L5(), silu3())
+def UpMiddle() -> T.Layer<UpP(), LOW(), MID(), UpS()>:
+  T.Seq(~Unit, ~P2C(), ~LOW(), ~MID(), ~MID(), ~Unit, ~S2C(), Up2(32n, 16n, 16n),
+    T.Seq(~(T.Two<CP3(), T.LN<16n>>), ~Unit, ~MID(), ~MID(), ~MID(), ~(T.Two<S4(), MID()>), ~MID(),
+      T.Seq(~CP3(), ~T.LN<16n>, ~MID(), ~MID(), ~MID(), ~S4(), ~MID(), conv4(), gn3()),
+      silu3()))
 
 def LevelP() -> Type:
-  T.Two<T.Two<Unit, L6P()>, Unit>
+  T.Two<T.Two<Unit, T.Two<LowP(), UpP()>>, Unit>
 
 def LevelS() -> Type:
-  T.Two<T.Two<Unit, L6S()>, Unit>
+  T.Two<T.Two<Unit, T.Two<LowS(), UpS()>>, Unit>
 
 def Level() -> T.Layer<LevelP(), MID(), MID(), LevelS()>:
-  T.Residual(2048n, CH(), L6P(), L6S(), L6())
+  T.Residual(2048n, 16n, T.Two<LowP(), UpP()>, T.Two<LowS(), UpS()>,
+    T.Seq(~LowP(), ~UpP(), ~MID(), ~LOW(), ~MID(), ~LowS(), ~UpS(), Low(), UpMiddle()))
 
-# 64x64 -> 32x32 -> 16x16 -> 32x32 -> (one conv at 64x64)
-def D1P() -> Type:
-  T.Two<CP1(), T.LN<CH()>>
+def TopP() -> Type:
+  T.Two<Unit, T.Two<CHP(), Unit>>
 
-def D1S() -> Type:
-  T.Two<S1(), MID()>
+def TopS() -> Type:
+  T.Two<Unit, T.Two<SH(), Unit>>
 
-def D1() -> T.Layer<D1P(), IN(), MID(), D1S()>:
-  T.Seq(~CP1(), ~T.LN<CH()>, ~IN(), ~MID(), ~MID(), ~S1(), ~MID(), conv1(), gn1())
-
-def D2P() -> Type:
-  T.Two<D1P(), Unit>
-
-def D2S() -> Type:
-  T.Two<D1S(), MID()>
-
-def D2() -> T.Layer<D2P(), IN(), MID(), D2S()>:
-  T.Seq(~D1P(), ~Unit, ~IN(), ~MID(), ~MID(), ~D1S(), ~MID(), D1(), silu1())
-
-def H1P() -> Type:
-  T.Two<Unit, HEAD()>
-
-def H1S() -> Type:
-  T.Two<Unit, SH()>
-
-def H3() -> T.Layer<H1P(), MID(), OUT(), H1S()>:
-  T.Seq(~Unit, ~HEAD(), ~MID(), ~TA.Mat<8192n, 16n>, ~OUT(), ~Unit, ~SH(), upM(), head())
-
-def H1() -> T.Layer<H1P(), MID(), OUT(), H1S()>:
-  H3()
-
-def H2P() -> Type:
-  H1P()
-
-def H2S() -> Type:
-  H1S()
-
-def H2() -> T.Layer<H2P(), MID(), OUT(), H2S()>:
-  H3()
-
-def Body1P() -> Type:
-  T.Two<D2P(), LevelP()>
-
-def Body1S() -> Type:
-  T.Two<D2S(), LevelS()>
-
-def Body1() -> T.Layer<Body1P(), IN(), MID(), Body1S()>:
-  T.Seq(~D2P(), ~LevelP(), ~IN(), ~MID(), ~MID(), ~D2S(), ~LevelS(), D2(), Level())
+def Top() -> T.Layer<TopP(), MID(), OUT(), TopS()>:
+  T.Seq(~Unit, ~(T.Two<CHP(), Unit>), ~MID(), ~UP(), ~OUT(), ~Unit, ~(T.Two<SH(), Unit>),
+    Up2(64n, 32n, 16n),
+    T.Seq(~CHP(), ~Unit, ~UP(), ~OUT(), ~OUT(), ~SH(), ~Unit, head(), T.Id(OUT())))
 
 def BodyP() -> Type:
-  T.Two<Body1P(), H1P()>
+  T.Two<T.Two<DownP(), LevelP()>, TopP>
 
 def BodyS() -> Type:
-  T.Two<Body1S(), H1S()>
+  T.Two<T.Two<DownS(), LevelS()>, TopS>
 
 def Body() -> T.Layer<BodyP(), IN(), OUT(), BodyS()>:
-  T.Seq(~Body1P(), ~H1P(), ~IN(), ~MID(), ~OUT(), ~Body1S(), ~H1S(), Body1(), H1())
+  T.Seq(~(T.Two<DownP(), LevelP()>), ~TopP(), ~IN(), ~MID(), ~OUT(),
+    ~(T.Two<DownS(), LevelS()>), ~TopS(),
+    T.Seq(~DownP(), ~LevelP(), ~IN(), ~MID(), ~MID(), ~DownS(), ~LevelS(), Down(), Level()), Top())
 
 def ModelP() -> Type:
   BodyP()
@@ -316,4 +254,3 @@ def ModelS() -> Type:
 
 def Model() -> T.Layer<ModelP(), IN(), OUT(), ModelS()>:
   Body()
-

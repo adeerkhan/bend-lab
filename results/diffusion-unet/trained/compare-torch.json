@@ -1,12 +1,12 @@
 {
   "task": "unet-flowers",
   "cells": 8192,
-  "atol": 1e-06,
+  "atol": 1e-05,
   "rtol": 1e-06,
-  "bend_vs_torch": 4.470348358154297e-08,
-  "worst_ratio": 0.03978763482537406,
-  "bend_vs_numpy": 4.470348358154297e-08,
-  "torch_vs_numpy": 1.4901161193847656e-08,
+  "bend_vs_torch": 1.1324882507324219e-06,
+  "worst_ratio": 0.10995716086374406,
+  "bend_vs_numpy": 1.0132789611816406e-06,
+  "torch_vs_numpy": 5.587935447692871e-07,
   "torch": "2.14.1+cpu",
   "ok": true
 }

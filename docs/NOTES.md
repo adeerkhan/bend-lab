@@ -2376,3 +2376,25 @@ carries the levers: 32 channels, 8 images a step, 20k steps, and a skip of chann
 (literals work; `Nat.mul` in a type alias does not), and a 300-line model plus its IO in one module overflows it too —
 splitting `model.bend` out fixed that. Also: `draw` first read the sampler's state in pairs, which halved every draw
 and scrambled the grid; the picture looked like noise for two reasons, and only one of them was the model.
+
+## 2026-11-05 — the trained UNet: the init was scrambling the weights, and the field is linear
+
+The trained flow (`examples/diffusion/unet/{model,train}.bend`) is recorded: 5,489 parameters, 3,000 steps, loss
+**1.1284 → 0.8364** against a predictor of zero at **1.0645**, 16 draws whose std is **1.012** against the data's
+0.226. The draws are noise; `TRAINED.md` says so.
+
+**Two bugs came out of the eight variants, and both were ours.** `init_arr` zeroed and one-filled hardcoded offsets
+from the first two-channel layout, so every later model started with real weights zeroed and unrelated cells at one —
+after the fix the same model's loss moved from 0.98 to 0.63 at 25 steps. And `drawn` read the sampler's state in pairs,
+which halved every picture and scrambled the grid; the first "noise" grid was wrong for two reasons, only one of them
+the model.
+
+**What the variants measure.** A single 1×1 convolution reaches **0.086 in 300 steps**: the marginal conditional field
+is linear in `x_t`, and a linear model finds it. Four convs without norms reach 0.18 at 3,000; with group norms 0.84;
+with an outer skip the sampler diverges (std 2.68 = e¹, the field being ≈ x — the field at `t = 0` is `-x`, so a
+residual makes the head learn twice the input's size). lr 3e-3 is flat at 0.81 over 6,000 steps; lr 1e-2 diverges after
+~1,000. So it is the optimization: the stack settles in the mean-field basin (its output's std is 0.06-0.14 where the
+target's is 1.03), and it cannot discover the linear map that a one-layer model finds immediately.
+
+**Next:** a learned linear bypass (5→1 added to the head) should reproduce 0.086 and give the body a gradient; then 32
+channels, 8 images a step, 20k steps. ISSUE-065.

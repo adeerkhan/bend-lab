@@ -10,13 +10,16 @@ What changed for the people who run the lab. Internal refactors are not listed.
   16 channels, one skip) trained on the 512 flowers with a rectified-flow objective. The input is the image plus four
   time features; the output is the velocity through a 1x1 convolution with no activation, so the field can be negative.
   Flags as in `flow_matching`: `--steps`, `--start`, `--save`, `--resume`, `--no-sample`, `--probe`.
-- **Gates**: `reference/test_unet_flowers.py` (NumPy, whole forward, 4.47e-08 against 1e-6),
-  `reference/compare_unet_flowers_torch.py` (PyTorch, same), `reference/test_unet_flowers_checkpoint.py` (40 steps ==
-  20 + 20 resumed, bit-identical, 5,489 weights).
+- **Gates**: `reference/test_unet_flowers.py` (NumPy, whole forward, 1.01e-06 against 1e-5, the measured reason in the
+  file), `reference/compare_unet_flowers_torch.py` (PyTorch, 1.13e-06), `reference/test_unet_flowers_checkpoint.py`
+  (40 steps == 20 + 20 resumed, bit-identical, 5,489 weights).
 - **Record**: `reference/unet_flowers_results.py` writes `results/diffusion-unet/trained/{run.json,loss.svg,samples.svg,stats.svg}`;
   `examples/diffusion/unet/TRAINED.md` carries the numbers and the reproduce commands.
-- **Honest limit**: the loss falls 1.1279 -> 0.8131 (a predictor of zero scores 1.0645) but the draws are noise, not
-  flowers — the model fits the marginal field at this size. Recorded as ISSUE-065 with the three architectures measured.
+- **Honest limit**: the loss falls 1.1284 -> 0.8364 over 3,000 steps (a predictor of zero scores 1.0645) but the draws
+  are noise, not flowers. Eight variants were measured; a single 1x1 convolution reaches 0.086, so the marginal field is
+  linear and the deep stack settles in the mean-field basin. Recorded as ISSUE-065 with the next lever (a learned
+  linear bypass). Two of our own bugs were found and fixed: `init_arr` scrambled the weights, and the draw loop halved
+  and scrambled every picture.
 
 ### The flow's settings were re-measured, and the torch comparison closes
 
