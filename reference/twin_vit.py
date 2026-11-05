@@ -260,17 +260,15 @@ def t_of(s, i):
 
 
 def levels_of(s):
-    """The level each image gets in Bend's step `s`: image i takes `t_of(s, 63 - i)`.
+    """The level each image gets in Bend's step `s`: image i takes `t_of(s, i)`.
 
-    `ab_img` and `te_img` both end in `List.reverse` over lists that are already
-    ascending (`ab_rev`/`te_rev` cons from the last image down), so the example
-    hands image 0 the pair and the time embedding of image 63, image 1 those of
-    image 62, and so on (ISSUE-040). The pairing of pixels, coefficients and
-    embedding is consistent within an image, so this is a permutation of which
-    level each image draws, not a wrong objective — but the twin has to mirror
-    it, because the loss is measured on that pairing.
+    Until 2026-11-05 `ab_img`/`te_img` ended in a `List.reverse` over lists that
+    already read image 0 first, so image i carried the coefficients and the time
+    embedding of image 63 - i and this twin mirrored the crossing (ISSUE-040).
+    `reference/probe_vit_tokens.bend` pinned it; the reverse was also correcting
+    the (a, b) pair and the temb block order, which are now right at the source.
     """
-    return [t_of(s, 63 - i) for i in range(64)]
+    return [t_of(s, i) for i in range(64)]
 
 
 def loss_pieces(s, seed=1):

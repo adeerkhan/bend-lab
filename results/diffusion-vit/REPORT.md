@@ -5,13 +5,13 @@ sampled by the 16-step DDIM walk with the clamped start.
 
 | | value |
 |---|---|
-| first loss | 1.009186 |
-| final loss | 0.071153 (minimum 0.058186) |
-| legibility (mean, min, max) | **0.787**, 0.606, 0.882 |
-| steps | 3000 (the comparison's arms train 3000) |
-| cloud mean / std | +0.2957 / 0.3395 (data 0.3076 / 0.3767) |
-| pixels in [0,1] | 4087/4096 |
-| nearest-digit MSE | 0.0598 (uniform noise 0.266) |
+| first loss | 1.009301 |
+| final loss | 0.073727 (minimum 0.058987) |
+| legibility (mean, min, max) | **0.795**, 0.648, 0.898 |
+| steps | 0 (the comparison's arms train 3000) |
+| cloud mean / std | +0.2946 / 0.3402 (data 0.3076 / 0.3767) |
+| pixels in [0,1] | 4089/4096 |
+| nearest-digit MSE | 0.0576 (uniform noise 0.266) |
 
 
 

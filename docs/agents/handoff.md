@@ -7,6 +7,23 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-05 (later still) — 040 fixed and re-recorded; 044 is one missing block
+
+**ISSUE-040 is FIXED** (committed with its record). The probe showed the `List.reverse` in `ab_img`/`te_img` was
+correcting **three** things at once — image order, each pixel's `(a,b)` pair, and each 8-value `temb` block. The fix
+does them at the source: drop both reverses, cons `(sqrt(abar), sqrt(1-abar))` in `ab64_rev`, reverse each `temb_of`
+block in `te_rev`; `twin_vit.levels_of(s) = t_of(s, i)`. Re-recorded through the guard (a plain `bend` run of the
+example dies with `machine stack overflow`): `BEND_MEM=9G scripts/bend-guard.sh bend -o /tmp/vit_bin …`, run it,
+`reference/vit_results.py /tmp/vit_ln.txt`, then the gate — `first loss delta 2.40e-08` (tol 1e-5), forward 1.19e-07,
+legibility 0.795 (gate 0.75), PASS. The recorded first loss moved 1.0091865 → 1.0093014, as the level assignment should.
+
+**ISSUE-044 is localised to one block.** `reference/probe_flow_tokens.bend` (new) prints the flow's `sample_input(0.5,
+synthetic)`: 10224 values against the twin's 10240 — **one 16-value `feats` block missing**, the drift starting at
+index 5184 = row 64, column 64, the **first row of the second image** (rows 0..63 match value for value). So the row
+reset is right and the image-boundary transition appends 63 blocks for the second image instead of 64. The example is
+reverted to green; fix the transition, verify with the same probe, then `make experiment TASK=flowers-flow` and
+`reference/test_flow64.py`.
+
 ## 2026-11-05 (later) — 040 solved on paper, 044 localised, both blocked on re-records
 
 **ISSUE-040.** `reference/probe_vit_tokens.bend` (new) prints `step_in(0, synthetic)` so the token order is read, not

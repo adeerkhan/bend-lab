@@ -2233,3 +2233,16 @@ The open `issues-hit` entries that are ours, and what each turned out to need.
   instrument: print the example's `inp` at rows 64/65 and compare with `tokens_of`'s, rather than reading a forward
   difference. Both examples are back to their green state.
 
+
+### ISSUE-040 fixed: the reverse was correcting three things
+
+`reference/probe_vit_tokens.bend` read the token order instead of inferring it: row 0 was image 0's pixels with level
+`t_of(0,63)`'s coefficients and its `temb`, no pair swap. So the `List.reverse` in `ab_img`/`te_img` was correcting the
+image order **and** the `(a,b)` pair order **and** the 8-value `temb` block order. The fix does all three at the source
+(drop both reverses, cons `(sqrt(abar), sqrt(1-abar))`, reverse each `temb_of` block) and `levels_of(s) = t_of(s, i)`.
+
+Re-recorded through the guard (`BEND_MEM=9G scripts/bend-guard.sh bend -o …`, then the binary, then
+`reference/vit_results.py`): `first loss: twin 1.0093014 bend 1.0093014 delta 2.40e-08` (tol 1e-5), forward 1.19e-07,
+ancestral 4.77e-07, ddim 6.38e-06, eta=0 invariance 0, legibility **0.795** (gate 0.75). PASS. A plain `bend` run of
+the example dies with `machine stack overflow`; that is the guard's reason for existing.
+

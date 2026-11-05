@@ -469,9 +469,11 @@ def ab64_rev(+s: Nat, +i: Nat, +k: Nat, +acc: List<&2, F32>) -> List<&2, F32>:
     case 0n:
       acc
     case 1n+q:
+      # (sqrt(abar), sqrt(1 - abar)), the order the mix reads; the reverse in ab_img used to correct this, the temb
+      # block order and the image order at once (ISSUE-040)
       ab64_rev(s, i, q,
-        Con{F32.sqrt((1.0 - abar(t_img(s, i)) : F32)),
-          Con{F32.sqrt(abar(t_img(s, i))), acc}})
+        Con{F32.sqrt(abar(t_img(s, i))),
+          Con{F32.sqrt((1.0 - abar(t_img(s, i)) : F32)), acc}})
 
 def ab_rev(+s: Nat, +i: Nat, +acc: List<&2, F32>) -> List<&2, F32>:
   match i:
@@ -481,17 +483,20 @@ def ab_rev(+s: Nat, +i: Nat, +acc: List<&2, F32>) -> List<&2, F32>:
       ab_rev(s, q, ab64_rev(s, q, 64n, acc))
 
 def ab_img(+s: Nat, +i: Nat, +acc: List<&2, F32>) -> List<&2, F32>:
-  List.reverse(&2, F32, ab_rev(s, i, acc))
+  # ab_rev already reads image 0 first; the reverse gave image i the coefficients of image 63 - i (ISSUE-040)
+  ab_rev(s, i, acc)
 
 def te_rev(+s: Nat, +i: Nat, +acc: List<&2, F32>) -> List<&2, F32>:
   match i:
     case 0n:
       acc
     case 1n+q:
-      te_rev(s, q, con_go(G.temb_of(t_img(s, q), 64n, 4n), acc))
+      # each 8-value block reads (sin, cos) per frequency; the reverse in te_img used to flip it (ISSUE-040)
+      te_rev(s, q, con_go(List.reverse(&2, F32, G.temb_of(t_img(s, q), 64n, 4n)), acc))
 
 def te_img(+s: Nat, +i: Nat, +acc: List<&2, F32>) -> List<&2, F32>:
-  List.reverse(&2, F32, te_rev(s, i, acc))
+  # as ab_img (ISSUE-040)
+  te_rev(s, i, acc)
 
 def skip(+n: Nat, xs: List<&2, F32>) -> List<&2, F32>:
   match n:
