@@ -294,31 +294,43 @@ type RS is Type:
 def feats(+t: F32, +k: Nat, +acc: List<&2, F32>) -> List<&2, F32>:
   tp_go(freqs(), t, tp_go(freqs(), (F32.from_nat(k) / F32.from_nat(TK()) : F32), acc))
 
-# one pass over the batch: image, row, column; one pixel per call
-def tok_go(+left: Nat, +img: Nat, +row: Nat, +col: Nat, data: List<&2, U32>,
-  noise: List<&2, F32>, +inp: List<&2, F32>, +tgt: List<&2, F32>,
-  +t: F32, +s: Nat) -> RS:
+# one pass over the batch: cells, then rows, then images. The fuel is the first argument (Bend needs one that always
+# shrinks). The features of a row are appended when its cells are done, and an image's last row moves straight to the
+# next image — the first version consumed the next row's cells before the transition, which cost the second image its
+# last feature block (ISSUE-044, found by reference/probe_flow_tokens.bend: 10224 values against the twin's 10240).
+def tok_go(+left: Nat, +col: Nat, +left_rows: Nat, +row: Nat, +img: Nat, +left_imgs: Nat, data: List<&2, U32>,
+  noise: List<&2, F32>, +inp: List<&2, F32>, +tgt: List<&2, F32>, +t: F32, +s: Nat) -> RS:
   match left:
     case 0n:
       RS{data, noise, inp, tgt}
-    case 1n+rest:
-      # one value matched, not three: `match img row col` costs 4.8 GB of
-      # codegen, `match img col` costs 6 MB for the same work (2026-10-30)
-      match img col:
-        case 8n _:
-          RS{data, noise, inp, tgt}
-        case _ 64n:
-          tok_go(rest, img, (1n + row : Nat), 0n, data, noise, feats(t, row, inp),
-            tgt, t, s)
-        case _ _:
-          match data noise:
-            case Con{b, dt} Con{+x0, nt}:
-              +x1 = (((F32.from_nat(U32.to_nat(b)) / 127.5 : F32) - 1.0) : F32)
-              +xt = ((x0 * (1.0 - t) : F32) + (x1 * t : F32) : F32)
-              tok_go(rest, img, row, (1n + col : Nat), dt, nt,
-                Con{xt, inp}, Con{(x1 - x0 : F32), tgt}, t, s)
-            case _ _:
-              RS{data, noise, inp, tgt}
+    case 1n+q:
+      match col data noise:
+        case 0n d n:
+          match left_rows:
+            case 0n:
+              match left_imgs:
+                case 0n:
+                  RS{d, n, inp, tgt}
+                case 1n+li:
+                  +img2 = Nat.add(img, 1n)
+                  tok_go(q, PX(), TK(), 0n, img2, li, d, n, inp, tgt, level(s, img2), s)
+            case 1n+lr:
+              match lr:
+                case 0n:
+                  match left_imgs:
+                    case 0n:
+                      RS{d, n, feats(t, row, inp), tgt}
+                    case 1n+li:
+                      +img2 = Nat.add(img, 1n)
+                      tok_go(q, PX(), TK(), 0n, img2, li, d, n, feats(t, row, inp), tgt, level(s, img2), s)
+                case 1n+lr2:
+                  tok_go(q, PX(), lr, Nat.add(row, 1n), img, left_imgs, d, n, feats(t, row, inp), tgt, t, s)
+        case 1n+c Con{b, dt} Con{+x0, nt}:
+          +x1 = (((F32.from_nat(U32.to_nat(b)) / 127.5 : F32) - 1.0) : F32)
+          +xt = ((x0 * (1.0 - t) : F32) + (x1 * t : F32) : F32)
+          tok_go(q, c, left_rows, row, img, left_imgs, dt, nt, Con{xt, inp}, Con{(x1 - x0 : F32), tgt}, t, s)
+        case _ d n:
+          RS{d, n, inp, tgt}
 
 type LR is Type:
   LR{inp: List<&2, F32>, tgt: List<&2, F32>}
@@ -329,7 +341,7 @@ def lr_of(r: RS) -> LR:
       LR{List.reverse(&2, F32, inp), List.reverse(&2, F32, tgt)}
 
 def pair_of(+s: Nat, data: List<&2, U32>) -> LR:
-  lr_of(tok_go(40000n, 0n, 0n, 0n, data, G.noise_of(s, BATCH()), Nil{}, Nil{},
+  lr_of(tok_go(40000n, PX(), TK(), 0n, 0n, BATCH(), data, G.noise_of(s, BATCH()), Nil{}, Nil{},
     level(s, 0n), s))
 
 # ---- the model input while sampling: rows of x, then time and position ----
@@ -337,23 +349,35 @@ def pair_of(+s: Nat, data: List<&2, U32>) -> LR:
 type XS is Type:
   XS{x: List<&2, F32>, acc: List<&2, F32>}
 
-def stok_go(+left: Nat, +img: Nat, +row: Nat, +col: Nat, x: List<&2, F32>,
+def stok_go(+left: Nat, +col: Nat, +left_rows: Nat, +row: Nat, +img: Nat, +left_imgs: Nat, x: List<&2, F32>,
   +t: F32, +acc: List<&2, F32>) -> XS:
   match left:
     case 0n:
       XS{x, acc}
-    case 1n+rest:
-      match img col:
-        case 8n _:
-          XS{x, acc}
-        case _ 64n:
-          stok_go(rest, img, (1n + row : Nat), 0n, x, t, feats(t, row, acc))
-        case _ _:
-          match x:
-            case Con{h, xt}:
-              stok_go(rest, img, row, (1n + col : Nat), xt, t, Con{h, acc})
-            case Nil{}:
-              XS{x, acc}
+    case 1n+q:
+      match col x:
+        case 0n xs:
+          match left_rows:
+            case 0n:
+              match left_imgs:
+                case 0n:
+                  XS{xs, acc}
+                case 1n+li:
+                  stok_go(q, PX(), TK(), 0n, Nat.add(img, 1n), li, xs, t, acc)
+            case 1n+lr:
+              match lr:
+                case 0n:
+                  match left_imgs:
+                    case 0n:
+                      XS{xs, feats(t, row, acc)}
+                    case 1n+li:
+                      stok_go(q, PX(), TK(), 0n, Nat.add(img, 1n), li, xs, t, feats(t, row, acc))
+                case 1n+lr2:
+                  stok_go(q, PX(), lr, Nat.add(row, 1n), img, left_imgs, xs, t, feats(t, row, acc))
+        case 1n+c Con{h, xt}:
+          stok_go(q, c, left_rows, row, img, left_imgs, xt, t, Con{h, acc})
+        case _ xs:
+          XS{xs, acc}
 
 def inp_of(r: XS) -> List<&2, F32>:
   match r:
@@ -361,7 +385,7 @@ def inp_of(r: XS) -> List<&2, F32>:
       List.reverse(&2, F32, a)
 
 def sample_input(+t: F32, x: List<&2, F32>) -> List<&2, F32>:
-  inp_of(stok_go(40000n, 0n, 0n, 0n, x, t, Nil{}))
+  inp_of(stok_go(40000n, PX(), TK(), 0n, 0n, BATCH(), x, t, Nil{}))
 
 # ---- the step ----
 

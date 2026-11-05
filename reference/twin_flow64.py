@@ -165,7 +165,7 @@ def features(t, k):
 def tokens_of(t, x):
     """(8192,) noise in row order -> (128, 80) the model input at level t."""
     rows = np.asarray(x, dtype=F).reshape(RW, TK)
-    feats = np.stack([features(t, k) for k in range(RW)])
+    feats = np.stack([features(t, k % TK) for k in range(RW)])
     return F(np.concatenate([rows, feats], axis=-1))
 
 

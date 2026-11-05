@@ -1,9 +1,9 @@
 {
   "schema": "mlbend.experiment/3",
-  "created_at": "2026-11-02T07:48:25.787295+00:00",
+  "created_at": "2026-11-05T09:29:30.425569+00:00",
   "task": {
     "name": "flowers-flow",
-    "description": "a rectified flow at 64x64 on 3,874 flowers: 6,000 steps, 32 Euler, held-out legibility against what a real unseen flower scores (no NumPy twin yet; the gate is the measured expectation)",
+    "description": "a rectified flow at 64x64 on 3,874 flowers: 6,000 steps, 32 Euler, held-out legibility against what a real unseen flower scores (the forward and the sampler are gated by reference/test_flow64.py; the legibility is the measured expectation)",
     "program": "examples/diffusion/flowers_flow/main.bend",
     "dataset": {
       "name": "flowers64",
@@ -11,6 +11,16 @@
       "features": 64,
       "source": "generated: reference/flowers_export.py --split from the pinned Oxford Flowers parquet",
       "files": [],
+      "pin": {
+        "roots": [
+          "reference/.cache/datasets/flowers",
+          "~/.cache/bend-lab/flowers"
+        ],
+        "files": {
+          "flowers64-train-gray.u8": "1ff86747f9b070c3ed7b2058dd0c1f88317dfea931ed883379513f121385566e",
+          "flowers64-hold-gray.u8": "f08730fe6730aacf440526420dfd645cd78f2ed1ef3fa82dacb1d90f2b978cf8"
+        }
+      },
       "bytes": 0,
       "sha256": "566936b650ebd4c943781079dc7374bbf64e1a0f42f868b910c3066a38b3ba71",
       "expected_sha256": null,
@@ -30,7 +40,7 @@
     "bend": "2.0.38"
   },
   "git": {
-    "commit": "78c3002",
+    "commit": "e6d2b10",
     "branch": "main",
     "dirty": true
   },
@@ -150,42 +160,42 @@
     }
   ],
   "machine": {
-    "platform": "Linux-7.2.13-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "platform": "Linux-7.2.14-200.fc44.x86_64-x86_64-with-glibc2.43",
     "machine": "x86_64",
     "processor": "",
     "cpu_count": 28,
     "python": "3.14.8",
-    "numpy": "2.5.2"
+    "numpy": "2.5.4"
   },
   "run": {
-    "build_seconds": 28.354,
-    "seconds_min": 1176.149,
+    "build_seconds": 24.21,
+    "seconds_min": 1209.53,
     "seconds_all": [
-      1176.149
+      1209.53
     ],
     "repeat": 1,
     "fetch_seconds": 0.0,
-    "compute_seconds": 1176.149,
-    "reference_seconds": 0.172,
+    "compute_seconds": 1209.53,
+    "reference_seconds": 0.41,
     "speed_ratio": 0.0
   },
   "stages": [
     {
       "path": "run",
       "depth": 0,
-      "ms": 159.667,
+      "ms": 162.0,
       "kind": "wall"
     },
     {
       "path": "run/init",
       "depth": 1,
-      "ms": 22.0,
+      "ms": 23.0,
       "kind": "once"
     },
     {
       "path": "run/step",
       "depth": 1,
-      "ms": 137.667,
+      "ms": 139.0,
       "kind": "wall"
     },
     {
@@ -197,13 +207,13 @@
     {
       "path": "run/step/forward",
       "depth": 2,
-      "ms": 32.0,
+      "ms": 31.0,
       "kind": "wall"
     },
     {
       "path": "run/step/loss_backward_opt",
       "depth": 2,
-      "ms": 104.667,
+      "ms": 107.0,
       "kind": "wall"
     }
   ],
@@ -220,40 +230,60 @@
     }
   },
   "peaks": {
-    "schema": "mlbend.peaks/1",
-    "created_at": "2026-10-31T21:08:08.983977+00:00",
+    "schema": "mlbend.peaks/2",
+    "created_at": "2026-11-03T09:53:03.287985+00:00",
     "machine": {
-      "platform": "Linux-7.2.13-200.fc44.x86_64-x86_64-with-glibc2.43",
+      "platform": "Linux-7.2.14-200.fc44.x86_64-x86_64-with-glibc2.43",
       "machine": "x86_64",
       "processor": "",
       "cpu_count": 28
     },
     "bend": "2.0.38",
-    "read_gbs": 3.355,
-    "write_gbs": 8.389,
-    "copy_gbs": 11.185,
+    "threads": null,
+    "clock_ms": 1,
+    "read_gbs": 12.027,
+    "write_gbs": 29.178,
+    "copy_gbs": 24.053,
+    "reduce_gbs": 10.076,
     "flops_gflops": 10.038,
     "flops_dtype": "f32",
+    "flops_threads": null,
     "launch_us": null,
     "source": {
       "program": "bench/peaks/main.bend",
       "bytes": 16777216,
+      "passes": 200,
       "repeats": 3,
       "flops": "results/bench-matmul.json ([128, 128] F32)"
     },
-    "median_ms": {
-      "copy_head": 1.0,
-      "copy_ms": 3.0,
-      "n": 4194304.0,
-      "read_head": 4194304.0,
-      "read_ms": 5.0,
-      "write_head": 1.0,
-      "write_ms": 2.0
+    "total_ms": {
+      "write": 115.0,
+      "read": 333.0,
+      "copy": 279.0
+    },
+    "pass_ms": {
+      "write": 0.575,
+      "read": 1.665,
+      "copy": 1.395
+    },
+    "checks": {
+      "read_le_write": true,
+      "reduce_le_read": true,
+      "sample_ms": {
+        "write": 115.0,
+        "read": 333.0,
+        "copy": 279.0
+      },
+      "sample_enough": true
     },
     "notes": [
       "read, write and copy are through Array.get/Array.set, not raw DRAM",
-      "copy counts a read and a write of every byte",
-      "flops is bench/matmul's measured rate at its shape",
+      "each phase is repeated inside one timed region: IO.now() counts whole ms",
+      "copy counts a read and a write of every byte; read_gbs charges a read at the copy's per-byte rate",
+      "reduce_gbs is a reducing walk (an F32 add chain), not a bandwidth",
+      "a sample under 100 ms is flagged in checks.sample_enough",
+      "threads is the runtime option the probe ran with; a record made at another count is not comparable",
+      "flops is bench/matmul's measured rate at its shape, with its thread count",
       "launch latency needs a bang: unprobed"
     ]
   },
@@ -266,17 +296,19 @@
     "run/step/forward": {
       "read": 1694720,
       "write": 32768,
-      "flops": 105840640
+      "flops": 105840640,
+      "counts": "matmul flops only"
     },
     "run/step/loss_backward_opt": {
       "read": 1686528,
       "write": 1653760,
-      "flops": 211681280
+      "flops": 211681280,
+      "counts": "matmul flops only"
     }
   },
   "notes": [
     "clock: IO.now is milliseconds; a stage below 1 ms prints <1 ms",
-    "init_params 22 ms once per process (in run/init)",
+    "init_params 23 ms once per process (in run/init)",
     "rows 0 ms and the matrix conversion 1 ms sit inside step_in",
     "parameters 413440",
     "no separate target stage: this program builds its input and target in one pass, so the target is inside the input",
@@ -295,9 +327,9 @@
           "pass": true
         },
         "legibility_heldout": {
-          "bend": 0.49009275436401367,
+          "bend": 0.48463332653045654,
           "reference": 0.4890271496772766,
-          "delta": 0.0010656046867370539,
+          "delta": -0.004393823146820075,
           "tolerance": 0.05,
           "mode": "absolute",
           "pass": true
@@ -309,14 +341,14 @@
           "note": "different folds; reported, not compared"
         },
         "final_loss": {
-          "bend": 0.28904936,
+          "bend": 0.29102874,
           "reference": null,
           "pass": true,
           "note": "no reference for this number"
         }
       },
-      "run_seconds": 1176.149,
-      "reference_seconds": 0.172
+      "run_seconds": 1209.53,
+      "reference_seconds": 0.41
     }
   ],
   "metrics": {
@@ -333,9 +365,9 @@
       "n_seeds": 1
     },
     "legibility_heldout": {
-      "bend": 0.49009275436401367,
+      "bend": 0.48463332653045654,
       "reference": 0.4890271496772766,
-      "delta": 0.0010656046867370539,
+      "delta": -0.004393823146820075,
       "tolerance": 0.05,
       "mode": "absolute",
       "pass": true,
@@ -356,7 +388,7 @@
       "n_seeds": 1
     },
     "final_loss": {
-      "bend": 0.28904936,
+      "bend": 0.29102874,
       "reference": null,
       "pass": true,
       "note": "no reference for this number",

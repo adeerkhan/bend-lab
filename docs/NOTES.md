@@ -2246,3 +2246,17 @@ Re-recorded through the guard (`BEND_MEM=9G scripts/bend-guard.sh bend -o …`, 
 ancestral 4.77e-07, ddim 6.38e-06, eta=0 invariance 0, legibility **0.795** (gate 0.75). PASS. A plain `bend` run of
 the example dies with `machine stack overflow`; that is the guard's reason for existing.
 
+### ISSUE-044 fixed: the boundary ate the second image's last feature block
+
+`reference/probe_flow_tokens.bend` printed 10224 values against the twin's 10240 — one 16-value `feats` block, with the
+drift at row 64. The cause was the image transition: after a row's cells the loop set `col` back to `PX()` and consumed
+the *next row's* cells before taking the transition, so the second image ran out of cells one row early. A simulation of
+the control flow gave `B*TK` appends for `(TK,PX,B) = (64,64,2), (4,3,2), (64,64,1), (8,5,3)` once the transition moved
+into the row-append step, which is what the code now does (both `tok_go` and `stok_go`, fuel first, per-image level,
+`tokens_of` reading `k % TK`).
+
+Verified: the probe prints 10240 values matching `tokens_of` to `5.96e-08` with no row over tolerance; `test_flow64.py`
+**PASS** (forward `2.98e-07`, euler `3.58e-07`; it failed at `0.568` before); the 6,000-step record passed —
+`legibility_heldout 0.484633` vs the reference's `0.489027` (delta `-0.0044`, tolerance `0.05`), `final_loss 0.291029`,
+`params 413440` exact. `results/latest/flowers-flow.json` is the new record.
+

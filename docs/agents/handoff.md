@@ -7,6 +7,23 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-05 (last) — both examples fixed and re-recorded
+
+**ISSUE-040 FIXED** (see below) and **ISSUE-044 FIXED**. 044's last bug was the image boundary: after a row's cells the
+loop reset `col` and consumed the *next row's* cells before the transition, so the second image lost its last 16-value
+`feats` block (the probe's 10224 vs 10240, drift at row 64). The transition now happens in the row-append step; a
+control-flow simulation gave `B*TK` appends for `(64,64,2), (4,3,2), (64,64,1), (8,5,3)` before the code was touched.
+`tok_go`/`stok_go` are one chain each (cells, rows, images; fuel first), each image takes `level(s, img)`, and
+`twin_flow64.tokens_of` reads positions `k % TK`.
+
+Verified: `reference/probe_flow_tokens.bend` prints 10240 values matching `tokens_of` to `5.96e-08`, no row over
+tolerance; `test_flow64.py` **PASS** (forward 2.98e-07, euler 3.58e-07; it was 0.568 before); the 6,000-step record
+passed — `legibility_heldout 0.484633` vs 0.489027 (delta -0.0044, tol 0.05), `final_loss 0.291029`, `params 413440`
+exact, `results/latest/flowers-flow.json` updated.
+
+**Next in the queue:** the U32 bit-lemma library (the four facts), then `ASet.Apart` on perfect trees and
+`Mat.to_list(Mat.of_list xs) == xs` (bend-ml#26), then #29's adjoint. PRs #32, #33, #34 are still open upstream.
+
 ## 2026-11-05 (later still) — 040 fixed and re-recorded; 044 is one missing block
 
 **ISSUE-040 is FIXED** (committed with its record). The probe showed the `List.reverse` in `ab_img`/`te_img` was
