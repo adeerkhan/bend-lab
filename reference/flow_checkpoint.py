@@ -23,11 +23,12 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import checkpoints
+import flow_config
 from experiment import bend_version, git_state, packages
 
 # what flow_matching/main.bend declares: three linear layers with SiLU, and the
 # config its `cfg()` and `do_step` use
-MODEL = {"layers": [3, 128, 128, 2], "act": "silu"}
+MODEL = {"layers": [3, flow_config.hidden(), flow_config.hidden(), 2], "act": "silu"}
 CONFIG = {"optimizer": "adamw", "lr": 0.003, "b1": 0.9, "b2": 0.999,
           "eps": 1e-8, "wd": 0.0, "c1": 0.1, "c2": 0.001, "batch": 128}
 

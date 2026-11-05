@@ -1,15 +1,20 @@
 """The 2D rectified flow's NumPy twin: the same dumped weights, the same forward, Euler step and sample.
 
 The model is `examples/diffusion/flow_matching/main.bend`'s: three linear layers with SiLU
-(3 -> 128 -> 128 -> 2, where the three inputs are x_t, y_t and the level), and Euler with dt = 1/32.
+(3 -> H -> H -> 2, where the three inputs are x_t, y_t and the level), and Euler with dt = 1/32. `H` is
+read from the example's `hidden()` (128 at the recorded setting), so the twin follows a width change instead of
+keeping a stale one (ISSUE-062).
 
 The weights come from the probe's own `Layer.dump` (flat, in the loader's order: w1, b1, w2, b2, w3, b3),
 so neither side's initialisation is trusted. SiLU is BendTorch's `x / (1 + exp(-x))`, not `x * sigmoid(x)`.
 """
 import numpy as np
 
+from flow_config import hidden
+
 F = np.float32
-N, D, IN, HID, EULER = 128, 2, 3, 128, 32
+N, D, IN, EULER = 128, 2, 3, 32
+HID = hidden()
 # the dump's parts, in the loader's order (Lin's w then b, three layers)
 PARTS = ((HID, IN), (1, HID), (HID, HID), (1, HID), (D, HID), (1, D))
 DT = F(1.0 / EULER)

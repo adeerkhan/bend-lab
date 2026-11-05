@@ -32,13 +32,19 @@ EULER = 32
 
 
 def moons_norm():
-    """The example's data: the DDPM moons, mapped to [-1, 1] per axis."""
+    """The example's data: the DDPM moons, mapped to [-1, 1] per axis, in the example's order.
+
+    `two_moons.moons()` alternates the two moons (`upper0, lower0, upper1, ...`), and the flow's
+    `norm` reads consecutive pairs, so a row here is one point in that order. Concatenating the
+    moons instead (all upper, then all lower) pairs each noise row with a different point and moves
+    the first loss by ~0.05 (ISSUE-060).
+    """
     n = 64
     k = np.arange(n, dtype=np.float64) + 0.5
     th = np.pi * k / 64.0
     upper = np.stack([np.cos(th), np.sin(th)], 1)
     lower = np.stack([1.0 - np.cos(th), 0.5 - np.sin(th)], 1)
-    x = np.concatenate([upper, lower]).astype(np.float32)
+    x = np.stack([upper, lower], 1).reshape(2 * n, 2).astype(np.float32)
     x[:, 0] = (2.0 * x[:, 0] - 1.0) / 3.0
     x[:, 1] = (2.0 * x[:, 1] - 0.5) / 1.5
     return x

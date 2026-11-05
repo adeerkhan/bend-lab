@@ -39,7 +39,7 @@ import mlbend-generative@0.1.1.0/main.bend as G
 import ../two_moons/main.bend as D2
 
 def n() -> Nat:
-  256n
+  128n
 
 def d() -> Nat:
   2n
@@ -48,7 +48,7 @@ def inw() -> Nat:
   3n
 
 def hidden() -> Nat:
-  256n
+  128n
 
 def steps() -> Nat:
   6000n

@@ -9,7 +9,7 @@ Flow matching replaces the diffusion chain with one vector field and an ODE:
 
 There is no beta schedule, no posterior, no sigma and no eta. The level of each
 point comes from a U32 Weyl sequence, one level per point. The model is three
-linear layers with SiLU (2 inputs for x_t, 1 for t, width 128), trained
+linear layers with SiLU (x_t, y_t and t as inputs, width 128), trained
 full-batch for 6000 steps with AdamW at 3e-3.
 
 ```console
@@ -24,9 +24,9 @@ The sample is 32 Euler steps from `noise_of(2000000)`.
 
 | | value |
 |---|---|
-| first loss | 0.9280 |
-| final loss | 0.4318 |
-| last 100 mean | **0.4465** |
+| first loss | 1.4768 |
+| final loss | 0.8360 |
+| last 100 mean | **0.8859** |
 | data mean / std | 0.000 / 0.000 · 0.577 / 0.659 |
 | sample mean / std | +0.049 / -0.048 · 0.610 / 0.675 |
 | inside the data's box | 112/128 |

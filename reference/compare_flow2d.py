@@ -25,6 +25,7 @@ import torch.nn.functional as Fn
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "reference"))
 
+from flow_config import hidden   # the example's width, so a change there moves the comparison
 from flow_results import moons_norm
 from test_diffusion_digits import noise_of
 
@@ -33,20 +34,19 @@ STEPS, EULER, LR = 6000, 32, 3e-3
 TOL_FIRST, TOL_FINAL = 1e-3, 0.02          # the first loss is the arithmetic; the final is the optimizer
 
 
-def hidden():
-    """The example's width, read from its source so a change there moves the comparison."""
-    src = open(os.path.join(ROOT, "examples/diffusion/flow_matching/main.bend")).read()
-    import re
-    m = re.search(r"def hidden\(\) -> Nat:\n  (\d+)n", src)
-    return int(m.group(1))
-
-
 def weights(h):
-    """The example's deterministic init, part for part (w, b per layer)."""
+    """The example's deterministic init, cell for cell (w, b per layer).
+
+    The scale is `1/sqrt(cols - j)` for column `j`, not `1/sqrt(cols)`: the example's `row_vals`
+    passes the *remaining* column count into the recursion and divides by that, so column 0 divides
+    by `cols` and the last column by 1. Reproducing the quirk is what makes the first loss agree;
+    with a uniform `1/sqrt(cols)` it is off by 0.03 (ISSUE-060).
+    """
     def mat(rows, cols, seed):
         r = torch.arange(rows).reshape(-1, 1).float()
         c = torch.arange(cols).reshape(1, -1).float()
-        v = (((3 * r + 5 * c + seed) % 7) * 0.1 - 0.2) / np.sqrt(cols)
+        scale = (1.0 / torch.sqrt(torch.arange(cols, 0, -1).float())).reshape(1, -1)
+        v = (((3 * r + 5 * c + seed) % 7) * 0.1 - 0.2) * scale
         return v.to(F)
     return [mat(h, 3, 1), torch.zeros(1, h), mat(h, h, 2), torch.zeros(1, h), mat(2, h, 3), torch.zeros(1, 2)]
 
@@ -67,13 +67,15 @@ def main():
     opt = torch.optim.AdamW(p, lr=LR, betas=(0.9, 0.999), eps=1e-8, weight_decay=0.1)
     curve = []
     for s in range(STEPS):
+        # each step trains on its own noise: the example's `do_step` calls `noise_of(s, 256)`
+        nzs = torch.tensor(np.asarray(noise_of(s, 2 * n), dtype=np.float32).reshape(n, 2), dtype=F)
         t = levels(s, n).reshape(-1, 1)
-        xt = (nz * (1 - t) + data * t)
+        xt = (nzs * (1 - t) + data * t)
         inp = torch.cat([xt, t], 1)
         h1 = Fn.silu(inp @ p[0].T + p[1])
         h2 = Fn.silu(h1 @ p[2].T + p[3])
         out = h2 @ p[4].T + p[5]
-        loss = ((out - (data - nz)) ** 2).mean()
+        loss = ((out - (data - nzs)) ** 2).mean()
         opt.zero_grad(); loss.backward(); opt.step()
         if s % 25 == 0:
             curve.append(float(loss.detach()))
