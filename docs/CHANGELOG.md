@@ -4,6 +4,14 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The 2D flow has an element-by-element gate
+
+- **`reference/probe_flow2d.bend` + `reference/twin_flow2d.py` + `reference/test_flow2d.py`**: the 2D rectified flow
+  was the one example measured only end to end — its README said the frozen probe and its NumPy twin were still owed.
+  The probe prints the model's own `Layer.dump`, the 128 input rows, one forward step at `t = 0.5`, one Euler step at
+  `t = 0` and the 8/16/32-step states; the twin rebuilds all of them from that dump. Six gates, each under `4e-7`
+  against `1e-5`. `reference/check_all.py` runs it with the rest.
+
 ### A wrong dataset is refused before the run, not after
 
 - **`reference/experiment.py`**: a task's *generated* dataset can now carry a `pin` (`roots` to search and

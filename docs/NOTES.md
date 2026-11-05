@@ -2260,3 +2260,22 @@ Verified: the probe prints 10240 values matching `tokens_of` to `5.96e-08` with 
 `legibility_heldout 0.484633` vs the reference's `0.489027` (delta `-0.0044`, tolerance `0.05`), `final_loss 0.291029`,
 `params 413440` exact. `results/latest/flowers-flow.json` is the new record.
 
+
+## 2026-11-05 — A1: the 2D flow's missing gate
+
+The 2D rectified flow (`examples/diffusion/flow_matching`) was the one example whose only evidence was an end-to-end
+number; its own README said the frozen probe and the NumPy twin were still owed. They are `reference/probe_flow2d.bend`
+and `reference/twin_flow2d.py` now, gated by `reference/test_flow2d.py` (six gates: input rows, one forward step at
+`t = 0.5`, one Euler step at `t = 0`, and the 8/16/32-step states), all under `4e-7` against `1e-5`, on the probe's own
+`Layer.dump` so neither side's initialisation is trusted.
+
+Two things it taught while being built. **`fwd_v` is not the velocity**: the example's `fwd_v` flattens the forward's
+output and returns `x + dt*v` through `euler_x_go`, so the gate compares a *step*, not the raw field — the twin's first
+version compared the velocity and was off by 2.9. **The Euler level is `i/32`**, so `k` steps have to be one call:
+restarting at 0 re-samples `t = 0`, which is why an `euler 8` built as `1 + 7` was off by 2.2e-3 while `euler 32` was
+right at 3.6e-7.
+
+The plateau is now measurable rather than arguable: the data's zero-predictor floor is **1.4665** (its own moons and
+noise), the run goes **1.4768 → 0.8360** with the last 100 at **0.8859**, and the design probe plateaus at **0.8662**.
+So the model learns about 40% of the way to zero and stops; whether that is the setup (lr, width, steps) or the method
+is the next experiment, and it now has a gate to keep the forward honest while the setup changes.

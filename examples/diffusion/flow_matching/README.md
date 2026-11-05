@@ -42,8 +42,11 @@ probe's data has 4096 points and a different init draw.
 
 ![data and samples](../../../results/flow-matching/scatter.svg)
 
-The frozen probe and its NumPy twin are still owed: the example is measured
-end to end, but there is no element-by-element gate yet.
+The element-by-element gate is `reference/test_flow2d.py` (2026-11-05):
+`reference/probe_flow2d.bend` prints the model's own `Layer.dump`, the input rows, one
+forward step at t = 0.5, one Euler step at t = 0 and the 8/16/32-step states, and
+`reference/twin_flow2d.py` rebuilds all of them from that dump. Six gates, each under
+`4e-7` against a `1e-5` tolerance; `reference/check_all.py` runs it with the rest.
 
 ## Checkpoints
 
