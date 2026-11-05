@@ -4,6 +4,35 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The flow's settings were re-measured, and the torch comparison closes
+
+- **No setting beats the baseline.** With the batch restored to 128 points: baseline 0.8360 final / 0.8859 last 100,
+  lower lr 0.8412, 12,000 steps 0.8630, 256 wide 0.8471, 256 wide + 12,000 0.8614. The "0.4318 at 256 wide" this
+  repository recorded for a day was a batch-size bug: the width edit also changed `def n()`, so half the batch's
+  targets were zero. The confounded run stays in `variants/zeropad-artifact.json` and `RESULTS.md` says what it was.
+- **`reference/compare_flow2d.py` now passes**: first loss 1.476769 vs 1.476769 (8.97e-08), final 0.835969 vs 0.846537,
+  last 100 0.885889 vs 0.893301. Three corrections in the comparator: the data order (`moons()` alternates the moons),
+  the per-step noise (`noise_of(s)`), and the init scale (`1/sqrt(cols - j)` per column). The printed loss is the
+  step's own loss with its pre-step weights; the convention was never wrong (ISSUE-060).
+- **`reference/flow_config.py`** is the one reader of the example's `hidden()`/`steps()`/`euler()`, used by the twin,
+  the torch comparison and the checkpoint sidecar, so a width change cannot leave a gate expecting the old weights
+  (ISSUE-062).
+
+### The UNet gains a second level, gated whole-plane against PyTorch
+
+- **`examples/diffusion/unet/main.bend`** is now a two-level U: 64x64 -> 32x32 -> 16x16 -> 32x32 -> 64x64, with four
+  `Conv2d`, four `GroupNorm`, two `Up2` upsamples and two additive skips. `--dump` prints the whole planes, so a
+  comparison is 2,048 cells per intermediate and 8,192 for the output instead of eight.
+- **`reference/test_unet.py`** is the two-level NumPy twin: first eight cells of `y`, `z` and `out` at **5.96e-08**
+  against `1e-6`, a can-fail that rejects a cell moved by 0.5, and the `Up2` adjoint. **`reference/compare_unet_torch.py`**
+  rebuilds the same deterministic weights and forward in torch and checks every cell: `y`/`z` **1.19e-06**, `out`
+  **7.63e-06**, all inside `2e-6 + 1e-6*|value|` (the last cell is one float32 ulp at the skip's +-82 ramp).
+- **`reference/unet_results.py`** writes the record: `run.json`, the U diagram, the planes as heatmaps and the
+  per-stage magnitudes under `results/diffusion-unet/`. The write-up, with the numbers and the two traps, is
+  `examples/diffusion/unet/RESULTS.md`.
+- **The trap worth keeping:** a conv's `Fwd` state type is the **im2col matrix** (`CST1()` here, `Mat<1024,18>`), not
+  the output image (`MID()`, `Mat<1024,2>`).
+
 ### The 2D flow has an element-by-element gate
 
 - **`reference/probe_flow2d.bend` + `reference/twin_flow2d.py` + `reference/test_flow2d.py`**: the 2D rectified flow

@@ -7,7 +7,30 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
-## 2026-11-05 (last) — both examples fixed and re-recorded
+## 2026-11-05 (latest) — the UNet's second level, and the flow's "width win" was a bug
+
+**The UNet's second level landed.** `examples/diffusion/unet/main.bend` is a two-level U: 64x64 -> 32x32 -> 16x16 ->
+32x32 -> 64x64, four `Conv2d`, four `GroupNorm`, two `up2` and two additive skips (`P` has eight fields;
+`LOW()`/`CST3()` are the 16x16 stage). The trap: a conv's `Fwd` state type is the im2col matrix, not the output image —
+`conv4` needs `CST1()` (`1024x18`) where the output is `MID()` (`1024x2`); `y` is needed twice, so `T.Mat.dup` feeds
+`mid_pair`. Gates: `test_unet.py` (two-level NumPy twin, `y`/`z`/`out` at **5.96e-08** vs 1e-6), `--dump` for whole
+planes, and `compare_unet_torch.py` (torch, `y`/`z` 1.19e-06, `out` 7.63e-06 inside `2e-6 + 1e-6*|v|`). Record:
+`reference/unet_results.py` writes `results/diffusion-unet/{run.json,level.svg,features.svg,stats.svg}`; write-up in
+`examples/diffusion/unet/RESULTS.md` (ISSUE-061).
+
+**The flow sweep was wrong, and is corrected.** The width edit had also changed `def n()` (batch 128 -> 256), so the
+"256 wide" runs trained with half their targets zero: the 0.4318 was that, not width. With `n()` restored, **no setting
+beats the baseline** (0.8360 final, 0.8859 last 100; 256 wide 0.8471, 12,000 steps 0.8630). The confounded run is kept
+as `variants/zeropad-artifact.json`. `compare_flow2d.py` now **PASSES**: first loss 1.476769 vs 1.476769 (8.97e-08)
+after fixing the data order (interleaved moons), the per-step noise (`noise_of(s)`) and the init scale
+(`1/sqrt(cols - j)`); ISSUE-060 is closed, the printed-loss convention was never wrong. `reference/flow_config.py` is
+the single reader of `hidden()`/`steps()`/`euler()`, so `test_flow2d`, `compare_flow2d` and `flow_checkpoint.MODEL`
+follow a width change (ISSUE-062).
+
+**Next in the queue:** the U32 bit-lemma library (four facts), then `ASet.Apart`/`Mat.to_list` (bend-ml#26), then #29's
+adjoint. `LayerNormMod` + gated residual still waits on the Tile PR (#34); PRs #32, #33, #34 await review.
+
+## 2026-11-05 (earlier) — both examples fixed and re-recorded
 
 **ISSUE-040 FIXED** (see below) and **ISSUE-044 FIXED**. 044's last bug was the image boundary: after a row's cells the
 loop reset `col` and consumed the *next row's* cells before the transition, so the second image lost its last 16-value

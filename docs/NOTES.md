@@ -2279,3 +2279,53 @@ The plateau is now measurable rather than arguable: the data's zero-predictor fl
 noise), the run goes **1.4768 → 0.8360** with the last 100 at **0.8859**, and the design probe plateaus at **0.8662**.
 So the model learns about 40% of the way to zero and stops; whether that is the setup (lr, width, steps) or the method
 is the next experiment, and it now has a gate to keep the forward honest while the setup changes.
+
+## 2026-11-05 — the UNet's second level: 64 -> 32 -> 16 -> 32 -> 64
+
+`examples/diffusion/unet/main.bend` now carries a real two-level U (four `Conv2d`, four `GroupNorm`, two `up2` upsamples,
+two additive skips) instead of one down/up pair. The level's own gate is `reference/test_unet.py`, extended to the whole
+forward: first eight cells of `y`, `z` and `out`, each **5.96e-08** against `1e-6`, plus the can-fail (a cell moved by
+0.5 is rejected) and the `up2` adjoint.
+
+**The trap, paid once.** A conv's `Fwd` state type is the **im2col matrix**, not the output image. `conv4` was written
+with `MID()` and the checker printed
+
+    expected : T.Fwd<T.Lin<18n, 2n>, TA.Mat<1024n, 2n>, TA.Mat<1024n, 2n>>
+    observed : T.Fwd<T.Lin<18n, 2n>, TA.Mat<1024n, 2n>, TA.Mat<1024n, 18n>>
+
+`1024 x 18` is output positions by `c*k*k`, i.e. `CST1()`; the 16x16 stage is `CST3()` (`256 x 18`). A second cost was
+structural, not a bug: the 32x32 stage needs `y` twice, and a `Mat` is linear, so `T.Mat.dup` hands both copies to
+`mid_pair`, the same pattern as the input's own skip.
+
+**Whole-plane PyTorch, not eight cells.** `--dump` prints `y_all`/`z_all`/`out_all` (2,048 cells per intermediate, 8,192
+for `out`), and `reference/compare_unet_torch.py` rebuilds the same deterministic weights and forward in torch. Measured:
+`y` 1.19e-06, `z` 1.19e-06, `out` 7.63e-06, with Bend-vs-NumPy and torch-vs-NumPy the same order (9.54e-07 on `y`/`z`).
+The gate is combined, `2e-6 + 1e-6*|value|` per cell, because the second skip adds the input ramp and `out` reaches
++-82, where one float32 ulp is already 7.63e-06; no cell exceeds a third of its allowance. Record: `run.json`,
+`level.svg`, `features.svg`, `stats.svg` under `results/diffusion-unet/`, written by `reference/unet_results.py`; the
+write-up is `examples/diffusion/unet/RESULTS.md`.
+
+`make check` passes with the extended twin (it globs `reference/test_*.py`).
+
+## 2026-11-05 — the flow's "width win" was a batch-size bug, and the torch comparison closes
+
+**The 0.4318 was not a width result.** Changing the 2D flow's width was done by replacing lines that were exactly
+`  128n`, which also hit `def n() -> Nat:` — the batch size. Those runs trained a 256-row batch against a 128-point
+dataset, and `at()` returns `0.0` past the end, so half of every target was zero. Kept as
+`variants/zeropad-artifact.json` so the mistake is on the record. With `n()` restored, the same settings read:
+baseline **0.8360** / last 100 **0.8859**, lr 1e-3 0.8412, 12,000 steps 0.8630, 256 wide 0.8471, 256 wide + 12,000
+0.8614 — **no setting beats the baseline**, and 256 wide is slightly worse at both step counts. The design probe's
+plateau (0.8662) and these runs agree.
+
+**ISSUE-060 closed: three reference bugs, not a convention.** `compare_flow2d.py` now agrees with Bend — first loss
+**1.476769 vs 1.476769 (8.97e-08)**, final 0.835969 vs 0.846537, last 100 0.885889 vs 0.893301, sample means within
+2.3e-02. The corrections, each measured: `moons_norm()` must interleave the moons (the example's `moons()` alternates
+`upper0, lower0, ...` and `norm` reads consecutive pairs; concatenating moved the first loss by 0.05); the example's
+`do_step(s, …)` draws `noise_of(s, 256)` **per step**, not one cloud reused; and the init scale is `1/sqrt(cols - j)`
+per column, not `1/sqrt(cols)` (the example's `row_vals` divides by the remaining column count), worth 0.03.
+The printed-loss convention was never wrong: Bend prints the step's own loss with its pre-step weights.
+
+**The width change also broke two gates** (ISSUE-062): `test_flow2d`'s twin had `HID = 128` and
+`test_flow_checkpoint` expected `3 × 17,282 + 2` bytes. Both now read `reference/flow_config.py`, the single reader of
+`hidden()`/`steps()`/`euler()` from the example's source, which `compare_flow2d` and `flow_checkpoint.MODEL` use too.
+`make check` is 116/116 with them.
