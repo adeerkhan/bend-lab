@@ -7,6 +7,24 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-05 (latest) — the UNet is trained: gates exact, samples weak (ISSUE-065)
+
+`examples/diffusion/unet/{model,train}.bend` train the two-level U (64→32→16→32→64, 16 channels, one skip) on 512
+flowers with the flow objective, with `--steps/--start/--save/--resume/--no-sample/--probe` and a `--probe` that prints
+the flat weights and one whole forward. Gates: NumPy twin **4.47e-08**, torch twin **4.47e-08** (1e-6), checkpoint
+**bit-identical** (40 == 20 + 20, 5,489 weights, 65,876 bytes). Record: `reference/unet_flowers_results.py` →
+`results/diffusion-unet/{run.json,loss.svg,samples.svg,stats.svg}`, write-up `examples/diffusion/unet/TRAINED.md`.
+
+**The open work is the learning, not the plumbing.** Loss 1.1279 → 0.8131 against a zero predictor at 1.0645, but the
+16 draws are noise (std 0.992 vs the data's 0.226). Three architectures measured: GN + linear head (0.813, kept),
+no GN (0.90 at 600), outer skip (diverged, std 2.68). lr 1e-2 == 3e-3 at 600 steps. **ISSUE-065** lists the levers:
+CH 32, 8 images a step, 20k steps, and a channel-0 skip without the 5-channel dilution (a custom layer; `Residual`
+needs equal channel counts).
+
+**Two Bend limits found:** a `Nat.mul(...)` in a type argument to a polymorphic def overflows the checker (literals
+work), and a 300-line model plus its IO in one module overflows it too (splitting `model.bend` fixed that). Both are in
+ISSUE-064.
+
 ## 2026-11-05 (latest) — UNet level 2, the flow re-measured, item 4 opened
 
 **Done and pushed.** The UNet's two-level U (`2e02ece`): 64→32→16→32→64, four `Conv2d`, four `GroupNorm`, two

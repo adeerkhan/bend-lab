@@ -1,35 +1,12 @@
 {
-  "task": "unet-two-level",
-  "atol": 2e-06,
+  "task": "unet-flowers",
+  "cells": 8192,
+  "atol": 1e-06,
   "rtol": 1e-06,
-  "planes": [
-    {
-      "plane": "y",
-      "cells": 2048,
-      "bend_vs_torch": 1.1920928955078125e-06,
-      "worst_ratio": 0.36476984281374414,
-      "bend_vs_numpy": 1.0728836059570312e-06,
-      "torch_vs_numpy": 9.5367431640625e-07,
-      "ok": true
-    },
-    {
-      "plane": "z",
-      "cells": 2048,
-      "bend_vs_torch": 1.1920928955078125e-06,
-      "worst_ratio": 0.33267939653288187,
-      "bend_vs_numpy": 1.1920928955078125e-06,
-      "torch_vs_numpy": 9.5367431640625e-07,
-      "ok": true
-    },
-    {
-      "plane": "out",
-      "cells": 8192,
-      "bend_vs_torch": 7.62939453125e-06,
-      "worst_ratio": 0.11407835243480281,
-      "bend_vs_numpy": 7.62939453125e-06,
-      "torch_vs_numpy": 7.62939453125e-06,
-      "ok": true
-    }
-  ],
-  "torch": "2.14.1+cpu"
+  "bend_vs_torch": 4.470348358154297e-08,
+  "worst_ratio": 0.03978763482537406,
+  "bend_vs_numpy": 4.470348358154297e-08,
+  "torch_vs_numpy": 1.4901161193847656e-08,
+  "torch": "2.14.1+cpu",
+  "ok": true
 }

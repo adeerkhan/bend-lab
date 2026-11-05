@@ -2357,3 +2357,22 @@ Two facts worth keeping: **Lean 4.34.0 is installed** at `~/.elan/bin/lean` and 
 `PATH=$HOME/.elan/bin:$PATH bend FILE --verdict` proves locally (the earlier "no Lean here" note was the PATH, not the
 machine). And the oracle `tensor-array/tests/apart.bend` checks **21,590 pairs through depth 7 with 0 failures**; the
 symbolic proof is what is missing, not the evidence.
+
+## 2026-11-05 — the UNet is trained, and its samples say what the loss cannot
+
+`examples/diffusion/unet/train.bend` now trains the two-level U on the 512 flowers with the flow objective, saves and
+resumes, and draws. The gates are exact: NumPy and torch twins on the whole forward at **4.47e-08** (1e-6), and a
+40-step run against 20 + 20 resumed is **bit-identical** (5,489 weights, 65,876 bytes). The record is
+`results/diffusion-unet/{run.json,loss.svg,samples.svg,stats.svg}` and `TRAINED.md`.
+
+**The learning is the weak half, and it is measured.** Loss 1.1279 → 0.8131 against a predictor of zero at 1.0645,
+while the draws' std is 0.992 (the noise's 1.003) against the data's 0.226: the sampler barely contracts. Three
+architectures were measured: group norms + linear head (this record, 0.813), the same without group norms (0.90 at 600),
+and an outer skip (`v = head + x`, which diverged: std 2.68, the field ~ x). lr 1e-2 gave the same 0.84 at 600 steps as
+3e-3, so it is not the rate or the steps — 5,489 parameters and 23 epochs fit the marginal field and stop. ISSUE-065
+carries the levers: 32 channels, 8 images a step, 20k steps, and a skip of channel 0 without the 5-channel dilution.
+
+**Two Bend facts paid for.** A `Nat.mul(...)` in a type argument to a polymorphic def overflows the checker's stack
+(literals work; `Nat.mul` in a type alias does not), and a 300-line model plus its IO in one module overflows it too —
+splitting `model.bend` out fixed that. Also: `draw` first read the sampler's state in pairs, which halved every draw
+and scrambled the grid; the picture looked like noise for two reasons, and only one of them was the model.

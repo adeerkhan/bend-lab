@@ -4,6 +4,20 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The UNet is trained: a 64x64 flowers flow, with checkpoints and two twins
+
+- **`examples/diffusion/unet/model.bend` + `train.bend`**: the gate example's two levels (64 -> 32 -> 16 -> 32 -> 64,
+  16 channels, one skip) trained on the 512 flowers with a rectified-flow objective. The input is the image plus four
+  time features; the output is the velocity through a 1x1 convolution with no activation, so the field can be negative.
+  Flags as in `flow_matching`: `--steps`, `--start`, `--save`, `--resume`, `--no-sample`, `--probe`.
+- **Gates**: `reference/test_unet_flowers.py` (NumPy, whole forward, 4.47e-08 against 1e-6),
+  `reference/compare_unet_flowers_torch.py` (PyTorch, same), `reference/test_unet_flowers_checkpoint.py` (40 steps ==
+  20 + 20 resumed, bit-identical, 5,489 weights).
+- **Record**: `reference/unet_flowers_results.py` writes `results/diffusion-unet/{run.json,loss.svg,samples.svg,stats.svg}`;
+  `examples/diffusion/unet/TRAINED.md` carries the numbers and the reproduce commands.
+- **Honest limit**: the loss falls 1.1279 -> 0.8131 (a predictor of zero scores 1.0645) but the draws are noise, not
+  flowers — the model fits the marginal field at this size. Recorded as ISSUE-065 with the three architectures measured.
+
 ### The flow's settings were re-measured, and the torch comparison closes
 
 - **No setting beats the baseline.** With the batch restored to 128 points: baseline 0.8360 final / 0.8859 last 100,

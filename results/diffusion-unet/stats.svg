@@ -1,30 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="520" height="150" viewBox="0 0 520 150">
-<rect width="520" height="150" fill="#101418"/>
-<rect x="110" y="24" width="1.4" height="6" fill="#5ee6c8" opacity="0.9"/>
-<text x="116.39303317223853" y="31" fill="#e6edf3" font-family="monospace" font-size="9">0.36</text>
-<rect x="110" y="32" width="1.6" height="6" fill="#5b8cff" opacity="0.9"/>
-<text x="116.55833715955526" y="39" fill="#e6edf3" font-family="monospace" font-size="9">0.41</text>
-<rect x="110" y="40" width="5.6" height="6" fill="#ffb454" opacity="0.9"/>
-<text x="120.57226009604385" y="47" fill="#e6edf3" font-family="monospace" font-size="9">1.46</text>
-<text x="10" y="38" fill="#e6edf3" font-family="monospace" font-size="11">y</text>
-<rect x="110" y="58" width="2.6" height="6" fill="#5ee6c8" opacity="0.9"/>
-<text x="117.56237134666256" y="65" fill="#e6edf3" font-family="monospace" font-size="9">0.67</text>
-<rect x="110" y="66" width="1.6" height="6" fill="#5b8cff" opacity="0.9"/>
-<text x="116.56545193546673" y="73" fill="#e6edf3" font-family="monospace" font-size="9">0.41</text>
-<rect x="110" y="74" width="6.8" height="6" fill="#ffb454" opacity="0.9"/>
-<text x="121.78839489453011" y="81" fill="#e6edf3" font-family="monospace" font-size="9">1.78</text>
-<text x="10" y="72" fill="#e6edf3" font-family="monospace" font-size="11">z</text>
-<rect x="110" y="92" width="156.4" height="6" fill="#5ee6c8" opacity="0.9"/>
-<text x="271.38615992202824" y="99" fill="#e6edf3" font-family="monospace" font-size="9">40.97</text>
-<rect x="110" y="100" width="180.6" height="6" fill="#5b8cff" opacity="0.9"/>
-<text x="295.5828921423283" y="107" fill="#e6edf3" font-family="monospace" font-size="9">47.31</text>
-<rect x="110" y="108" width="314.0" height="6" fill="#ffb454" opacity="0.9"/>
-<text x="429.0" y="115" fill="#e6edf3" font-family="monospace" font-size="9">82.26</text>
-<text x="10" y="106" fill="#e6edf3" font-family="monospace" font-size="11">out</text>
-<rect x="110" y="132" width="9" height="9" fill="#5ee6c8"/>
-<text x="124" y="140" fill="#98a2b3" font-family="monospace" font-size="10">mean |v|</text>
-<rect x="220" y="132" width="9" height="9" fill="#5b8cff"/>
-<text x="234" y="140" fill="#98a2b3" font-family="monospace" font-size="10">std</text>
-<rect x="330" y="132" width="9" height="9" fill="#ffb454"/>
-<text x="344" y="140" fill="#98a2b3" font-family="monospace" font-size="10">max |v|</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="170" viewBox="0 0 560 170">
+<rect width="560" height="170" fill="#101418"/>
+<rect x="120" y="30" width="140.5" height="10" fill="#5b8cff" opacity="0.9"/>
+<text x="266.49397028808346" y="39" fill="#e6edf3" font-family="monospace" font-size="10">0.3981</text>
+<text x="112" y="39" fill="#98a2b3" text-anchor="end" font-family="monospace" font-size="10">mean data</text>
+<rect x="120" y="44" width="189.3" height="10" fill="#5ee6c8" opacity="0.9"/>
+<text x="315.3147396884102" y="53" fill="#e6edf3" font-family="monospace" font-size="10">0.5365</text>
+<text x="112" y="53" fill="#98a2b3" text-anchor="end" font-family="monospace" font-size="10">mean drawn</text>
+<rect x="120" y="76" width="79.9" height="10" fill="#5b8cff" opacity="0.9"/>
+<text x="205.89108007309352" y="85" fill="#e6edf3" font-family="monospace" font-size="10">0.2264</text>
+<text x="112" y="85" fill="#98a2b3" text-anchor="end" font-family="monospace" font-size="10">std data</text>
+<rect x="120" y="90" width="350.0" height="10" fill="#5ee6c8" opacity="0.9"/>
+<text x="476.0" y="99" fill="#e6edf3" font-family="monospace" font-size="10">0.9919</text>
+<text x="112" y="99" fill="#98a2b3" text-anchor="end" font-family="monospace" font-size="10">std drawn</text>
 </svg>
