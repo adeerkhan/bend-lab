@@ -35,6 +35,9 @@ needs `d + (2+j) == 32`, i.e. the `d <= 30` bound, which the *array* law must ca
 subtraction-without-borrow. Then `ASet.Apart` on perfect trees, `Mat.to_list(Mat.of_list xs) == xs`, and #29's adjoint.
 Oracle: `tensor-array/tests/apart.bend`, 21,590 pairs, 0 failures.
 
+**Posted upstream:** the six U32 lemmas and the three missing pieces are **bendlang/bend#2059** (2026-11-05), with the
+program inline; the local offer text is `.local/u32_bits_issue.md`.
+
 **Lean:** 4.34.0 **is installed** (`~/.elan/bin/lean`), just not on the shell PATH — use
 `PATH=$HOME/.elan/bin:$PATH bend FILE --verdict`. The earlier "no Lean here" note was the PATH.
 
