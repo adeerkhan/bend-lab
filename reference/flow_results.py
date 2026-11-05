@@ -75,6 +75,16 @@ def scatter_svg(path, data, samples):
     open(path, "w").write("\n".join(out))
 
 
+def _conf(text, key, default):
+    """The run's own configuration line (`hidden: 256`), or the module's default.
+
+    The writer used to hardcode 128 and 6000, so a run at another width or step count recorded the old one
+    (ISSUE-059); the program now prints its configuration and this reads it.
+    """
+    m = re.search(rf"^{key}: (\d+)$", text, re.M)
+    return int(m.group(1)) if m else default
+
+
 def main():
     path = sys.argv[1] if len(sys.argv) > 1 else None
     if not path:
@@ -88,9 +98,9 @@ def main():
     record = {
         "task": "flow-2d",
         "program": "examples/diffusion/flow_matching/main.bend",
-        "steps": STEPS,
-        "euler": EULER,
-        "hidden": 128,
+        "steps": _conf(text, "steps", STEPS),
+        "euler": _conf(text, "euler", EULER),
+        "hidden": _conf(text, "hidden", 128),
         "first_loss": curve[0],
         "final_loss": final,
         "last100": float(np.mean(curve[-100:])),

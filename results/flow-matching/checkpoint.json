@@ -1,6 +1,6 @@
 {
   "schema": "mlbend.checkpoint/1",
-  "created_at": "2026-11-01T08:14:55.640198+00:00",
+  "created_at": "2026-11-05T10:45:48.400877+00:00",
   "weights": null,
   "model": {
     "structure": "03f470b1ce59d1edb0a9a5dc505fa660aae87619f2d37f0d00f2f0210df77b51",
@@ -41,13 +41,14 @@
     ],
     "bend-ml-tensor-array": [
       "0.1.14.0 0x0f6479f09ada7ae614e64e31e8f5a730",
-      "0.1.16.0 0x0159e1f0f11cc1d285ac6a993d19ba8a"
+      "0.1.18.0 0xf4dfe0b415f12cd7b6b3e20aa7cc5aa0"
     ],
     "bend-ml-tensor-fork": [
-      "0.1.4.0 0xd13098b0f80022977b3ddb83a57e3c50"
+      "0.1.5.0 0x236efa65086abc5955a9e74563e24668"
     ],
     "bend-ml-tensor-gpu": [
-      "0.1.2.1 0x454d8eb5320624d5b121fdc9d78ee0a6"
+      "0.1.2.1 0x454d8eb5320624d5b121fdc9d78ee0a6",
+      "0.1.5.0 0x6538b6a56d11b5a4d65ef7d8b18c1f9f"
     ],
     "bendtorch-gpu": [
       "1.1.1.0 0x3c22148d676c2988827dae103c18f499"
@@ -56,7 +57,7 @@
       "0.1.0.0 0x0c4fbc7d44d2e3e47247a6c1f12c05e0"
     ],
     "mlbend-datasets": [
-      "0.1.6.0 0xf3d145d639153c61b826e4f60d3c0dcd"
+      "0.1.6.0 0x43f00fa69fc1132fa416c0f389d0a503"
     ],
     "mlbend-generative": [
       "0.1.1.0 0xd48e7ce018b6fa7dc613b629e4260a23"
@@ -65,7 +66,7 @@
       "0.1.1.0 0x9f97047b6ffb57443a7a2a2f0adefcbd"
     ],
     "mlbend-metrics": [
-      "0.1.0.0 0x9afaa60ee4d17706cb14d6ec20d1d4ae"
+      "0.1.0.0 0xcffef0c9b0e924c8e74e1d965dfb4106"
     ],
     "mlbend-pipeline": [
       "0.1.0.0 0xea73a86e2118529cadd597fb3727979b"
@@ -84,6 +85,6 @@
     ]
   },
   "bend": "2.0.38",
-  "git": "8685f7f",
+  "git": "fd23874",
   "tensors": []
 }

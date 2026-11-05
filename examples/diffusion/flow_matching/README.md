@@ -24,9 +24,9 @@ The sample is 32 Euler steps from `noise_of(2000000)`.
 
 | | value |
 |---|---|
-| first loss | 1.4768 |
-| final loss | 0.8360 |
-| last 100 mean | **0.8859** |
+| first loss | 0.9280 |
+| final loss | 0.4318 |
+| last 100 mean | **0.4465** |
 | data mean / std | 0.000 / 0.000 · 0.577 / 0.659 |
 | sample mean / std | +0.049 / -0.048 · 0.610 / 0.675 |
 | inside the data's box | 112/128 |

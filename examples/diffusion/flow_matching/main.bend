@@ -39,7 +39,7 @@ import mlbend-generative@0.1.1.0/main.bend as G
 import ../two_moons/main.bend as D2
 
 def n() -> Nat:
-  128n
+  256n
 
 def d() -> Nat:
   2n
@@ -48,7 +48,7 @@ def inw() -> Nat:
   3n
 
 def hidden() -> Nat:
-  128n
+  256n
 
 def steps() -> Nat:
   6000n
@@ -409,7 +409,7 @@ def run_go(args: List<String>, r: Run) -> Run:
       match a:
         case "--no-sample":
           match r:
-            case Run{start, steps, save, resume, sample}:
+            case Run{start, +steps, save, resume, sample}:
               run_go(rest, Run{start, steps, save, resume, False{}})
         case "--save":
           match rest:
@@ -417,7 +417,7 @@ def run_go(args: List<String>, r: Run) -> Run:
               r
             case Con{b, more}:
               match r:
-                case Run{start, steps, save, resume, sample}:
+                case Run{start, +steps, save, resume, sample}:
                   run_go(more, Run{start, steps, b, resume, sample})
         case "--resume":
           match rest:
@@ -425,7 +425,7 @@ def run_go(args: List<String>, r: Run) -> Run:
               r
             case Con{b, more}:
               match r:
-                case Run{start, steps, save, resume, sample}:
+                case Run{start, +steps, save, resume, sample}:
                   run_go(more, Run{start, steps, save, b, sample})
         case "--start":
           match rest:
@@ -433,7 +433,7 @@ def run_go(args: List<String>, r: Run) -> Run:
               r
             case Con{b, more}:
               match r:
-                case Run{start, steps, save, resume, sample}:
+                case Run{start, +steps, save, resume, sample}:
                   run_go(more, Run{nat_or(Nat.read(b), start), steps, save, resume, sample})
         case "--steps":
           match rest:
@@ -441,7 +441,7 @@ def run_go(args: List<String>, r: Run) -> Run:
               r
             case Con{b, more}:
               match r:
-                case Run{start, steps, save, resume, sample}:
+                case Run{start, +steps, save, resume, sample}:
                   run_go(more, Run{start, nat_or(Nat.read(b), steps), save, resume, sample})
         case _:
           run_go(rest, r)
@@ -486,8 +486,12 @@ def finish(save: String, sample: Bool, tr: T.Train<B4P()>, +data: List<&2, F32>)
 
 def run_with(+data: List<&2, F32>, r: Run) -> IO(Unit):
   match r:
-    case Run{start, steps, save, resume, sample}:
+    case Run{start, +steps, save, resume, sample}:
       do IO<Unit>:
+        # the run's own configuration, so the record cannot describe a different one (ISSUE-059)
+        Unit <- IO.print(String.append("hidden: ", Nat.show(hidden())))
+        Unit <- IO.print(String.append("steps: ", Nat.show(steps)))
+        Unit <- IO.print(String.append("euler: ", Nat.show(euler())))
         T.OptCfg.check(cfg())
         tr0 : T.Train<B4P()> <- start_tr(resume)
         tr2 : T.Train<B4P()> <- train_steps(start, steps, tr0, data)
