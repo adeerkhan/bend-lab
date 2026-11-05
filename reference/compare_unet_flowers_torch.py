@@ -9,7 +9,7 @@ the model in torch, and compares every cell.
 
 Two comparisons are printed: torch against Bend, and torch against the NumPy
 twin, so a disagreement says whether the model or one reference is wrong.
-Writes `results/diffusion-unet/compare-torch.json`.
+Writes `results/diffusion-unet/trained/compare-torch.json`.
 """
 import json
 import os
@@ -81,7 +81,7 @@ def main():
     ok = worst <= 1.0
     print(f"{'ok  ' if ok else 'FAIL'} forward: {bend.size} cells  bend-torch {err.max():.3e}  "
           f"bend-numpy {d_bn:.3e}  torch-numpy {d_tn:.3e}  worst {worst:.2f}x the allowance")
-    out = os.path.join(ROOT, "results/diffusion-unet/compare-torch.json")
+    out = os.path.join(ROOT, "results/diffusion-unet/trained/compare-torch.json")
     os.makedirs(os.path.dirname(out), exist_ok=True)
     json.dump({"task": "unet-flowers", "cells": int(bend.size), "atol": ATOL, "rtol": RTOL,
                "bend_vs_torch": float(err.max()), "worst_ratio": worst,

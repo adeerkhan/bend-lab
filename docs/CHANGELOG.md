@@ -13,7 +13,7 @@ What changed for the people who run the lab. Internal refactors are not listed.
 - **Gates**: `reference/test_unet_flowers.py` (NumPy, whole forward, 4.47e-08 against 1e-6),
   `reference/compare_unet_flowers_torch.py` (PyTorch, same), `reference/test_unet_flowers_checkpoint.py` (40 steps ==
   20 + 20 resumed, bit-identical, 5,489 weights).
-- **Record**: `reference/unet_flowers_results.py` writes `results/diffusion-unet/{run.json,loss.svg,samples.svg,stats.svg}`;
+- **Record**: `reference/unet_flowers_results.py` writes `results/diffusion-unet/trained/{run.json,loss.svg,samples.svg,stats.svg}`;
   `examples/diffusion/unet/TRAINED.md` carries the numbers and the reproduce commands.
 - **Honest limit**: the loss falls 1.1279 -> 0.8131 (a predictor of zero scores 1.0645) but the draws are noise, not
   flowers — the model fits the marginal field at this size. Recorded as ISSUE-065 with the three architectures measured.

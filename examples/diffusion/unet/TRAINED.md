@@ -23,11 +23,11 @@ negative. Last recorded 2026-11-05.
 | draws, mean / std | **+0.536 / 0.992** |
 | data, mean / std | +0.398 / 0.226 |
 
-![loss](../../../results/diffusion-unet/loss.svg)
+![loss](../../../results/diffusion-unet/trained/loss.svg)
 
-![16 draws](../../../results/diffusion-unet/samples.svg)
+![16 draws](../../../results/diffusion-unet/trained/samples.svg)
 
-![drawn against data](../../../results/diffusion-unet/stats.svg)
+![drawn against data](../../../results/diffusion-unet/trained/stats.svg)
 
 ## What that means
 
