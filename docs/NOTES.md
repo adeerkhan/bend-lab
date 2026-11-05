@@ -2344,11 +2344,13 @@ match-order trap, and splitting the builder into two defs is mutual recursion, w
 first and `n` inside the branches is what works. The structural facts that made the earlier lemmas go: `init_p` (drop
 the top bit) and `shl.put` (shift one bit in) are the *same recursion*, differing only at length 0.
 
-The remaining wall is now precise. `top(p2(d, 32)) == False` for `d <= 30` closes as `Q(K,d) = top(p2(d, d+K)) == False`
-by induction on `d`, but applying it at 32 needs `K = 32-d`, and Base states no `Nat.sub` law. And the mask and
-subtraction facts (D, F) are a separate layer, not a longer induction: Base has **no** law for `Word.and`, `Word.sub`
-or `Word.cmp` (only `Word.adc` and `Word.add_comm`), so D needs `sub(2^d,1) = ones(d)`, a mask law, and a comparison
-law, each over bit lists with borrow.
+**C is proved in its structural form**: `top_p2` says `top(p2(d, d+2+j)) == False` for every `j, d`, by induction on
+`d`, since `p2(d+1,n)` is `F :: p2(d,n-1)` and `top_cons` reduces a cons to its tail. The only piece left is the
+32-bit instantiation, `top(32, p2(d,32))`, which needs `d + (2+j) == 32` — the bound `d <= 30`, and that is the array
+law's to carry (a U32 holds `2^d`, so `d <= 31`; the top bit is exactly the `d = 31` edge). No standalone bit lemma can
+supply it. D and F remain a separate layer: Base has **no** law for `Word.and`, `Word.sub` or `Word.cmp` (only
+`Word.adc` and `Word.add_comm`), so D needs `sub(2^d,1) = ones(d)`, a mask law, and a comparison law, each over bit
+lists with borrow.
 
 Two facts worth keeping: **Lean 4.34.0 is installed** at `~/.elan/bin/lean` and is simply not on the shell PATH, so
 `PATH=$HOME/.elan/bin:$PATH bend FILE --verdict` proves locally (the earlier "no Lean here" note was the PATH, not the

@@ -27,9 +27,10 @@ need word inductions. **Six lemmas are proved** in `bend-lab/.local/u32_bits.ben
 `d` first and `n` inside the branches: matching `d` after `n` is the match-order trap, and two defs are mutual
 recursion, which is forbidden. `init_p` and `shl.put` are the same recursion at different lengths.
 
-**C's wall, precisely:** `top(p2(d,32)) == False` (`d <= 30`) closes as `Q(K,d) = top(p2(d,d+K)) == False` by
-induction on `d`, but at 32 it needs `K = 32-d`, i.e. `Nat.add(d, Nat.sub(32,d)) == 32`, and Base states no `Nat.sub`
-law. **D/F are a separate layer, not a longer induction:** Base has no law for `Word.and`, `Word.sub` or `Word.cmp`
+**C is proved structurally:** `top_p2` gives `top(p2(d, d+2+j)) == False` for every `j, d` (induction on `d`; the
+step is `p2(d+1,n) = F :: p2(d,n-1)` and `top_cons`). Only the 32-bit instantiation is left — `top(32, p2(d,32))`
+needs `d + (2+j) == 32`, i.e. the `d <= 30` bound, which the *array* law must carry (a U32 holds `2^d`, so `d <= 31`;
+`d = 31` is the top-bit edge). **D/F are a separate layer, not a longer induction:** Base has no law for `Word.and`, `Word.sub` or `Word.cmp`
 (only `Word.adc`, `Word.add_comm`), so D needs `sub(2^d,1) = ones(d)`, a mask law and a comparison law; F needs
 subtraction-without-borrow. Then `ASet.Apart` on perfect trees, `Mat.to_list(Mat.of_list xs) == xs`, and #29's adjoint.
 Oracle: `tensor-array/tests/apart.bend`, 21,590 pairs, 0 failures.
