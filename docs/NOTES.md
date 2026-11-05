@@ -2216,3 +2216,20 @@ The open `issues-hit` entries that are ours, and what each turned out to need.
 - **ISSUE-011 closed** (`FullAttention` in v1.3.0) and **ISSUE-026 narrowed**: of the three layers a TEM needs, RoPE2d
   is PR #33 and Tile is PR #34; what is left is `LayerNormMod` and the gated residual.
 
+
+## 2026-11-05 — two probes, and what they said (040 pinned; 044 localised)
+
+- **ISSUE-040 is solved on paper and blocked on a re-record.** `reference/probe_vit_tokens.bend` prints the example's
+  `step_in(0, synthetic)` (1024 x 20 raw words) so the token order can be *read*. Decoded: row 0 is image 0's pixels
+  with level `t_of(0, 63)`'s coefficients and its `temb`, no pair swap. So the `List.reverse` in `ab_img`/`te_img`
+  corrects three things at once — the image order, the `(a, b)` pair order, and the 8-value `temb` block order. The fix
+  is to drop both reverses, cons `(sqrt(abar), sqrt(1-abar))` in `ab64_rev`, and reverse each `temb_of` block; the probe
+  then matches the twin's reconstruction on all 1024 rows to the last float digit. What is not done is the recorded run:
+  a direct `bend examples/diffusion/vit/main.bend` dies with `machine stack overflow`, so it must go through
+  `BEND_MEM=9G scripts/bend-guard.sh` (or `make experiment`) and `reference/vit_results.py` to write `run.json`.
+- **ISSUE-044 is localised, not solved.** The images -> rows -> cells rewrite (fuel first, because Bend needs one
+  shrinking argument) compiles, and `test_flow64.py` says `ok input` but `FAIL forward 0.568` — the first two tokens
+  agree and the rest do not, which points at rows 64..127 (the per-image row reset). The next step is the same
+  instrument: print the example's `inp` at rows 64/65 and compare with `tokens_of`'s, rather than reading a forward
+  difference. Both examples are back to their green state.
+

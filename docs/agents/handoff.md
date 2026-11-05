@@ -7,6 +7,23 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-05 (later) — 040 solved on paper, 044 localised, both blocked on re-records
+
+**ISSUE-040.** `reference/probe_vit_tokens.bend` (new) prints `step_in(0, synthetic)` so the token order is read, not
+inferred. It shows row 0 = image 0's pixels with level `t_of(0,63)`'s coefficients and `temb`, **no pair swap** — so the
+`List.reverse` in `ab_img`/`te_img` is correcting three things at once: image order, `(a,b)` pair order, and the 8-value
+`temb` block. Fix: drop both reverses, cons `(sqrt(abar), sqrt(1-abar))` in `ab64_rev`, reverse each `temb_of` block in
+`te_rev`. Probe-verified: all 1024 rows match `twin_vit`'s reconstruction to the last float digit. **Not done: the
+recorded run.** A direct `bend examples/diffusion/vit/main.bend` dies with `machine stack overflow`; it must run as
+`BEND_MEM=9G scripts/bend-guard.sh bend examples/diffusion/vit/main.bend > log`, then `reference/vit_results.py log`
+writes `run.json`, then `reference/test_diffusion_vit.py`. Reverted until that lands.
+
+**ISSUE-044.** The images → rows → cells rewrite (fuel first, because Bend needs one shrinking argument) compiles and
+`twin_flow64.tokens_of` uses `k % TK`, but `test_flow64.py` gives `ok input` (first two tokens) and `FAIL forward
+0.568`: rows 64..127 still disagree. Next instrument: print the example's `inp` at rows 64/65 inside
+`probe_flow64.bend` and compare with `tokens_of`'s rows, then re-record with `make experiment TASK=flowers-flow` and
+`reference/test_flow64.py`. Reverted to green.
+
 ## 2026-11-05 — our own debt: one fixed, one found deeper, the rest recorded
 
 **Fixed and pushed (`bend-lab` main).** **ISSUE-042**: a generated dataset's pin now lives in the task
