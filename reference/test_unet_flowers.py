@@ -66,7 +66,8 @@ TOL = 1e-5
 PARTS = [(16, 45), (16,), (16,), (16,),
          (16, 144), (16,), (16,), (16,),
          (16, 144), (16,), (16,), (16,),
-         (1, 16), (1,)]
+         (1, 16), (1,),
+         (1, 5), (1,)]
 
 
 def im2col(x, k=3, p=1, s=1):
@@ -112,7 +113,7 @@ def forward(flat, inp):
         off += size
     if off != f.size:
         raise SystemExit(f"the probe's weights are {f.size} values, the model takes {off}")
-    w1, b1, g1, be1, w3, b3, g4, be4, w4, b4, g3, be3, wh, bh = parts
+    w1, b1, g1, be1, w3, b3, g4, be4, w4, b4, g3, be3, wh, bh, wl, bl = parts
 
     outs = []
     for img in range(NIMG):
@@ -121,6 +122,7 @@ def forward(flat, inp):
         low = silu(groupnorm(conv(y, w3, b3, s=2), g4, be4))
         z = F(silu(groupnorm(conv(up2(low), w4, b4, s=1), g3, be3)) + y)
         o = conv(up2(z), wh, bh, k=1, p=0, s=1)          # the head: a 1x1 conv, no activation
+        o = F(o + conv(x, wl, bl, k=1, p=0, s=1))        # plus the learned linear bypass
         outs.append(o.reshape(HW, 1))
     return np.concatenate(outs).reshape(-1)
 
@@ -173,7 +175,7 @@ def main():
     want = forward(w, inp)
 
     ok = True
-    ok &= check("weights", w.size == 5489, f"{w.size} values, the model takes 5489")
+    ok &= check("weights", w.size == 5495, f"{w.size} values, the model takes 5495")
     ok &= check("output shape", got.size == want.size, f"{got.size} cells, twin {want.size}")
     d = float(np.max(np.abs(got.astype(np.float64) - want.astype(np.float64)))) if got.size == want.size else float("inf")
     ok &= check("forward", d <= TOL, f"two images, maxabs {d:.3e}  tol {TOL:g}")

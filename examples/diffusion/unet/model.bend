@@ -246,11 +246,34 @@ def Body() -> T.Layer<BodyP(), IN(), OUT(), BodyS()>:
     ~(T.Two<DownS(), LevelS()>), ~TopS(),
     T.Seq(~DownP(), ~LevelP(), ~IN(), ~MID(), ~MID(), ~DownS(), ~LevelS(), Down(), Level()), Top())
 
+# a learned linear bypass beside the U: the marginal conditional field is linear,
+# and a one-layer linear map finds it in 300 steps where the stack does not
+def LINP() -> Type:
+  T.Lin<5n, 1n>
+
+def LINS() -> Type:
+  TA.Mat<8192n, 5n>
+
+def bypass() -> T.Layer<LINP(), IN(), OUT(), LINS()>:
+  T.Conv2d(2n, INW(), 1n, 1n, 63n, 63n, 0n, 0n, 0n)
+
+def ForkP() -> Type:
+  T.Two<BodyP(), LINP()>
+
+def ForkS() -> Type:
+  T.Two<BodyS(), LINS()>
+
+def Forked() -> T.Layer<ForkP(), IN(), T.Two<OUT(), OUT()>, ForkS()>:
+  T.Fork(~BodyP(), ~LINP(), ~IN(), ~OUT(), ~OUT(), ~BodyS(), ~LINS(),
+    ~(m => T.Mat.dup(8192n, 5n, m)), ~(a => b => T.Mat.sum2(8192n, 5n, a, b)),
+    Body(), bypass())
+
 def ModelP() -> Type:
-  BodyP()
+  T.Two<ForkP(), Unit>
 
 def ModelS() -> Type:
-  BodyS()
+  T.Two<ForkS(), Unit>
 
 def Model() -> T.Layer<ModelP(), IN(), OUT(), ModelS()>:
-  Body()
+  T.Seq(~ForkP(), ~Unit, ~IN(), ~(T.Two<OUT(), OUT()>), ~OUT(), ~ForkS(), ~Unit,
+    Forked(), T.Add2(8192n, 1n))

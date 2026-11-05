@@ -1,15 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="560" height="170" viewBox="0 0 560 170">
 <rect width="560" height="170" fill="#101418"/>
-<rect x="120" y="30" width="137.8" height="10" fill="#5b8cff" opacity="0.9"/>
-<text x="263.7628695459" y="39" fill="#e6edf3" font-family="monospace" font-size="10">0.3981</text>
+<rect x="120" y="30" width="350.0" height="10" fill="#5b8cff" opacity="0.9"/>
+<text x="476.0" y="39" fill="#e6edf3" font-family="monospace" font-size="10">0.3981</text>
 <text x="112" y="39" fill="#98a2b3" text-anchor="end" font-family="monospace" font-size="10">mean data</text>
-<rect x="120" y="44" width="164.9" height="10" fill="#5ee6c8" opacity="0.9"/>
-<text x="290.9061738936236" y="53" fill="#e6edf3" font-family="monospace" font-size="10">0.4766</text>
+<rect x="120" y="44" width="315.2" height="10" fill="#5ee6c8" opacity="0.9"/>
+<text x="441.22857830652885" y="53" fill="#e6edf3" font-family="monospace" font-size="10">0.3586</text>
 <text x="112" y="53" fill="#98a2b3" text-anchor="end" font-family="monospace" font-size="10">mean drawn</text>
-<rect x="120" y="76" width="78.3" height="10" fill="#5b8cff" opacity="0.9"/>
-<text x="204.33805550104915" y="85" fill="#e6edf3" font-family="monospace" font-size="10">0.2264</text>
+<rect x="120" y="76" width="199.0" height="10" fill="#5b8cff" opacity="0.9"/>
+<text x="325.0254668456362" y="85" fill="#e6edf3" font-family="monospace" font-size="10">0.2264</text>
 <text x="112" y="85" fill="#98a2b3" text-anchor="end" font-family="monospace" font-size="10">std data</text>
-<rect x="120" y="90" width="350.0" height="10" fill="#5ee6c8" opacity="0.9"/>
-<text x="476.0" y="99" fill="#e6edf3" font-family="monospace" font-size="10">1.0115</text>
+<rect x="120" y="90" width="230.6" height="10" fill="#5ee6c8" opacity="0.9"/>
+<text x="356.63888567851006" y="99" fill="#e6edf3" font-family="monospace" font-size="10">0.2624</text>
 <text x="112" y="99" fill="#98a2b3" text-anchor="end" font-family="monospace" font-size="10">std drawn</text>
 </svg>

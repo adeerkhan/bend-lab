@@ -7,24 +7,26 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
-## 2026-11-05 (latest) — the UNet is trained; the gates are exact and the samples are noise
+## 2026-11-05 (latest) — the UNet trains and denoises; the channel order was the bug
 
 `examples/diffusion/unet/{model,train}.bend`: the two-level U (64→32→16→32→64, 16 channels, a group norm before every
-activation, the 32×32 skip, a 1×1 head) trained on 512 flowers by rectified flow, with
-`--steps/--start/--save/--resume/--no-sample/--probe`. Record: `results/diffusion-unet/trained/{run.json,loss.svg,
-samples.svg,stats.svg}` from 3,000 steps; write-up `examples/diffusion/unet/TRAINED.md`.
+activation, the 32×32 skip, a 1×1 linear head) plus a **learned linear bypass** from the input, trained on 512 flowers
+by rectified flow, with `--steps/--start/--save/--resume/--no-sample/--probe`. Record:
+`results/diffusion-unet/trained/{run.json,loss.svg,samples.svg,stats.svg}` from 6,000 steps; write-up
+`examples/diffusion/unet/TRAINED.md`.
 
-**Gates, all exact:** NumPy twin on the whole forward **1.01e-06** (gate 1e-5, measured reason in the file), torch twin
-**1.13e-06**, checkpoint **bit-identical** (40 == 20 + 20, 5,489 weights).
+**The numbers:** loss **1.2687 → 0.1652** against a zero predictor at 1.0645 (84% below); draws mean/std
+**+0.359 / 0.262** against the data's +0.398 / 0.226. Structure in the right proportion, blurry rather than
+recognisable; the levers are 32 channels, 8 images a step, 20k steps.
 
-**The open half is the learning** (ISSUE-065): loss 1.1284 → 0.8364 against a zero predictor at 1.0645, draws of std
-1.012 against the data's 0.226. Eight variants measured; a *single 1×1 convolution* reaches **0.086**, so the marginal
-field is linear and the deep stack is stuck in the mean-field basin. The next lever is a learned linear bypass (5→1
-added to the head), then 32 channels, 8 images a step, 20k steps.
+**The bug that cost the day:** the training pair builder and the sampler built the five input channels in opposite
+orders (`[f4,f3,f2,f1,xt]` against `[x,f1,f2,f3,f4]`), so the field was learned on one permutation and applied to
+another — the draws stayed at the noise's spread while the loss fell. Fixed; the spread fell from 1.01 to 0.262. Two
+more of ours were fixed with it: `init_arr` zeroed offsets from the first two-channel layout, and `drawn` read the
+sampler's state in pairs.
 
-**Two of our own bugs fixed on the way:** `init_arr` scrambled the weights (offsets from the first two-channel layout
-zeroed real weights), and `drawn` read the sampler's state in pairs (halving and scrambling every picture). Both are in
-the ledger; the second is why an earlier "noise" grid looked worse than the model.
+**Gates, exact:** NumPy twin 1.01e-06 (gate 1e-5), torch twin 1.13e-06, checkpoint bit-identical (5,495 weights).
+`make check` green.
 
 ## 2026-11-05 (latest) — UNet level 2, the flow re-measured, item 4 opened
 

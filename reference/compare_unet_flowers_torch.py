@@ -41,7 +41,7 @@ def forward(flat, inp):
         size = int(np.prod(shape))
         parts.append(t(w[off:off + size].reshape(shape)))
         off += size
-    w1, b1, g1, be1, w3, b3, g4, be4, w4, b4, g3, be3, wh, bh = parts
+    w1, b1, g1, be1, w3, b3, g4, be4, w4, b4, g3, be3, wh, bh, wl, bl = parts
 
     def conv(h, wt, b, stride, k=3):
         return Fn.conv2d(h, wt.reshape(wt.shape[0], -1, k, k), b, stride=stride, padding=1 if k > 1 else 0)
@@ -56,7 +56,7 @@ def forward(flat, inp):
         y = Fn.silu(gn(conv(x, w1, b1, 2), g1, be1))
         low = Fn.silu(gn(conv(y, w3, b3, 2), g4, be4))
         z = Fn.silu(gn(conv(up(low), w4, b4, 1), g3, be3)) + y
-        o = conv(up(z), wh, bh, 1, k=1)
+        o = conv(up(z), wh, bh, 1, k=1) + conv(x, wl, bl, 1, k=1)
     return o.permute(0, 2, 3, 1).reshape(-1).numpy().astype(F)
 
 

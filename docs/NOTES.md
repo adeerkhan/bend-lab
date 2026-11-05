@@ -2398,3 +2398,22 @@ target's is 1.03), and it cannot discover the linear map that a one-layer model 
 
 **Next:** a learned linear bypass (5→1 added to the head) should reproduce 0.086 and give the body a gradient; then 32
 channels, 8 images a step, 20k steps. ISSUE-065.
+
+## 2026-11-05 — the UNet's draws were noise because two functions built the input differently
+
+The trained flow (`examples/diffusion/unet/{model,train}.bend`) is recorded at 6,000 steps: **1.2687 → 0.1652** against
+a zero predictor at **1.0645** (84% below), 16 draws with mean/std **+0.359 / 0.262** against the data's
++0.398 / 0.226. The pictures show structure in the right proportion, blurry rather than recognisable.
+
+**The root cause was a permutation, and it took a measured contradiction to find it.** The model trained (loss fell)
+and every gate passed, yet the draws stayed at the *noise's* spread (1.01 against the data's 0.226). The training pair
+builder consed `[xt, f1, f2, f3, f4]` per pixel and then reversed the whole list, which yields `[f4, f3, f2, f1, xt]`,
+while the sampler built `[x, f1, f2, f3, f4]`: the field learned on one order was applied to another. After the fix the
+draws' spread fell to 0.262. Two smaller faults were fixed with it: `init_arr` zeroed offsets from the first
+two-channel layout (corrupting weights), and the draw loop read the sampler's state in pairs (halving the pictures).
+
+**What the variants ruled out**, each measured: group norms vs none, an outer skip (`v = head + x`) which diverged
+because the field at `t = 0` is `-x`, lr 1e-2 which diverged after ~1,000 steps, 3e-3 which was flat, a single 1×1
+convolution reaching 0.086 in 300 steps (the marginal field is linear), and a learned linear bypass beside the U which
+took the loss from 0.84 to 0.19 at 3,000 steps. ISSUE-065 carries the next levers: 32 channels, 8 images a step, 20k
+steps.

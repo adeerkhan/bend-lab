@@ -15,11 +15,13 @@ What changed for the people who run the lab. Internal refactors are not listed.
   (40 steps == 20 + 20 resumed, bit-identical, 5,489 weights).
 - **Record**: `reference/unet_flowers_results.py` writes `results/diffusion-unet/trained/{run.json,loss.svg,samples.svg,stats.svg}`;
   `examples/diffusion/unet/TRAINED.md` carries the numbers and the reproduce commands.
-- **Honest limit**: the loss falls 1.1284 -> 0.8364 over 3,000 steps (a predictor of zero scores 1.0645) but the draws
-  are noise, not flowers. Eight variants were measured; a single 1x1 convolution reaches 0.086, so the marginal field is
-  linear and the deep stack settles in the mean-field basin. Recorded as ISSUE-065 with the next lever (a learned
-  linear bypass). Two of our own bugs were found and fixed: `init_arr` scrambled the weights, and the draw loop halved
-  and scrambled every picture.
+- **What it reaches**: 6,000 steps take the loss **1.2687 -> 0.1652** against a predictor of zero at 1.0645 (84% below),
+  and the 16 draws now have the data's statistics (mean/std +0.359 / 0.262 against +0.398 / 0.226) and visible
+  structure, blurry rather than recognisable. The record and the measured variants are in `TRAINED.md` and ISSUE-065.
+- **The bug that made the first records noise**: the training pair builder and the sampler built the five input
+  channels in opposite orders, so the field was learned on one permutation and applied to another. Fixed with two
+  smaller ones (`init_arr` zeroed offsets from the first two-channel layout; the draw loop read the sampler's state in
+  pairs).
 
 ### The flow's settings were re-measured, and the torch comparison closes
 
