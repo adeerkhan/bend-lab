@@ -4,6 +4,14 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### A wrong dataset is refused before the run, not after
+
+- **`reference/experiment.py`**: a task's *generated* dataset can now carry a `pin` (`roots` to search and
+  `name -> sha256`), and `run_bend` checks it **before the build and the run**. `flowers-flow` is pinned this way, so a
+  stale or corrupted export costs a second instead of a 19.6-minute run (ISSUE-042). `_flowers_paths()` calls the same
+  check, so the pre-run pin and the parse cannot disagree, and `--check-dataset TASK` runs the check and exits — which
+  is how it is tested without a run.
+
 ### The UNet's forward, composed and confronted with a twin
 
 ### The conv round trip at any stride and padding

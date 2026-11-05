@@ -2190,3 +2190,29 @@ buys nothing until the work per step is much larger.
   is a bijection the decode already gives; for overlapping windows it is a fiber
   sum, which needs `Nat` equality reasoning the codebase does not have. Recorded
   in `docs/limitations.md` and BendTorch `NOTES.md`.
+
+## 2026-11-05 — our own debt, taken in order: the runner pin, the ViT levels, and the two examples
+
+The open `issues-hit` entries that are ours, and what each turned out to need.
+
+- **ISSUE-042, fixed.** A generated dataset had no way to be pinned, so `flowers-flow`'s export was hashed inside the
+  *parse*, after 19.6 minutes of training. The pin now lives in the task (`dataset["pin"]: {roots, files}`),
+  `check_pins` enforces it, and `run_bend` calls it before the build; `_flowers_paths()` calls the same function so the
+  pre-run check and the parse cannot drift. `--check-dataset TASK` runs exactly that check and exits — `flowers-flow:
+  2 pinned file(s) ok` on the real export, and a one-byte-flipped copy in a temporary root is refused with both
+  digests printed.
+- **ISSUE-040, still open, and deeper than the ledger said.** `ab_img`/`te_img` reverse lists that `ab_rev`/`te_rev`
+  build ascending, and the ledger called that a permutation of which image draws which level — "the pixels, the
+  coefficients and the embedding stay consistent within an image". **Not quite.** Reversing a 128-value row also
+  swaps each pixel's `(a, b)` pair, and `twin_vit`'s token order was derived from the old, reversed rows. Dropping the
+  two `List.reverse`s and setting `levels_of(s) = t_of(s, i)` takes the twin's step-0 loss to 1.0093014 against Bend's
+  1.00921 — a 9.2e-5 gap, where the pre-fix pair matched to 6.3e-9. So the fix needs the twin's token order re-derived
+  from the corrected rows (and its own `tokens_of` checked pair by pair) before either side is re-recorded; the
+  experiment run and `vit_results.py` then have to be redone. Reverted to the green state rather than shipped at
+  9.2e-5, with the measurement above as the starting point.
+- **ISSUE-038, accepted with the decision written down.** The target's noise costs one `fill_gauss` now (29 → 4-5 ms);
+  the input's path needs a *list* in raster order, which a fill cannot produce, so it stays as it is until a
+  measurement says the list is avoidable.
+- **ISSUE-011 closed** (`FullAttention` in v1.3.0) and **ISSUE-026 narrowed**: of the three layers a TEM needs, RoPE2d
+  is PR #33 and Tile is PR #34; what is left is `LayerNormMod` and the gated residual.
+

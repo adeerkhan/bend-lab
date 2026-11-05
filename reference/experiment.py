@@ -293,29 +293,48 @@ FLOWERS_SHA = {
 }
 
 
-def _flowers_paths():
-    """The two flower exports, hash-checked: the runner's cache, then the machine's.
+def _pinned_path(name, roots):
+    """The first place a pinned local file exists: the runner's cache, then the machine's."""
+    for root in roots:
+        base = os.path.expanduser(root) if root.startswith("~") else os.path.join(ROOT, root)
+        path = os.path.join(base, name)
+        if os.path.exists(path):
+            return path
+    return None
 
-    `reference/flowers_export.py --split` writes them to the machine cache; the
-    runner's `reference/.cache/datasets/flowers/` is a copy, so a run under
-    MLBEND_DATA and a run by hand read the same bytes. A run whose export is
-    not the pinned one is refused here, because the program's numbers are the
-    export's numbers.
+
+def check_pins(cfg):
+    """Refuse a pinned *local* dataset whose bytes are not the pinned ones, before the program runs.
+
+    A dataset with `files` is fetched and hashed by `dataset_probe`; a generated one (flowers64 is an export, not a URL)
+    has no URL to fetch, so its pin is `dataset["pin"]`: root directories to search and name -> sha256. This runs before
+    the build and the run, so a wrong export costs a second, not a run (ISSUE-042: the check used to run inside the
+    parse, after 19.6 minutes).
     """
-    cache = os.path.join(ROOT, "reference/.cache/datasets/flowers")
-    home = os.path.expanduser("~/.cache/bend-lab/flowers")
-    got = []
-    for name, want in FLOWERS_SHA.items():
-        near = os.path.join(cache, name)
-        path = near if os.path.exists(near) else os.path.join(home, name)
-        if not os.path.exists(path):
-            raise SystemExit(f"flowers64: {path} is missing; run "
-                             "`reference/.venv/bin/python reference/flowers_export.py --split`")
+    pin = cfg["dataset"].get("pin") or {}
+    if not pin:
+        return []
+    seen = []
+    for name, want in sorted(pin.get("files", {}).items()):
+        path = _pinned_path(name, pin.get("roots", []))
+        if path is None:
+            raise SystemExit(f"{cfg['dataset']['name']}: {name} is missing from {pin.get('roots')}; "
+                             "run the task's export step first")
         digest = hashlib.sha256(open(path, "rb").read()).hexdigest()
         if digest != want:
-            raise SystemExit(f"flowers64: {path} is {digest}, pinned {want}")
-        got.append(path)
-    return got[0], got[1]
+            raise SystemExit(f"{cfg['dataset']['name']}: {path} is {digest}, pinned {want}")
+        seen.append(path)
+    return seen
+
+
+def _flowers_paths():
+    """The two flower exports, hash-checked by the task's pin: (train, hold).
+
+    One definition serves both the pre-run check and the parse (ISSUE-042): the pin lives in the `flowers-flow` task,
+    `check_pins` enforces it, and the export's own refusal message is that function's.
+    """
+    got = {os.path.basename(p): p for p in check_pins(TASKS["flowers-flow"])}
+    return got["flowers64-train-gray.u8"], got["flowers64-hold-gray.u8"]
 
 
 def parse_flowers_flow(out):
@@ -584,7 +603,9 @@ TASKS = {
         "program": "examples/diffusion/flowers_flow/main.bend",
         "dataset": {"name": "flowers64", "rows": 3874, "features": 64,
                     "source": "generated: reference/flowers_export.py --split from the pinned Oxford Flowers parquet",
-                    "files": []},
+                    "files": [],
+                    "pin": {"roots": ["reference/.cache/datasets/flowers", "~/.cache/bend-lab/flowers"],
+                            "files": dict(FLOWERS_SHA)}},
         "seed": 0,
         "stages": {"program": "bench/plumbing_flow64/main.bend",
                    "note": "one step of the 64x64 flow, not the run; the input stage is the pair build (noise, mix, tokens)"},
@@ -773,6 +794,9 @@ def run_binary(task, binary, seed=0, repeat=1, threads=None):
 
 
 def run_bend(task, cfg, repeat=1, seed=0, threads=None):
+    # the pins first: a wrong local dataset must cost a second, not the run (ISSUE-042)
+    for path in check_pins(cfg):
+        print(f"pinned: {os.path.relpath(path, ROOT)}")
     """Build and run once; the convenience the tests use."""
     binary, build_seconds = build_bend(task, cfg)
     output, times = run_binary(task, binary, seed, repeat, threads)
@@ -1174,6 +1198,8 @@ def main():
     parser.add_argument("--task", choices=sorted(TASKS), help="the task to run")
     parser.add_argument("--all", action="store_true", help="every task")
     parser.add_argument("--list", action="store_true", help="say what the tasks are")
+    parser.add_argument("--check-dataset", choices=sorted(TASKS),
+                        help="check a task's pinned local dataset and exit (no build, no run)")
     parser.add_argument("--wandb", action="store_true", help="log the manifest to Weights & Biases")
     parser.add_argument("--offline", action="store_true", help="force W&B offline mode")
     parser.add_argument("--project", default=os.environ.get("WANDB_PROJECT", "mlbend"))
@@ -1200,6 +1226,13 @@ def main():
 
     if args.summary:
         print(summary(os.path.join(ROOT, "results")))
+        return 0
+
+    if args.check_dataset:
+        paths = check_pins(TASKS[args.check_dataset])
+        for path in paths:
+            print(f"pin ok: {os.path.relpath(path, ROOT)}")
+        print(f"{args.check_dataset}: {len(paths)} pinned file(s) ok")
         return 0
 
     if args.list:

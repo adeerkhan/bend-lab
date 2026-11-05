@@ -1,0 +1,379 @@
+{
+  "schema": "mlbend.experiment/3",
+  "created_at": "2026-10-31T20:14:05.339799+00:00",
+  "task": {
+    "name": "iris-crossval",
+    "description": "logistic regression over iris, five stratified folds, scaler fitted on the training rows only",
+    "program": "examples/classification/crossval/main.bend",
+    "dataset": {
+      "name": "iris",
+      "rows": 150,
+      "features": 4,
+      "source": "https://huggingface.co/datasets/mstz/iris",
+      "files": [
+        "https://huggingface.co/datasets/mstz/iris/resolve/e99306d5df05d2ea66a188ea936037f6588a20e9/iris.data"
+      ],
+      "expected_sha256": "6f608b71a7317216319b4d27b4d9bc84e6abd734eda7872b71a458569e2656c0",
+      "bytes": 4551,
+      "sha256": "6f608b71a7317216319b4d27b4d9bc84e6abd734eda7872b71a458569e2656c0",
+      "fetch_seconds": 0.001,
+      "cache": "/home/adeerkhan/github/bend/bend-lab/reference/.cache/datasets"
+    },
+    "seed": 42
+  },
+  "seeds": [
+    42,
+    43,
+    44,
+    45,
+    46
+  ],
+  "trainer": "bend",
+  "variant": {
+    "trainer": "bend",
+    "lane": "cpu",
+    "threads": null,
+    "bend": "2.0.38"
+  },
+  "git": {
+    "commit": "4f78ae5",
+    "branch": "main",
+    "dirty": true
+  },
+  "bend": {
+    "version": "2.0.38"
+  },
+  "packages": [
+    {
+      "name": "bend-ml-autograd",
+      "version": "0.1.1.0",
+      "hash": "0x0ed882696c6c048c64c66242a999a426"
+    },
+    {
+      "name": "bend-ml-bpe-tokenizer",
+      "version": "0.1.3.0",
+      "hash": "0x559a0abb492a951db15be435191b6d0a"
+    },
+    {
+      "name": "bend-ml-nat-lemmas",
+      "version": "0.1.0.0",
+      "hash": "0xa7aa06c09e97c6747c12cc64bb5203d9"
+    },
+    {
+      "name": "bend-ml-nat-lemmas",
+      "version": "0.1.1.0",
+      "hash": "0x2bbe4207657ea8b1158567d930651411"
+    },
+    {
+      "name": "bend-ml-nat-lemmas",
+      "version": "0.1.2.0",
+      "hash": "0x09966385f3a8541fb22fd49450cdf477"
+    },
+    {
+      "name": "bend-ml-tensor",
+      "version": "0.1.0.0",
+      "hash": "0xf9837737d2c3f58ae1d0c5df42255584"
+    },
+    {
+      "name": "bend-ml-tensor-array",
+      "version": "0.1.14.0",
+      "hash": "0x0f6479f09ada7ae614e64e31e8f5a730"
+    },
+    {
+      "name": "bend-ml-tensor-array",
+      "version": "0.1.16.0",
+      "hash": "0x0159e1f0f11cc1d285ac6a993d19ba8a"
+    },
+    {
+      "name": "bend-ml-tensor-fork",
+      "version": "0.1.4.0",
+      "hash": "0xd13098b0f80022977b3ddb83a57e3c50"
+    },
+    {
+      "name": "bend-ml-tensor-gpu",
+      "version": "0.1.2.1",
+      "hash": "0x454d8eb5320624d5b121fdc9d78ee0a6"
+    },
+    {
+      "name": "bendtorch-gpu",
+      "version": "1.1.1.0",
+      "hash": "0x3c22148d676c2988827dae103c18f499"
+    },
+    {
+      "name": "mlbend-cluster",
+      "version": "0.1.0.0",
+      "hash": "0x0c4fbc7d44d2e3e47247a6c1f12c05e0"
+    },
+    {
+      "name": "mlbend-datasets",
+      "version": "0.1.6.0",
+      "hash": "0xf3d145d639153c61b826e4f60d3c0dcd"
+    },
+    {
+      "name": "mlbend-generative",
+      "version": "0.1.1.0",
+      "hash": "0xd48e7ce018b6fa7dc613b629e4260a23"
+    },
+    {
+      "name": "mlbend-huggingface",
+      "version": "0.1.1.0",
+      "hash": "0x9f97047b6ffb57443a7a2a2f0adefcbd"
+    },
+    {
+      "name": "mlbend-metrics",
+      "version": "0.1.0.0",
+      "hash": "0x9afaa60ee4d17706cb14d6ec20d1d4ae"
+    },
+    {
+      "name": "mlbend-pipeline",
+      "version": "0.1.0.0",
+      "hash": "0xea73a86e2118529cadd597fb3727979b"
+    },
+    {
+      "name": "mlbend-preprocess",
+      "version": "0.1.0.0",
+      "hash": "0xa8182854f375cd61135ccd32993993cc"
+    },
+    {
+      "name": "mlbend-report",
+      "version": "0.1.0.0",
+      "hash": "0x97687e0483c49ddb64fe1ee5f5244927"
+    },
+    {
+      "name": "mlbend-select",
+      "version": "0.1.0.0",
+      "hash": "0xf6594aa2392363c8ab774bc81fb20b9d"
+    },
+    {
+      "name": "mlbend-split",
+      "version": "0.1.1.0",
+      "hash": "0xe8b7953f71ec5b441a90a08e0961269b"
+    }
+  ],
+  "machine": {
+    "platform": "Linux-7.2.13-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "machine": "x86_64",
+    "processor": "",
+    "cpu_count": 28,
+    "python": "3.14.8",
+    "numpy": "2.5.4"
+  },
+  "run": {
+    "build_seconds": 114.956,
+    "seconds_min": 0.185,
+    "seconds_all": [
+      0.205,
+      0.192,
+      0.185,
+      0.194,
+      0.189
+    ],
+    "repeat": 1,
+    "fetch_seconds": 0.001,
+    "compute_seconds": 0.184,
+    "reference_seconds": 3.429,
+    "speed_ratio": 18.519
+  },
+  "stages": [],
+  "stages_source": null,
+  "counts": {},
+  "peaks": {},
+  "bounds": {},
+  "notes": [],
+  "seed_runs": [
+    {
+      "seed": 42,
+      "metrics": {
+        "mean_accuracy": {
+          "bend": 0.9333333,
+          "reference": 0.9333333333333333,
+          "delta": -3.333333331578814e-08,
+          "tolerance": 1e-06,
+          "mode": "absolute",
+          "pass": true
+        },
+        "fold_min": {
+          "bend": 0.8333333,
+          "reference": 0.8333333333333334,
+          "delta": -3.333333331578814e-08,
+          "tolerance": 1e-06,
+          "mode": "absolute",
+          "pass": true
+        },
+        "fold_max": {
+          "bend": 0.96666664,
+          "reference": 0.9666666666666667,
+          "delta": -2.666666665263051e-08,
+          "tolerance": 1e-06,
+          "mode": "absolute",
+          "pass": true
+        }
+      },
+      "run_seconds": 0.205,
+      "reference_seconds": 3.429
+    },
+    {
+      "seed": 43,
+      "metrics": {
+        "mean_accuracy": {
+          "bend": 0.93999994,
+          "reference": 0.9400000000000001,
+          "delta": -6.000000007944095e-08,
+          "tolerance": 1e-06,
+          "mode": "absolute",
+          "pass": true
+        },
+        "fold_min": {
+          "bend": 0.9,
+          "reference": 0.9,
+          "delta": 0.0,
+          "tolerance": 1e-06,
+          "mode": "absolute",
+          "pass": true
+        },
+        "fold_max": {
+          "bend": 1.0,
+          "reference": 1.0,
+          "delta": 0.0,
+          "tolerance": 1e-06,
+          "mode": "absolute",
+          "pass": true
+        }
+      },
+      "run_seconds": 0.192,
+      "reference_seconds": 1.611
+    },
+    {
+      "seed": 44,
+      "metrics": {
+        "mean_accuracy": {
+          "bend": 0.9266666,
+          "reference": 0.9266666666666667,
+          "delta": -6.666666674259858e-08,
+          "tolerance": 1e-06,
+          "mode": "absolute",
+          "pass": true
+        },
+        "fold_min": {
+          "bend": 0.8,
+          "reference": 0.8,
+          "delta": 0.0,
+          "tolerance": 1e-06,
+          "mode": "absolute",
+          "pass": true
+        },
+        "fold_max": {
+          "bend": 1.0,
+          "reference": 1.0,
+          "delta": 0.0,
+          "tolerance": 1e-06,
+          "mode": "absolute",
+          "pass": true
+        }
+      },
+      "run_seconds": 0.185,
+      "reference_seconds": 1.232
+    },
+    {
+      "seed": 45,
+      "metrics": {
+        "mean_accuracy": {
+          "bend": 0.9266666,
+          "reference": 0.9266666666666665,
+          "delta": -6.666666652055397e-08,
+          "tolerance": 1e-06,
+          "mode": "absolute",
+          "pass": true
+        },
+        "fold_min": {
+          "bend": 0.8333333,
+          "reference": 0.8333333333333334,
+          "delta": -3.333333331578814e-08,
+          "tolerance": 1e-06,
+          "mode": "absolute",
+          "pass": true
+        },
+        "fold_max": {
+          "bend": 1.0,
+          "reference": 1.0,
+          "delta": 0.0,
+          "tolerance": 1e-06,
+          "mode": "absolute",
+          "pass": true
+        }
+      },
+      "run_seconds": 0.194,
+      "reference_seconds": 1.498
+    },
+    {
+      "seed": 46,
+      "metrics": {
+        "mean_accuracy": {
+          "bend": 0.9266666,
+          "reference": 0.9266666666666667,
+          "delta": -6.666666674259858e-08,
+          "tolerance": 1e-06,
+          "mode": "absolute",
+          "pass": true
+        },
+        "fold_min": {
+          "bend": 0.8333333,
+          "reference": 0.8333333333333334,
+          "delta": -3.333333331578814e-08,
+          "tolerance": 1e-06,
+          "mode": "absolute",
+          "pass": true
+        },
+        "fold_max": {
+          "bend": 0.96666664,
+          "reference": 0.9666666666666667,
+          "delta": -2.666666665263051e-08,
+          "tolerance": 1e-06,
+          "mode": "absolute",
+          "pass": true
+        }
+      },
+      "run_seconds": 0.189,
+      "reference_seconds": 0.814
+    }
+  ],
+  "metrics": {
+    "mean_accuracy": {
+      "bend": 0.9306666079999999,
+      "reference": 0.9306666666666666,
+      "delta": -5.866666668019604e-08,
+      "tolerance": 1e-06,
+      "mode": "absolute",
+      "pass": true,
+      "bend_sd": 0.005962854275539517,
+      "reference_sd": 0.005962847939999459,
+      "delta_sd": 1.445298893610222e-08,
+      "n_seeds": 5
+    },
+    "fold_min": {
+      "bend": 0.83999998,
+      "reference": 0.8400000000000001,
+      "delta": -1.9999999989472883e-08,
+      "tolerance": 1e-06,
+      "mode": "absolute",
+      "pass": true,
+      "bend_sd": 0.03651484173136999,
+      "reference_sd": 0.036514837167011066,
+      "delta_sd": 1.8257418573895636e-08,
+      "n_seeds": 5
+    },
+    "fold_max": {
+      "bend": 0.986666656,
+      "reference": 0.9866666666666667,
+      "delta": -1.0666666661052204e-08,
+      "tolerance": 1e-06,
+      "mode": "absolute",
+      "pass": true,
+      "bend_sd": 0.018257433189440394,
+      "reference_sd": 0.018257418583505533,
+      "delta_sd": 1.460593485911651e-08,
+      "n_seeds": 5
+    }
+  },
+  "passed": true
+}
