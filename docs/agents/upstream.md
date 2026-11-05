@@ -1,6 +1,8 @@
 # Upstream issues and pull requests
 
 Every artifact this repository has filed or opened upstream, newest work first.
+The **full bendlang/bend list, with the fixing pull request for each issue**, is the README's
+`Upstream` section; this file adds the BendTorch and bend-ml artifacts and what is still open there.
 The local issue numbers in `.local/issues-hit.md` map to these; a local issue
 with no entry here was fixed in this repository. **BendTorch 2.0.0 is the pin's
 target** (`bendtorch@2.0.0.0`, tensor-array `0.1.18.0`).

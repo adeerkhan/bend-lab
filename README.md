@@ -214,15 +214,59 @@ constant energy, the denoising variants move toward the data but need far more
 compute, and the Bend port is blocked by the missing full attention, RoPE and
 adaLN. Paper numbers are never presented as reproduced.
 
+## Upstream
+
+Everything this repository found in Bend, filed at
+[bendlang/bend](https://github.com/bendlang/bend), and what came back. Every
+issue carries the program that found it; every pull request was tested against
+the programs in `examples/` and `reference/` here.
+
+**Open**
+
+| Issue | What it found |
+|---|---|
+| [#2059](https://github.com/bendlang/bend/issues/2059) | Base states no bit facts about `U32` (mask, halving, the branch bit, the subtraction bound), so the value round-trip law for `Mat` stays "tested, not proved". Six lemmas are proved in the meantime and offered with the program inline. |
+| [#1998](https://github.com/bendlang/bend/issues/1998) | A match binder that shadows a parameter is reported with the name printed twice and no scope. |
+
+**Closed**
+
+| Issue | Outcome |
+|---|---|
+| [#1980](https://github.com/bendlang/bend/issues/1980) | `Array<T>` accepts a mixed-depth `ANode` the compiled runtime cannot represent. Closed as a duplicate. |
+| [#1962](https://github.com/bendlang/bend/issues/1962) | `Array.new`'s depth argument was undocumented, and a length gave "an array past the deepest block class 31". Fixed by [#1963](https://github.com/bendlang/bend/pull/1963) and [#1970](https://github.com/bendlang/bend/pull/1970). |
+| [#1961](https://github.com/bendlang/bend/issues/1961) | `import` refused a path segment starting with a digit while the error said digits are allowed. Fixed by [#1964](https://github.com/bendlang/bend/pull/1964). |
+| [#1894](https://github.com/bendlang/bend/issues/1894) | The run path overflows its stack on a 32k-element list while `--check-only` and `-o` are fine. Fixed by [#1921](https://github.com/bendlang/bend/pull/1921). |
+| [#1868](https://github.com/bendlang/bend/issues/1868) | A pure let inside a do block was refused with a message pointing at the previous statement. Fixed by [#1889](https://github.com/bendlang/bend/pull/1889), after [#1870](https://github.com/bendlang/bend/pull/1870). |
+| [#1863](https://github.com/bendlang/bend/issues/1863) | The GPU build recipe existed only in a comment in `cli_build`. Fixed by [#1888](https://github.com/bendlang/bend/pull/1888), after [#1871](https://github.com/bendlang/bend/pull/1871). |
+| [#1848](https://github.com/bendlang/bend/issues/1848) | The two spellings of an effect (`IO<Unit>` and `IO(Unit)`) both named the wrong side. Closed; [#1835](https://github.com/bendlang/bend/pull/1835) was the attempt. |
+| [#1789](https://github.com/bendlang/bend/issues/1789) | Base could not read a number from a string. Fixed in Base. |
+| [#1716](https://github.com/bendlang/bend/issues/1716) | A bare constructor name as a match pattern silently became a catch-all when the datatype was imported. Fixed by [#1738](https://github.com/bendlang/bend/pull/1738), after [#1717](https://github.com/bendlang/bend/pull/1717). |
+
+**Pull requests opened from here**
+
+Merged: [#1880](https://github.com/bendlang/bend/pull/1880) `Array.get_unchecked`, an `@unsafe` read without the
+wrap mask; [#1845](https://github.com/bendlang/bend/pull/1845) `File.read` fills its buffer instead of answering one
+`read(2)`; [#1748](https://github.com/bendlang/bend/pull/1748) the gate counts caps with one tokenizer;
+[#1655](https://github.com/bendlang/bend/pull/1655) an async-signal-safe SIGSEGV/SIGBUS trap;
+[#1654](https://github.com/bendlang/bend/pull/1654) the bug form asks for `bend version`;
+[#1653](https://github.com/bendlang/bend/pull/1653) effects scan with the source's own comment rules.
+
+Closed with the maintainer's own fix landing instead: [#1820](https://github.com/bendlang/bend/pull/1820) the native
+spin's poll period, [#1769](https://github.com/bendlang/bend/pull/1769) the gate pin's columns,
+[#1715](https://github.com/bendlang/bend/pull/1715) native C intrinsics for `Nat.pow`, `U32.log2` and `Map.msb.u`,
+[#1652](https://github.com/bendlang/bend/pull/1652) and [#1651](https://github.com/bendlang/bend/pull/1651) the JS
+lane, and the seven diagnostic prototypes
+[#1731](https://github.com/bendlang/bend/pull/1731)–[#1737](https://github.com/bendlang/bend/pull/1737) for
+[#1632](https://github.com/bendlang/bend/issues/1632).
+
 ## Status
 
-`make check` is 93/93. Diffusion is complete through the ViT, with the gate at
-0.75 and the Bend model measured at 0.787 and 0.811. Flow matching has a
-measured 2D example, with its frozen gate still to be added. CIFAR-10 has its
+`make check` is 116/116. Diffusion is complete through the ViT, with the gate at
+0.75 and the Bend model measured at 0.795 (DDIM) and 0.807 (DDPM). Flow matching
+has a measured 2D example and its frozen gate (`test_flow2d.py`, six gates). CIFAR-10 has its
 3072-output DDPM: 256 images, 40 steps, build 50.8 s and run 65.4 s, first loss
-and data mean gated against the NumPy twin and `RESULTS.md` carrying the rows. The UNet in Bend waits on
-`Im2col`; GroupNorm has landed upstream, and a faithful reference arm also
-needs the full and linear attention variants.
+and data mean gated against the NumPy twin and `RESULTS.md` carrying the rows. The UNet in Bend is built two levels
+deep (64 → 32 → 16 → 32 → 64) and gated against NumPy and PyTorch.
 
 ## Licence
 
