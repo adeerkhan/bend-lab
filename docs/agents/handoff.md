@@ -21,12 +21,14 @@ nothing to do:** #32/#33/#34 are MERGEABLE with 0 reviews.
 
 **Item 4, where it actually starts.** The four U32 facts are a `Word` bit-vector library: Base has only
 `U32.add_comm`, and the facts (`J(j,2^d) == j`, `shr(2^(d+1)) == 2^d`, `Z` is bit `d-1`, the subtraction bound) each
-need word inductions. **Lemma A is proved** — `shr(shl(w)) == ctop(w)`, "shifting up and back down clears the top
-bit" — in `bend-lab/.local/u32_bits.bend` (local only), with `--verdict` green; `top`/`top_p` helpers are there too.
-Next, in order: **B.** `ctop(w) == w` when `top(w) == False`; **C.** `top(2^d) == False` for `d <= 30` (the hard one:
-`shl` moves the set bit, so carry the canonical pattern of `shln(1,d)`); **D.** the mask fact; **E.** `Z` is bit `d-1`;
-**F.** the subtraction bound. Then `ASet.Apart` on perfect trees, `Mat.to_list(Mat.of_list xs) == xs`, and #29's
-adjoint. The measured oracle is `tensor-array/tests/apart.bend`: 21,590 pairs, 0 failures.
+need word inductions. **Four lemmas are proved** in `bend-lab/.local/u32_bits.bend` (local only), `--verdict` green: A
+(`shr(shl(w)) == ctop(w)`), B (`ctop(w) == w` when `top(w) == False`), C1 (`init(shl(w)) == shl.put(False, init(w))`)
+and `top(shl(w)) == top(init(w))` (via `top_put`/`top_cons`/`init_put_eq`). `init_p` and `shl.put` are the same
+recursion at different lengths — that is what makes C1 go. Next: **C** (`top(2^d) == False`, `d <= 30`) = fact 2; it
+needs `top_zero`, `weaken`, `drop_last` and an `above(d, w)` predicate (the index `31-d` needs either `Nat.sub` or a
+stop at position `d` via `Nat.is_eq` through a def). Then **D** the mask fact, **E** `Z` is bit `d-1`, **F** the
+subtraction bound, then `ASet.Apart` on perfect trees, `Mat.to_list(Mat.of_list xs) == xs`, and #29's adjoint. Oracle:
+`tensor-array/tests/apart.bend`, 21,590 pairs, 0 failures.
 
 **Lean:** 4.34.0 **is installed** (`~/.elan/bin/lean`), just not on the shell PATH — use
 `PATH=$HOME/.elan/bin:$PATH bend FILE --verdict`. The earlier "no Lean here" note was the PATH.

@@ -2335,10 +2335,13 @@ The printed-loss convention was never wrong: Bend prints the step's own loss wit
 The next item after the UNet and the flow is the four U32 bit facts that `ASet.Apart` on perfect trees needs
 (`J(j, 2^d) == j`, `shr(2^(d+1)) == 2^d`, `Z` is bit `d-1`, and the subtraction bound). They are not four one-liners:
 Base states only `U32.add_comm`, and `Word` is a little-endian bit list, so the library has to start with word
-inductions. **Lemma A is proved** — `shr(shl(w)) == ctop(w)`, "shifting up and back down clears the top bit" — and
-`--verdict` is green; the draft, with the derivation and the remaining lemmas B–F in order, is
-`bend-lab/.local/u32_bits.bend` (local only). The hard one is `top(2^d) == False`: `shl` moves the single set bit, so
-the induction must carry the whole canonical pattern of `shln(1, d)`, not just the top bit.
+inductions. **Four lemmas are proved** — A (`shr(shl(w)) == ctop(w)`), B (`ctop(w) == w` when the top bit is False), C1
+(`init(shl(w)) == shl.put(False, init(w))`, i.e. dropping the top bit commutes with shifting up) and
+`top(shl(w)) == top(init(w))` — and `--verdict` is green; the draft with the derivations is
+`bend-lab/.local/u32_bits.bend` (local only). The wall is `top(2^d) == False`: A and B make it the same statement as
+fact 2, and both need the index `31-d`, so the next pieces are `top_zero`, `weaken`, `drop_last` and an `above(d, w)`
+predicate that stops at position `d`. A useful structural fact fell out: `init_p` (drop the top bit) and `shl.put`
+(shift one bit in) are the *same recursion*, differing only at length 0.
 
 Two facts worth keeping: **Lean 4.34.0 is installed** at `~/.elan/bin/lean` and is simply not on the shell PATH, so
 `PATH=$HOME/.elan/bin:$PATH bend FILE --verdict` proves locally (the earlier "no Lean here" note was the PATH, not the
