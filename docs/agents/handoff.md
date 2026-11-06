@@ -7,7 +7,41 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
-## 2026-11-05 (latest) — the UNet trains and denoises; the channel order was the bug
+## 2026-11-06 (latest) — the UNet draws flowers: the objective was the wrong one
+
+**Done and in the tree.** `examples/diffusion/unet/{model,train,config}.bend`: 64 channels at each level, **no
+normalisations**, the **clean image** as the flow target instead of the velocity, and the 3,874 flowers of the training
+split. Record `results/diffusion-unet/trained/{run.json,loss.svg,samples.svg,stats.svg}`, write-up `TRAINED.md`, new
+`reference/unet_flowers_eval.py`, changelog entry.
+
+**The numbers.** 76,871 parameters, 4,000 steps: loss **0.6551 -> 0.0390** (a predictor of the data's mean scores
+0.0534); the 64 draws are **blurred flowers**; legibility **0.426** (73.1% of the span above the noise floor) and
+**0.330 held out** (54.2%) against a ceiling of 0.562. The previous record was 0.259 / 0.206 and its draws were
+speckle. Gates: NumPy **9.54e-07**, torch **1.61e-06** (0.16x the allowance), checkpoint **bit-identical** (76,871
+weights).
+
+**What was measured and ruled out.** Group norms (0.233 with, 0.274 without, on more steps); batch 2 -> 8 -> 26 at
+three resolutions (+10.5 / +4.4 points of span, saturating, still speckle at every resolution); capacity 76,871 ->
+301,191 parameters (+1.3 points). The loss is not a progress measure here: the arm with the best loss had the worst
+picture, twice.
+
+**Open, in order.** 1. The blur: two levels with a 4x4 bottleneck carry 256 numbers per image, so a **third level** is
+the next lever (not width - measured). 2. A report-card task for `unet-flowers` still needs a reference arm; the honest
+comparison now is `flowers_flow` (0.536 / 0.490 with 413,440 parameters). 3. The batch cannot exceed 2 at 64x64
+(bendlang/bend#1071); accumulation is requested as nuxyel/BendTorch#36.
+
+**Upstream.** bendlang/bend#1071 — a comment with the measured 2.0.38/Linux thresholds (8,192 checks, 16,384 only on
+an empty stack, 32,768 overflows) and the observation that the checker's budget is shared across module imports, so
+splitting a file does not raise it. nuxyel/BendTorch#36 — a feature request for gradient accumulation, with the rows
+argument and the numbers from this example.
+
+**Traps paid for.** A batch that does not divide the image count reads past the export, and only on the last batch
+(3,874 = 149 x 26, 3,872 = 484 x 8). A type error whose expected/observed types carry deep literals crashes the error
+renderer (bendlang/bend#1291's symptom, no new issue) — the workaround is a **batch-1 twin with small literals**, which
+prints the real mismatch. `Seq`'s parameter pair keeps `Unit` where a layer is dropped, and `Up2`'s rows are the batch
+times the level's own rows.
+
+## 2026-11-05 — the UNet trains and denoises; the channel order was the bug
 
 `examples/diffusion/unet/{model,train}.bend`: the two-level U (64→32→16→32→64, 16 channels, a group norm before every
 activation, the 32×32 skip, a 1×1 linear head) plus a **learned linear bypass** from the input, trained on 512 flowers

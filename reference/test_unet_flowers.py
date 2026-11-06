@@ -5,33 +5,33 @@
 `examples/diffusion/unet/train.bend --probe --steps 0` prints the model's flat
 weights and one whole forward pass at a fixed input: `noise_of(7, 8192)` as the
 image channel and `t = 0.5` as the level channel, two images of 64x64. This twin
-rebuilds that forward in float32 from the same weights and compares all 16,384
-cells (two images, two channels each).
+rebuilds that forward in float32 from the same weights and compares all 8,192
+cells (two images, one channel each).
 
 The shapes, in the order the flat weights are laid out (the model's forward
-order):
+order, 76,871 values):
 
-  w1 (16, 45) b1 (16)                       conv1 5 -> 16, stride 2
-  w3 (16, 144) b3 (16)                      conv3 16 -> 16, stride 2
-  w4 (16, 144) b4 (16)                      conv4 16 -> 16, stride 1
-  wh (5, 16) bh (5)                         the head, a 1x1 conv, no activation
+  w1 (64, 45)  b1 (64)                      conv1 5 -> 64, stride 2
+  w3 (64, 576) b3 (64)                      conv3 64 -> 64, stride 2
+  w4 (64, 576) b4 (64)                      conv4 64 -> 64, stride 1
+  wh (1, 64)   bh (1)                       the head, a 1x1 conv, no activation
+  wl (1, 5)    bl (1)                       the linear bypass from the input
 
   y = silu(conv(x))                        32x32
   l = silu(conv(y))                        16x16
   z = silu(conv(up(l)))                    32x32
-  o = conv1x1(up(z))                       64x64, five channels
+  o = conv1x1(up(z + y)) + conv1x1(x)      64x64, one channel
 
-Channel 0 is the velocity; channels 1..4 are trained to reproduce the time
-features, which are constants, so they cost the head nothing. There is no group
-norm and no residual: a norm over all pixels removes the image's scale (which
-the field at t = 0 is), and a residual makes the head learn a correction twice
-the input's size, which stalls in the mean-field basin.
+The output is the model's prediction of the clean image `x0` (the training
+target since 2026-11-06; the sampler turns it into a velocity with
+`v = (x0hat - x)/(1-t)`). There are no normalisations: a group norm over all of
+an image's pixels removes the image's amplitude, which is what the model needs
+to know to remove noise, and the same model with the norms drew speckle.
 
 The layout facts are `reference/test_unet.py`'s: a Mat row is one pixel and the
 channels are last; im2col gathers `(c, kh, kw)`; the conv weight is row-major
-`(co, c*k*k)`; a one-group GroupNorm normalises over the group's channels and
-all the image's pixels. The difference here is `eps = 1e-5` (the trained model's
-choice) and the batch of two images, normalised separately.
+`(co, c*k*k)`. The batch is two images, and the residual adds the 32x32 level to
+the decoder's 32x32 output.
 
 Exit 0 = the forward matched to 1e-5. Nothing here writes.
 """
@@ -56,17 +56,17 @@ if os.path.isdir(ENV_DIR):
 
 F = np.float32
 EPS = F(1e-5)
-HW, C = 4096, 16
+HW, C = 4096, 64
 NIMG = 2
 # measured first, then set: 2.15e-06 on 40,960 cells with two group norms at
 # eps = 1e-5 (a norm divides small variances up), so the gate sits ~5x above it
 TOL = 1e-5
 
 # the flat weights, in the order the model's forward pass dumps them
-PARTS = [(16, 45), (16,), (16,), (16,),
-         (16, 144), (16,), (16,), (16,),
-         (16, 144), (16,), (16,), (16,),
-         (1, 16), (1,),
+PARTS = [(64, 45), (64,),
+         (64, 576), (64,),
+         (64, 576), (64,),
+         (1, 64), (1,),
          (1, 5), (1,)]
 
 
@@ -89,11 +89,6 @@ def conv(x, w, b, k=3, p=1, s=1):
     return (rows @ w.T + b).reshape(oh, ow, -1).astype(F)
 
 
-def groupnorm(x, g, b):
-    """one group of all channels, per image: mean and variance over H, W and C."""
-    m = x.mean(axis=(0, 1, 2), keepdims=True)
-    v = x.var(axis=(0, 1, 2), keepdims=True)
-    return F(F(F(x - m) * (F(1.0) / np.sqrt(v + EPS))) * g + b)
 
 
 def silu(x):
@@ -113,14 +108,14 @@ def forward(flat, inp):
         off += size
     if off != f.size:
         raise SystemExit(f"the probe's weights are {f.size} values, the model takes {off}")
-    w1, b1, g1, be1, w3, b3, g4, be4, w4, b4, g3, be3, wh, bh, wl, bl = parts
+    w1, b1, w3, b3, w4, b4, wh, bh, wl, bl = parts
 
     outs = []
     for img in range(NIMG):
         x = inp[img * HW:(img + 1) * HW].reshape(64, 64, 5)
-        y = silu(groupnorm(conv(x, w1, b1, s=2), g1, be1))
-        low = silu(groupnorm(conv(y, w3, b3, s=2), g4, be4))
-        z = F(silu(groupnorm(conv(up2(low), w4, b4, s=1), g3, be3)) + y)
+        y = silu(conv(x, w1, b1, s=2))
+        low = silu(conv(y, w3, b3, s=2))
+        z = F(silu(conv(up2(low), w4, b4, s=1)) + y)
         o = conv(up2(z), wh, bh, k=1, p=0, s=1)          # the head: a 1x1 conv, no activation
         o = F(o + conv(x, wl, bl, k=1, p=0, s=1))        # plus the learned linear bypass
         outs.append(o.reshape(HW, 1))
@@ -175,7 +170,7 @@ def main():
     want = forward(w, inp)
 
     ok = True
-    ok &= check("weights", w.size == 5495, f"{w.size} values, the model takes 5495")
+    ok &= check("weights", w.size == 76871, f"{w.size} values, the model takes 76871")
     ok &= check("output shape", got.size == want.size, f"{got.size} cells, twin {want.size}")
     d = float(np.max(np.abs(got.astype(np.float64) - want.astype(np.float64)))) if got.size == want.size else float("inf")
     ok &= check("forward", d <= TOL, f"two images, maxabs {d:.3e}  tol {TOL:g}")

@@ -3,13 +3,13 @@
 <rect x="120" y="30" width="350.0" height="10" fill="#5b8cff" opacity="0.9"/>
 <text x="476.0" y="39" fill="#e6edf3" font-family="monospace" font-size="10">0.3981</text>
 <text x="112" y="39" fill="#98a2b3" text-anchor="end" font-family="monospace" font-size="10">mean data</text>
-<rect x="120" y="44" width="315.2" height="10" fill="#5ee6c8" opacity="0.9"/>
-<text x="441.22857830652885" y="53" fill="#e6edf3" font-family="monospace" font-size="10">0.3586</text>
+<rect x="120" y="44" width="336.6" height="10" fill="#5ee6c8" opacity="0.9"/>
+<text x="462.61068930392935" y="53" fill="#e6edf3" font-family="monospace" font-size="10">0.3829</text>
 <text x="112" y="53" fill="#98a2b3" text-anchor="end" font-family="monospace" font-size="10">mean drawn</text>
 <rect x="120" y="76" width="199.0" height="10" fill="#5b8cff" opacity="0.9"/>
 <text x="325.0254668456362" y="85" fill="#e6edf3" font-family="monospace" font-size="10">0.2264</text>
 <text x="112" y="85" fill="#98a2b3" text-anchor="end" font-family="monospace" font-size="10">std data</text>
-<rect x="120" y="90" width="230.6" height="10" fill="#5ee6c8" opacity="0.9"/>
-<text x="356.63888567851006" y="99" fill="#e6edf3" font-family="monospace" font-size="10">0.2624</text>
+<rect x="120" y="90" width="94.3" height="10" fill="#5ee6c8" opacity="0.9"/>
+<text x="220.28617391227542" y="99" fill="#e6edf3" font-family="monospace" font-size="10">0.1073</text>
 <text x="112" y="99" fill="#98a2b3" text-anchor="end" font-family="monospace" font-size="10">std drawn</text>
 </svg>

@@ -4,7 +4,7 @@
 
 This repository's venv has no torch; bendtorch's does. The check reads the flat
 weights and the whole forward output from `train.bend --probe --steps 0` (the
-same 16,384 cells `reference/test_unet_flowers.py` checks in NumPy), rebuilds
+same 8,192 cells `reference/test_unet_flowers.py` checks in NumPy), rebuilds
 the model in torch, and compares every cell.
 
 Two comparisons are printed: torch against Bend, and torch against the NumPy
@@ -25,10 +25,10 @@ sys.path.insert(0, os.path.join(ROOT, "reference"))
 import test_unet_flowers as twin
 
 F = np.float32
-HW, NIMG, C = 4096, 2, 16
-# measured first, then set: torch and Bend agree to 4.29e-06 over 16,384 cells
-# after four convolutions (144-term sums) and four group norms at eps = 1e-5,
-# and the NumPy twin is 4.65e-06 from Bend; the allowance sits ~2x above that.
+HW, NIMG, C = 4096, 2, 64
+# measured first, then set (see the run in TRAINED.md): torch and Bend agree to
+# the value printed on the current model over 8,192 cells after four
+# convolutions (576-term sums at the widest); the allowance sits above it.
 ATOL, RTOL = 1e-5, 1e-6
 
 
@@ -41,21 +41,18 @@ def forward(flat, inp):
         size = int(np.prod(shape))
         parts.append(t(w[off:off + size].reshape(shape)))
         off += size
-    w1, b1, g1, be1, w3, b3, g4, be4, w4, b4, g3, be3, wh, bh, wl, bl = parts
+    w1, b1, w3, b3, w4, b4, wh, bh, wl, bl = parts
 
     def conv(h, wt, b, stride, k=3):
         return Fn.conv2d(h, wt.reshape(wt.shape[0], -1, k, k), b, stride=stride, padding=1 if k > 1 else 0)
-
-    def gn(h, g, b):
-        return Fn.group_norm(h, 1, g, b, eps=1e-5)
 
     def up(h):
         return Fn.interpolate(h, scale_factor=2, mode="nearest")
 
     with torch.no_grad():
-        y = Fn.silu(gn(conv(x, w1, b1, 2), g1, be1))
-        low = Fn.silu(gn(conv(y, w3, b3, 2), g4, be4))
-        z = Fn.silu(gn(conv(up(low), w4, b4, 1), g3, be3)) + y
+        y = Fn.silu(conv(x, w1, b1, 2))
+        low = Fn.silu(conv(y, w3, b3, 2))
+        z = Fn.silu(conv(up(low), w4, b4, 1)) + y
         o = conv(up(z), wh, bh, 1, k=1) + conv(x, wl, bl, 1, k=1)
     return o.permute(0, 2, 3, 1).reshape(-1).numpy().astype(F)
 

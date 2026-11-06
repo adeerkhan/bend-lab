@@ -1,23 +1,31 @@
 # A trained 64x64 UNet denoiser on Oxford Flowers, written in Bend on BendTorch.
 #
-#   scripts/bend-guard.sh bend examples/diffusion/unet/train.bend
+#   BEND_MEM=9G scripts/bend-guard.sh bend -o .scratch/unet_train examples/diffusion/unet/train.bend
+#   .scratch/unet_train --save /tmp/unet.bin
 #   bend examples/diffusion/unet/train.bend --steps 50 --no-sample
 #
-# The model is `model.bend`: two levels, 64 -> 32 -> 16 -> 32 -> 64, with an
-# `up2` upsample and additive skips at both levels (the shapes the gate example
-# `main.bend` proves). The objective is rectified flow:
+# The model is `model.bend`: two levels, 64 -> 32 -> 16 -> 32 -> 64, 64 channels
+# at each level, an `up2` upsample, a skip at 32x32 and a linear bypass from the
+# input beside the U, with no normalisations (the reason is in that file).
 #
-#   x_t = noise*(1-t) + data*t,  target v = data - noise,  MSE
-#   sample: x <- x + v(x,t)*dt,  Euler over linspace(0,1,steps+1)
+# The objective is rectified flow with the CLEAN IMAGE as the target:
 #
-# The input has two channels, the image and its level `t`; the output has two so
-# the outer skip can add the input back, and the target on the `t` channel is 0,
-# so the field is trained to leave it alone. Sampling uses channel 0.
+#   x_t = noise*(1-t) + data*t,   target x0 = data,   MSE
+#   sample: v = (x0hat - x)/(1-t), then x <- x + v*dt, Euler over linspace(0,1,steps+1)
 #
-# Data: `flowers64-512-gray.u8`, 512 flowers at 64x64, one grayscale byte a
-# pixel, made from the pinned RGB export by `reference/flowers_export.py`.
+# The target was the velocity `v = data - noise` until 2026-11-06, and that is
+# what kept every draw noise: E[(d-n)^2] = 1.053 is 95% the noise's variance, so
+# the loss could be halved by learning the noise statistics alone, while
+# E[x0^2] = 0.203 is the image. With x0 the draws became flowers, blurred, and
+# legibility rose 0.274 -> 0.426 against a held-out ceiling of 0.562.
 #
-#   --steps N       steps to run (default 3000)
+# Data: `flowers64-train-gray.u8`, 3,874 flowers at 64x64, one grayscale byte a
+# pixel, sha256 1ff86747f9b070c3ed7b2058dd0c1f88317dfea931ed883379513f121385566e,
+# the training split of the pinned Oxford parquet (`reference/flowers_export.py`
+# makes it). `flowers64-hold-gray.u8`, 102 images, sha256 f08730fe..., is the
+# held-out half and is never trained on.
+#
+#   --steps N       steps to run (default 4000)
 #   --start N       the global index of the first step (default 0)
 #   --save PATH     write the training state to PATH with Train.save
 #   --resume PATH   restore it with Train.restore
@@ -161,7 +169,7 @@ def pix(+p: Nat, +t: F32, bytes: List<&2, U32>, noise: List<&2, F32>,
           +f4 = feat4(t)
           pix(rest, t, bt, nt,
             Con{f4, Con{f3, Con{f2, Con{f1, Con{xt, ai}}}}},
-            Con{(d - n : F32), at})
+            Con{d, at})
         case _ _:
           RS{ai, at, bytes, noise}
 
@@ -223,28 +231,22 @@ def scale_go(xs: List<&2, F32>, +acc: List<&2, F32>) -> List<&2, F32>:
 def count() -> Nat:
   U32.to_nat(T.Layer.count(ModelP(), IN(), OUT(), ModelS(), Model()))
 
-# The flat order is the model's forward order: the U's four conv biases start at
-# zero, its three group norms' scales at one and their biases at zero, then the
-# linear bypass's weight is noise and its bias is zero:
-#   conv1 w 720, b 720..735;   gn1 g 736..751, b 752..767
-#   conv3 w 2304, b 3072..3087; gn4 g 3088..3103, b 3104..3119
-#   conv4 w 2304, b 5424..5439; gn3 g 5440..5455, b 5456..5471
-#   head  w 16, b 5488;        bypass w 5, b 5494
+# The flat order is the model's forward order: the U's three conv biases start at
+# zero, then the linear bypass's weight is noise and its bias is zero. There are no
+# group norms in this arm, so there are no gain segments. The offsets are the layer
+# counts added in the same order, at B = 2 and CH = 64:
+#   conv1 w 2880, b 2880..2943;  conv3 w 36864, b 39808..39871
+#   conv4 w 36864, b 76736..76799; head  w 64, b 76864; bypass w 5, b 76870
+#   count 76871
 def init_arr() -> Array<F32>:
   +n = count()
   arr0 = fill_go(n, scale_go(G.noise_of(1n, n), Nil{}), U32.from_nat(0n),
     Array.new(F32, T.depth(n), 0.0))
-  arr1 = zeros_at(arr0, 720n, 16n, 0.0)
-  arr2 = zeros_at(arr1, 736n, 16n, 1.0)
-  arr3 = zeros_at(arr2, 752n, 16n, 0.0)
-  arr4 = zeros_at(arr3, 3072n, 16n, 0.0)
-  arr5 = zeros_at(arr4, 3088n, 16n, 1.0)
-  arr6 = zeros_at(arr5, 3104n, 16n, 0.0)
-  arr7 = zeros_at(arr6, 5424n, 16n, 0.0)
-  arr8 = zeros_at(arr7, 5440n, 16n, 1.0)
-  arr9 = zeros_at(arr8, 5456n, 16n, 0.0)
-  arr10 = zeros_at(arr9, 5488n, 1n, 0.0)
-  zeros_at(arr10, 5494n, 1n, 0.0)
+  arr1 = zeros_at(arr0, 2880n, 64n, 0.0)
+  arr2 = zeros_at(arr1, 39808n, 64n, 0.0)
+  arr3 = zeros_at(arr2, 76736n, 64n, 0.0)
+  arr4 = zeros_at(arr3, 76864n, 1n, 0.0)
+  zeros_at(arr4, 76870n, 1n, 0.0)
 
 def un_pa(pa: T.PA<ModelP()>) -> ModelP():
   match pa:
@@ -372,26 +374,29 @@ def ve_of(f: T.Fwd<ModelP(), OUT(), ModelS()>) -> T.Two<ModelP(), List<&2, F32>>
     case T.Fwd{p, y, s}:
       T.Two{p, ml_list(NN(), 1n, TA.Mat.to_list(NN(), 1n, y))}
 
-def upd(+left: Nat, x: List<&2, F32>, v: List<&2, F32>, +acc: List<&2, F32>) -> List<&2, F32>:
+def coef(+t: F32) -> F32:
+  (dt() / ((1.0 - t) : F32) : F32)
+
+def upd(+left: Nat, +t: F32, x: List<&2, F32>, v: List<&2, F32>, +acc: List<&2, F32>) -> List<&2, F32>:
   match left:
     case 0n:
       List.reverse(&2, F32, acc)
     case 1n+rest:
       match x v:
-        case Con{a, at} Con{b, vt}:
-          upd(rest, at, vt, Con{(a + (dt() * b : F32) : F32), acc})
+        case Con{+a, at} Con{b, vt}:
+          upd(rest, t, at, vt, Con{(a + (coef(t) * (b - a : F32) : F32) : F32), acc})
         case _ _:
           List.reverse(&2, F32, acc)
 
-def step_f(x2: List<&2, F32>, f: T.Fwd<ModelP(), OUT(), ModelS()>) -> T.Two<ModelP(), List<&2, F32>>:
+def step_f(+t: F32, x2: List<&2, F32>, f: T.Fwd<ModelP(), OUT(), ModelS()>) -> T.Two<ModelP(), List<&2, F32>>:
   match f:
     case T.Fwd{p2, y, s}:
-      T.Two{p2, upd(NN(), x2, ml_list(NN(), 1n, TA.Mat.to_list(NN(), 1n, y)), Nil{})}
+      T.Two{p2, upd(NN(), t, x2, ml_list(NN(), 1n, TA.Mat.to_list(NN(), 1n, y)), Nil{})}
 
 def step_two(p: ModelP(), +t: F32, d: T.Two<List<&2, F32>, List<&2, F32>>) -> T.Two<ModelP(), List<&2, F32>>:
   match d:
     case T.Two{x1, x2}:
-      step_f(x2, T.Layer.fwd(ModelP(), IN(), OUT(), ModelS(), Model(), p,
+      step_f(t, x2, T.Layer.fwd(ModelP(), IN(), OUT(), ModelS(), Model(), p,
         TA.Mat.from_list(NN(), INW(), interleave(NN(), t, x1, Nil{}))))
 
 def step_x(p: ModelP(), +k: Nat, x: List<&2, F32>) -> T.Two<ModelP(), List<&2, F32>>:

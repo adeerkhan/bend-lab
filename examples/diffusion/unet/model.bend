@@ -1,10 +1,15 @@
-# The trained UNet's shape, as one layer: 64x64 -> 32x32 -> 16x16 -> 32x32 -> 64x64,
-# 16 channels at each level, a group norm before every activation, an up2 at each
-# level, a skip at 32x32, and a skip from the input to the 5-channel linear head.
+# The trained UNet's shape: 64x64 -> 32x32 -> 16x16 -> 32x32 -> 64x64, 64
+# channels at each level, an up2 at each level, a skip at 32x32, and a linear
+# bypass from the input beside the U.
 #
-# Both parts are load-bearing. A SiLU on the raw input crushes the negative half of
-# the velocity (it is bounded below), so the norms come first; and the outer skip is
-# the only path that carries the image's amplitude, which the norms would remove.
+# There are no normalisations, and that is the measured choice. GroupNorm(2,
+# 1024, 1, 64) normalises each image's whole feature tensor to zero mean and
+# unit variance, so the U loses the input's amplitude and cannot know how much
+# noise to remove; the only amplitude path left is the linear bypass, which can
+# produce scaled noise and a mean but no structure. The same model with the
+# norms drew speckle (legibility 0.233) and without them drew flowers (0.274),
+# on fewer steps. Four convs without norms also reached 0.18 at 3,000 steps
+# against 0.84 with them, before the widths changed.
 #
 #   bend examples/diffusion/unet/train.bend
 #
@@ -114,93 +119,82 @@ def IN() -> Type:
   TA.Mat<8192n, 5n>
 
 def MID() -> Type:
-  TA.Mat<2048n, 16n>
+  TA.Mat<2048n, 64n>
 
 def LOW() -> Type:
-  TA.Mat<512n, 16n>
+  TA.Mat<512n, 64n>
 
 def UP() -> Type:
-  TA.Mat<8192n, 16n>
+  TA.Mat<8192n, 64n>
 
 def OUT() -> Type:
   TA.Mat<8192n, 1n>
 
 def CP1() -> Type:
-  T.Lin<45n, 16n>
+  T.Lin<45n, 64n>
 
 def S1() -> Type:
   TA.Mat<2048n, 45n>
 
 def CP3() -> Type:
-  T.Lin<144n, 16n>
+  T.Lin<576n, 64n>
 
 def S3() -> Type:
-  TA.Mat<512n, 144n>
+  TA.Mat<512n, 576n>
 
 def S4() -> Type:
-  TA.Mat<2048n, 144n>
+  TA.Mat<2048n, 576n>
 
 def CHP() -> Type:
-  T.Lin<16n, 1n>
+  T.Lin<64n, 1n>
 
 def SH() -> Type:
-  TA.Mat<8192n, 16n>
+  TA.Mat<8192n, 64n>
 
 def conv1() -> T.Layer<CP1(), IN(), MID(), S1()>:
-  T.Conv2d(2n, INW(), 16n, 3n, 63n, 63n, 1n, 1n, 0n)
-
-def gn1() -> T.Layer<T.LN<16n>, MID(), MID(), MID()>:
-  T.GroupNorm(2n, 1024n, 1n, 16n, 0.00001)
+  T.Conv2d(2n, INW(), 64n, 3n, 63n, 63n, 1n, 1n, 0n)
 
 def silu1() -> T.Layer<Unit, MID(), MID(), MID()>:
-  T.SiLU(2048n, 16n)
+  T.SiLU(2048n, 64n)
 
 def conv3() -> T.Layer<CP3(), MID(), LOW(), S3()>:
-  T.Conv2d(2n, 16n, 16n, 3n, 31n, 31n, 1n, 1n, 0n)
-
-def gn4() -> T.Layer<T.LN<16n>, LOW(), LOW(), LOW()>:
-  T.GroupNorm(2n, 256n, 1n, 16n, 0.00001)
+  T.Conv2d(2n, 64n, 64n, 3n, 31n, 31n, 1n, 1n, 0n)
 
 def silu4() -> T.Layer<Unit, LOW(), LOW(), LOW()>:
-  T.SiLU(512n, 16n)
+  T.SiLU(512n, 64n)
 
 def conv4() -> T.Layer<CP3(), MID(), MID(), S4()>:
-  T.Conv2d(2n, 16n, 16n, 3n, 31n, 31n, 1n, 0n, 0n)
-
-def gn3() -> T.Layer<T.LN<16n>, MID(), MID(), MID()>:
-  T.GroupNorm(2n, 1024n, 1n, 16n, 0.00001)
+  T.Conv2d(2n, 64n, 64n, 3n, 31n, 31n, 1n, 0n, 0n)
 
 def silu3() -> T.Layer<Unit, MID(), MID(), MID()>:
-  T.SiLU(2048n, 16n)
+  T.SiLU(2048n, 64n)
 
 def head() -> T.Layer<CHP(), UP(), OUT(), SH()>:
-  T.Conv2d(2n, 16n, 1n, 1n, 63n, 63n, 0n, 0n, 0n)
+  T.Conv2d(2n, 64n, 1n, 1n, 63n, 63n, 0n, 0n, 0n)
 
 def P2C() -> Type:
-  T.Two<T.Two<CP3(), T.LN<16n>>, Unit>
+  T.Two<CP3(), Unit>
 
 def S2C() -> Type:
-  T.Two<T.Two<S4(), MID()>, MID()>
+  T.Two<S4(), MID()>
 
 def DownP() -> Type:
-  T.Two<T.Two<CP1(), T.LN<16n>>, Unit>
+  T.Two<CP1(), Unit>
 
 def DownS() -> Type:
-  T.Two<T.Two<S1(), MID()>, MID()>
+  T.Two<S1(), MID()>
 
 def Down() -> T.Layer<DownP(), IN(), MID(), DownS()>:
-  T.Seq(~T.Two<CP1(), T.LN<16n>>, ~Unit, ~IN(), ~MID(), ~MID(), ~(T.Two<S1(), MID()>), ~MID(),
-    T.Seq(~CP1(), ~T.LN<16n>, ~IN(), ~MID(), ~MID(), ~S1(), ~MID(), conv1(), gn1()), silu1())
+  T.Seq(~CP1(), ~Unit, ~IN(), ~MID(), ~MID(), ~S1(), ~MID(), conv1(), silu1())
 
 def LowP() -> Type:
-  T.Two<T.Two<CP3(), T.LN<16n>>, Unit>
+  T.Two<CP3(), Unit>
 
 def LowS() -> Type:
-  T.Two<T.Two<S3(), LOW()>, LOW()>
+  T.Two<S3(), LOW()>
 
 def Low() -> T.Layer<LowP(), MID(), LOW(), LowS()>:
-  T.Seq(~T.Two<CP3(), T.LN<16n>>, ~Unit, ~MID(), ~LOW(), ~LOW(), ~(T.Two<S3(), LOW()>), ~LOW(),
-    T.Seq(~CP3(), ~T.LN<16n>, ~MID(), ~LOW(), ~LOW(), ~S3(), ~LOW(), conv3(), gn4()), silu4())
+  T.Seq(~CP3(), ~Unit, ~MID(), ~LOW(), ~LOW(), ~S3(), ~LOW(), conv3(), silu4())
 
 def UpP() -> Type:
   T.Two<Unit, P2C()>
@@ -209,10 +203,8 @@ def UpS() -> Type:
   T.Two<Unit, S2C()>
 
 def UpMiddle() -> T.Layer<UpP(), LOW(), MID(), UpS()>:
-  T.Seq(~Unit, ~P2C(), ~LOW(), ~MID(), ~MID(), ~Unit, ~S2C(), Up2(32n, 16n, 16n),
-    T.Seq(~(T.Two<CP3(), T.LN<16n>>), ~Unit, ~MID(), ~MID(), ~MID(), ~(T.Two<S4(), MID()>), ~MID(),
-      T.Seq(~CP3(), ~T.LN<16n>, ~MID(), ~MID(), ~MID(), ~S4(), ~MID(), conv4(), gn3()),
-      silu3()))
+  T.Seq(~Unit, ~P2C(), ~LOW(), ~MID(), ~MID(), ~Unit, ~S2C(), Up2(32n, 16n, 64n),
+    T.Seq(~CP3(), ~Unit, ~MID(), ~MID(), ~MID(), ~S4(), ~MID(), conv4(), silu3()))
 
 def LevelP() -> Type:
   T.Two<T.Two<Unit, T.Two<LowP(), UpP()>>, Unit>
@@ -221,7 +213,7 @@ def LevelS() -> Type:
   T.Two<T.Two<Unit, T.Two<LowS(), UpS()>>, Unit>
 
 def Level() -> T.Layer<LevelP(), MID(), MID(), LevelS()>:
-  T.Residual(2048n, 16n, T.Two<LowP(), UpP()>, T.Two<LowS(), UpS()>,
+  T.Residual(2048n, 64n, T.Two<LowP(), UpP()>, T.Two<LowS(), UpS()>,
     T.Seq(~LowP(), ~UpP(), ~MID(), ~LOW(), ~MID(), ~LowS(), ~UpS(), Low(), UpMiddle()))
 
 def TopP() -> Type:
@@ -232,7 +224,7 @@ def TopS() -> Type:
 
 def Top() -> T.Layer<TopP(), MID(), OUT(), TopS()>:
   T.Seq(~Unit, ~(T.Two<CHP(), Unit>), ~MID(), ~UP(), ~OUT(), ~Unit, ~(T.Two<SH(), Unit>),
-    Up2(64n, 32n, 16n),
+    Up2(64n, 32n, 64n),
     T.Seq(~CHP(), ~Unit, ~UP(), ~OUT(), ~OUT(), ~SH(), ~Unit, head(), T.Id(OUT())))
 
 def BodyP() -> Type:

@@ -3,10 +3,10 @@
   "cells": 8192,
   "atol": 1e-05,
   "rtol": 1e-06,
-  "bend_vs_torch": 1.1622905731201172e-06,
-  "worst_ratio": 0.11210938997262225,
-  "bend_vs_numpy": 1.0132789611816406e-06,
-  "torch_vs_numpy": 5.587935447692871e-07,
+  "bend_vs_torch": 1.6093254089355469e-06,
+  "worst_ratio": 0.1592022231974491,
+  "bend_vs_numpy": 9.5367431640625e-07,
+  "torch_vs_numpy": 1.8477439880371094e-06,
   "torch": "2.14.1+cpu",
   "ok": true
 }
