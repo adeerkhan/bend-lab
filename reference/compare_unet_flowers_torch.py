@@ -27,9 +27,11 @@ import test_unet_flowers as twin
 F = np.float32
 HW, NIMG, C = 4096, 2, 64
 # measured first, then set (see the run in TRAINED.md): torch and Bend agree to
-# the value printed on the current model over 8,192 cells after four
-# convolutions (576-term sums at the widest); the allowance sits above it.
-ATOL, RTOL = 1e-5, 1e-6
+# 1.18e-05 over 8,192 cells after seven convolutions (576-term sums at the
+# widest), so the allowance is 2e-5 plus 1e-6 of the value. It was 1e-5 at three
+# levels (3.93e-06); the growth is float32 accumulation down the convolution
+# chain, the same reason the NumPy twin's gate moved.
+ATOL, RTOL = 2e-5, 1e-6
 
 
 def forward(flat, inp):
@@ -41,7 +43,7 @@ def forward(flat, inp):
         size = int(np.prod(shape))
         parts.append(t(w[off:off + size].reshape(shape)))
         off += size
-    w1, b1, w3, b3, w5, b5, w6, b6, w4, b4, wh, bh, wl, bl = parts
+    w1, b1, w3, b3, w5, b5, w7, b7, w8, b8, w6, b6, w4, b4, wh, bh, wl, bl = parts
 
     def conv(h, wt, b, stride, k=3):
         return Fn.conv2d(h, wt.reshape(wt.shape[0], -1, k, k), b, stride=stride, padding=1 if k > 1 else 0)
@@ -53,7 +55,9 @@ def forward(flat, inp):
         y = Fn.silu(conv(x, w1, b1, 2))
         low = Fn.silu(conv(y, w3, b3, 2))
         bot = Fn.silu(conv(low, w5, b5, 2))
-        u16 = Fn.silu(conv(up(bot), w6, b6, 1))
+        b2 = Fn.silu(conv(bot, w7, b7, 2))
+        u8 = Fn.silu(conv(up(b2), w8, b8, 1))
+        u16 = Fn.silu(conv(up(u8), w6, b6, 1))
         z = Fn.silu(conv(up(u16 + low), w4, b4, 1)) + y
         o = conv(up(z), wh, bh, 1, k=1) + conv(x, wl, bl, 1, k=1)
     return o.permute(0, 2, 3, 1).reshape(-1).numpy().astype(F)

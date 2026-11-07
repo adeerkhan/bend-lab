@@ -7,7 +7,44 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
-## 2026-11-07 (latest) — the UNet draws flowers: a third level and the full corpus
+## 2026-11-08 (latest) — the UNet draws flowers: a fourth level, and the measurement fixed
+
+**Done and in the tree.** `examples/diffusion/unet/{model,train,config}.bend`: **four levels** (64 -> 32 -> 16 -> 8 ->
+4 -> 8 -> 16 -> 32 -> 64), 64 channels, no normalisations, the clean image as the flow target, 7,067 flowers. Record
+`results/diffusion-unet/trained/`, write-up `TRAINED.md`, changelog entry.
+
+**The numbers.** 224,583 parameters, 3,600 steps: loss **1.1831 -> 0.0298**; 64 draws with the data's mean and spread
+(+0.379 / 0.246 against +0.384 / 0.232); **held-out legibility 0.498** against a ceiling of 0.574 — **85.4%** of the
+span above the noise floor. The trained legibility is 0.603, above the ceiling: memorisation, stated as such. Gates:
+NumPy **9.15e-06** and torch **1.18e-05** at 2e-05 (widened from 1e-5 when the fourth level added two convolutions;
+measured value beside each), checkpoint **bit-identical** at 224,583 weights.
+
+**The measurement, fixed twice this session.** The eval scored against the 3,874-image subset while the model trained
+on 7,067, so `legibility` and the ceiling were both inflated and the previous record's "7,067 reference" label was
+wrong (0.545 was against 3,874; the true figures were 0.560 / 0.439). The eval now defaults to the full export, prints
+the reference set's size beside the ceiling, and prints a memorisation note when the trained legibility passes the
+ceiling.
+
+**Open, in order.** 1. The softness: the spectrum is steeper than the data's at every band, the bottleneck is 4x4
+(16 numbers per image), so the levers are a **fifth level** or a sampler that adds detail. 2. The width arm
+(CH = 96, 336,679 parameters, three levels) is running: if it beats 85.4% of the span it replaces depth, otherwise
+depth is settled. 3. A report-card task still needs a reference arm; the comparison is `flowers_flow`
+(0.536 / 0.490 with 413,440 parameters), and this UNet's held-out 0.498 is level with it at half the parameters.
+
+**Upstream.** bendlang/bend#1071 (a comment with the measured thresholds) and nuxyel/BendTorch#36 (gradient
+accumulation) are open as filed. The three BendTorch PRs are answered: #34 and #33 got their reference checks wired
+into `make check`, their NOTES and limitations edits; #32 carries the #29 doc edits. The remaining obligation is the
+**rebase and law recount** for #33/#34 once #32 merges.
+
+**Environment.** Builds need `LD_LIBRARY_PATH=$HOME/.local/lib/llvm22:$HOME/.local/cuda-nvrtc/lib64` (the restored
+`libLLVM` lives in `~/.local/lib/llvm22`; `~/opt/llvm-tree/usr/lib64` is read-only). Both venvs were rebuilt on python
+3.15 after the system moved; bendtorch's uses its pinned torch 2.14.1+cpu.
+
+**Traps paid for.** `Seq` returns a pair of parameters at every level, so nesting two Seqs nests the pairs. A batch must
+divide the image count. A run shorter than one pass trains on a class-ordered prefix. The eval's reference set must be
+the training set. A gate is never widened without the measured number written beside it.
+
+## 2026-11-07 — the UNet draws flowers: a third level and the full corpus
 
 **Done and in the tree.** `examples/diffusion/unet/{model,train,config}.bend`: **three levels** (64 -> 32 -> 16 -> 8 ->
 16 -> 32 -> 64), 64 channels, no normalisations, the clean image as the flow target, and the **7,067** flowers of the

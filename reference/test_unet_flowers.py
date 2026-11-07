@@ -9,20 +9,24 @@ rebuilds that forward in float32 from the same weights and compares all 8,192
 cells (two images, one channel each).
 
 The shapes, in the order the flat weights are laid out (the model's forward
-order, 150,727 values):
+order, 224,583 values):
 
   w1 (64, 45)  b1 (64)                      conv1 5 -> 64, stride 2
   w3 (64, 576) b3 (64)                      conv3 64 -> 64, stride 2
-  w5 (64, 576) b5 (64)                      conv5 64 -> 64, stride 2   (the third level)
-  w6 (64, 576) b6 (64)                      conv6 64 -> 64, stride 1   (its way back)
+  w5 (64, 576) b5 (64)                      conv5 64 -> 64, stride 2
+  w7 (64, 576) b7 (64)                      conv7 64 -> 64, stride 2   (the fourth level)
+  w8 (64, 576) b8 (64)                      conv8 64 -> 64, stride 1   (its way back)
+  w6 (64, 576) b6 (64)                      conv6 64 -> 64, stride 1
   w4 (64, 576) b4 (64)                      conv4 64 -> 64, stride 1
   wh (1, 64)   bh (1)                       the head, a 1x1 conv, no activation
   wl (1, 5)    bl (1)                       the linear bypass from the input
 
   y   = silu(conv(x))                      32x32
   l   = silu(conv(y))                      16x16
-  b   = silu(conv(l))                      8x8    (the bottleneck)
-  u16 = silu(conv(up(b)))                  16x16
+  b   = silu(conv(l))                      8x8
+  b2  = silu(conv(b))                      4x4    (the bottleneck)
+  u8  = silu(conv(up(b2)))                 8x8
+  u16 = silu(conv(up(u8)))                 16x16
   z   = silu(conv(up(u16 + l))) + y        32x32
   o   = conv1x1(up(z)) + conv1x1(x)        64x64, one channel
 
@@ -62,12 +66,17 @@ F = np.float32
 EPS = F(1e-5)
 HW, C = 4096, 64
 NIMG = 2
-# measured first, then set: 2.15e-06 on 40,960 cells with two group norms at
-# eps = 1e-5 (a norm divides small variances up), so the gate sits ~5x above it
-TOL = 1e-5
+# measured first, then set: four levels and seven convolutions (576-term sums at
+# the widest) give 9.15e-06 on these 8,192 cells, so the gate sits above it. It
+# was 1e-5 at three levels (measured 2.38e-06); the growth is the convolution
+# chain's float32 accumulation, not a different computation - the can-fail below
+# shows the gate still fails on a 0.5 error.
+TOL = 2e-5
 
 # the flat weights, in the order the model's forward pass dumps them
 PARTS = [(64, 45), (64,),
+         (64, 576), (64,),
+         (64, 576), (64,),
          (64, 576), (64,),
          (64, 576), (64,),
          (64, 576), (64,),
@@ -114,7 +123,7 @@ def forward(flat, inp):
         off += size
     if off != f.size:
         raise SystemExit(f"the probe's weights are {f.size} values, the model takes {off}")
-    w1, b1, w3, b3, w5, b5, w6, b6, w4, b4, wh, bh, wl, bl = parts
+    w1, b1, w3, b3, w5, b5, w7, b7, w8, b8, w6, b6, w4, b4, wh, bh, wl, bl = parts
 
     outs = []
     for img in range(NIMG):
@@ -122,7 +131,9 @@ def forward(flat, inp):
         y = silu(conv(x, w1, b1, s=2))
         low = silu(conv(y, w3, b3, s=2))
         bot = silu(conv(low, w5, b5, s=2))
-        u16 = silu(conv(up2(bot), w6, b6, s=1))
+        b2 = silu(conv(bot, w7, b7, s=2))
+        u8 = silu(conv(up2(b2), w8, b8, s=1))
+        u16 = silu(conv(up2(u8), w6, b6, s=1))
         z = F(silu(conv(up2(F(u16 + low)), w4, b4, s=1)) + y)
         o = conv(up2(z), wh, bh, k=1, p=0, s=1)          # the head: a 1x1 conv, no activation
         o = F(o + conv(x, wl, bl, k=1, p=0, s=1))        # plus the learned linear bypass
@@ -178,7 +189,7 @@ def main():
     want = forward(w, inp)
 
     ok = True
-    ok &= check("weights", w.size == 150727, f"{w.size} values, the model takes 150727")
+    ok &= check("weights", w.size == 224583, f"{w.size} values, the model takes 224583")
     ok &= check("output shape", got.size == want.size, f"{got.size} cells, twin {want.size}")
     d = float(np.max(np.abs(got.astype(np.float64) - want.astype(np.float64)))) if got.size == want.size else float("inf")
     ok &= check("forward", d <= TOL, f"two images, maxabs {d:.3e}  tol {TOL:g}")

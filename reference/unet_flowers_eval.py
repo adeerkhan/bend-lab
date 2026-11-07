@@ -13,6 +13,12 @@ disagree:
   legibility_held   the draws' best |corr| with any held-out flower
   ceiling           what a REAL held-out flower scores against the training set
 
+The reference set must be the one the model trained on: the 3,874-image subset is
+inside the 7,067-image training set, so scoring against the smaller set inflates
+both `legibility` and the ceiling. The default is the full export, and the two
+line counts are printed so a mismatch is visible. A trained legibility above the
+ceiling means memorisation; the held-out number is then the only honest one.
+
 plus the white-noise test the loss cannot see: the draws' radial power spectrum
 against the data's (a flat spectrum is noise, whatever the loss says).
 """
@@ -85,7 +91,7 @@ def main():
     ap.add_argument("--tag", default="run")
     a = ap.parse_args()
     EDGE = a.edge
-    train_path = a.train or os.path.join(FLOWERS, f"flowers{EDGE}-train-gray.u8")
+    train_path = a.train or os.path.join(FLOWERS, f"flowers{EDGE}-trainfull-gray.u8")
     hold_path = a.hold or os.path.join(FLOWERS, f"flowers{EDGE}-hold-gray.u8")
 
     text = open(a.log).read()
@@ -115,6 +121,8 @@ def main():
     print(f"legibility        {leg.mean():.3f}   (min {leg.min():.3f} max {leg.max():.3f})")
     print(f"legibility_held   {leg_held.mean():.3f}")
     print(f"ceiling           {ceiling:.3f}   (a real held-out flower vs the training set)")
+    print(f"reference set     {len(train)} training x {len(hold)} held out"
+          f"   ({os.path.basename(train_path)})")
     print(f"floor             {floor:.3f}   (noise)")
     print(f"of the ceiling    {100.0 * leg.mean() / ceiling:.1f}% trained, "
           f"{100.0 * leg_held.mean() / ceiling:.1f}% held out")
@@ -123,6 +131,9 @@ def main():
     print(f"of the span       {100.0 * (leg.mean() - floor) / span:.1f}% trained, "
           f"{100.0 * (leg_held.mean() - floor) / span:.1f}% held out"
           f"   (0 = noise, 100 = a real held-out flower)")
+    if leg.mean() > ceiling:
+        print(f"note             trained legibility is ABOVE the ceiling ({leg.mean():.3f} > {ceiling:.3f}): "
+              f"the draws memorise the training set, read the held-out number")
 
     sd, dd = spectrum(draws), spectrum(train.reshape(-1, EDGE, EDGE))
     print("spectrum (power per coefficient, radius 1-4 / 5-10 / 11-20 / 21-32):")
