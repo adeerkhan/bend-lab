@@ -24,7 +24,7 @@ import numpy as np
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.environ.get("OUT") or os.path.join(ROOT, "results", "diffusion-unet", "trained")
 DATA = os.path.join(os.path.expanduser("~"), ".cache", "bend-lab", "flowers",
-                    "flowers64-512-gray.u8")
+                    "flowers64-trainfull-gray.u8")
 HW, RES = 4096, 64
 
 

@@ -7,7 +7,45 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
-## 2026-11-06 (latest) — the UNet draws flowers: the objective was the wrong one
+## 2026-11-07 (latest) — the UNet draws flowers: a third level and the full corpus
+
+**Done and in the tree.** `examples/diffusion/unet/{model,train,config}.bend`: **three levels** (64 -> 32 -> 16 -> 8 ->
+16 -> 32 -> 64), 64 channels, no normalisations, the clean image as the flow target, and the **7,067** flowers of the
+training split (a fixed permutation, sha256 `87ee501c…`). Record `results/diffusion-unet/trained/`, write-up
+`TRAINED.md`, `reference/unet_flowers_eval.py`, changelog entry.
+
+**The numbers.** 150,727 parameters, 3,600 steps: loss **0.5542 -> 0.0241** (the data's mean scores 0.0539); 64 draws
+that are **flowers**; legibility **0.545** (96.6% of the span above the noise floor, 97.0% of the ceiling) and **0.438
+held out** (75.5% of the span). Gates: NumPy **2.38e-06**, torch **3.93e-06**, checkpoint **bit-identical** at 150,727
+weights.
+
+**The four levers, measured apart.** Objective v -> x0: 0.274 -> 0.426. Third level on 3,874 images: +11.7 points of
+span. Full corpus on two levels: **+0.0** (72.6% against 73.1%). All three together: 96.6% / 75.5%. Group norms
+(0.233 with, 0.274 without) and batch size (2 -> 8 -> 26 for +0.5 points held out) were measured and rejected earlier.
+
+**Open, in order.** 1. The softness: the spectrum is steeper than the data's at every band and the mean is 0.302 against
+0.384, so the next lever is a **fourth level** (the bottleneck is 8x8 = 64 numbers per image) or a wider stack - not more
+images, which is measured to do nothing on its own. 2. A report-card task for `unet-flowers` still needs a reference
+arm; the honest comparison is `flowers_flow` (0.536 / 0.490 with 413,440 parameters), which this UNet now beats on
+trained legibility and trails on held out. 3. The batch cannot exceed 2 at 64x64 (bendlang/bend#1071); accumulation is
+requested as nuxyel/BendTorch#36.
+
+**Upstream.** bendlang/bend#1071 (a comment with the measured thresholds) and nuxyel/BendTorch#36 (gradient
+accumulation) are both open, as filed on 2026-11-06.
+
+**Environment, repaired this session.** Python moved 3.14 -> 3.15 and orphaned `reference/.venv`; it was rebuilt on
+3.15 (requirements + pillow, pyarrow, torch-cpu). `libLLVM.so.22.1` had been deleted from `~/opt/llvm-tree`; the real
+147 MB file came back out of the cached `llvm-libs-22.1.8-4.fc44.x86_64.rpm` into **`~/.local/lib/llvm22`** (the tree's
+`usr/lib64` is read-only). **Any build in this checkout now needs**
+`LD_LIBRARY_PATH=$HOME/.local/lib/llvm22:$HOME/.local/cuda-nvrtc/lib64`.
+
+**Traps paid for.** `Seq` returns a *pair* of parameters at every level, so dropping a layer keeps `Unit` and nesting
+two `Seq`s nests the pairs (the third level cost three failed checks to this). A type error whose types carry deep
+literals crashes the renderer (bendlang/bend#1291's symptom) - the workaround is a **batch-1 twin with small literals**.
+`Up2`'s rows are the batch times the level's own rows. A batch must divide the image count or the last read runs past
+the export.
+
+## 2026-11-06 — the UNet draws flowers: the objective was the wrong one
 
 **Done and in the tree.** `examples/diffusion/unet/{model,train,config}.bend`: 64 channels at each level, **no
 normalisations**, the **clean image** as the flow target instead of the velocity, and the 3,874 flowers of the training

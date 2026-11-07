@@ -1,6 +1,9 @@
-# The trained UNet's shape: 64x64 -> 32x32 -> 16x16 -> 32x32 -> 64x64, 64
-# channels at each level, an up2 at each level, a skip at 32x32, and a linear
-# bypass from the input beside the U.
+# The trained UNet's shape with THREE levels: 64 -> 32 -> 16 -> 8 -> 16 -> 32 ->
+# 64, 64 channels at each level, an up2 at each level, a residual skip at 32x32
+# and another at 16x16, and a linear bypass from the input beside the U. The
+# third level is what closed the blur: two levels carry 256 numbers per image
+# into their widest representation, three carry 64, and legibility went 0.426 ->
+# 0.485 on the same corpus and 0.545 with the full one.
 #
 # There are no normalisations, and that is the measured choice. GroupNorm(2,
 # 1024, 1, 64) normalises each image's whole feature tensor to zero mean and
@@ -163,6 +166,21 @@ def conv3() -> T.Layer<CP3(), MID(), LOW(), S3()>:
 def silu4() -> T.Layer<Unit, LOW(), LOW(), LOW()>:
   T.SiLU(512n, 64n)
 
+def BOT() -> Type:
+  TA.Mat<128n, 64n>
+
+def SB() -> Type:
+  TA.Mat<128n, 576n>
+
+def conv5() -> T.Layer<CP3(), LOW(), BOT(), SB()>:
+  T.Conv2d(2n, 64n, 64n, 3n, 15n, 15n, 1n, 1n, 0n)
+
+def silu5() -> T.Layer<Unit, BOT(), BOT(), BOT()>:
+  T.SiLU(128n, 64n)
+
+def conv6() -> T.Layer<CP3(), LOW(), LOW(), S3()>:
+  T.Conv2d(2n, 64n, 64n, 3n, 15n, 15n, 1n, 0n, 0n)
+
 def conv4() -> T.Layer<CP3(), MID(), MID(), S4()>:
   T.Conv2d(2n, 64n, 64n, 3n, 31n, 31n, 1n, 0n, 0n)
 
@@ -187,14 +205,44 @@ def DownS() -> Type:
 def Down() -> T.Layer<DownP(), IN(), MID(), DownS()>:
   T.Seq(~CP1(), ~Unit, ~IN(), ~MID(), ~MID(), ~S1(), ~MID(), conv1(), silu1())
 
+def BotDown() -> T.Layer<T.Two<CP3(), Unit>, LOW(), BOT(), T.Two<SB(), BOT()>>:
+  T.Seq(~CP3(), ~Unit, ~LOW(), ~BOT(), ~BOT(), ~SB(), ~BOT(), conv5(), silu5())
+
+def BotUp() -> T.Layer<T.Two<Unit, P2C()>, BOT(), LOW(), T.Two<Unit, T.Two<S3(), LOW()>>>:
+  T.Seq(~Unit, ~P2C(), ~BOT(), ~LOW(), ~LOW(), ~Unit, ~T.Two<S3(), LOW()>, Up2(16n, 8n, 64n),
+    T.Seq(~CP3(), ~Unit, ~LOW(), ~LOW(), ~LOW(), ~S3(), ~LOW(), conv6(), silu4()))
+
+def BotP() -> Type:
+  T.Two<T.Two<CP3(), Unit>, T.Two<Unit, P2C()>>
+
+def BotS() -> Type:
+  T.Two<T.Two<SB(), BOT()>, T.Two<Unit, T.Two<S3(), LOW()>>>
+
+def Bot() -> T.Layer<BotP(), LOW(), LOW(), BotS()>:
+  T.Seq(~T.Two<CP3(), Unit>, ~T.Two<Unit, P2C()>, ~LOW(), ~BOT(), ~LOW(),
+    ~T.Two<SB(), BOT()>, ~T.Two<Unit, T.Two<S3(), LOW()>>, BotDown(), BotUp())
+
+def LowBlockP() -> Type:
+  T.Two<T.Two<Unit, BotP()>, Unit>
+
+def LowBlockS() -> Type:
+  T.Two<T.Two<Unit, BotS()>, Unit>
+
+def LowBlock() -> T.Layer<LowBlockP(), LOW(), LOW(), LowBlockS()>:
+  T.Residual(512n, 64n, BotP(), BotS(), Bot())
+
+def LowDown() -> T.Layer<T.Two<CP3(), Unit>, MID(), LOW(), T.Two<S3(), LOW()>>:
+  T.Seq(~CP3(), ~Unit, ~MID(), ~LOW(), ~LOW(), ~S3(), ~LOW(), conv3(), silu4())
+
 def LowP() -> Type:
-  T.Two<CP3(), Unit>
+  T.Two<T.Two<CP3(), Unit>, LowBlockP()>
 
 def LowS() -> Type:
-  T.Two<S3(), LOW()>
+  T.Two<T.Two<S3(), LOW()>, LowBlockS()>
 
 def Low() -> T.Layer<LowP(), MID(), LOW(), LowS()>:
-  T.Seq(~CP3(), ~Unit, ~MID(), ~LOW(), ~LOW(), ~S3(), ~LOW(), conv3(), silu4())
+  T.Seq(~T.Two<CP3(), Unit>, ~LowBlockP(), ~MID(), ~LOW(), ~LOW(), ~T.Two<S3(), LOW()>,
+    ~LowBlockS(), LowDown(), LowBlock())
 
 def UpP() -> Type:
   T.Two<Unit, P2C()>

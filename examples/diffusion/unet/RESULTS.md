@@ -1,10 +1,10 @@
 # The UNet's two levels: 64x64 to 16x16 and back
 
-> **The trained model is `TRAINED.md`.** `model.bend` + `train.bend` train this shape on 3,874 flowers with the
-> clean image as the target: 76,871 parameters, 4,000 steps, loss **0.6551 → 0.0390** against a predictor of the
-> data's mean at 0.0534, and 64 draws that are **blurred flowers** — legibility **0.426** against a held-out ceiling
-> of 0.562, and **0.330** on the 102 images the model never saw. The gates there are the NumPy twin **9.54e-07**, the
-> torch twin **1.61e-06** and a **bit-identical** checkpoint (76,871 weights). This file records the two-level shape
+> **The trained model is `TRAINED.md`.** `model.bend` + `train.bend` train this shape with a third level on 7,067
+> flowers, target the clean image: 150,727 parameters, 3,600 steps, loss **0.5542 → 0.0241** against a predictor of the
+> data's mean at 0.0539, and 64 draws that are **flowers** — legibility **0.545** against a held-out ceiling of 0.562
+> (97.0% of it), and **0.438** on the 102 images the model never saw. The gates are the NumPy twin **2.38e-06**, the
+> torch twin **3.93e-06** and a **bit-identical** checkpoint (150,727 weights). This file records the two-level shape
 > itself and its deterministic gate, which `main.bend` still checks independently of any training.
 
 `examples/diffusion/unet/main.bend` is the smallest composition that is still a U: 64x64 -> 32x32 -> **16x16** ->

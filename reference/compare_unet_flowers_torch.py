@@ -41,7 +41,7 @@ def forward(flat, inp):
         size = int(np.prod(shape))
         parts.append(t(w[off:off + size].reshape(shape)))
         off += size
-    w1, b1, w3, b3, w4, b4, wh, bh, wl, bl = parts
+    w1, b1, w3, b3, w5, b5, w6, b6, w4, b4, wh, bh, wl, bl = parts
 
     def conv(h, wt, b, stride, k=3):
         return Fn.conv2d(h, wt.reshape(wt.shape[0], -1, k, k), b, stride=stride, padding=1 if k > 1 else 0)
@@ -52,7 +52,9 @@ def forward(flat, inp):
     with torch.no_grad():
         y = Fn.silu(conv(x, w1, b1, 2))
         low = Fn.silu(conv(y, w3, b3, 2))
-        z = Fn.silu(conv(up(low), w4, b4, 1)) + y
+        bot = Fn.silu(conv(low, w5, b5, 2))
+        u16 = Fn.silu(conv(up(bot), w6, b6, 1))
+        z = Fn.silu(conv(up(u16 + low), w4, b4, 1)) + y
         o = conv(up(z), wh, bh, 1, k=1) + conv(x, wl, bl, 1, k=1)
     return o.permute(0, 2, 3, 1).reshape(-1).numpy().astype(F)
 

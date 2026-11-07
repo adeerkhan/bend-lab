@@ -4,9 +4,10 @@
 #   .scratch/unet_train --save /tmp/unet.bin
 #   bend examples/diffusion/unet/train.bend --steps 50 --no-sample
 #
-# The model is `model.bend`: two levels, 64 -> 32 -> 16 -> 32 -> 64, 64 channels
-# at each level, an `up2` upsample, a skip at 32x32 and a linear bypass from the
-# input beside the U, with no normalisations (the reason is in that file).
+# The model is `model.bend`: THREE levels, 64 -> 32 -> 16 -> 8 -> 16 -> 32 -> 64,
+# 64 channels at each level, an `up2` upsample, a residual skip at 32x32 and
+# another at 16x16, and a linear bypass from the input beside the U, with no
+# normalisations (the reason is in that file).
 #
 # The objective is rectified flow with the CLEAN IMAGE as the target:
 #
@@ -25,7 +26,7 @@
 # makes it). `flowers64-hold-gray.u8`, 102 images, sha256 f08730fe..., is the
 # held-out half and is never trained on.
 #
-#   --steps N       steps to run (default 4000)
+#   --steps N       steps to run (default 3600, one pass over the 7,066)
 #   --start N       the global index of the first step (default 0)
 #   --save PATH     write the training state to PATH with Train.save
 #   --resume PATH   restore it with Train.restore
@@ -123,7 +124,8 @@ def read_batch(root: String, +s: Nat) -> IO(List<&2, U32>):
   do IO<List<&2, U32>>:
     f : File <- IO.try(File, File.open(path(root), "r"))
     m : File & Result<&1, &1, U32 & String, List<&2, U32>> <-
-      File.read_at(f, U32.from_nat(Nat.mul(Nat.mod(Nat.mul(s, B()), NIMG()), HW())),
+      File.read_at(f, U32.from_nat(Nat.mul(Nat.mod(Nat.mul(s, 7919n),
+        Nat.add(Nat.sub(NIMG(), B()), 1n)), HW())),
         U32.from_nat(batch_bytes()))
     rd_done(m)
 
@@ -231,13 +233,10 @@ def scale_go(xs: List<&2, F32>, +acc: List<&2, F32>) -> List<&2, F32>:
 def count() -> Nat:
   U32.to_nat(T.Layer.count(ModelP(), IN(), OUT(), ModelS(), Model()))
 
-# The flat order is the model's forward order: the U's three conv biases start at
-# zero, then the linear bypass's weight is noise and its bias is zero. There are no
-# group norms in this arm, so there are no gain segments. The offsets are the layer
-# counts added in the same order, at B = 2 and CH = 64:
-#   conv1 w 2880, b 2880..2943;  conv3 w 36864, b 39808..39871
-#   conv4 w 36864, b 76736..76799; head  w 64, b 76864; bypass w 5, b 76870
-#   count 76871
+# The flat order is the model's forward order, three levels, count 150,727:
+#   conv1 w 2880,   b 2880..2943;    conv3 w 36864, b 39808..39871
+#   conv5 w 36864,  b 76736..76799;  conv6 w 36864, b 113664..113727
+#   conv4 w 36864,  b 150592..150655; head w 64, b 150720; bypass w 5, b 150726
 def init_arr() -> Array<F32>:
   +n = count()
   arr0 = fill_go(n, scale_go(G.noise_of(1n, n), Nil{}), U32.from_nat(0n),
@@ -245,8 +244,10 @@ def init_arr() -> Array<F32>:
   arr1 = zeros_at(arr0, 2880n, 64n, 0.0)
   arr2 = zeros_at(arr1, 39808n, 64n, 0.0)
   arr3 = zeros_at(arr2, 76736n, 64n, 0.0)
-  arr4 = zeros_at(arr3, 76864n, 1n, 0.0)
-  zeros_at(arr4, 76870n, 1n, 0.0)
+  arr4 = zeros_at(arr3, 113664n, 64n, 0.0)
+  arr5 = zeros_at(arr4, 150592n, 64n, 0.0)
+  arr6 = zeros_at(arr5, 150720n, 1n, 0.0)
+  zeros_at(arr6, 150726n, 1n, 0.0)
 
 def un_pa(pa: T.PA<ModelP()>) -> ModelP():
   match pa:
