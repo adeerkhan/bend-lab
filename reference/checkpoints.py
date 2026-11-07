@@ -66,6 +66,11 @@ def package_map(packages):
     `reference/experiment.py` gives a list (several versions of one package can
     be resolved at once), a lock gives a mapping; both are compared by name, so
     a resumed run that resolved a different version is refused by name.
+
+    That refusal is this repository's policy, not a claim that the file is
+    unreadable: BendTorch's checkpoint layout did not change across 1.x -> 2.0.0,
+    and a 1.x file resumes under the `Train` it is read into. What a resume
+    cannot carry is a different *configuration*, and that is `config` below.
     """
     if isinstance(packages, dict):
         return {str(k): [str(v)] for k, v in packages.items()}
