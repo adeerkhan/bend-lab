@@ -138,10 +138,12 @@ trains nothing.
 ## Why there is no report card
 
 `reference/experiment.py` tasks carry a reference arm and a gate on a held-out metric. This example has the metric — 102
-unseen flowers, ceiling 0.574 — but no reference arm inside the task machinery. The honest comparison is
-`examples/diffusion/flowers_flow`, whose row-token model reaches **0.536 trained / 0.490 held out** with 413,440
-parameters. This UNet's held-out **0.547** is above it with 298,439 parameters; its trained 0.633 is above the ceiling
-and is not comparable.
+unseen flowers, ceiling 0.574 — but no reference arm inside the task machinery, and it is not one of the report-card
+tasks. The nearest comparison is `examples/diffusion/flowers_flow`, whose row-token model reaches **0.536 trained /
+0.490 held out** with 413,440 parameters on **3,874** flowers. This UNet trained on **7,067**, so the raw held-out
+numbers are not a clean head-to-head: as fractions of their own ceilings they are 87% (3,874-image row-token model,
+ceiling 0.562) and 95.4% (this UNet, ceiling 0.574). A same-corpus, same-draw-count run is still owed. This UNet's
+trained legibility, 0.633, is above its ceiling and is not comparable.
 
 ## Limits
 
