@@ -261,7 +261,7 @@ lane, and the seven diagnostic prototypes
 
 ## Status
 
-`make check` is 119/119. Diffusion is complete through the ViT, with the gate at
+`make check` is 120/120. Diffusion is complete through the ViT, with the gate at
 0.75 and the Bend model measured at 0.795 (DDIM) and 0.807 (DDPM). Flow matching
 has a measured 2D example and its frozen gate (`test_flow2d.py`, six gates). CIFAR-10 has its
 3072-output DDPM: 256 images, 40 steps, build 50.8 s and run 65.4 s, first loss

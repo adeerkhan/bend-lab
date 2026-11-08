@@ -4,6 +4,25 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### GLM-5.3-Flash-from-scratch: Stage A, and the linear-attention forward
+
+- **`reference/glm53_flash/`**: the educational 25.7M model vendored at commit `96d9c7c`, MIT,
+  with `VENDORED.md` stating that it is not the 320B release. Its 12 tests pass under
+  `reference/.venv-rf` (torch 2.11.0+cu128).
+- **Stage A** (`examples/language/glm53_flash/model_a.bend`): a 74,144-parameter dense-attention
+  harness, width 32, four blocks, four heads of 8, 64 positions, SwiGLU 128, tied head, built
+  from BendTorch's existing `Embedding`, `RMSNorm`, `RoPE`, `Attention`, `SiLU`, `Tie` and
+  `CrossEntropy`. `probe_a.bend` prints whole logits and all 74,144 parameter gradients.
+- **The gate** (`reference/test_glm53_layers.py`, six checks): logits **2.38e-07**, gradients
+  **2.24e-08**, loss 5.5654626, causality (first half exact, future changed), the Stage B
+  linear-attention forward **9.77e-04** on values to 4,096 (relative < 1e-6), and RoPE
+  **2.44e-04** on values to 2,000 (relative < 1e-7). The RoPE bridge is explicit: the reference's
+  interleaved pairs, BendTorch's half-split pairs, and the q/k row permutation
+  `[0,4,1,5,2,6,3,7]`.
+- **Stage B forward** (`lin_core.bend`): ELU+1, the causal prefix of `k` and `k⊗v`, the
+  numerator, denominator and 1e-6 clamp, in list form. **Not built:** the linear-attention
+  backward, Stage C, the MoE, the four-stream HyperConnection, RL and the 25.7M run.
+
 ### The rectified-flow port gets a whole-array gate, and the bug it caught
 
 - **`reference/test_rectified_flow_layers.py`** (in `make check`): builds

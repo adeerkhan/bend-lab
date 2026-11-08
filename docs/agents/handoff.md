@@ -7,7 +7,33 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
-## 2026-11-08 (later) — the rectified-flow layer gate, its backward, and the bugs they caught
+## 2026-11-08 (latest) — GLM-5.3-Flash-from-scratch: Stage A and the linear-attention forward
+
+**Done and in the tree.** `reference/glm53_flash/`: the educational 25.7M model vendored at
+`96d9c7c`, MIT, with `VENDORED.md`; its 12 tests pass under `reference/.venv-rf` (torch
+2.11.0+cu128). `examples/language/glm53_flash/`: Stage A, a **74,144-parameter** dense-attention
+harness (width 32, four blocks, four heads of 8, 64 positions, SwiGLU 128, tied head) built from
+BendTorch's existing `Embedding`, `RMSNorm`, `RoPE`, `Attention`, `SiLU`, `Tie` and
+`CrossEntropy`; `model_a.bend`, `probe_a.bend`, `probe_rope.bend`, and `lin_core.bend`, the
+Stage B linear-attention forward.
+
+**The gate.** `reference/test_glm53_layers.py` runs under `make check` with no PyTorch: it
+generates the weights and batch with NumPy, runs the probes, and compares a frozen
+PyTorch-autograd golden. Six checks: Stage A logits **2.38e-07**; all 74,144 gradients
+**2.24e-08**; loss 5.5654626 (golden 5.5654621); causality (first half exact, future changed);
+Stage B linear forward **9.77e-04** on values to 4,096 (relative < 1e-6); RoPE **2.44e-04** on
+values to 2,000 (relative < 1e-7). The RoPE bridge is explicit: the reference's interleaved
+pairs, BendTorch's half-split pairs, and the q/k row permutation `[0,4,1,5,2,6,3,7]`. The
+gradients are compared in the file layout, so the permutation is part of the gate.
+`make check` is **120/120**.
+
+**What is not built.** Stage B backward (dq, dk, dv); Stage C gathered sparse attention and its
+backward; the MoE, the four-stream HyperConnection, RL and the 25.7M run. The list-form core's
+reverse pass is the next work: the forward already matches, and the same prefix lists are the
+state it needs. No upstream issue has been filed; this is local implementation, not a Bend
+defect.
+
+## 2026-11-08 (earlier) — the rectified-flow layer gate, its backward, and the bugs they caught
 
 **Done and in the tree.** `reference/test_rectified_flow_layers.py` builds
 `reference/probe_rectified_flow_layers.bend` once and compares fourteen whole outputs with a NumPy twin: `Down2`
