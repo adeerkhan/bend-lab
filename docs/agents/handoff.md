@@ -35,13 +35,25 @@ README's gate count and its stale two-level UNet sentence are current; three bro
 public `.local`/absolute-path references, the upstream table (#39, #36, #34, #33, #29, bend-ml #35, merged #32) and
 `.gitignore` are fixed.
 
+**Verification pass (2026-11-08, `93ce3ac`).** Clean tree; `env -u LD_LIBRARY_PATH make check` **119/119** and the
+layer test **14/14**. The regression proof in a temporary worktree: the old `dot8` fails **7/14** (`mix2`, `mixw`, and
+the five `mb_*` gates), the old `dq_sum` fails `mb_dq` at **6.890e+02** (13/14); the worktree was removed and the main
+tree reran **14/14**. The defect-class audit over **78** tracked `.bend` files found one `1n+p` case without a
+self-call, `flow_matching train_steps`, which delegates to `loop`; the only offset dot is `rectified_flow dot8`, and
+the other dots are full-list. The docs scan found **0** missing relative links in **62** Markdown files and no
+absolute home path in `*.md`, `*.bend` or `*.py`.
+
+**The k=4 parse error is ruled out.** `do IO(T.Train<ModelP()>):` is invalid: the `do` form takes `IO<T>`, not
+`IO(T)`, hence `expected '<' observed '('`. The scratch copy also calls a `do_step` it does not define, so the arm is
+not runnable, but there is no Bend defect and no upstream issue. The rule is now in `AGENTS.md`'s pitfall list.
+
 **What was not run.** The PyTorch 33M reference is still smoke-only (stopped deliberately); there is no reference
 number for the 16x16 target. The XAttn wrapper, the memory-KV `FullAttention`, the DAG and the `rf16` task are the
 next work.
 
 **Open, in order.** 1. the XAttn wrapper (normalization, the LoRA key, the projection, the query as a parameter);
-2. the memory-KV attention; 3. the DAG U-Net; 4. `rf16` plus the texture band. The k=4 accumulation arm still waits
-on the Bend syntax error. The PyTorch 33M reference remains smoke-only.
+2. the memory-KV attention; 3. the DAG U-Net; 4. `rf16` plus the texture band. The k=4 arm is not runnable because
+its scratch file lacks `do_step`; that is not Bend. The PyTorch 33M reference remains smoke-only.
 
 ## 2026-11-08 (earlier) — the UNet's fifth level: the metric paid, the texture did not
 
@@ -75,7 +87,7 @@ amplitude, or a texture stage; a sixth level has nothing left to remove (bottlen
 k=4 accumulation arm still is not running: k=1 `accumulate`+`flush` is **bit-identical** to `Train.step` on this UNet
 (same 8,192-cell probe, loss 0.340704, probe md5 `d63d0fa3d2c716922ccae43a6847850b`), and four micro-batches with the
 loss divided by 4 land on the **same weights**; the loop that reads four different batches hit a Bend syntax error
-(`expected '<' observed '('`) and is unresolved. 3. A report-card task still needs a reference arm; `flowers_flow` is
+(`expected '<' observed '('`), ruled out in the later section as invalid `do IO(T)` syntax. 3. A report-card task still needs a reference arm; `flowers_flow` is
 0.536 / 0.490 with 413,440 parameters, so the UNet's 0.547 is above it at 298,439.
 
 **Upstream.** #34 (`tile`, 6aa3428) and #33 (`rope2d`, d82365e) are rebased, force-pushed to `fork`; `make check-tile`

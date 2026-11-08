@@ -39,7 +39,7 @@ What changed for the people who run the lab. Internal refactors are not listed.
   `checkpoint.latest.pt` was never written).
 - **`examples/diffusion/{unet,flowers_flow}`** fall back to
   `$HOME/.cache/bend-lab` instead of one machine's absolute path.
-- **Docs and links**: stale `.local` and `/home/adeerkhan` references removed,
+- **Docs and links**: stale private-ledger and absolute-home references removed,
   three broken Markdown links fixed, the README's `make check` count and
   two-level UNet sentence brought up to date, `.understand-anything/tmp/`
   ignored, and `results/lucidrains-rectified-flow/` added to `.gitignore`.

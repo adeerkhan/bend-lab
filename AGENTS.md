@@ -152,3 +152,4 @@ traps bend-ml paid for, and the fix is in each case.
 - The comparison operators are not terms: use `Nat.is_eq`, `F32.is_eq` and
   `Nat.cmp`, and pass the `Bool` to a def that matches on it.
 - A negative literal is not a term: write `(0.0 - 0.5 : F32)`.
+- `do` takes `IO<T>`, not `IO(T)`: `do IO(Unit):` is a parse error (`expected '<' observed '('`); write `do IO<Unit>:`.
