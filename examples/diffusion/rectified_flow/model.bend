@@ -393,3 +393,72 @@ def Pool2() -> T.Layer<Unit, IN(), POOL(), PS>:
     p => xs => off => T.PA{p, xs, off},
     p => xs => off => T.PA{p, xs, off},
     u => 0}
+
+# ---- learned-query mix, forward -------------------------------------------
+#
+# The reference's XAttnRes does not average the history blindly: it scores each
+# entry with a learned pseudo-query and a softmax. At the toy scale the entries
+# are (pooled history value, current x), and the keys are the normalized values.
+# This block is the learned query forward; the backward is the next test.
+
+type MXS is Type:
+  MXS{vh: TA.Mat<128n, 8n>, xc: TA.Mat<128n, 8n>, kh: TA.Mat<128n, 8n>, kx: TA.Mat<128n, 8n>, q: TA.Mat<1n, 8n>}
+
+def scale8() -> F32:
+  0.35355338
+
+def dot8(+off: Nat, +xs: List<&2, F32>, +ys: List<&2, F32>) -> F32:
+  s0 = (nth(off, xs) * nth(off, ys) : F32)
+  +s1 = (s0 + nth(Nat.add(off, 1n), xs) * nth(Nat.add(off, 1n), ys) : F32)
+  +s2 = (s1 + nth(Nat.add(off, 2n), xs) * nth(Nat.add(off, 2n), ys) : F32)
+  +s3 = (s2 + nth(Nat.add(off, 3n), xs) * nth(Nat.add(off, 3n), ys) : F32)
+  +s4 = (s3 + nth(Nat.add(off, 4n), xs) * nth(Nat.add(off, 4n), ys) : F32)
+  +s5 = (s4 + nth(Nat.add(off, 5n), xs) * nth(Nat.add(off, 5n), ys) : F32)
+  +s6 = (s5 + nth(Nat.add(off, 6n), xs) * nth(Nat.add(off, 6n), ys) : F32)
+  (s6 + nth(Nat.add(off, 7n), xs) * nth(Nat.add(off, 7n), ys) : F32)
+
+def logits_list(+left: Nat, +row: Nat, +kh: List<&2, F32>, +kx: List<&2, F32>, +q: List<&2, F32>, +acc: List<&2, F32>) -> List<&2, F32>:
+  match left:
+    case 0n:
+      List.reverse(&2, F32, acc)
+    case 1n+p:
+      +off = Nat.mul(row, 8n)
+      lh = (dot8(off, kh, q) * scale8() : F32)
+      lx = (dot8(off, kx, q) * scale8() : F32)
+      logits_list(p, Nat.add(row, 1n), kh, kx, q, Con{lx, Con{lh, acc}})
+
+def mix_out_list(+left: Nat, +row: Nat, +vh: List<&2, F32>, +xc: List<&2, F32>, +w: List<&2, F32>, +acc: List<&2, F32>) -> List<&2, F32>:
+  match left:
+    case 0n:
+      List.reverse(&2, F32, acc)
+    case 1n+p:
+      +off = Nat.mul(row, 8n)
+      +woff = Nat.mul(row, 2n)
+      +wh = nth(woff, w)
+      +wx = nth(Nat.add(woff, 1n), w)
+      v0 = (wh * nth(off, vh) + wx * nth(off, xc) : F32)
+      v1 = (wh * nth(Nat.add(off, 1n), vh) + wx * nth(Nat.add(off, 1n), xc) : F32)
+      v2 = (wh * nth(Nat.add(off, 2n), vh) + wx * nth(Nat.add(off, 2n), xc) : F32)
+      v3 = (wh * nth(Nat.add(off, 3n), vh) + wx * nth(Nat.add(off, 3n), xc) : F32)
+      v4 = (wh * nth(Nat.add(off, 4n), vh) + wx * nth(Nat.add(off, 4n), xc) : F32)
+      v5 = (wh * nth(Nat.add(off, 5n), vh) + wx * nth(Nat.add(off, 5n), xc) : F32)
+      v6 = (wh * nth(Nat.add(off, 6n), vh) + wx * nth(Nat.add(off, 6n), xc) : F32)
+      v7 = (wh * nth(Nat.add(off, 7n), vh) + wx * nth(Nat.add(off, 7n), xc) : F32)
+      mix_out_list(p, Nat.add(row, 1n), vh, xc, w, Con{v7, Con{v6, Con{v5, Con{v4, Con{v3, Con{v2, Con{v1, Con{v0, acc}}}}}}}})
+
+def mix_sm(r: T.Fwd<Unit, TA.Mat<128n, 2n>, TA.Mat<128n, 2n>>, +vh: List<&2, F32>, +xc: List<&2, F32>) -> TA.Mat<128n, 8n>:
+  match r:
+    case T.Fwd{_, w, _}:
+      wl = ml_list(128n, 2n, TA.Mat.to_list(128n, 2n, w))
+      TA.Mat.from_list(128n, 8n, mix_out_list(128n, 0n, vh, xc, wl, Nil{}))
+
+def mix_forward(x: MXS) -> TA.Mat<128n, 8n>:
+  match x:
+    case MXS{vh, xc, kh, kx, q}:
+      vhl = ml_list(128n, 8n, TA.Mat.to_list(128n, 8n, vh))
+      xcl = ml_list(128n, 8n, TA.Mat.to_list(128n, 8n, xc))
+      khl = ml_list(128n, 8n, TA.Mat.to_list(128n, 8n, kh))
+      kxl = ml_list(128n, 8n, TA.Mat.to_list(128n, 8n, kx))
+      ql = ml_list(1n, 8n, TA.Mat.to_list(1n, 8n, q))
+      logits = TA.Mat.from_list(128n, 2n, logits_list(128n, 0n, khl, kxl, ql, Nil{}))
+      mix_sm(T.Layer.fwd(Unit, TA.Mat<128n, 2n>, TA.Mat<128n, 2n>, TA.Mat<128n, 2n>, T.Softmax(128n, 2n), Unit{}, logits), vhl, xcl)
