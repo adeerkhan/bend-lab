@@ -14,11 +14,14 @@ mirrors the layers with NumPy:
   xattn      0.5 * (pool(history) + current)
   mix        learned query: softmax([kh.q, kx.q] / sqrt(8)) over (vh, xc)
   mix2       the same with kx = 2 * kh, so the row weights differ
+  mixw       the saved softmax weights of the kx = 2 * kh case
+  mb_*       its backward: dvh, dxc, dkh, dkx and the query gradient
   softmax    Softmax(2,2) row-wise
 
-The permutation, max, scatter and zero-query mix are exact; the learned mix is
-compared at 5e-3 (float32 exp/softmax at values around 3,000) and the 2x2
-softmax at 1e-6. Exit code 0 = every gate passed. Nothing here writes results.
+The permutation, max, scatter and zero-query mix are exact; the learned mix and
+its backward are compared at 5e-3 (float32 exp/softmax at values around 3,000)
+and the 2x2 softmax at 1e-6. Exit code 0 = every gate passed. Nothing here
+writes results.
 """
 import os
 import re
@@ -146,10 +149,10 @@ def dot8(xs, ys):
     return s
 
 
-def mix_twin(vh, xc, kh, kx, q):
+def weights_twin(kh, kx, q):
     scale = np.float32(0.35355338)
-    logits = np.empty((len(vh), 2), dtype=np.float32)
-    for r in range(len(vh)):
+    logits = np.empty((len(kh), 2), dtype=np.float32)
+    for r in range(len(kh)):
         logits[r, 0] = np.float32(dot8(kh[r], q) * scale)
         logits[r, 1] = np.float32(dot8(kx[r], q) * scale)
     m = np.maximum(logits[:, 0], logits[:, 1])
@@ -157,12 +160,24 @@ def mix_twin(vh, xc, kh, kx, q):
     e[:, 0] = np.exp(np.float32(logits[:, 0] - m), dtype=np.float32)
     e[:, 1] = np.exp(np.float32(logits[:, 1] - m), dtype=np.float32)
     s = np.float32(e[:, 0] + e[:, 1])
-    w = e / s[:, None]
+    return e / s[:, None]
+
+
+def mix_twin(vh, xc, kh, kx, q):
+    w = weights_twin(kh, kx, q)
     out = np.empty_like(vh)
     for r in range(len(vh)):
         for c in range(vh.shape[1]):
             out[r, c] = np.float32(w[r, 0] * vh[r, c] + w[r, 1] * xc[r, c])
     return out
+
+
+def dot8row(off, xs, ys):
+    """A row dot in the model's order: x[off]*y[off], then one add per term."""
+    s = np.float32(xs[off] * ys[off])
+    for k in range(1, 8):
+        s = np.float32(s + np.float32(xs[off + k] * ys[off + k]))
+    return s
 
 
 # ---- the gates --------------------------------------------------------------
@@ -206,6 +221,23 @@ def main():
          (np.float32(0.5) * (pool + vh)).astype(np.float32).reshape(-1), 0.0)
     gate("mix", got.get("mix"), mix_twin(vh, 3 * vh, vh, vh, q).reshape(-1), 5e-3)
     gate("mix2", got.get("mix2"), mix_twin(vh, 3 * vh, vh, 2 * vh, q).reshape(-1), 5e-3)
+    w = weights_twin(vh, 2 * vh, q)
+    gate("mixw", got.get("mixw"), w.reshape(-1), 1e-6)
+    dout = vh
+    dout_f, vh_f, xc_f = dout.reshape(-1), vh.reshape(-1), (3 * vh).reshape(-1)
+    dwh = np.array([dot8row(8 * r, dout_f, vh_f) for r in range(len(vh))], dtype=np.float32)
+    dwx = np.array([dot8row(8 * r, dout_f, xc_f) for r in range(len(vh))], dtype=np.float32)
+    sft = np.float32(w[:, 0] * dwh + w[:, 1] * dwx)
+    da = (w[:, 0] * (dwh - sft)).astype(np.float32)
+    db = (w[:, 1] * (dwx - sft)).astype(np.float32)
+    dda = (da * np.float32(0.35355338)).astype(np.float32)
+    ddb = (db * np.float32(0.35355338)).astype(np.float32)
+    gate("mb_dvh", got.get("mb_dvh"), (w[:, 0:1] * dout).astype(np.float32).reshape(-1), 5e-3)
+    gate("mb_dxc", got.get("mb_dxc"), (w[:, 1:2] * (3 * vh)).astype(np.float32).reshape(-1), 5e-3)
+    gate("mb_dkh", got.get("mb_dkh"), (dda[:, None] * q[None, :]).astype(np.float32).reshape(-1), 5e-3)
+    gate("mb_dkx", got.get("mb_dkx"), (ddb[:, None] * q[None, :]).astype(np.float32).reshape(-1), 5e-3)
+    dq = (dda[:, None] * vh + ddb[:, None] * (2 * vh)).sum(axis=0, dtype=np.float32)
+    gate("mb_dq", got.get("mb_dq"), dq.reshape(-1), 5e-3)
 
     sm = np.array([[0.0, 0.0], [2.0, 0.0]], dtype=np.float32)
     e = np.exp(sm - sm.max(axis=1, keepdims=True), dtype=np.float32)

@@ -399,7 +399,8 @@ def Pool2() -> T.Layer<Unit, IN(), POOL(), PS>:
 # The reference's XAttnRes does not average the history blindly: it scores each
 # entry with a learned pseudo-query and a softmax. At the toy scale the entries
 # are (pooled history value, current x), and the keys are the normalized values.
-# This block is the learned query forward; the backward is the next test.
+# This block is the learned query forward and its backward; the backward
+# below uses the saved softmax weights and the same dot order.
 
 type MXS is Type:
   MXS{vh: TA.Mat<128n, 8n>, xc: TA.Mat<128n, 8n>, kh: TA.Mat<128n, 8n>, kx: TA.Mat<128n, 8n>, q: TA.Mat<1n, 8n>}
@@ -452,16 +453,176 @@ def mix_out_list(+left: Nat, +row: Nat, +vh: List<&2, F32>, +xc: List<&2, F32>, 
 def mix_sm(r: T.Fwd<Unit, TA.Mat<128n, 2n>, TA.Mat<128n, 2n>>, +vh: List<&2, F32>, +xc: List<&2, F32>) -> TA.Mat<128n, 8n>:
   match r:
     case T.Fwd{_, w, _}:
-      wl = ml_list(128n, 2n, TA.Mat.to_list(128n, 2n, w))
+      +wl = ml_list(128n, 2n, TA.Mat.to_list(128n, 2n, w))
       TA.Mat.from_list(128n, 8n, mix_out_list(128n, 0n, vh, xc, wl, Nil{}))
 
 def mix_forward(x: MXS) -> TA.Mat<128n, 8n>:
   match x:
     case MXS{vh, xc, kh, kx, q}:
-      vhl = ml_list(128n, 8n, TA.Mat.to_list(128n, 8n, vh))
-      xcl = ml_list(128n, 8n, TA.Mat.to_list(128n, 8n, xc))
-      khl = ml_list(128n, 8n, TA.Mat.to_list(128n, 8n, kh))
-      kxl = ml_list(128n, 8n, TA.Mat.to_list(128n, 8n, kx))
-      ql = ml_list(1n, 8n, TA.Mat.to_list(1n, 8n, q))
+      +vhl = ml_list(128n, 8n, TA.Mat.to_list(128n, 8n, vh))
+      +xcl = ml_list(128n, 8n, TA.Mat.to_list(128n, 8n, xc))
+      +khl = ml_list(128n, 8n, TA.Mat.to_list(128n, 8n, kh))
+      +kxl = ml_list(128n, 8n, TA.Mat.to_list(128n, 8n, kx))
+      +ql = ml_list(1n, 8n, TA.Mat.to_list(1n, 8n, q))
       logits = TA.Mat.from_list(128n, 2n, logits_list(128n, 0n, khl, kxl, ql, Nil{}))
       mix_sm(T.Layer.fwd(Unit, TA.Mat<128n, 2n>, TA.Mat<128n, 2n>, TA.Mat<128n, 2n>, T.Softmax(128n, 2n), Unit{}, logits), vhl, xcl)
+
+# ---- learned-query mix, backward -------------------------------------------
+#
+# The gradient of one row, with a = kh.q, b = kx.q and w = softmax([a, b]):
+#
+#   dvh  = wh * dout              dxc  = wx * dout
+#   dwh  = dout . vh              dwx  = dout . xc
+#   s    = wh * dwh + wx * dwx    (the softmax's own sum)
+#   da   = wh * (dwh - s)         db   = wx * (dwx - s)
+#   dq   = sum_r (da*scale) * kh[r] + (db*scale) * kx[r]
+#   dkh  = (da*scale) outer q     dkx  = (db*scale) outer q
+#
+# The softmax derivative is BendTorch's own `Softmax` backward on the saved
+# weights, so the forward and the backward use one definition. `w` is cloned
+# through its list: the matrix is linear, the list is read-only.
+
+type MB is Type:
+  MB{dvh: TA.Mat<128n, 8n>, dxc: TA.Mat<128n, 8n>, dkh: TA.Mat<128n, 8n>, dkx: TA.Mat<128n, 8n>, dq: TA.Mat<1n, 8n>}
+
+def logits_mat(kh: TA.Mat<128n, 8n>, kx: TA.Mat<128n, 8n>, q: TA.Mat<1n, 8n>) -> TA.Mat<128n, 2n>:
+  +khl = ml_list(128n, 8n, TA.Mat.to_list(128n, 8n, kh))
+  +kxl = ml_list(128n, 8n, TA.Mat.to_list(128n, 8n, kx))
+  +ql = ml_list(1n, 8n, TA.Mat.to_list(1n, 8n, q))
+  TA.Mat.from_list(128n, 2n, logits_list(128n, 0n, khl, kxl, ql, Nil{}))
+
+def w_of(r: T.Fwd<Unit, TA.Mat<128n, 2n>, TA.Mat<128n, 2n>>) -> TA.Mat<128n, 2n>:
+  match r:
+    case T.Fwd{_, w, _}:
+      w
+
+def mix_weights(kh: TA.Mat<128n, 8n>, kx: TA.Mat<128n, 8n>, q: TA.Mat<1n, 8n>) -> TA.Mat<128n, 2n>:
+  w_of(T.Layer.fwd(Unit, TA.Mat<128n, 2n>, TA.Mat<128n, 2n>, TA.Mat<128n, 2n>,
+    T.Softmax(128n, 2n), Unit{}, logits_mat(kh, kx, q)))
+
+def dx_of(b: T.Bwd<Unit, TA.Mat<128n, 2n>>) -> TA.Mat<128n, 2n>:
+  match b:
+    case T.Bwd{_, dx, _}:
+      dx
+
+def sm_bwd_mat(s: TA.Mat<128n, 2n>, dy: TA.Mat<128n, 2n>) -> TA.Mat<128n, 2n>:
+  dx_of(T.Layer.bwd(Unit, TA.Mat<128n, 2n>, TA.Mat<128n, 2n>, TA.Mat<128n, 2n>,
+    T.Softmax(128n, 2n), Unit{}, s, dy, Unit{}))
+
+# both operands at off..off + 7 (a row dot)
+def row8(+off: Nat, +xs: List<&2, F32>, +ys: List<&2, F32>) -> F32:
+  s0 = (nth(off, xs) * nth(off, ys) : F32)
+  +s1 = (s0 + nth(Nat.add(off, 1n), xs) * nth(Nat.add(off, 1n), ys) : F32)
+  +s2 = (s1 + nth(Nat.add(off, 2n), xs) * nth(Nat.add(off, 2n), ys) : F32)
+  +s3 = (s2 + nth(Nat.add(off, 3n), xs) * nth(Nat.add(off, 3n), ys) : F32)
+  +s4 = (s3 + nth(Nat.add(off, 4n), xs) * nth(Nat.add(off, 4n), ys) : F32)
+  +s5 = (s4 + nth(Nat.add(off, 5n), xs) * nth(Nat.add(off, 5n), ys) : F32)
+  +s6 = (s5 + nth(Nat.add(off, 6n), xs) * nth(Nat.add(off, 6n), ys) : F32)
+  (s6 + nth(Nat.add(off, 7n), xs) * nth(Nat.add(off, 7n), ys) : F32)
+
+# one source row scaled by w[2*row + col]: dvh (col 0) and dxc (col 1)
+def weighted_rows(+left: Nat, +row: Nat, +src: List<&2, F32>, +w: List<&2, F32>, +col: Nat, +acc: List<&2, F32>) -> List<&2, F32>:
+  match left:
+    case 0n:
+      List.reverse(&2, F32, acc)
+    case 1n+p:
+      +off = Nat.mul(row, 8n)
+      +f = nth(Nat.add(Nat.mul(row, 2n), col), w)
+      v0 = (f * nth(off, src) : F32)
+      v1 = (f * nth(Nat.add(off, 1n), src) : F32)
+      v2 = (f * nth(Nat.add(off, 2n), src) : F32)
+      v3 = (f * nth(Nat.add(off, 3n), src) : F32)
+      v4 = (f * nth(Nat.add(off, 4n), src) : F32)
+      v5 = (f * nth(Nat.add(off, 5n), src) : F32)
+      v6 = (f * nth(Nat.add(off, 6n), src) : F32)
+      v7 = (f * nth(Nat.add(off, 7n), src) : F32)
+      weighted_rows(p, Nat.add(row, 1n), src, w, col, Con{v7, Con{v6, Con{v5, Con{v4, Con{v3, Con{v2, Con{v1, Con{v0, acc}}}}}}}})
+
+# w's derivative enters the softmax as (dout . vh, dout . xc) per row
+def dw_list(+left: Nat, +row: Nat, +vh: List<&2, F32>, +xc: List<&2, F32>, +dout: List<&2, F32>, +acc: List<&2, F32>) -> List<&2, F32>:
+  match left:
+    case 0n:
+      List.reverse(&2, F32, acc)
+    case 1n+p:
+      +off = Nat.mul(row, 8n)
+      hw = row8(off, dout, vh)
+      xw = row8(off, dout, xc)
+      dw_list(p, Nat.add(row, 1n), vh, xc, dout, Con{xw, Con{hw, acc}})
+
+# dlogit * scale8, 256 values in row-major order
+def scale_all(+left: Nat, +xs: List<&2, F32>, +acc: List<&2, F32>) -> List<&2, F32>:
+  match left xs:
+    case 0n _:
+      List.reverse(&2, F32, acc)
+    case 1n+p Con{h, t}:
+      scale_all(p, t, Con{(h * scale8() : F32), acc})
+    case _ _:
+      acc
+
+# every second value, starting at off: the two softmax logits split apart
+def pick_list(+left: Nat, +i: Nat, +off: Nat, +xs: List<&2, F32>, +acc: List<&2, F32>) -> List<&2, F32>:
+  match left:
+    case 0n:
+      List.reverse(&2, F32, acc)
+    case 1n+p:
+      pick_list(p, Nat.add(i, 1n), off, xs, Con{nth(Nat.add(Nat.mul(i, 2n), off), xs), acc})
+
+# one row of dkh (col 0) or dkx (col 1): d[r] outer q
+def outer_list(+left: Nat, +row: Nat, +q: List<&2, F32>, +d: List<&2, F32>, +acc: List<&2, F32>) -> List<&2, F32>:
+  match left:
+    case 0n:
+      List.reverse(&2, F32, acc)
+    case 1n+p:
+      +dr = nth(row, d)
+      v0 = (dr * nth(0n, q) : F32)
+      v1 = (dr * nth(1n, q) : F32)
+      v2 = (dr * nth(2n, q) : F32)
+      v3 = (dr * nth(3n, q) : F32)
+      v4 = (dr * nth(4n, q) : F32)
+      v5 = (dr * nth(5n, q) : F32)
+      v6 = (dr * nth(6n, q) : F32)
+      v7 = (dr * nth(7n, q) : F32)
+      outer_list(p, Nat.add(row, 1n), q, d, Con{v7, Con{v6, Con{v5, Con{v4, Con{v3, Con{v2, Con{v1, Con{v0, acc}}}}}}}})
+
+def dq_sum(+left: Nat, +row: Nat, +k: Nat, +kh: List<&2, F32>, +kx: List<&2, F32>, +dda: List<&2, F32>, +ddb: List<&2, F32>, acc: F32) -> F32:
+  match left:
+    case 0n:
+      acc
+    case 1n+p:
+      +off = Nat.add(Nat.mul(row, 8n), k)
+      +a = nth(off, kh)
+      +b = nth(off, kx)
+      +da = nth(row, dda)
+      +db = nth(row, ddb)
+      dq_sum(p, Nat.add(row, 1n), k, kh, kx, dda, ddb,
+        ((acc + (da * a : F32) : F32) + (db * b : F32) : F32))
+
+def dq_list(+left: Nat, +k: Nat, +kh: List<&2, F32>, +kx: List<&2, F32>, +dda: List<&2, F32>, +ddb: List<&2, F32>, +acc: List<&2, F32>) -> List<&2, F32>:
+  match left:
+    case 0n:
+      List.reverse(&2, F32, acc)
+    case 1n+p:
+      dq_list(p, Nat.add(k, 1n), kh, kx, dda, ddb,
+        Con{dq_sum(128n, 0n, k, kh, kx, dda, ddb, 0.0), acc})
+
+def mix_backward(vh: TA.Mat<128n, 8n>, xc: TA.Mat<128n, 8n>, kh: TA.Mat<128n, 8n>, kx: TA.Mat<128n, 8n>, q: TA.Mat<1n, 8n>, w: TA.Mat<128n, 2n>, dout: TA.Mat<128n, 8n>) -> MB:
+  +vhl = ml_list(128n, 8n, TA.Mat.to_list(128n, 8n, vh))
+  +xcl = ml_list(128n, 8n, TA.Mat.to_list(128n, 8n, xc))
+  +khl = ml_list(128n, 8n, TA.Mat.to_list(128n, 8n, kh))
+  +kxl = ml_list(128n, 8n, TA.Mat.to_list(128n, 8n, kx))
+  +ql = ml_list(1n, 8n, TA.Mat.to_list(1n, 8n, q))
+  +wl = ml_list(128n, 2n, TA.Mat.to_list(128n, 2n, w))
+  +doutl = ml_list(128n, 8n, TA.Mat.to_list(128n, 8n, dout))
+  +dwl = dw_list(128n, 0n, vhl, xcl, doutl, Nil{})
+  dw = TA.Mat.from_list(128n, 2n, dwl)
+  w2 = TA.Mat.from_list(128n, 2n, wl)
+  dlogits = sm_bwd_mat(w2, dw)
+  dl = ml_list(128n, 2n, TA.Mat.to_list(128n, 2n, dlogits))
+  +ds = scale_all(256n, dl, Nil{})
+  +dda = pick_list(128n, 0n, 0n, ds, Nil{})
+  +ddb = pick_list(128n, 0n, 1n, ds, Nil{})
+  MB{TA.Mat.from_list(128n, 8n, weighted_rows(128n, 0n, doutl, wl, 0n, Nil{})),
+    TA.Mat.from_list(128n, 8n, weighted_rows(128n, 0n, xcl, wl, 1n, Nil{})),
+    TA.Mat.from_list(128n, 8n, outer_list(128n, 0n, ql, dda, Nil{})),
+    TA.Mat.from_list(128n, 8n, outer_list(128n, 0n, ql, ddb, Nil{})),
+    TA.Mat.from_list(1n, 8n, dq_list(8n, 0n, khl, kxl, dda, ddb, Nil{}))}

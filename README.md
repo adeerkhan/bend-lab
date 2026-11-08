@@ -269,7 +269,7 @@ and data mean gated against the NumPy twin and `RESULTS.md` carrying the rows. T
 flowers U-Net is at five levels (64 -> 32 -> 16 -> 8 -> 4 -> 2 -> 4 -> ... -> 64),
 298,439 parameters, held-out legibility 0.547, gated against NumPy and PyTorch. The
 rectified-flow port's layers are gated whole-array against a NumPy twin
-(`test_rectified_flow_layers.py`, eight gates).
+(`test_rectified_flow_layers.py`, fourteen gates).
 
 ## Licence
 

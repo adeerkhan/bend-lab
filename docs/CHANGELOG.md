@@ -7,13 +7,18 @@ What changed for the people who run the lab. Internal refactors are not listed.
 ### The rectified-flow port gets a whole-array gate, and the bug it caught
 
 - **`reference/test_rectified_flow_layers.py`** (in `make check`): builds
-  `reference/probe_rectified_flow_layers.bend` once and compares eight whole
+  `reference/probe_rectified_flow_layers.bend` once and compares fourteen whole
   outputs with a NumPy twin — `Down2` forward and its exact-inverse backward
   (4,096 values each), the 2x2 max pool and its arg-max scatter (1,024 and
   4,096), the zero-query XAttnRes mix (1,024), the learned-query mix on equal
-  and unequal keys (1,024 each), and `Softmax(2,2)`'s axis. The permutation,
-  pool, scatter and zero-query gates are exact (0.0); the learned mix is under
-  5e-3.
+  and unequal keys (1,024 each), its saved weights (256), its five gradients
+  (`dvh`, `dxc`, `dkh`, `dkx`, `dq`), and `Softmax(2,2)`'s axis. The
+  permutation, pool, scatter and zero-query gates are exact (0.0); the learned
+  mix and its backward are under 5e-3.
+- **The mix backward**: `dvh`, `dxc`, `dkh`, `dkx` and the query gradient,
+  with BendTorch's own `Softmax` backward on the saved weights. The
+  query-gradient gate caught a missing recursion in `dq_sum` while it was
+  being written (the sum stopped after row 0; max |diff| 689).
 - **The bug it caught**: `dot8` indexed the 1x8 query with the row offset, so
   every row after the first read past the query's end, scored 0 and silently
   averaged 50/50. The row-only probes had passed because row 0 reads offset 0;
@@ -21,7 +26,7 @@ What changed for the people who run the lab. Internal refactors are not listed.
   query at 0..7 and moves only the key/value row with `off`.
 - **`examples/diffusion/rectified_flow/README.md`**: the 16x16, dim-8,
   one-hour target, the layer/probe inventory, the mix formula, and what is
-  next (mix backward, XAttn wrapper, memory-KV attention, DAG, `rf16`).
+  next (XAttn wrapper, memory-KV attention, DAG, `rf16`).
 
 ### Lab survey: the build environment, the checkpoint default, portable caches
 

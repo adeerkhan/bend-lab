@@ -7,13 +7,16 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
-## 2026-11-08 (later) — the rectified-flow layer gate, and the bug it caught
+## 2026-11-08 (later) — the rectified-flow layer gate, its backward, and the bugs they caught
 
 **Done and in the tree.** `reference/test_rectified_flow_layers.py` builds
-`reference/probe_rectified_flow_layers.bend` once and compares eight whole outputs with a NumPy twin: `Down2` forward
-and its exact-inverse backward (4,096 values each), the 2x2 max pool and its arg-max scatter (1,024 and 4,096), the
-zero-query XAttnRes mix (1,024), the learned-query mix on equal keys and on `kx = 2 * kh` (1,024 each), and
-`Softmax(2,2)`'s axis. Every gate passed at max |diff| **0.0**; the mix gates use a 5e-3 allowance.
+`reference/probe_rectified_flow_layers.bend` once and compares fourteen whole outputs with a NumPy twin: `Down2`
+forward and its exact-inverse backward (4,096 values each), the 2x2 max pool and its arg-max scatter (1,024 and
+4,096), the zero-query XAttnRes mix (1,024), the learned-query mix on equal keys and on `kx = 2 * kh` (1,024 each),
+its saved weights (256) and its five gradients (`dvh`, `dxc`, `dkh`, `dkx`, `dq`), and `Softmax(2,2)`'s axis. Every
+gate passed; the permutation, pool, scatter, zero-query and forward mix gates are **0.0**, and the backward is under
+5e-3 (`dq` 1.2e-4). The mix backward uses BendTorch's own `Softmax` backward; its `dq_sum` first stopped after row 0,
+which the query-gradient gate caught at max |diff| 689 before it could ship.
 `make check` is **119/119**, run from a shell with no exported `LD_LIBRARY_PATH` (the new build-env split in
 `check_all.py` supplies the local `libLLVM` path, and `--verdict` still runs without it).
 
@@ -33,12 +36,12 @@ public `.local`/absolute-path references, the upstream table (#39, #36, #34, #33
 `.gitignore` are fixed.
 
 **What was not run.** The PyTorch 33M reference is still smoke-only (stopped deliberately); there is no reference
-number for the 16x16 target. The mix backward, the XAttn wrapper, the memory-KV `FullAttention`, the DAG and the
-`rf16` task are the next work.
+number for the 16x16 target. The XAttn wrapper, the memory-KV `FullAttention`, the DAG and the `rf16` task are the
+next work.
 
-**Open, in order.** 1. the mix backward (`dvh`, `dxc`, `dkh`, `dkx`, and the query gradient); 2. the XAttn wrapper;
-3. the memory-KV attention; 4. the DAG U-Net; 5. `rf16` plus the texture band. The k=4 accumulation arm still waits
-on the Bend syntax error.
+**Open, in order.** 1. the XAttn wrapper (normalization, the LoRA key, the projection, the query as a parameter);
+2. the memory-KV attention; 3. the DAG U-Net; 4. `rf16` plus the texture band. The k=4 accumulation arm still waits
+on the Bend syntax error. The PyTorch 33M reference remains smoke-only.
 
 ## 2026-11-08 (earlier) — the UNet's fifth level: the metric paid, the texture did not
 

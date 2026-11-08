@@ -7,6 +7,8 @@
 #   xattn      the zero-query mix 0.5 * (pooled history + current)
 #   mix        the learned-query mix, equal keys (weights 1/2, 1/2)
 #   mix2       the learned-query mix, kx = 2 * kh (per-row weights)
+#   mixw       the saved softmax weights of the kx = 2 * kh case
+#   mb_dvh, mb_dxc, mb_dkh, mb_dkx, mb_dq   its backward
 #   softmax    Softmax(2,2) on [[0,0],[2,0]], to pin the axis
 #
 # `reference/test_rectified_flow_layers.py` builds this once and compares every
@@ -142,6 +144,46 @@ def softmax_show() -> IO(Unit):
   x = TA.Mat.from_list(2n, 2n, Con{0.0, Con{0.0, Con{2.0, Con{0.0, Nil{}}}}})
   un_sm(T.Layer.fwd(Unit, TA.Mat<2n, 2n>, TA.Mat<2n, 2n>, TA.Mat<2n, 2n>, T.Softmax(2n, 2n), Unit{}, x))
 
+
+def ramp2_mat() -> M.POOL():
+  TA.Mat.from_list(128n, 8n, ramp2(1024n, 0n, Nil{}))
+
+def show_w(tag: String, y: TA.Mat<128n, 2n>) -> IO(Unit):
+  do IO<Unit>:
+    IO.print(show(tag, M.ml_list(128n, 2n, TA.Mat.to_list(128n, 2n, y))))
+    return Unit{}
+
+def show_q(tag: String, y: TA.Mat<1n, 8n>) -> IO(Unit):
+  do IO<Unit>:
+    IO.print(show(tag, M.ml_list(1n, 8n, TA.Mat.to_list(1n, 8n, y))))
+    return Unit{}
+
+def show_mb(g: M.MB) -> IO(Unit):
+  match g:
+    case M.MB{dvh, dxc, dkh, dkx, dq}:
+      do IO<Unit>:
+        Unit <- show_pool("mb_dvh:", dvh)
+        Unit <- show_pool("mb_dxc:", dxc)
+        Unit <- show_pool("mb_dkh:", dkh)
+        Unit <- show_pool("mb_dkx:", dkx)
+        show_q("mb_dq:", dq)
+
+# The unequal-key mix: weights once, then the backward on fresh inputs of the
+# same value (a Mat is consumed by its use).
+def mixb_show() -> IO(Unit):
+  w = M.mix_weights(pool_ramp(), ramp2_mat(), q_const())
+  +wl = M.ml_list(128n, 2n, TA.Mat.to_list(128n, 2n, w))
+  w2 = TA.Mat.from_list(128n, 2n, wl)
+  vh = pool_ramp()
+  xc = TA.Mat.from_list(128n, 8n, ramp3(1024n, 0n, Nil{}))
+  kh = pool_ramp()
+  kx = ramp2_mat()
+  q = q_const()
+  dout = pool_ramp()
+  do IO<Unit>:
+    Unit <- show_w("mixw:", TA.Mat.from_list(128n, 2n, wl))
+    show_mb(M.mix_backward(vh, xc, kh, kx, q, w2, dout))
+
 def main() -> IO(Unit):
   do IO<Unit>:
     Unit <- down_all(T.Layer.fwd(Unit, M.IN(), M.OUT(), Unit, M.Down2(), Unit{}, in_ramp()))
@@ -149,4 +191,5 @@ def main() -> IO(Unit):
     Unit <- xattn_show()
     Unit <- mix_a()
     Unit <- mix_b()
+    Unit <- mixb_show()
     softmax_show()

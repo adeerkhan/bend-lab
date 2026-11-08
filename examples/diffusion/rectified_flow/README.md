@@ -15,7 +15,7 @@ state of the art.
 | file | what it is |
 |---|---|
 | `config.bend` | the toy shape: 2 images, 16x16, 8 channels, 8x8 after the first down |
-| `model.bend` | `Down2` (pixel unshuffle), the XAttnRes max-pool resize and zero-query mix, `Pool2` with its arg-max backward, the learned-query mix forward |
+| `model.bend` | `Down2` (pixel unshuffle), the XAttnRes max-pool resize and zero-query mix, `Pool2` with its arg-max backward, the learned-query mix forward and backward |
 | `probe_down.bend` | `Down2` on a ramp: `0 8 128 136 1 9 129 137` |
 | `probe_xattn.bend` | `0.5 * (maxpool(history) + x)`: `68 69 70 71 72 73 74 75` |
 | `probe_pool_bwd.bend` | the scatter backward: `dx@136: 0 1 2 3 4 5 6 7` |
@@ -23,15 +23,16 @@ state of the art.
 | `probe_softmax.bend` | BendTorch's softmax is row-wise: `0.5 0.5 0.8808 0.1192` |
 
 The whole-array gate is `reference/test_rectified_flow_layers.py`; it builds
-`reference/probe_rectified_flow_layers.bend` once and compares eight outputs
+`reference/probe_rectified_flow_layers.bend` once and compares fourteen outputs
 (forward and backward for `Down2` and `Pool2`, the zero-query and learned
-mixes, and the softmax axis) with its own NumPy twin:
+mixes, the mix's saved weights and its five gradients, and the softmax axis)
+with its own NumPy twin:
 
 ```console
 $ reference/.venv/bin/python reference/test_rectified_flow_layers.py
 ok   down: 4096 values, max |diff| 0.000e+00 (atol 0)
 ...
-8/8 gates passed
+14/14 gates passed
 ```
 
 `make check` runs it with the rest. Building a probe needs the pinned Bend and
@@ -53,18 +54,22 @@ The first row-only probes passed because row 0 reads the query at offset 0.
 read past the query's end and scored 0**, and the mix silently became a
 50/50 average. The whole-array `mix2` gate (`kx = 2 * kh`, so each row's
 weights differ) caught it; `dot8` now reads the query at 0..7 and moves only
-the key/value row with `off`. At this point the query is an input; it becomes
-a parameter with the mix backward.
+the key/value row with `off`.
+
+The backward uses BendTorch's own `Softmax` backward on the saved weights, so
+the forward and backward share one definition. The query-gradient gate caught
+a missing recursion in `dq_sum` while it was being written: the sum stopped
+after row 0, which the eight-value gate saw at once (max |diff| 689). At this
+point the query is an input; it becomes a parameter with the XAttn wrapper.
 
 ## What is next
 
-1. the mix backward: `dvh`, `dxc`, `dkh`, `dkx` and the pseudo-query gradient;
-2. the XAttnRes wrapper: normalization, the LoRA key, the projection, and the
-   query as a parameter;
-3. the memory-KV `FullAttention`: four learned KV rows appended to each batch,
+1. the XAttnRes wrapper: normalization, the LoRA key, the projection, and the
+   query as a parameter (the backward is in place);
+2. the memory-KV `FullAttention`: four learned KV rows appended to each batch,
    Q padded, the extra outputs dropped;
-4. the DAG U-Net that carries the history gradients across stages;
-5. the `rf16` task in `reference/experiment.py` and a texture band in the
+3. the DAG U-Net that carries the history gradients across stages;
+4. the `rf16` task in `reference/experiment.py` and a texture band in the
    metrics, so the port gets a report card instead of prose.
 
 The layer gaps upstream are BendTorch
