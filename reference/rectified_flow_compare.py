@@ -89,7 +89,7 @@ def build(args):
         checkpoints_folder=args.checkpoints,
         results_folder=args.results,
         clear_results_folder=not args.sample and not args.resume,
-        num_samples=args.draws if args.sample else 16,
+        num_samples=16,
     )
     return ds, flow, trainer
 
@@ -128,9 +128,12 @@ def main():
         trainer.load(args.checkpoint)
         print(f"loaded {args.checkpoint}; drawing {args.draws} images", flush=True)
         t0 = time.time()
+        chunks = []
         with torch.no_grad():
-            sampled = trainer.sample(os.path.join(args.results, "results.final.png"))
-        sampled = sampled.clamp(0.0, 1.0).cpu().numpy()[:, 0]
+            for i in range(0, args.draws, 16):
+                chunks.append(trainer.sample(
+                    os.path.join(args.results, f"results.final.{i // 16}.png")))
+        sampled = torch.cat(chunks, 0)[:args.draws].clamp(0.0, 1.0).cpu().numpy()[:, 0]
         lines = [f"params: {params}", f"euler: {args.euler or 16}", f"steps: {args.steps}"]
         for img in sampled:
             lines.append("sample: " + " ".join(f"{v:.6f}" for v in img.reshape(-1)))
