@@ -140,3 +140,76 @@ def Down2() -> T.Layer<Unit, IN(), OUT(), Unit>:
     p => xs => off => T.PA{p, xs, off},
     p => xs => off => T.PA{p, xs, off},
     u => 0}
+
+# ---- XAttnRes at the toy scale: one history entry, max-pool resize --------
+#
+# The reference's XAttnRes resizes every earlier stage to the current spatial
+# shape, projects it to the current width, optionally adds a LoRA key, appends
+# the current feature as the last value, and mixes the history entries with a
+# learned pseudo-query softmax. This first block is the resize and the mix with
+# a zero query (two entries, weights 0.5/0.5); the projections and the learned
+# query come next.
+#
+# Down stage 1 of the toy: history 2x16x16x8 -> max pool 2x2 -> 2x8x8x8, and
+# the current x is 2x8x8x8.
+
+def POOL() -> Type:
+  TA.Mat<128n, 8n>
+
+def max2_if(le: Bool, a: F32, b: F32) -> F32:
+  match le:
+    case True{}:
+      b
+    case False{}:
+      a
+
+def max2(+a: F32, +b: F32) -> F32:
+  max2_if(F32.is_le(a, b), a, b)
+
+def max4(a: F32, b: F32, c: F32, d: F32) -> F32:
+  max2(max2(a, b), max2(c, d))
+
+# One output row of 8 x2 positions, 8 channels each, from the 2x16x8 block.
+def pool_block(+left: Nat, +o: Nat, +blk: List<&2, F32>, +acc: List<&2, F32>) -> List<&2, F32>:
+  match left:
+    case 0n:
+      List.reverse(&2, F32, acc)
+    case 1n+p:
+      x2 = Nat.div(o, C.CH())
+      c = Nat.mod(o, C.CH())
+      +i0 = Nat.add(Nat.mul(Nat.mul(x2, 2n), C.CH()), c)
+      +i1 = Nat.add(i0, C.CH())
+      i2 = Nat.add(i0, 128n)
+      i3 = Nat.add(i1, 128n)
+      v = max4(nth(i0, blk), nth(i1, blk), nth(i2, blk), nth(i3, blk))
+      pool_block(p, Nat.add(o, 1n), blk, Con{v, acc})
+
+def pool_list(+left: Nat, +row: Nat, +xs: List<&2, F32>, +acc: List<&2, F32>) -> List<&2, F32>:
+  match left:
+    case 0n:
+      acc
+    case 1n+p:
+      b = Nat.div(row, C.HW2())
+      y2 = Nat.mod(row, C.HW2())
+      off = Nat.mul(Nat.add(Nat.mul(b, 256n), Nat.mul(y2, 32n)), C.CH())
+      blk = List.reverse(&2, F32, tk(256n, dr(off, xs), Nil{}))
+      out = pool_block(64n, 0n, blk, Nil{})
+      pool_list(p, Nat.add(row, 1n), xs, List.append(&2, F32, acc, out))
+
+def pool_mat(h: IN()) -> POOL():
+  TA.Mat.from_list(128n, 8n, pool_list(16n, 0n, ml_list(512n, 8n, TA.Mat.to_list(512n, 8n, h)), Nil{}))
+
+# The zero-query mix: out = 0.5 * (pooled history + current x), per cell.
+def mix_list(+left: Nat, +xs: List<&2, F32>, +ys: List<&2, F32>, +acc: List<&2, F32>) -> List<&2, F32>:
+  match left xs ys:
+    case 0n _ _:
+      acc
+    case 1n+p Con{a, at} Con{b, bt}:
+      mix_list(p, at, bt, Con{((a + b : F32) * 0.5 : F32), acc})
+    case _ _ _:
+      acc
+
+def mix_mat(x: POOL(), h: POOL()) -> POOL():
+  xs = ml_list(128n, 8n, TA.Mat.to_list(128n, 8n, x))
+  ys = ml_list(128n, 8n, TA.Mat.to_list(128n, 8n, h))
+  TA.Mat.from_list(128n, 8n, List.reverse(&2, F32, mix_list(1024n, xs, ys, Nil{})))
