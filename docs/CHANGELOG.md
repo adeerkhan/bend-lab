@@ -4,6 +4,42 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The rectified-flow port gets a whole-array gate, and the bug it caught
+
+- **`reference/test_rectified_flow_layers.py`** (in `make check`): builds
+  `reference/probe_rectified_flow_layers.bend` once and compares eight whole
+  outputs with a NumPy twin — `Down2` forward and its exact-inverse backward
+  (4,096 values each), the 2x2 max pool and its arg-max scatter (1,024 and
+  4,096), the zero-query XAttnRes mix (1,024), the learned-query mix on equal
+  and unequal keys (1,024 each), and `Softmax(2,2)`'s axis. The permutation,
+  pool, scatter and zero-query gates are exact (0.0); the learned mix is under
+  5e-3.
+- **The bug it caught**: `dot8` indexed the 1x8 query with the row offset, so
+  every row after the first read past the query's end, scored 0 and silently
+  averaged 50/50. The row-only probes had passed because row 0 reads offset 0;
+  the `kx = 2 * kh` whole-array gate failed immediately. `dot8` now reads the
+  query at 0..7 and moves only the key/value row with `off`.
+- **`examples/diffusion/rectified_flow/README.md`**: the 16x16, dim-8,
+  one-hour target, the layer/probe inventory, the mix formula, and what is
+  next (mix backward, XAttn wrapper, memory-KV attention, DAG, `rf16`).
+
+### Lab survey: the build environment, the checkpoint default, portable caches
+
+- **`reference/check_all.py`** supplies the local `libLLVM` path to the build
+  checks only, so `make check` builds from a fresh shell; `--verdict` still
+  runs without it, as Lean needs its own clang.
+- **`reference/rectified_flow_compare.py`**: `--sample` without `--checkpoint`
+  loads the newest checkpoint under `--checkpoints`; `--resume` is now an
+  honest warm start (the vendored `Trainer` has no step resume, and the old
+  `checkpoint.latest.pt` was never written).
+- **`examples/diffusion/{unet,flowers_flow}`** fall back to
+  `$HOME/.cache/bend-lab` instead of one machine's absolute path.
+- **Docs and links**: stale `.local` and `/home/adeerkhan` references removed,
+  three broken Markdown links fixed, the README's `make check` count and
+  two-level UNet sentence brought up to date, `.understand-anything/tmp/`
+  ignored, and `results/lucidrains-rectified-flow/` added to `.gitignore`.
+
+
 ### The UNet's fifth level: better flower identity, no more texture
 
 - **`examples/diffusion/unet/{model,train,config}.bend`**: a **fifth level**, 64 -> 32 -> 16 -> 8 -> 4 -> 2 -> 4 -> 8

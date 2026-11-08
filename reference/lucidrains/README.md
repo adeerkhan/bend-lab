@@ -1,31 +1,46 @@
-# The lucidrains reference (vendored)
+# The lucidrains references (vendored)
 
-A verbatim copy of [`lucidrains/denoising-diffusion-pytorch`](https://github.com/lucidrains/denoising-diffusion-pytorch)
-at the commit in [`VENDORED.md`](VENDORED.md), MIT licensed. It is a
-**reference**, not a dependency: no Bend package imports it, `make check` does
-not run it, and the Bend layer still writes no tensor, no autodiff and no
-optimizer.
+Two verbatim copies, both MIT licensed. They are **references**, not
+dependencies: no Bend package imports them, `make check` does not run them, and
+the Bend layer still writes no tensor, no autodiff and no optimizer.
+
+| directory | upstream | commit | its gate |
+|---|---|---|---|
+| `denoising_diffusion_pytorch/` | [lucidrains/denoising-diffusion-pytorch](https://github.com/lucidrains/denoising-diffusion-pytorch) | [`VENDORED.md`](VENDORED.md) | `reference/lucidrains_compare.py`, `reference/digits_ablation.py` |
+| `rectified-flow-pytorch/` | [lucidrains/rectified-flow-pytorch](https://github.com/lucidrains/rectified-flow-pytorch) | `rectified-flow-pytorch/VENDORED.md` | `reference/rectified_flow_compare.py` |
 
 It exists because the diffusion examples needed a second opinion that is not
 my own NumPy mirror. The mirror agrees with the example by construction; this
 library is what the field actually uses, and comparing against it is how the
 digits denoiser's failure was found (the local issue ledger, ISSUE-001).
 
-## The environment
+## The environments
 
 PyTorch is not in `reference/.venv` (that venv is NumPy-only, and it is what
-`make check` uses). This reference has its own, gitignored:
+`make check` uses). Each reference has its own, gitignored:
 
-```console
-$ python3.14 -m venv reference/.venv-lucidrains
-$ reference/.venv-lucidrains/bin/pip install --index-url https://download.pytorch.org/whl/cpu torch torchvision
-$ reference/.venv-lucidrains/bin/pip install -r reference/lucidrains/requirements.txt
-```
+- **`reference/.venv-lucidrains`** — the denoising-diffusion reference. It was
+  removed in the 2026-11-08 cleanup, so recreate it before running
+  `lucidrains_compare.py` or `digits_ablation.py`:
 
-The CPU index keeps it to ~200 MB instead of pulling the CUDA build; the
-versions that were used are pinned in `requirements.txt`.
+  ```console
+  $ python3.14 -m venv reference/.venv-lucidrains
+  $ reference/.venv-lucidrains/bin/pip install --index-url https://download.pytorch.org/whl/cpu torch torchvision
+  $ reference/.venv-lucidrains/bin/pip install -r reference/lucidrains/requirements.txt
+  ```
 
-## What runs against it
+  The CPU index keeps it to ~200 MB instead of pulling the CUDA build.
+
+- **`reference/.venv-rf`** — the rectified-flow reference (Python 3.13,
+  torch 2.11.0+cu128, the CUDA build the RTX 5060 needs). It is what the
+  port's comparison runs use, and it is pinned in `requirements-rf.txt`:
+
+  ```console
+  $ python3.13 -m venv reference/.venv-rf
+  $ reference/.venv-rf/bin/pip install -r reference/lucidrains/requirements-rf.txt
+  ```
+
+## What runs against them
 
 - `reference/lucidrains_compare.py` — trains the same denoiser task
   (noise prediction, T = 64, linear schedule) on the same 1024 optdigits rows
@@ -38,8 +53,21 @@ versions that were used are pinned in `requirements.txt`.
   $ STEPS=200 reference/.venv-lucidrains/bin/python reference/lucidrains_compare.py   # smoke
   ```
 
+- `reference/rectified_flow_compare.py` — trains the rectified-flow reference
+  on the pinned 7,067/102 flowers split, 64x64, one grayscale channel, and
+  writes `results/lucidrains-rectified-flow/` (gitignored). The full recipe is
+  70k steps and was stopped after the smoke test; the 16x16 port is the
+  target. `--sample` without `--checkpoint` loads the newest checkpoint under
+  `--checkpoints`; `--resume` is a warm start (the vendored `Trainer` has no
+  step resume):
+
+  ```console
+  $ reference/.venv-rf/bin/python reference/rectified_flow_compare.py --steps 200
+  $ reference/.venv-rf/bin/python reference/rectified_flow_compare.py --sample --draws 64
+  ```
+
 - `reference/digits_ablation.py` — the controlled experiment that isolated
-  the digits failure: our exact MLP and optimizer with init, input range and
+  the digits failure: the example's exact MLP and optimizer with init, input range and
   schedule changed one at a time.
 
   ```console

@@ -33,7 +33,11 @@ reference/.cache/
 .venv-lucidrains/
 .venv-rf/
 results/vit-logs/
+results/lucidrains-rectified-flow/
 
 # private, local-only
 .local/
 .ua/
+
+# the understand skill's scratch files
+.understand-anything/tmp/

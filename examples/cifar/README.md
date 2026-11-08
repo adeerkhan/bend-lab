@@ -6,6 +6,6 @@ The digits skeleton at CIFAR shapes: the first 256 rows of `arwics/cifar10` (pin
 $ bendenv run -- bend examples/cifar/main.bend
 ```
 
-First loss **1.0014** against the NumPy twin's — the gate — and the data mean to 1.7e-9. Forty steps proves the pipeline, not a trained model: the final loss and the sample statistics are reported, not gated. The grid holds eight training images beside eight samples; the legibility report reads 0.071 against random images' 0.055, which is the underfit the 40-step budget buys. The curve, the grid and the manifest are in [`results/cifar-10/`](../../../results/cifar-10/).
+First loss **1.0014** against the NumPy twin's — the gate — and the data mean to 1.7e-9. Forty steps proves the pipeline, not a trained model: the final loss and the sample statistics are reported, not gated. The grid holds eight training images beside eight samples; the legibility report reads 0.071 against random images' 0.055, which is the underfit the 40-step budget buys. The curve, the grid and the manifest are in [`results/cifar-10/`](../../results/cifar-10/).
 
 ![plot](plot.svg)

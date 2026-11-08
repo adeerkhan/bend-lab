@@ -15,7 +15,7 @@ new operations are all welcome.
 - For anything beyond a small fix (a change to a package's types or laws, a new
   package, performance work, a new dependency), open an issue first so we can
   agree on the approach before you spend time on it.
-- Read [`NOTES.md`](NOTES.md): it records every experiment, including the ones
+- Read [`NOTES.md`](docs/NOTES.md): it records every experiment, including the ones
   that did not pay off. [`docs/AUDIT.md`](docs/AUDIT.md) says what is proved,
   what is tested and what is trusted.
 - Bend 2 is young and differs a lot from Bend 1. The "Bend 2.0.37 pitfalls" in

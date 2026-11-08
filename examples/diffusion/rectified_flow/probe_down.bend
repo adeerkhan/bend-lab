@@ -1,5 +1,5 @@
 # A probe for the pixel-unshuffle Down2: a known ramp in, the first output
-# values out. The Python twin (reference/test_rectified_flow_down.py) computes
+# values out. The Python twin (reference/test_rectified_flow_layers.py) computes
 # the same permutation and compares.
 import Base
 import bendtorch@2.0.0.0/main.bend as T

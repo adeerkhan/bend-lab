@@ -35,4 +35,4 @@ $ make report TASK=cifar-train
 
 One step at these sizes (`bench/plumbing_cifar`, three runs): input 41 ms,
 forward 36, target 4, loss and backward 44, 126 ms in all. The curve and the record are
-in [`results/cifar-train/`](../../../results/cifar-train/).
+in [`results/cifar-train/`](../../results/cifar-train/).

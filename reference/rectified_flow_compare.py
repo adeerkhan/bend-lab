@@ -28,7 +28,9 @@ Two deliberate choices, both recorded in the comparison:
   sampler. The flag can be changed to compare samplers separately.
 """
 import argparse
+import glob
 import os
+import re
 import sys
 import time
 
@@ -46,6 +48,26 @@ CACHE = os.path.expanduser("~/.cache/bend-lab/flowers")
 TRAIN = os.path.join(CACHE, "flowers64-trainfull-gray.u8")
 HOLD = os.path.join(CACHE, "flowers64-hold-gray.u8")
 EDGE = 64
+
+
+def newest_checkpoint(folder):
+    """The highest-step checkpoint the trainer wrote, or None."""
+    def step(path):
+        match = re.search(r"checkpoint\.(\d+)\.pt$", os.path.basename(path))
+        return int(match.group(1)) if match else -1
+
+    found = glob.glob(os.path.join(folder, "checkpoint.*.pt"))
+    return max(found, key=step) if found else None
+
+
+def checkpoint_path(args):
+    """Resolve --checkpoint (or the newest one) against --checkpoints."""
+    path = args.checkpoint or newest_checkpoint(args.checkpoints)
+    if path is None:
+        raise SystemExit(f"no checkpoint in {args.checkpoints}; train first or pass --checkpoint")
+    if not os.path.isabs(path):
+        path = os.path.join(args.checkpoints, path)
+    return os.path.abspath(path)
 
 
 class Flowers(Dataset):
@@ -107,7 +129,8 @@ def main():
     ap.add_argument("--results", default="results/lucidrains-rectified-flow")
     ap.add_argument("--checkpoints", default=".scratch/rf-checkpoints")
     ap.add_argument("--sample", action="store_true")
-    ap.add_argument("--checkpoint", default="checkpoint.70000.pt")
+    ap.add_argument("--checkpoint", default=None,
+                    help="checkpoint file, absolute or under --checkpoints; default: the newest")
     ap.add_argument("--draws", type=int, default=64)
     ap.add_argument("--out", default=".scratch/logs/rf_draws.log")
     ap.add_argument("--seed", type=int, default=0)
@@ -125,8 +148,9 @@ def main():
     print(f"train images: {len(ds)}  batch: {args.batch_size}  steps: {args.steps}", flush=True)
 
     if args.sample:
-        trainer.load(args.checkpoint)
-        print(f"loaded {args.checkpoint}; drawing {args.draws} images", flush=True)
+        path = checkpoint_path(args)
+        trainer.load(path)
+        print(f"loaded {path}; drawing {args.draws} images", flush=True)
         t0 = time.time()
         chunks = []
         with torch.no_grad():
@@ -143,7 +167,14 @@ def main():
         return
 
     if args.resume:
-        trainer.load("checkpoint.latest.pt")
+        # The vendored Trainer has no step resume: forward() always starts at
+        # step 1 and re-creates its data cycle. So --resume is a warm start:
+        # it loads the newest weights, and --steps is the number of further
+        # steps. The checkpoint names and the step counter restart at 1.
+        path = checkpoint_path(args)
+        trainer.load(path)
+        print(f"warm start from {path}; --steps further steps, the step counter restarts at 1",
+              flush=True)
 
     t0 = time.time()
     trainer()

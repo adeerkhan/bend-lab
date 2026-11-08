@@ -7,7 +7,40 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
-## 2026-11-08 (latest) — the UNet's fifth level: the metric paid, the texture did not
+## 2026-11-08 (later) — the rectified-flow layer gate, and the bug it caught
+
+**Done and in the tree.** `reference/test_rectified_flow_layers.py` builds
+`reference/probe_rectified_flow_layers.bend` once and compares eight whole outputs with a NumPy twin: `Down2` forward
+and its exact-inverse backward (4,096 values each), the 2x2 max pool and its arg-max scatter (1,024 and 4,096), the
+zero-query XAttnRes mix (1,024), the learned-query mix on equal keys and on `kx = 2 * kh` (1,024 each), and
+`Softmax(2,2)`'s axis. Every gate passed at max |diff| **0.0**; the mix gates use a 5e-3 allowance.
+`make check` is **119/119**, run from a shell with no exported `LD_LIBRARY_PATH` (the new build-env split in
+`check_all.py` supplies the local `libLLVM` path, and `--verdict` still runs without it).
+
+**The bug it caught.** `dot8` indexed the 1x8 query with the row offset, so every row after the first read past the
+query's end, scored 0 and silently averaged 50/50. The row-0-only probes had passed because row 0 reads offset 0; the
+`kx = 2 * kh` whole-array gate failed at once (max |diff| 1,023). Fixed in `model.bend`; only the whole-array twin can
+see it, which is the lesson for every later matrix layer.
+
+**Survey fixes, all in the same pass.** `check_all.py` gives the build checks the local `libLLVM` path only.
+`rectified_flow_compare.py` resolves the newest `checkpoint.*.pt` under `--checkpoints` and documents `--resume` as a
+warm start (the vendored `Trainer` has no step resume; the old `checkpoint.latest.pt` was never written). Both flower
+examples fall back to `$HOME/.cache/bend-lab` instead of an absolute home path. The new
+`examples/diffusion/rectified_flow/README.md` records the 16x16, dim-8, one-hour target and the layer inventory.
+`reference/lucidrains/README.md` and `requirements-rf.txt` document `.venv-rf` and the rectified-flow vendor. The
+README's gate count and its stale two-level UNet sentence are current; three broken Markdown links, the remaining
+public `.local`/absolute-path references, the upstream table (#39, #36, #34, #33, #29, bend-ml #35, merged #32) and
+`.gitignore` are fixed.
+
+**What was not run.** The PyTorch 33M reference is still smoke-only (stopped deliberately); there is no reference
+number for the 16x16 target. The mix backward, the XAttn wrapper, the memory-KV `FullAttention`, the DAG and the
+`rf16` task are the next work.
+
+**Open, in order.** 1. the mix backward (`dvh`, `dxc`, `dkh`, `dkx`, and the query gradient); 2. the XAttn wrapper;
+3. the memory-KV attention; 4. the DAG U-Net; 5. `rf16` plus the texture band. The k=4 accumulation arm still waits
+on the Bend syntax error.
+
+## 2026-11-08 (earlier) — the UNet's fifth level: the metric paid, the texture did not
 
 **Done and in the tree.** `examples/diffusion/unet/{model,train,config}.bend`: **five levels** (64 -> 32 -> 16 -> 8 ->
 4 -> 2 -> 4 -> 8 -> 16 -> 32 -> 64), 64 channels, no normalisations, the clean image as the target, 7,067 flowers.
@@ -201,7 +234,7 @@ nothing to do:** #32/#33/#34 are MERGEABLE with 0 reviews.
 
 **Item 4, where it actually starts.** The four U32 facts are a `Word` bit-vector library: Base has only
 `U32.add_comm`, and the facts (`J(j,2^d) == j`, `shr(2^(d+1)) == 2^d`, `Z` is bit `d-1`, the subtraction bound) each
-need word inductions. **Six lemmas are proved** in `bend-lab/.local/u32_bits.bend` (local only), `--verdict` green: A
+need word inductions. **Six lemmas are proved** in a local scratch file (not committed), `--verdict` green: A
 (`shr(shl(w)) == ctop(w)`), B (`ctop(w) == w` when `top(w) == False`), C1 (`init(shl(w)) == shl.put(False, init(w))`),
 `top_shl`, and the canonical `2^d` — `p2(d,n)` (`d` zeros, a one, then zeros) with `shl_p2`. The builder had to match
 `d` first and `n` inside the branches: matching `d` after `n` is the match-order trap, and two defs are mutual
@@ -216,7 +249,7 @@ subtraction-without-borrow. Then `ASet.Apart` on perfect trees, `Mat.to_list(Mat
 Oracle: `tensor-array/tests/apart.bend`, 21,590 pairs, 0 failures.
 
 **Posted upstream:** the six U32 lemmas and the three missing pieces are **bendlang/bend#2059** (2026-11-05), with the
-program inline; the local offer text is `.local/u32_bits_issue.md`.
+program inline; the offer text is in a local scratch file (not committed).
 
 **Lean:** 4.34.0 **is installed** (`~/.elan/bin/lean`), just not on the shell PATH — use
 `PATH=$HOME/.elan/bin:$PATH bend FILE --verdict`. The earlier "no Lean here" note was the PATH.

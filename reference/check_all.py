@@ -18,6 +18,15 @@ ENV_DIR = os.path.join(ROOT, ".bend", "env")
 if os.path.isdir(ENV_DIR):
     # the environment the packages are checked in: the same one the examples run in
     ENV["BEND_LIB"] = ENV_DIR
+
+# This machine's clang wrapper loads libLLVM from the local tree, and Bend
+# builds with it. `--verdict` must run without the path (Lean uses its own
+# clang), so the fallback goes to the build checks only.
+ENV_BUILD = dict(ENV)
+LLVM_LIB = os.path.expanduser("~/.local/lib/llvm22")
+if os.path.isdir(LLVM_LIB) and LLVM_LIB not in ENV_BUILD.get("LD_LIBRARY_PATH", "").split(":"):
+    ENV_BUILD["LD_LIBRARY_PATH"] = ":".join(
+        filter(None, [LLVM_LIB, ENV_BUILD.get("LD_LIBRARY_PATH")]))
 results = []
 FAST = "--fast" in sys.argv   # the cheap gate: the proofs and the frozen references only
 
@@ -54,17 +63,17 @@ def native_binary(path):
     return os.path.join("/tmp", "mlbend-test-" + path.replace("/", "-").replace(".bend", ""))
 
 
-def run(name, cmd, ok_if=None, timeout=1800):
+def run(name, cmd, ok_if=None, timeout=1800, env=None):
     t0 = time.time()
-    r = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT, env=ENV, timeout=timeout)
+    r = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT, env=env or ENV_BUILD, timeout=timeout)
     out = r.stdout + r.stderr
     ok = (r.returncode == 0) if ok_if is None else ok_if(out, r.returncode)
     results.append(ok)
-    print(f"{'ok  ' if ok else 'ERROR'} {name} ({time.time() - t0:.0f}s)")
+    print(f"{'ok  ' if ok else 'ERROR'} {name} ({time.time() - t0:.0f}s)", flush=True)
     if not ok:
-        print("     " + out.strip().replace("\n", "\n     ")[-600:])
+        print("     " + out.strip().replace("\n", "\n     ")[-600:], flush=True)
         if FAST:
-            print(f"\n{sum(results)}/{len(results)} checks passed before the failure")
+            print(f"\n{sum(results)}/{len(results)} checks passed before the failure", flush=True)
             sys.exit(1)
     return out
 
@@ -103,9 +112,9 @@ def main():
         run(f"{f}: ALL PROOFS CHECK", BEND.split() + [f], verdict_ok)
         if lean_here():
             run(f"{f} --verdict (the kernel, as Lean)", BEND.split() + [f, "--verdict"],
-                verdict_ok)
+                verdict_ok, env=ENV)
         else:
-            print(f"skip {f} --verdict (no Lean 4.34.0 on this machine; CI runs it)")
+            print(f"skip {f} --verdict (no Lean 4.34.0 on this machine; CI runs it)", flush=True)
 
     # 2. the packages with laws carry no @unsafe and no ?TODO
     for pkg in packages:
@@ -113,11 +122,11 @@ def main():
         src = open(f).read()
         clean = not re.search(r"@unsafe|^\s*\?\w+|sorry", re.sub(r"#.*", "", src), re.M)
         results.append(clean)
-        print(f"{'ok  ' if clean else 'ERROR'} {pkg}/main.bend: no @unsafe or ?TODO")
+        print(f"{'ok  ' if clean else 'ERROR'} {pkg}/main.bend: no @unsafe or ?TODO", flush=True)
 
     if FAST:
         ok = sum(results)
-        print(f"\n{ok}/{len(results)} checks passed (--fast: the proofs and the frozen references)")
+        print(f"\n{ok}/{len(results)} checks passed (--fast: the proofs and the frozen references)", flush=True)
         sys.exit(0 if ok == len(results) else 1)
 
     # 3. the programs that must be refused
@@ -174,7 +183,7 @@ def main():
         run(f"reference/{name}: the numbers match", [PY, os.path.join("reference", name)])
 
     ok = sum(results)
-    print(f"\n{ok}/{len(results)} checks passed")
+    print(f"\n{ok}/{len(results)} checks passed", flush=True)
     sys.exit(0 if ok == len(results) else 1)
 
 

@@ -62,13 +62,19 @@ def EULER() -> Nat:
 # The export directory: the runner's cache when MLBEND_DATA is set, the
 # machine's export cache otherwise. The file name is the config's, so a preset
 # picks the export and the environment picks where it lives.
-def cache_root() -> String:
-  "/home/adeerkhan/.cache/bend-lab"
+def home_root(h: Result<&1, &1, U32 & String, String>) -> IO(String):
+  match h:
+    case Fail{code}:
+      IO.pure(String, "/tmp/bend-lab")
+    case Done{d}:
+      IO.pure(String, String.append(d, "/.cache/bend-lab"))
 
 def root_of(e: Result<&1, &1, U32 & String, String>) -> IO(String):
   match e:
     case Fail{code}:
-      IO.pure(String, cache_root())
+      do IO<String>:
+        h : Result<&1, &1, U32 & String, String> <- IO.get_env("HOME")
+        home_root(h)
     case Done{d}:
       IO.pure(String, d)
 

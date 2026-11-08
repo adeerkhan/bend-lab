@@ -261,12 +261,15 @@ lane, and the seven diagnostic prototypes
 
 ## Status
 
-`make check` is 116/116. Diffusion is complete through the ViT, with the gate at
+`make check` is 119/119. Diffusion is complete through the ViT, with the gate at
 0.75 and the Bend model measured at 0.795 (DDIM) and 0.807 (DDPM). Flow matching
 has a measured 2D example and its frozen gate (`test_flow2d.py`, six gates). CIFAR-10 has its
 3072-output DDPM: 256 images, 40 steps, build 50.8 s and run 65.4 s, first loss
-and data mean gated against the NumPy twin and `RESULTS.md` carrying the rows. The UNet in Bend is built two levels
-deep (64 → 32 → 16 → 32 → 64) and gated against NumPy and PyTorch.
+and data mean gated against the NumPy twin and `RESULTS.md` carrying the rows. The
+flowers U-Net is at five levels (64 -> 32 -> 16 -> 8 -> 4 -> 2 -> 4 -> ... -> 64),
+298,439 parameters, held-out legibility 0.547, gated against NumPy and PyTorch. The
+rectified-flow port's layers are gated whole-array against a NumPy twin
+(`test_rectified_flow_layers.py`, eight gates).
 
 ## Licence
 

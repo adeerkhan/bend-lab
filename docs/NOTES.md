@@ -920,7 +920,7 @@ relevant entry before changing performance-sensitive code or a law.
   eight zeros,
   `gpu_layers` SiLU 4 ulps, cross-entropy 4, attention 176128 at the small
   sizes and 7680 at the large ones — their documented ulp policy.
-  (Earlier sessions ran it with `PY=/home/adeerkhan/github/fatima/.venv/bin/python`
+  (Earlier sessions ran it with `PY=<a local torch venv>/bin/python`
   only because no `reference/.venv` existed anywhere on this machine;
   `scripts/setup.sh` builds one with `torch==2.14.1+cpu` and that is what
   the verified run used — the oracles are CPU-side.)
@@ -2338,7 +2338,7 @@ Base states only `U32.add_comm`, and `Word` is a little-endian bit list, so the 
 inductions. **Four lemmas are proved** — A (`shr(shl(w)) == ctop(w)`), B (`ctop(w) == w` when the top bit is False), C1
 (`init(shl(w)) == shl.put(False, init(w))`, i.e. dropping the top bit commutes with shifting up) and
 `top(shl(w)) == top(init(w))` — and `--verdict` is green; the draft with the derivations is
-`bend-lab/.local/u32_bits.bend` (local only). **Six lemmas are proved** and `--verdict` is green, including a canonical `2^d`: `p2(d, n)` is `d` zeros, a one, then
+a local scratch file (not committed). **Six lemmas are proved** and `--verdict` is green, including a canonical `2^d`: `p2(d, n)` is `d` zeros, a one, then
 zeros, and `shl_p2` says `shl(p2(d,n)) == p2(d+1,n)`. Two Bend restrictions shaped it: matching `d` after `n` is the
 match-order trap, and splitting the builder into two defs is mutual recursion, which the language forbids; matching `d`
 first and `n` inside the branches is what works. The structural facts that made the earlier lemmas go: `init_p` (drop

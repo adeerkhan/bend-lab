@@ -407,15 +407,18 @@ type MXS is Type:
 def scale8() -> F32:
   0.35355338
 
-def dot8(+off: Nat, +xs: List<&2, F32>, +ys: List<&2, F32>) -> F32:
-  s0 = (nth(off, xs) * nth(off, ys) : F32)
-  +s1 = (s0 + nth(Nat.add(off, 1n), xs) * nth(Nat.add(off, 1n), ys) : F32)
-  +s2 = (s1 + nth(Nat.add(off, 2n), xs) * nth(Nat.add(off, 2n), ys) : F32)
-  +s3 = (s2 + nth(Nat.add(off, 3n), xs) * nth(Nat.add(off, 3n), ys) : F32)
-  +s4 = (s3 + nth(Nat.add(off, 4n), xs) * nth(Nat.add(off, 4n), ys) : F32)
-  +s5 = (s4 + nth(Nat.add(off, 5n), xs) * nth(Nat.add(off, 5n), ys) : F32)
-  +s6 = (s5 + nth(Nat.add(off, 6n), xs) * nth(Nat.add(off, 6n), ys) : F32)
-  (s6 + nth(Nat.add(off, 7n), xs) * nth(Nat.add(off, 7n), ys) : F32)
+# q is the 1 x 8 query: it is read at 0..7, whatever the row. Only the key and
+# value rows move with `off` (the old version indexed q at off + k, so every
+# row past the first read past its end and scored 0).
+def dot8(+off: Nat, +q: List<&2, F32>, +xs: List<&2, F32>) -> F32:
+  s0 = (nth(0n, q) * nth(off, xs) : F32)
+  +s1 = (s0 + nth(1n, q) * nth(Nat.add(off, 1n), xs) : F32)
+  +s2 = (s1 + nth(2n, q) * nth(Nat.add(off, 2n), xs) : F32)
+  +s3 = (s2 + nth(3n, q) * nth(Nat.add(off, 3n), xs) : F32)
+  +s4 = (s3 + nth(4n, q) * nth(Nat.add(off, 4n), xs) : F32)
+  +s5 = (s4 + nth(5n, q) * nth(Nat.add(off, 5n), xs) : F32)
+  +s6 = (s5 + nth(6n, q) * nth(Nat.add(off, 6n), xs) : F32)
+  (s6 + nth(7n, q) * nth(Nat.add(off, 7n), xs) : F32)
 
 def logits_list(+left: Nat, +row: Nat, +kh: List<&2, F32>, +kx: List<&2, F32>, +q: List<&2, F32>, +acc: List<&2, F32>) -> List<&2, F32>:
   match left:
@@ -423,8 +426,8 @@ def logits_list(+left: Nat, +row: Nat, +kh: List<&2, F32>, +kx: List<&2, F32>, +
       List.reverse(&2, F32, acc)
     case 1n+p:
       +off = Nat.mul(row, 8n)
-      lh = (dot8(off, kh, q) * scale8() : F32)
-      lx = (dot8(off, kx, q) * scale8() : F32)
+      lh = (dot8(off, q, kh) * scale8() : F32)
+      lx = (dot8(off, q, kx) * scale8() : F32)
       logits_list(p, Nat.add(row, 1n), kh, kx, q, Con{lx, Con{lh, acc}})
 
 def mix_out_list(+left: Nat, +row: Nat, +vh: List<&2, F32>, +xc: List<&2, F32>, +w: List<&2, F32>, +acc: List<&2, F32>) -> List<&2, F32>:
