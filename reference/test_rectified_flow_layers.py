@@ -23,6 +23,7 @@ its backward are compared at 5e-3 (float32 exp/softmax at values around 3,000)
 and the 2x2 softmax at 1e-6. Exit code 0 = every gate passed. Nothing here
 writes results.
 """
+import hashlib
 import os
 import re
 import subprocess
@@ -47,7 +48,8 @@ SOURCES = [
     "examples/diffusion/rectified_flow/model.bend",
     "examples/diffusion/rectified_flow/config.bend",
 ]
-BIN = "/tmp/mlbend-rectified-flow-layers"
+# the root is in the name: two worktrees must not share one cached binary
+BIN = "/tmp/mlbend-rectified-flow-layers-" + hashlib.sha1(ROOT.encode()).hexdigest()[:8]
 
 H = 16          # the toy spatial edge
 CH = 8          # channels
