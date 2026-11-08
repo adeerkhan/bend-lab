@@ -84,7 +84,7 @@ def unsh_list(+left: Nat, +row: Nat, +xs: List<&2, F32>, +acc: List<&2, F32>) ->
     case 1n+p:
       b = Nat.div(row, C.HW2())
       y2 = Nat.mod(row, C.HW2())
-      off = Nat.mul(Nat.add(Nat.mul(b, 256n), Nat.mul(y2, 32n)), C.CH())
+      +off = Nat.mul(Nat.add(Nat.mul(b, 256n), Nat.mul(y2, 32n)), C.CH())
       blk = List.reverse(&2, F32, tk(256n, dr(off, xs), Nil{}))
       out = unsh_block(256n, 0n, blk, Nil{})
       unsh_list(p, Nat.add(row, 1n), xs, List.append(&2, F32, acc, out))
@@ -179,8 +179,8 @@ def pool_block(+left: Nat, +o: Nat, +blk: List<&2, F32>, +acc: List<&2, F32>) ->
       c = Nat.mod(o, C.CH())
       +i0 = Nat.add(Nat.mul(Nat.mul(x2, 2n), C.CH()), c)
       +i1 = Nat.add(i0, C.CH())
-      i2 = Nat.add(i0, 128n)
-      i3 = Nat.add(i1, 128n)
+      +i2 = Nat.add(i0, 128n)
+      +i3 = Nat.add(i1, 128n)
       v = max4(nth(i0, blk), nth(i1, blk), nth(i2, blk), nth(i3, blk))
       pool_block(p, Nat.add(o, 1n), blk, Con{v, acc})
 
@@ -191,7 +191,7 @@ def pool_list(+left: Nat, +row: Nat, +xs: List<&2, F32>, +acc: List<&2, F32>) ->
     case 1n+p:
       b = Nat.div(row, C.HW2())
       y2 = Nat.mod(row, C.HW2())
-      off = Nat.mul(Nat.add(Nat.mul(b, 256n), Nat.mul(y2, 32n)), C.CH())
+      +off = Nat.mul(Nat.add(Nat.mul(b, 256n), Nat.mul(y2, 32n)), C.CH())
       blk = List.reverse(&2, F32, tk(256n, dr(off, xs), Nil{}))
       out = pool_block(64n, 0n, blk, Nil{})
       pool_list(p, Nat.add(row, 1n), xs, List.append(&2, F32, acc, out))
@@ -213,3 +213,183 @@ def mix_mat(x: POOL(), h: POOL()) -> POOL():
   xs = ml_list(128n, 8n, TA.Mat.to_list(128n, 8n, x))
   ys = ml_list(128n, 8n, TA.Mat.to_list(128n, 8n, h))
   TA.Mat.from_list(128n, 8n, List.reverse(&2, F32, mix_list(1024n, xs, ys, Nil{})))
+
+# ---- the same 2x2 max pool as a layer: forward saves the arg-max ----------
+#
+# The reference's XAttnRes uses adaptive_max_pool2d on the down path. Its
+# backward is not an average: the whole gradient of an output cell goes to the
+# one input cell that was the maximum. The forward saves that choice.
+
+type PS is Type:
+  PS{idx: List<&2, U32>}
+
+def nth_u(+n: Nat, +xs: List<&2, U32>) -> U32:
+  match n xs:
+    case 0n Con{h, t}:
+      h
+    case 1n+p Con{h, t}:
+      nth_u(p, t)
+    case _ _:
+      U32.from_nat(0n)
+
+def tk_u(+n: Nat, +xs: List<&2, U32>, +acc: List<&2, U32>) -> List<&2, U32>:
+  match n xs:
+    case 0n _:
+      acc
+    case 1n+p Con{h, t}:
+      tk_u(p, t, Con{h, acc})
+    case _ _:
+      acc
+
+def dr_u(+n: Nat, +xs: List<&2, U32>) -> List<&2, U32>:
+  match n xs:
+    case 0n _:
+      xs
+    case 1n+p Con{h, t}:
+      dr_u(p, t)
+    case _ _:
+      Nil{}
+
+def pick_if(ok: Bool, +a: F32, +b: F32) -> F32:
+  match ok:
+    case True{}:
+      a
+    case False{}:
+      b
+
+def m2i(le: Bool, +a: F32, +b: F32, +ia: U32, +ib: U32) -> T.Two<F32, U32>:
+  match le:
+    case True{}:
+      T.Two{b, ib}
+    case False{}:
+      T.Two{a, ia}
+
+def m2i_pairs(p: T.Two<F32, U32>, q: T.Two<F32, U32>) -> T.Two<F32, U32>:
+  match p q:
+    case T.Two{+pa, pi} T.Two{+qa, qi}:
+      m2i(F32.is_le(pa, qa), pa, qa, pi, qi)
+
+def tw_fst(a: T.Two<F32, U32>) -> F32:
+  match a:
+    case T.Two{x, y}:
+      x
+
+def tw_snd(a: T.Two<F32, U32>) -> U32:
+  match a:
+    case T.Two{x, y}:
+      y
+
+def m4i(+a: F32, +b: F32, +c: F32, +d: F32) -> T.Two<F32, U32>:
+  p = m2i(F32.is_le(a, b), a, b, U32.from_nat(0n), U32.from_nat(1n))
+  q = m2i(F32.is_le(c, d), c, d, U32.from_nat(2n), U32.from_nat(3n))
+  m2i_pairs(p, q)
+
+def m4_val(+a: F32, +b: F32, +c: F32, +d: F32) -> F32:
+  tw_fst(m4i(a, b, c, d))
+
+def m4_idx(+a: F32, +b: F32, +c: F32, +d: F32) -> U32:
+  tw_snd(m4i(a, b, c, d))
+
+def tl_fst(a: T.Two<List<&2, F32>, List<&2, U32>>) -> List<&2, F32>:
+  match a:
+    case T.Two{x, y}:
+      x
+
+def tl_snd(a: T.Two<List<&2, F32>, List<&2, U32>>) -> List<&2, U32>:
+  match a:
+    case T.Two{x, y}:
+      y
+
+def pool_block_idx(+left: Nat, +o: Nat, +blk: List<&2, F32>, +acc: List<&2, F32>, +idx: List<&2, U32>) -> T.Two<List<&2, F32>, List<&2, U32>>:
+  match left:
+    case 0n:
+      T.Two{List.reverse(&2, F32, acc), List.reverse(&2, U32, idx)}
+    case 1n+p:
+      x2 = Nat.div(o, C.CH())
+      c = Nat.mod(o, C.CH())
+      +i0 = Nat.add(Nat.mul(Nat.mul(x2, 2n), C.CH()), c)
+      +i1 = Nat.add(i0, C.CH())
+      +i2 = Nat.add(i0, 128n)
+      +i3 = Nat.add(i1, 128n)
+      pool_block_idx(p, Nat.add(o, 1n), blk, Con{m4_val(nth(i0, blk), nth(i1, blk), nth(i2, blk), nth(i3, blk)), acc}, Con{m4_idx(nth(i0, blk), nth(i1, blk), nth(i2, blk), nth(i3, blk)), idx})
+
+def pool_list_idx(+left: Nat, +row: Nat, +xs: List<&2, F32>, +acc: List<&2, F32>, +idx: List<&2, U32>) -> T.Two<List<&2, F32>, List<&2, U32>>:
+  match left:
+    case 0n:
+      T.Two{acc, idx}
+    case 1n+p:
+      b = Nat.div(row, C.HW2())
+      y2 = Nat.mod(row, C.HW2())
+      +off = Nat.mul(Nat.add(Nat.mul(b, 256n), Nat.mul(y2, 32n)), C.CH())
+      blk = List.reverse(&2, F32, tk(256n, dr(off, xs), Nil{}))
+      bk2 = List.reverse(&2, F32, tk(256n, dr(off, xs), Nil{}))
+      out = tl_fst(pool_block_idx(64n, 0n, blk, Nil{}, Nil{}))
+      ii = tl_snd(pool_block_idx(64n, 0n, bk2, Nil{}, Nil{}))
+      pool_list_idx(p, Nat.add(row, 1n), xs, List.append(&2, F32, acc, out), List.append(&2, U32, idx, ii))
+
+def pool_mat_of(r: T.Two<List<&2, F32>, List<&2, U32>>) -> T.Two<POOL(), List<&2, U32>>:
+  match r:
+    case T.Two{ys, idx}:
+      T.Two{TA.Mat.from_list(128n, 8n, ys), idx}
+
+def pool_mat_idx(x: IN()) -> T.Two<POOL(), List<&2, U32>>:
+  pool_mat_of(pool_list_idx(16n, 0n, ml_list(512n, 8n, TA.Mat.to_list(512n, 8n, x)), Nil{}, Nil{}))
+
+def pool_fwd_of(p: T.Two<POOL(), List<&2, U32>>) -> T.Fwd<Unit, POOL(), PS>:
+  match p:
+    case T.Two{y, idx}:
+      T.Fwd{Unit{}, y, PS{idx}}
+
+def pool_fwd(x: IN()) -> T.Fwd<Unit, POOL(), PS>:
+  pool_fwd_of(pool_mat_idx(x))
+
+# ---- backward: scatter each output gradient to the saved arg-max ----------
+
+def pool_inv_block(+left: Nat, +i: Nat, +idx: List<&2, U32>, +dy: List<&2, F32>, +acc: List<&2, F32>) -> List<&2, F32>:
+  match left:
+    case 0n:
+      List.reverse(&2, F32, acc)
+    case 1n+p:
+      +row = Nat.div(i, 128n)
+      +rem = Nat.mod(i, 128n)
+      +x = Nat.div(rem, C.CH())
+      c = Nat.mod(rem, C.CH())
+      x2 = Nat.div(x, 2n)
+      q = Nat.add(Nat.mul(row, 2n), Nat.mod(x, 2n))
+      +cell = Nat.add(Nat.mul(x2, C.CH()), c)
+      k = nth_u(cell, idx)
+      v = pick_if(U32.is_eq(k, U32.from_nat(q)), nth(cell, dy), 0.0)
+      pool_inv_block(p, Nat.add(i, 1n), idx, dy, Con{v, acc})
+
+def pool_inv_list(+left: Nat, +row: Nat, +idx: List<&2, U32>, +dy: List<&2, F32>, +acc: List<&2, F32>) -> List<&2, F32>:
+  match left:
+    case 0n:
+      acc
+    case 1n+p:
+      ioff = Nat.mul(row, 64n)
+      dblk = List.reverse(&2, F32, tk(64n, dr(Nat.mul(row, 64n), dy), Nil{}))
+      iblk = tk_u(64n, dr_u(ioff, idx), Nil{})
+      out = pool_inv_block(256n, 0n, iblk, dblk, Nil{})
+      pool_inv_list(p, Nat.add(row, 1n), idx, dy, List.append(&2, F32, acc, out))
+
+def pool_inv_mat(dy: POOL(), idx: List<&2, U32>) -> IN():
+  ys = ml_list(128n, 8n, TA.Mat.to_list(128n, 8n, dy))
+  TA.Mat.from_list(512n, 8n, pool_inv_list(16n, 0n, idx, ys, Nil{}))
+
+def pool_bwd_of(dy: POOL(), idx: List<&2, U32>, g: Unit) -> T.Bwd<Unit, IN()>:
+  T.Bwd{Unit{}, pool_inv_mat(dy, idx), g}
+
+def pool_bwd(dy: POOL(), s: PS, g: Unit) -> T.Bwd<Unit, IN()>:
+  match s:
+    case PS{idx}:
+      pool_bwd_of(dy, idx, g)
+
+def Pool2() -> T.Layer<Unit, IN(), POOL(), PS>:
+  T.Layer{p => x => pool_fwd(x),
+    p => s => dy => g => pool_bwd(dy, s, g),
+    op => p => g => st => T.no_step(Unit, op, p, g, st),
+    u => Unit{},
+    p => T.PL{p, Nil{}},
+    p => xs => off => T.PA{p, xs, off},
+    p => xs => off => T.PA{p, xs, off},
+    u => 0}
