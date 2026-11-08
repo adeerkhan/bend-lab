@@ -4,6 +4,29 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The UNet's fifth level: better flower identity, no more texture
+
+- **`examples/diffusion/unet/{model,train,config}.bend`**: a **fifth level**, 64 -> 32 -> 16 -> 8 -> 4 -> 2 -> 4 -> 8
+  -> 16 -> 32 -> 64, 64 channels, no normalisations, the clean image as the flow target, 7,067 flowers. 298,439
+  parameters, 3,600 steps; loss **15.3262 -> 0.0259** (the first value is the untrained head on the first batch; step 1
+  is 0.1343).
+- **What it reaches**: 64 draws at Euler 32, mean/spread **+0.325 / 0.179** (the data's +0.384 / 0.232); **held-out
+  legibility 0.547** against a ceiling of 0.574, **94.8%** of the span above the noise floor. The four-level record,
+  re-scored today with the same evaluator, is 0.605 / **0.501** / 85.8% (published 0.498 / 85.4%), so the fifth level is
+  +4.6 points of held-out legibility and +9.0 points of span. The trained legibility is 0.633, above the ceiling:
+  memorisation, stated as such.
+- **What it did not do**: the gain is global identity, not texture. The raw draws are lower contrast than the
+  four-level's (+0.325 / 0.179 against +0.381 / 0.238) and the top spectrum band is 0.034 against 0.039 (the data's is
+  0.137). On the same 8 draws, 128 Euler steps give spread 0.174 and top band 0.027, so the sampler is not the cause;
+  **32 steps stays**. The depth line stops here; the next lever is detail and contrast, not a sixth level.
+- **The draw-count trap**: a max-over-correlations statistic depends on how many draws are averaged. The five-level's
+  first 8 draws score 0.575 held out (100.3% of the span) against 0.547 for all 64 (94.8%); an earlier 128-step run on
+  the four-level looked like +3 points for the same reason. Comparisons hold the draw count fixed.
+- **Gates**: the twins cover nine convolutions and 22 weight blocks; NumPy **1.621e-05** at 2e-05 and torch
+  **2.098e-05**, 0.83x its allowance; the checkpoint resumes **bit-identical** at 298,439 weights.
+- **The trap paid in the twins**: the new level outputs were first named `b2`/`b3`, which are the biases of the same
+  names; the levels are `l4`/`l2` now.
+
 ### The UNet draws flowers: four levels, and an objective that was the wrong one
 
 - **`examples/diffusion/unet/{model,train,config}.bend`**: the gate example's U with **four levels** (64 -> 32 -> 16 ->

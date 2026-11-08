@@ -1,9 +1,11 @@
-# The trained UNet's shape with FOUR levels: 64 -> 32 -> 16 -> 8 -> 4 -> 8 -> 16
-# -> 32 -> 64, 64 channels at each level, an up2 at each level, a residual skip
-# at 32x32 and another at 16x16, and a linear bypass from the input beside the U.
-# The depth is what closed the detail: legibility 0.545 at three levels, 0.603 at
-# four, and 0.438 -> 0.498 held out, on the same corpus and the same budget. The
-# third level is what closed the blur: two levels carry 256 numbers per image
+# The trained UNet's shape with FIVE levels: 64 -> 32 -> 16 -> 8 -> 4 -> 2 -> 4
+# -> 8 -> 16 -> 32 -> 64, 64 channels at each level, an up2 at every level, a
+# residual skip at 32x32 and another at 16x16, and a linear bypass from the input
+# beside the U. Depth paid on held-out flower identity, monotonically: 0.439 at
+# three levels, 0.498 at four, 0.547 at five, on the same corpus and the same
+# budget. It did not add texture: the five-level draws are lower contrast and
+# their top spectrum band is 0.034 against the four-level's 0.039 (TRAINED.md).
+# The third level is what closed the blur: two levels carry 256 numbers per image
 # into their widest representation, three carry 64, and legibility went 0.426 ->
 # 0.485 on the same corpus and 0.545 with the full one.
 #
@@ -180,6 +182,12 @@ def BOT2() -> Type:
 def SB2() -> Type:
   TA.Mat<32n, 576n>
 
+def BOT3() -> Type:
+  TA.Mat<8n, 64n>
+
+def SB3() -> Type:
+  TA.Mat<8n, 576n>
+
 def conv5() -> T.Layer<CP3(), LOW(), BOT(), SB()>:
   T.Conv2d(2n, 64n, 64n, 3n, 15n, 15n, 1n, 1n, 0n)
 
@@ -197,6 +205,15 @@ def silu7() -> T.Layer<Unit, BOT2(), BOT2(), BOT2()>:
 
 def conv8() -> T.Layer<CP3(), BOT(), BOT(), SB()>:
   T.Conv2d(2n, 64n, 64n, 3n, 7n, 7n, 1n, 0n, 0n)
+
+def conv9() -> T.Layer<CP3(), BOT2(), BOT3(), SB3()>:
+  T.Conv2d(2n, 64n, 64n, 3n, 3n, 3n, 1n, 1n, 0n)
+
+def silu9() -> T.Layer<Unit, BOT3(), BOT3(), BOT3()>:
+  T.SiLU(8n, 64n)
+
+def conv10() -> T.Layer<CP3(), BOT2(), BOT2(), SB2()>:
+  T.Conv2d(2n, 64n, 64n, 3n, 3n, 3n, 1n, 0n, 0n)
 
 def conv4() -> T.Layer<CP3(), MID(), MID(), S4()>:
   T.Conv2d(2n, 64n, 64n, 3n, 31n, 31n, 1n, 0n, 0n)
@@ -236,6 +253,13 @@ def BotUpB() -> T.Layer<T.Two<Unit, P2C()>, BOT2(), BOT(), T.Two<Unit, T.Two<SB(
   T.Seq(~Unit, ~P2C(), ~BOT2(), ~BOT(), ~BOT(), ~Unit, ~T.Two<SB(), BOT()>, Up2(8n, 4n, 64n),
     T.Seq(~CP3(), ~Unit, ~BOT(), ~BOT(), ~BOT(), ~SB(), ~BOT(), conv8(), silu5()))
 
+def BotBott2() -> T.Layer<T.Two<CP3(), Unit>, BOT2(), BOT3(), T.Two<SB3(), BOT3()>>:
+  T.Seq(~CP3(), ~Unit, ~BOT2(), ~BOT3(), ~BOT3(), ~SB3(), ~BOT3(), conv9(), silu9())
+
+def BotUpB2() -> T.Layer<T.Two<Unit, P2C()>, BOT3(), BOT2(), T.Two<Unit, T.Two<SB2(), BOT2()>>>:
+  T.Seq(~Unit, ~P2C(), ~BOT3(), ~BOT2(), ~BOT2(), ~Unit, ~T.Two<SB2(), BOT2()>, Up2(4n, 2n, 64n),
+    T.Seq(~CP3(), ~Unit, ~BOT2(), ~BOT2(), ~BOT2(), ~SB2(), ~BOT2(), conv10(), silu7()))
+
 def BotDown4P() -> Type:
   T.Two<T.Two<CP3(), Unit>, T.Two<CP3(), Unit>>
 
@@ -245,6 +269,16 @@ def BotDown4S() -> Type:
 def BotDown4() -> T.Layer<BotDown4P(), LOW(), BOT2(), BotDown4S()>:
   T.Seq(~T.Two<CP3(), Unit>, ~T.Two<CP3(), Unit>, ~LOW(), ~BOT(), ~BOT2(),
     ~T.Two<SB(), BOT()>, ~T.Two<SB2(), BOT2()>, BotDown(), BotBott())
+
+def BotDown5P() -> Type:
+  T.Two<BotDown4P(), T.Two<CP3(), Unit>>
+
+def BotDown5S() -> Type:
+  T.Two<BotDown4S(), T.Two<SB3(), BOT3>>
+
+def BotDown5() -> T.Layer<BotDown5P(), LOW(), BOT3(), BotDown5S()>:
+  T.Seq(~BotDown4P(), ~T.Two<CP3(), Unit>, ~LOW(), ~BOT2(), ~BOT3(), ~BotDown4S(),
+    ~T.Two<SB3(), BOT3>, BotDown4(), BotBott2())
 
 def BotUp4P() -> Type:
   T.Two<T.Two<Unit, P2C()>, T.Two<Unit, P2C()>>
@@ -256,15 +290,25 @@ def BotUp4() -> T.Layer<BotUp4P(), BOT2(), LOW(), BotUp4S()>:
   T.Seq(~T.Two<Unit, P2C()>, ~T.Two<Unit, P2C()>, ~BOT2(), ~BOT(), ~LOW(),
     ~T.Two<Unit, T.Two<SB(), BOT()>>, ~T.Two<Unit, T.Two<S3(), LOW()>>, BotUpB(), BotUp())
 
+def BotUp5P() -> Type:
+  T.Two<T.Two<Unit, P2C()>, BotUp4P()>
+
+def BotUp5S() -> Type:
+  T.Two<T.Two<Unit, T.Two<SB2(), BOT2()>>, BotUp4S()>
+
+def BotUp5() -> T.Layer<BotUp5P(), BOT3(), LOW(), BotUp5S()>:
+  T.Seq(~T.Two<Unit, P2C()>, ~BotUp4P(), ~BOT3(), ~BOT2(), ~LOW(),
+    ~T.Two<Unit, T.Two<SB2(), BOT2()>>, ~BotUp4S(), BotUpB2(), BotUp4())
+
 def BotP() -> Type:
-  T.Two<BotDown4P(), BotUp4P()>
+  T.Two<BotDown5P(), BotUp5P()>
 
 def BotS() -> Type:
-  T.Two<BotDown4S(), BotUp4S()>
+  T.Two<BotDown5S(), BotUp5S()>
 
 def Bot() -> T.Layer<BotP(), LOW(), LOW(), BotS()>:
-  T.Seq(~BotDown4P(), ~BotUp4P(), ~LOW(), ~BOT2(), ~LOW(), ~BotDown4S(), ~BotUp4S(),
-    BotDown4(), BotUp4())
+  T.Seq(~BotDown5P(), ~BotUp5P(), ~LOW(), ~BOT3(), ~LOW(), ~BotDown5S(), ~BotUp5S(),
+    BotDown5(), BotUp5())
 
 def LowBlockP() -> Type:
   T.Two<T.Two<Unit, BotP()>, Unit>

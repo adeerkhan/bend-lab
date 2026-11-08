@@ -10,7 +10,7 @@ Reads the program's stdout and writes, under `results/diffusion-unet/`:
   stats.svg       the draws' mean and std against the export's
 
 and prints the same numbers, so a run can be quoted without the files. The data
-is `flowers64-512-gray.u8`: 512 flowers at 64x64, one grayscale byte a pixel.
+is `flowers64-trainfull-gray.u8`: the 7,067 training flowers at 64x64, one grayscale byte a pixel.
 """
 import json
 import os

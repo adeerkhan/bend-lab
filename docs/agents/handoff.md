@@ -7,7 +7,57 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
-## 2026-11-08 (latest) — the UNet draws flowers: a fourth level, and the measurement fixed
+## 2026-11-08 (latest) — the UNet's fifth level: the metric paid, the texture did not
+
+**Done and in the tree.** `examples/diffusion/unet/{model,train,config}.bend`: **five levels** (64 -> 32 -> 16 -> 8 ->
+4 -> 2 -> 4 -> 8 -> 16 -> 32 -> 64), 64 channels, no normalisations, the clean image as the target, 7,067 flowers.
+Record `results/diffusion-unet/trained/` regenerated from the five-level run, write-up `TRAINED.md`, changelog entry.
+
+**The numbers.** 298,439 parameters, 3,600 steps: loss **15.3262 -> 0.0259** (step 1 is 0.1343; the first value is the
+untrained head on the first batch), 64 draws at Euler 32 with mean/spread **+0.325 / 0.179** against the data's
++0.384 / 0.232; **held-out legibility 0.547** against a ceiling of 0.574, **94.8%** of the span. The four-level record,
+re-scored with the same evaluator, is 0.605 / **0.501** / 85.8% (published 0.498 / 85.4%), so the fifth level is +4.6
+points of held-out legibility and +9.0 points of span. Trained legibility 0.633, above the ceiling: memorisation.
+
+**The finding that matters.** The fifth level bought **global flower identity**, not petals or tone. The raw draws are
+lower contrast than the four-level's (+0.325 / 0.179 against +0.381 / 0.238) and the top spectrum band is 0.034 against
+0.039 (data 0.137). A deeper net fits a more confident conditional mean and MSE shrinks an uncertain mean toward gray;
+the held-out correlation is scale-invariant, so it rewards the better structure. On the same 8 draws, 128 Euler steps
+change spread 0.185 -> 0.174 and top band 0.033 -> 0.027, so the sampler is not the cause. **32 steps stays; the depth
+line stops; the next lever is detail and contrast, not a sixth level.**
+
+**The draw-count trap, again.** The five-level's first 8 draws score 0.575 held out (100.3% of span) against 0.547 for
+all 64 (94.8%); the 128-step four-level run looked like +3 points for the same reason. A max-over-correlations statistic
+depends on the sample size, so comparisons hold the draw count fixed. This is in TRAINED.md and the issue ledger.
+
+**Gates.** NumPy **1.621e-05** at 2e-05; torch **2.098e-05**, 0.83x its allowance (2e-05 + 1e-6|v|); checkpoint
+**bit-identical** at 298,439 weights (40 steps == 20 + 20, final loss 0.23739263 both). The twins cover nine
+convolutions / 22 weight blocks.
+
+**Open, in order.** 1. The contrast/texture mechanism: a sampler that adds detail, a loss that does not shrink the
+amplitude, or a texture stage; a sixth level has nothing left to remove (bottleneck 2x2). 2. The four-different-batch
+k=4 accumulation arm still is not running: k=1 `accumulate`+`flush` is **bit-identical** to `Train.step` on this UNet
+(same 8,192-cell probe, loss 0.340704, probe md5 `d63d0fa3d2c716922ccae43a6847850b`), and four micro-batches with the
+loss divided by 4 land on the **same weights**; the loop that reads four different batches hit a Bend syntax error
+(`expected '<' observed '('`) and is unresolved. 3. A report-card task still needs a reference arm; `flowers_flow` is
+0.536 / 0.490 with 413,440 parameters, so the UNet's 0.547 is above it at 298,439.
+
+**Upstream.** #34 (`tile`, 6aa3428) and #33 (`rope2d`, d82365e) are rebased, force-pushed to `fork`; `make check-tile`
+PASS 0.000e+00, `make check-rope2d` PASS 1.192e-07, `PROOF.bend --verdict` ALL PROOFS CHECK on both. #32 is merged; #36
+is tried and reported (see Open). Comments are on #32, #33, #34, #29, #27, #26, #36 and bendlang#1781. The next move is
+nuxyel's merge.
+
+**Environment.** Builds need `LD_LIBRARY_PATH=$HOME/.local/lib/llvm22:$HOME/.local/cuda-nvrtc/lib64`; `--verdict` must
+run **without** it (Lean's own clang). Bend 2.0.40 is installed at `~/.bend-240/bend/bin/bend`; bend-lab still pins
+2.0.38. Both venvs are on python 3.15; the five-level CUDA run took 55 min 11 s wall for 3,600 steps (0.92 s/step;
+38 min 13 s user).
+
+**Traps paid for.** A max-over-correlations statistic moves with the draw count. The eval's reference set must be the
+training set. `Seq` returns a pair at every level, so nesting two Seqs nests the pairs. A batch must divide the image
+count. A run shorter than one pass trains on a class-ordered prefix. A gate is never widened without the measured number
+beside it.
+
+## 2026-11-08 (earlier) — the UNet draws flowers: a fourth level, and the measurement fixed
 
 **Done and in the tree.** `examples/diffusion/unet/{model,train,config}.bend`: **four levels** (64 -> 32 -> 16 -> 8 ->
 4 -> 8 -> 16 -> 32 -> 64), 64 channels, no normalisations, the clean image as the flow target, 7,067 flowers. Record

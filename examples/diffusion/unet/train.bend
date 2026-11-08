@@ -4,10 +4,10 @@
 #   .scratch/unet_train --save /tmp/unet.bin
 #   bend examples/diffusion/unet/train.bend --steps 50 --no-sample
 #
-# The model is `model.bend`: FOUR levels, 64 -> 32 -> 16 -> 8 -> 4 -> 8 -> 16 ->
-# 32 -> 64, 64 channels at each level, an `up2` upsample, a residual skip at
-# 32x32 and another at 16x16, and a linear bypass from the input beside the U,
-# with no normalisations (the reason is in that file).
+# The model is `model.bend`: FIVE levels, 64 -> 32 -> 16 -> 8 -> 4 -> 2 -> 4 ->
+# 8 -> 16 -> 32 -> 64, 64 channels at each level, an `up2` upsample, a residual
+# skip at 32x32 and another at 16x16, and a linear bypass from the input beside
+# the U, with no normalisations (the reason is in that file).
 #
 # The objective is rectified flow with the CLEAN IMAGE as the target:
 #
@@ -233,11 +233,9 @@ def scale_go(xs: List<&2, F32>, +acc: List<&2, F32>) -> List<&2, F32>:
 def count() -> Nat:
   U32.to_nat(T.Layer.count(ModelP(), IN(), OUT(), ModelS(), Model()))
 
-# The flat order is the model's forward order, four levels, count 224,583:
-#   conv1 w 2880,   b 2880..2943;    conv3 w 36864, b 39808..39871
-#   conv5 w 36864,  b 76736..76799;  conv7 w 36864, b 113664..113727
-#   conv8 w 36864,  b 150592..150655; conv6 w 36864, b 187520..187583
-#   conv4 w 36864,  b 224448..224511; head w 64, b 224576; bypass w 5, b 224582
+# The flat order is the model's forward order, five levels, count 298,439:
+#   conv1 2880; conv3/conv5/conv7/conv9/conv10/conv8/conv6/conv4 36864 each in that order;
+#   head w 64, b 298432; bypass w 5, b 298438
 def init_arr() -> Array<F32>:
   +n = count()
   arr0 = fill_go(n, scale_go(G.noise_of(1n, n), Nil{}), U32.from_nat(0n),
@@ -249,8 +247,10 @@ def init_arr() -> Array<F32>:
   arr5 = zeros_at(arr4, 150592n, 64n, 0.0)
   arr6 = zeros_at(arr5, 187520n, 64n, 0.0)
   arr7 = zeros_at(arr6, 224448n, 64n, 0.0)
-  arr8 = zeros_at(arr7, 224576n, 1n, 0.0)
-  zeros_at(arr8, 224582n, 1n, 0.0)
+  arr8 = zeros_at(arr7, 261376n, 64n, 0.0)
+  arr9 = zeros_at(arr8, 298304n, 64n, 0.0)
+  arr10 = zeros_at(arr9, 298432n, 1n, 0.0)
+  zeros_at(arr10, 298438n, 1n, 0.0)
 
 def un_pa(pa: T.PA<ModelP()>) -> ModelP():
   match pa:
