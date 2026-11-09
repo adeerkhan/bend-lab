@@ -137,6 +137,15 @@ def corrupt_batch(source):
     return target
 
 
+def reference_indices(length=64, window=16, stride=16):
+    rows = []
+    for position in range(length):
+        anchors = list(range(0, position + 1, stride))
+        local = list(range(max(0, position - window + 1), position + 1))
+        rows.append(sorted(set(anchors + local)))
+    return rows
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--record", type=os.path.abspath, default=None)
@@ -144,8 +153,12 @@ def main():
     D.prepare()
     golden = np.load(GOLDEN)
     out = tempfile.mkdtemp(prefix="glm53-c-20-")
+    ours = [[s for s in range(t + 1) if s % 16 == 0 or t - s < 16] for t in range(64)]
+    indices_ok = ours == reference_indices()
+    print(f"{'ok  ' if indices_ok else 'FAIL'} sparse indices: window 16, stride 16, causal, 64 rows")
+    ok = [indices_ok]
     losses, params, _ = run_train(D.DATA, out, 20)
-    ok = [params == 4168]
+    ok.append(params == 4168)
     print(f"params: {params}")
     ok.append(gate_losses(losses, golden["losses"]))
     weights = np.fromfile(os.path.join(out, "final_weights.bin"), dtype="<f4")

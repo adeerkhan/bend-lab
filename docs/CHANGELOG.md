@@ -34,7 +34,7 @@ What changed for the people who run the lab. Internal refactors are not listed.
   SwiGLU hidden 32, a final RMSNorm and the tied head: **4,168 parameters**. The sparse indices
   are exactly the reference's `s <= t and (s % 16 == 0 or t - s < 16)`; the sparse backward is the
   softmax backward on the gathered scores, with the scatter into dk/dv.
-- **The 20-step gate** (`reference/test_glm53_c.py`, 6 checks): every step's loss within
+- **The 20-step gate** (`reference/test_glm53_c.py`, 7 checks): every step's loss within
   **2.852e-07** relative of the PyTorch twin (`reference/glm53_c_twin.py`), the 4,168 final
   weights at **2.246e-08** and the 4,168 final gradients at **9.914e-08** whole-tensor relative
   (gate 1e-3). The loss falls 5.5484023 -> 5.4986544. Can-fail runs with one weight moved (+2.0)

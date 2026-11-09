@@ -135,7 +135,7 @@ The sparse indices are exactly the reference's
 `s <= t and (s % 16 == 0 or t - s < 16)`; its backward is the softmax backward
 on the gathered scores with the scatter into dk/dv.
 
-`reference/test_glm53_c.py` (6 gates, no PyTorch) runs **20 AdamW steps**
+`reference/test_glm53_c.py` (7 gates, no PyTorch) runs **20 AdamW steps**
 against `reference/glm53_c_twin.py`:
 
 | check | tolerance | measured |

@@ -35,7 +35,7 @@ length; it is not the 25.7M reference. The manifest is frozen in
 `reference/glm53_dense_eval_golden.json` and gated.
 
 **Gate count.** `env -u LD_LIBRARY_PATH make check` is **123/123** (three new test files; they print
-10, 20 and 6 internal gates). The masked-CE gradient bug found during the work: `mask_one` called
+10, 20 and 7 internal gates). The masked-CE gradient bug found during the work: `mask_one` called
 `T.ce_pick` but not `T.ce_row2`, so the gradient was the softmax, not `(p - onehot)/n`; a 2x3
 probe with an exact `T.CrossEntropy` comparison caught it before the 20-step gate.
 
@@ -49,7 +49,7 @@ closed; the old 64-step list implementation was not debugged.
 **Stage C, 2026-11-09.** `attn_c.bend` adds the qkv split, RoPE, the linear and sparse cores,
 and the attention layers; `model_c.bend` is one batch, 64 positions, one head of width 8, linear
 then sparse (window 16, stride 16) with SwiGLU 32, a final RMSNorm and the tied head (**4,168
-parameters**). `reference/test_glm53_c.py` (6 gates) runs 20 AdamW steps against the PyTorch twin:
+parameters**). `reference/test_glm53_c.py` (7 gates) runs 20 AdamW steps against the PyTorch twin:
 loss max relative **2.852e-07**, final weights **2.246e-08**, final gradients **9.914e-08**
 whole-tensor relative; can-fail runs diverge at step 1 at **7.860e-03** and **6.585e-04**. The
 loss is 5.5484023 -> 5.4986544; record in `results/glm53-c/run.json`. The layer cores are gated
