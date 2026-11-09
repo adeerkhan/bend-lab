@@ -277,7 +277,9 @@ Stage C integrates linear + sparse attention in a 4,168-parameter model gated at
 (`test_glm53_c.py`), with the ignored-label branch and a 16-label learning canary
 (`test_glm53_mask.py`, `results/glm53-c/canary-16.json`). A corpus-trained dense baseline at
 128 positions solves **61/64 dev and 60/64 confirm** at 409,600 tokens and **64/64 / 64/64** at
-1,638,400 tokens (`results/glm53-corpus128{,-b32}`).
+1,638,400 tokens (`results/glm53-corpus128{,-b32}`). With `reverse` held out of pretraining it is
+**56/64** on both splits, with `reverse` at **0/8** and every seen family at **8/8**
+(`results/glm53-corpus128-holdout-reverse`).
 
 ## Licence
 

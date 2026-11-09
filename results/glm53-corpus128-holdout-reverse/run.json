@@ -1,0 +1,73 @@
+{
+  "created_at": "2026-11-09T14:46:24.837371+00:00",
+  "stage": "dense-corpus-128-holdout-reverse",
+  "model": "dense Stage A: Embedding, 4 x (RMSNorm, RoPE, causal Attention, residual; RMSNorm, SwiGLU 128, residual), RMSNorm, tied head",
+  "params": 74144,
+  "steps": 400,
+  "batch": 32,
+  "positions": 128,
+  "tokens_seen": 1638400,
+  "optimizer": {
+    "name": "AdamW",
+    "lr": 0.003,
+    "betas": [
+      0.9,
+      0.95
+    ],
+    "eps": 1e-08,
+    "weight_decay": 0.1
+  },
+  "data": {
+    "examples": 20000,
+    "positions": 128,
+    "batch": 32,
+    "steps": 400,
+    "heldout": "reverse",
+    "tokens": 1638400,
+    "val_offset": 1638400,
+    "sha256": {
+      "train_batch.bin": "5b0dcfaeed4a53410df95fb5324c04f88154effaad88850d2aab2a95c15c2634",
+      "train_labels.bin": "9190190d990fc734e34591f7096f77f22488572b19ea7928c3cfcd5aefa09b91",
+      "val_batch.bin": "1ef9cb13592d6302515555941e2d6944b250d0bfa6d2ce0da0fbe9e263f32ae9",
+      "val_labels.bin": "5201488b6a02d5939bfcd0f7b76371828a35373028b32413d07d743b1817f9ff"
+    }
+  },
+  "build_seconds": 75.499,
+  "seconds": 112.01,
+  "peak_rss_kib": 440836,
+  "loss": {
+    "first": 5.5683017,
+    "final": 0.29021987,
+    "last_100_mean": 0.28450989969999996,
+    "min": 0.26951158,
+    "val": 0.27888998
+  },
+  "eval": {
+    "dev": {
+      "pass_at_1": 0.875,
+      "tasks_solved": 56,
+      "tasks_total": 64,
+      "test_accuracy": 0.875,
+      "tests_passed": 168,
+      "tests_total": 192,
+      "token_cap_hits": 0,
+      "valid_programs": 64
+    },
+    "confirm": {
+      "pass_at_1": 0.875,
+      "tasks_solved": 56,
+      "tasks_total": 64,
+      "test_accuracy": 0.875,
+      "tests_passed": 168,
+      "tests_total": 192,
+      "token_cap_hits": 0,
+      "valid_programs": 64
+    }
+  },
+  "commands": {
+    "build": "env LD_LIBRARY_PATH=$HOME/.local/lib/llvm22 BEND_MEM=6G scripts/bend-guard.sh bend -o /tmp/opencode/glm53/train_dense128_b32 examples/language/glm53_flash/train_dense128_b32.bend",
+    "run": "/tmp/opencode/glm53/train_dense128_b32 --steps 400 --lr-ppm 3000 --data examples/language/glm53_flash/data/corpus128-holdout-reverse --weights examples/language/glm53_flash/data --out /tmp/opencode/glm53/holdout-reverse",
+    "eval": "reference/.venv/bin/python reference/glm53_dense_eval.py --weights results/glm53-corpus128-holdout-reverse/final_weights.bin --out results/glm53-corpus128-holdout-reverse --golden reference/glm53_corpus_holdout_reverse_eval_golden.json --model-name model-128"
+  },
+  "passed": true
+}

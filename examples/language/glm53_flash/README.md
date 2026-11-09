@@ -182,6 +182,22 @@ probe runs in **0.024 s** against the direct core's **11.4 s**. The integrated
 attention layers use it, which took the 20-step Stage C test from 3 m 25 s to
 **37 s** without moving the twin gate.
 
+### A held-out family
+
+The seen-family benchmark is saturated, so the next test removes one family from the
+pretraining stream and evaluates it. With `reverse` held out, the same 74,144-parameter
+model at batch 32, 128 positions and 1,638,400 tokens reaches loss **0.29021987**, held-out
+**0.27888998**, and:
+
+| split | solved | tests | reverse | seven seen families |
+|---|---:|---:|---:|---:|
+| dev | **56/64** | 168/192 | **0/8, 0/24** | 8/8, 24/24 each |
+| confirm | **56/64** | 168/192 | **0/8, 0/24** | 8/8, 24/24 each |
+
+The model memorises the seven templates and does not generalise to the unseen one. Run
+**112.0 s**, peak RSS **440,836 KiB**; the build is shared with the batch-32 baseline. This is a
+real headroom benchmark for architecture work; the seen-family 64/64 is not.
+
 ## Diagnostics: the mask and the learning canary
 
 The 64-byte training batch has no ignored labels, so the masked-loss branch was untested until

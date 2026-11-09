@@ -27,6 +27,21 @@ What changed for the people who run the lab. Internal refactors are not listed.
 - **`make check`** gains the dense gate (one test file, ten internal checks); it is **121/121**.
   The Stage B backward and Stage C remain open, and no upstream issue was filed.
 
+### GLM-5.3-Flash: a held-out family is not learned
+
+- **Train on seven families, evaluate the eighth.** The 74,144-parameter dense model at 128
+  positions, batch 32, 1,638,400 tokens, with `reverse` removed from the pretraining stream
+  (`corpus_stream_holdout`): loss **5.5683017** -> **0.29021987**, held-out **0.27888998**; run
+  **112.0 s**, peak RSS **440,836 KiB**.
+- **Result**: dev **56/64** (168/192 tests), confirm **56/64** (168/192); `reverse` is
+  **0/8 solved, 0/24 tests** in both splits, and all seven seen families are **8/8, 24/24**.
+  The model memorises the seven templates and does not generalise to the unseen one.
+- **Why it matters**: the seen-family benchmark is saturated, so MoE/HyperConnection/25.7M can
+  only be justified by this kind of headroom or by efficiency. The held-out-family split is now
+  a recorded benchmark and a frozen evaluation manifest.
+- **Gate**: `reference/test_glm53_corpus.py` now validates the held-out data, both manifests and
+  a corrupted copy, 19/19 internal checks; `make check` stays **125/125**.
+
 ### GLM-5.3-Flash: the prefix-state linear core
 
 - **`examples/language/glm53_flash/lin_fast.bend`**: the prefix-state causal linear-attention

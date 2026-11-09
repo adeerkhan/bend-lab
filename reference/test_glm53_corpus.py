@@ -49,6 +49,9 @@ GOLDEN = os.path.join(ROOT, "reference/glm53_corpus_eval_golden.json")
 B32_DATA = os.path.join(DATA, "corpus128-b32")
 B32_RESULTS = os.path.join(ROOT, "results/glm53-corpus128-b32")
 B32_GOLDEN = os.path.join(ROOT, "reference/glm53_corpus_b32_eval_golden.json")
+HOLD_DATA = os.path.join(DATA, "corpus128-holdout-reverse")
+HOLD_RESULTS = os.path.join(ROOT, "results/glm53-corpus128-holdout-reverse")
+HOLD_GOLDEN = os.path.join(ROOT, "reference/glm53_corpus_holdout_reverse_eval_golden.json")
 EX = os.path.join(ROOT, "examples/language/glm53_flash")
 STEPS = 400
 PER_FAMILY = 8
@@ -206,7 +209,8 @@ def validate_manifest(payload, split, golden, weights_path):
 def main():
     D.write_windows(DATA)
     D.write_windows(B32_DATA, steps=400, batch=32, positions=128, examples=16000)
-    ok = [validate_data(DATA), validate_data(B32_DATA)]
+    D.write_windows(HOLD_DATA, steps=400, batch=32, positions=128, examples=20000, heldout="reverse")
+    ok = [validate_data(DATA), validate_data(B32_DATA), validate_data(HOLD_DATA)]
     record = json.load(open(os.path.join(RESULTS, "run.json")))
     frozen_losses = [float(line.split("\t")[1]) for line in
                      open(os.path.join(RESULTS, "loss.tsv")).read().splitlines()[1:]]
@@ -220,7 +224,8 @@ def main():
     ok.append(val_ok)
 
     for label, results_dir, golden_path in (
-            ("b8", RESULTS, GOLDEN), ("b32", B32_RESULTS, B32_GOLDEN)):
+            ("b8", RESULTS, GOLDEN), ("b32", B32_RESULTS, B32_GOLDEN),
+            ("holdout-reverse", HOLD_RESULTS, HOLD_GOLDEN)):
         frozen = json.load(open(golden_path))
         weights_path = os.path.join(results_dir, "final_weights.bin")
         for split in ("dev", "confirm"):

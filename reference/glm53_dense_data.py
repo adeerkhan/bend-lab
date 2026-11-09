@@ -21,6 +21,7 @@ import argparse
 import hashlib
 import json
 import os
+import random
 import sys
 
 import numpy as np
@@ -132,6 +133,22 @@ def corpus_stream(examples=512):
     return stream
 
 
+def corpus_stream_holdout(heldout, examples=20000, seed=42):
+    """The corpus with one family removed from the pretraining stream."""
+    if VENDOR not in sys.path:
+        sys.path.insert(0, VENDOR)
+    from glm53_flash.tasks import FAMILIES, pretraining_text
+    tokenizer = _tokenizer()
+    stream = []
+    for index in range(examples):
+        rng = random.Random(seed * 10_000_019 + index)
+        family = FAMILIES[rng.randrange(len(FAMILIES))]
+        if family.name == heldout:
+            continue
+        stream += tokenizer.encode(pretraining_text(index, seed=seed), bos=True, eos=True)
+    return stream
+
+
 def train_batch():
     """Two fixed 64-byte rows of inputs and the next-byte labels."""
     stream = corpus_stream()
@@ -176,11 +193,11 @@ def write_eval_prompts(directory, split, per_family=8):
     return tasks, rows, lengths
 
 
-def write_windows(directory, steps=400, batch=8, positions=128, examples=4000):
+def write_windows(directory, steps=400, batch=8, positions=128, examples=4000, heldout=None):
     """A deterministic corpus stream cut into fixed windows, plus one val batch."""
     directory = os.path.abspath(directory)
     os.makedirs(directory, exist_ok=True)
-    stream = corpus_stream(examples)
+    stream = corpus_stream_holdout(heldout, examples) if heldout else corpus_stream(examples)
     need = steps * batch * positions + positions + 1
     if len(stream) < need:
         raise SystemExit(f"corpus stream has {len(stream)} tokens, need {need}")
@@ -197,7 +214,7 @@ def write_windows(directory, steps=400, batch=8, positions=128, examples=4000):
         open(os.path.join(directory, "corpus128-" + name), "wb").write(value.tobytes())
     meta = {
         "examples": examples, "positions": positions, "batch": batch, "steps": steps,
-        "tokens": int(train.size), "val_offset": int(val_at),
+        "heldout": heldout, "tokens": int(train.size), "val_offset": int(val_at),
         "sha256": {name: hashlib.sha256(value.tobytes()).hexdigest() for name, value in out.items()},
     }
     open(os.path.join(directory, "corpus128.json"), "w").write(json.dumps(meta, indent=2) + "\n")
@@ -216,6 +233,9 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--prepare", action="store_true")
     ap.add_argument("--windows", action="store_true")
+    ap.add_argument("--holdout", default="")
+    ap.add_argument("--examples", type=int, default=4000)
+    ap.add_argument("--batch", type=int, default=8)
     ap.add_argument("--directory", default=DATA)
     args = ap.parse_args()
     if not (args.prepare or args.windows):
@@ -223,7 +243,8 @@ def main():
     if args.prepare:
         prepare(args.directory)
     if args.windows:
-        meta = write_windows(args.directory)
+        meta = write_windows(args.directory, examples=args.examples, batch=args.batch,
+                             heldout=args.holdout or None)
         print(json.dumps(meta, indent=2))
     x, y = train_batch()
     print(f"weights: {sum(int(np.prod(s)) for _, s in shapes())} values")

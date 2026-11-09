@@ -56,6 +56,14 @@ loss is 5.5484023 -> 5.4986544; record in `results/glm53-c/run.json`. The layer 
 directly in `test_glm53_bwd.py` (20 checks) at **1.5e-07 .. 1.9e-06**. The sparse forward and
 backward are the reference's exact window-16/stride-16 gathered causal attention.
 
+**The held-out family, 2026-11-09.** With `reverse` removed from the pretraining stream, the
+74,144-parameter dense model at 128 positions, batch 32, 1,638,400 tokens reaches loss
+**0.29021987** and held-out **0.27888998**. Dev/confirm are **56/64** and **56/64** (168/192
+tests); `reverse` is **0/8, 0/24** in both splits, while all seven seen families are **8/8,
+24/24**. The model memorises the templates; the unseen one is not learned. This is the headroom
+benchmark for architecture work. The corpus test validates the data and both manifests
+(19 internal checks).
+
 **The prefix-state core, 2026-11-09.** `lin_fast.bend` carries `K_t/KV_t` forward and `N_s/Q_s`
 backward. Against the direct core at 64: y exact, dq/dk/dv **6.07e-07 / 4.40e-07 / 2.75e-07**
 relative; the fast-only probe is **0.024 s** against **11.4 s** for the direct core. `attn_c.bend`
