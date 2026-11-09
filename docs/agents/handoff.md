@@ -56,6 +56,14 @@ loss is 5.5484023 -> 5.4986544; record in `results/glm53-c/run.json`. The layer 
 directly in `test_glm53_bwd.py` (20 checks) at **1.5e-07 .. 1.9e-06**. The sparse forward and
 backward are the reference's exact window-16/stride-16 gathered causal attention.
 
+**The 4-block hybrid, 2026-11-09.** `attn_mh.bend` (multi-head wrapper, 128 and 192 copies),
+`model_h.bend` (3 linear + 1 sparse, width 32, 4 heads, 128 positions, SwiGLU 128, 74,144
+parameters), `weights_h.bend` and `train_h128.bend` are implemented and type-check. The one-step
+smoke is loss **5.5622463**, val **5.4333777**, **21.0 s** for 128 tokens, peak RSS **15,932
+KiB**. At that rate the 1,638,400-token budget is **12,800 steps / 74.7 h**, so no corpus run or
+192-position accuracy is claimed. The sparse core's `List.set` scatter and the per-head gather
+are the bottleneck; the next step is the vectorized/batched sparse core.
+
 **The held-out family, 2026-11-09.** With `reverse` removed from the pretraining stream, the
 74,144-parameter dense model at 128 positions, batch 32, 1,638,400 tokens reaches loss
 **0.29021987** and held-out **0.27888998**. Dev/confirm are **56/64** and **56/64** (168/192

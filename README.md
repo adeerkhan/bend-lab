@@ -279,7 +279,9 @@ Stage C integrates linear + sparse attention in a 4,168-parameter model gated at
 128 positions solves **61/64 dev and 60/64 confirm** at 409,600 tokens and **64/64 / 64/64** at
 1,638,400 tokens (`results/glm53-corpus128{,-b32}`). With `reverse` held out of pretraining it is
 **56/64** on both splits, with `reverse` at **0/8** and every seen family at **8/8**
-(`results/glm53-corpus128-holdout-reverse`).
+(`results/glm53-corpus128-holdout-reverse`). The 4-block/4-head hybrid is implemented but its
+corpus run is blocked at 21 s per 128 tokens (75 h for the 1.6M-token budget); see
+`results/glm53-hybrid128/smoke.json`.
 
 ## Licence
 

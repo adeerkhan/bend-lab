@@ -1,0 +1,24 @@
+{
+  "status": "implemented, corpus run blocked on throughput",
+  "model": "4 blocks, 3 linear + 1 sparse (window 16, stride 16), width 32, 4 heads, 128 positions, SwiGLU 128, tied head",
+  "params": 74144,
+  "tokens_per_step": 128,
+  "steps_measured": 1,
+  "bend": {
+    "loss": 5.5622463,
+    "final_loss": 5.5622463,
+    "val_loss": 5.4333777,
+    "seconds": 21.0,
+    "peak_rss_kib": 15932,
+    "command": "/tmp/opencode/glm53/train_h128 --steps 1 --lr-ppm 3000 --data examples/language/glm53_flash/data/corpus128-b32 --weights examples/language/glm53_flash/data/h --out /tmp/opencode/glm53/hybrid_smoke"
+  },
+  "projected_1_6m_tokens": {
+    "steps": 12800,
+    "seconds": 268800,
+    "hours": 74.7,
+    "note": "Extrapolation from one measured step; not a run."
+  },
+  "accuracy": "unavailable",
+  "reason": "At 21.0 s for 128 tokens, the 1.6M-token corpus budget is a 75-hour run. A 51,200-token smoke (400 steps) is 2.3 hours and 32x below the dense baseline's token budget, so it is not a comparable baseline. The list-based sparse core and the per-head gather/scatter are the bottleneck.",
+  "next": "Vectorize the sparse core and batch the multi-head model (the same step that took the linear core from 11.4 s to 0.024 s); then run the 1.6M-token comparison and evaluate at 192."
+}

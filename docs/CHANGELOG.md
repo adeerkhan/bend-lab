@@ -27,6 +27,22 @@ What changed for the people who run the lab. Internal refactors are not listed.
 - **`make check`** gains the dense gate (one test file, ten internal checks); it is **121/121**.
   The Stage B backward and Stage C remain open, and no upstream issue was filed.
 
+### GLM-5.3-Flash: the 4-block hybrid is implemented, the corpus run is blocked by the sparse core
+
+- **`attn_mh.bend` / `model_h.bend` / `weights_h.bend` / `train_h128.bend`**: the 4-block hybrid,
+  three linear blocks and one sparse, width 32, four heads, 128 positions, SwiGLU 128, tied head,
+  **74,144 parameters**. The multi-head wrapper gathers each head, runs the gated single-head
+  fast linear core or the gated sparse core, and joins the four head outputs; the parameters and
+  loader are separate from the dense Stage A tree.
+- **The one-step smoke**: loss **5.5622463**, val **5.4333777**, **21.0 s** for 128 tokens, peak
+  RSS **15,932 KiB** (`results/glm53-hybrid128/smoke.json`).
+- **The blocker**: 128 tokens a step makes the dense baseline's 1,638,400-token budget a
+  **12,800-step, 74.7-hour** job. A 400-step / 51,200-token smoke would take 2.3 hours and is
+  32x below the comparison budget, so it is not a baseline. The sparse core's `List.set` scatter
+  and the per-head gather/scatter dominate; the linear core is already fast.
+- **Not claimed**: no 192-position accuracy is reported. The next step is a vectorized sparse
+  core and a batched multi-head model, before the hybrid can enter the 1.6M-token comparison.
+
 ### GLM-5.3-Flash: a held-out family is not learned
 
 - **Train on seven families, evaluate the eighth.** The 74,144-parameter dense model at 128
