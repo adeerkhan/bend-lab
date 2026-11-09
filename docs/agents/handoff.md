@@ -35,7 +35,7 @@ length; it is not the 25.7M reference. The manifest is frozen in
 `reference/glm53_dense_eval_golden.json` and gated.
 
 **Gate count.** `env -u LD_LIBRARY_PATH make check` is **125/125** (five new test files; they print
-10, 20, 7, 4 and 14 internal gates). The masked-CE gradient bug found during the work: `mask_one` called
+10, 24, 7, 4 and 14 internal gates). The masked-CE gradient bug found during the work: `mask_one` called
 `T.ce_pick` but not `T.ce_row2`, so the gradient was the softmax, not `(p - onehot)/n`; a 2x3
 probe with an exact `T.CrossEntropy` comparison caught it before the 20-step gate.
 
@@ -50,11 +50,18 @@ closed; the old 64-step list implementation was not debugged.
 and the attention layers; `model_c.bend` is one batch, 64 positions, one head of width 8, linear
 then sparse (window 16, stride 16) with SwiGLU 32, a final RMSNorm and the tied head (**4,168
 parameters**). `reference/test_glm53_c.py` (7 gates) runs 20 AdamW steps against the PyTorch twin:
-loss max relative **2.852e-07**, final weights **2.246e-08**, final gradients **9.914e-08**
+loss max relative **2.852e-07**, final weights **3.705e-08**, final gradients **1.487e-07**
 whole-tensor relative; can-fail runs diverge at step 1 at **7.860e-03** and **6.585e-04**. The
 loss is 5.5484023 -> 5.4986544; record in `results/glm53-c/run.json`. The layer cores are gated
 directly in `test_glm53_bwd.py` (20 checks) at **1.5e-07 .. 1.9e-06**. The sparse forward and
 backward are the reference's exact window-16/stride-16 gathered causal attention.
+
+**The prefix-state core, 2026-11-09.** `lin_fast.bend` carries `K_t/KV_t` forward and `N_s/Q_s`
+backward. Against the direct core at 64: y exact, dq/dk/dv **6.07e-07 / 4.40e-07 / 2.75e-07**
+relative; the fast-only probe is **0.024 s** against **11.4 s** for the direct core. `attn_c.bend`
+now uses it; the Stage C 20-step gate is **2.852e-07** loss, **3.705e-08** weights,
+**1.487e-07** gradients, and the test is **37 s** instead of 3 m 25 s. `test_glm53_bwd.py` is now
+24 checks.
 
 **The corpus baseline, 2026-11-09.** The 0/64 fixed-batch result was the experiment, not the
 model. `train_dense128.bend` trains the same 74,144-parameter stack at **128 positions**, batch 8,

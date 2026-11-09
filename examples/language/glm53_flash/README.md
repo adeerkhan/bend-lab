@@ -164,8 +164,8 @@ against `reference/glm53_c_twin.py`:
 | check | tolerance | measured |
 |---|---|---|
 | loss at every step | 1e-4 relative | max **2.852e-07** |
-| final weights (4,168) | 1e-3 relative | **2.246e-08** |
-| final gradients (4,168) | 1e-3 relative | **9.914e-08** |
+| final weights (4,168) | 1e-3 relative | **3.705e-08** |
+| final gradients (4,168) | 1e-3 relative | **1.487e-07** |
 
 The loss falls 5.5484023 -> 5.4986544. Can-fail runs with one weight moved
 (+2.0) and one input byte changed diverge at step 1 at **7.860e-03** and
@@ -173,7 +173,14 @@ The loss falls 5.5484023 -> 5.4986544. Can-fail runs with one weight moved
 
 The layer cores are also gated directly, RoPE + each core on the same 64 x 8
 inputs against PyTorch-autograd goldens, at **1.5e-07 .. 1.9e-06** relative
-(`reference/test_glm53_bwd.py`, 20 checks).
+(`reference/test_glm53_bwd.py`, 24 checks).
+
+`lin_fast.bend` is the prefix-state linear core: `K_t/KV_t` forward and
+`N_s/Q_s` suffix backward. Against the direct core at 64, y is exact and
+dq/dk/dv agree at **6.07e-07 / 4.40e-07 / 2.75e-07** relative; the fast-only
+probe runs in **0.024 s** against the direct core's **11.4 s**. The integrated
+attention layers use it, which took the 20-step Stage C test from 3 m 25 s to
+**37 s** without moving the twin gate.
 
 ## Diagnostics: the mask and the learning canary
 

@@ -272,7 +272,7 @@ rectified-flow port's layers are gated whole-array against a NumPy twin
 (`test_rectified_flow_layers.py`, fourteen gates). The GLM Stage A harness is
 now a trainable dense baseline: 74,144 parameters, a 20-step AdamW twin gate,
 a 400-step record, and a frozen greedy dev/confirm manifest (`test_glm53_dense.py`);
-its Stage B linear-attention backward is gated at t=2 and 64 (`test_glm53_bwd.py`), and
+its Stage B linear-attention backward is gated at t=2 and 64 and has a prefix-state fast core (`test_glm53_bwd.py`), and
 Stage C integrates linear + sparse attention in a 4,168-parameter model gated at 20 steps
 (`test_glm53_c.py`), with the ignored-label branch and a 16-label learning canary
 (`test_glm53_mask.py`, `results/glm53-c/canary-16.json`). A corpus-trained dense baseline at

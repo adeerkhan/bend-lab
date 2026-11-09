@@ -11,6 +11,7 @@ import Base
 import bendtorch@2.0.0.0/main.bend as T
 import bend-ml-tensor-array@0.1.18.0/main.bend as TA
 import ./lin_bwd.bend as L
+import ./lin_fast.bend as LF
 
 def N() -> Nat:
   64n
@@ -172,7 +173,7 @@ def unrope_bw(bw: L.BW) -> L.BW:
 # ---- linear attention: RoPE, then the exact core ----
 
 def lin_y(q: List<&2, F32>, k: List<&2, F32>, v: List<&2, F32>) -> List<&2, F32>:
-  L.lin_y(N(), HD(), rope_all(q), rope_all(k), v)
+  LF.lin_y_fast(N(), HD(), rope_all(q), rope_all(k), v)
 
 def lin_bwd(q: List<&2, F32>, k: List<&2, F32>, v: List<&2, F32>, dy: List<&2, F32>) -> L.BW:
   unrope_bw(L.lin_bwd(N(), HD(), rope_all(q), rope_all(k), v, dy))
@@ -388,7 +389,7 @@ def bwd_mats(bw: L.BW) -> T.Bwd<Unit, QKV()>:
         T.Two{TA.Mat.from_list(N(), HD(), dk), TA.Mat.from_list(N(), HD(), dv)}}, Unit{}}
 
 def lin_bwd_lists(d: List<&2, F32>, q: List<&2, F32>, k: List<&2, F32>, v: List<&2, F32>) -> T.Bwd<Unit, QKV()>:
-  bwd_mats(unrope_bw(L.lin_bwd(N(), HD(), q, k, v, d)))
+  bwd_mats(unrope_bw(LF.lin_bwd_fast(N(), HD(), q, k, v, d)))
 
 def lin_bwd_of(dy: M(), s: LinS) -> T.Bwd<Unit, QKV()>:
   match dy s:

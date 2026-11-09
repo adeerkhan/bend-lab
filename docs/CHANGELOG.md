@@ -27,6 +27,19 @@ What changed for the people who run the lab. Internal refactors are not listed.
 - **`make check`** gains the dense gate (one test file, ten internal checks); it is **121/121**.
   The Stage B backward and Stage C remain open, and no upstream issue was filed.
 
+### GLM-5.3-Flash: the prefix-state linear core
+
+- **`examples/language/glm53_flash/lin_fast.bend`**: the prefix-state causal linear-attention
+  core, `K_t/KV_t` forward and `N_s/Q_s` suffix backward. On the same 64 x 8 inputs as the direct
+  core, y is bit-identical and dq/dk/dv agree at **6.07e-07 / 4.40e-07 / 2.75e-07** relative;
+  the fast-only probe runs in **0.024 s** against the direct core's **11.4 s**.
+- **The integrated cores use it**: `attn_c.bend` now calls the prefix-state linear core, while the
+  sparse core is unchanged. The Stage C 20-step gate still matches the PyTorch twin at
+  **2.852e-07** on the loss, **3.705e-08** on the final weights and **1.487e-07** on the final
+  gradients; the test takes **37 s** instead of 3 m 25 s.
+- **The gate** (`reference/test_glm53_bwd.py`, now 24 checks): fast vs direct at 64 at 1e-5, plus
+  the direct t=2/t=64 and integrated layer gates. `make check` stays **125/125**.
+
 ### GLM-5.3-Flash: the dense baseline is real, 61/64 -> 64/64 with the token budget
 
 - **A corpus-trained dense baseline at 128 positions** (`train_dense128.bend`, `model_128.bend`):
@@ -77,7 +90,7 @@ What changed for the people who run the lab. Internal refactors are not listed.
   softmax backward on the gathered scores, with the scatter into dk/dv.
 - **The 20-step gate** (`reference/test_glm53_c.py`, 7 checks): every step's loss within
   **2.852e-07** relative of the PyTorch twin (`reference/glm53_c_twin.py`), the 4,168 final
-  weights at **2.246e-08** and the 4,168 final gradients at **9.914e-08** whole-tensor relative
+  weights at **3.705e-08** and the 4,168 final gradients at **1.487e-07** whole-tensor relative
   (gate 1e-3). The loss falls 5.5484023 -> 5.4986544. Can-fail runs with one weight moved (+2.0)
   and one input byte changed diverge at step 1 at **7.860e-03** and **6.585e-04**.
 - **The layer cores** are also gated directly (`reference/test_glm53_bwd.py`, now 20 checks):

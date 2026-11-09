@@ -38,8 +38,8 @@
   ],
   "twin": {
     "loss_max_relative": 2.852421613772558e-07,
-    "weights_relative": 2.2461279976629747e-08,
-    "gradients_relative": 9.9138643807146e-08,
+    "weights_relative": 3.7049533982069684e-08,
+    "gradients_relative": 1.48707965710719e-07,
     "corrupt_weight_step1_relative": 0.007859951159873165,
     "corrupt_batch_step1_relative": 0.000658537844016747
   },

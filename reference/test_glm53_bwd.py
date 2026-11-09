@@ -52,7 +52,7 @@ T2_DY = np.array([0.1, 0.2, -0.1, 0.3, -0.2, 0.4, -0.3, 0.5,
 
 def binary(source, tag):
     out = f"/tmp/glm53-bwd-{TAG}-{tag}"
-    deps = [os.path.join(EX, name) for name in (source, "lin_bwd.bend", "attn_c.bend")]
+    deps = [os.path.join(EX, name) for name in (source, "lin_bwd.bend", "lin_fast.bend", "attn_c.bend")]
     if os.path.exists(out) and all(os.path.getmtime(out) >= os.path.getmtime(s) for s in deps):
         return out
     build = subprocess.run([BEND, "-o", out, os.path.join(EX, source)],
@@ -148,6 +148,11 @@ def main():
     golden = np.load(GOLDEN)
     for name in ("y", "dq", "dk", "dv"):
         ok.append(compare(f"t64/{name}", got64[name], golden[name].astype(np.float64)))
+
+    # the prefix-state core against the direct core, same 64 x 8 inputs
+    fast = run("probe_lin_fast.bend", "fast")
+    for name in ("y", "dq", "dk", "dv"):
+        ok.append(compare(f"fast64/{name}", fast[f"fast_{name}"], fast[f"direct_{name}"], 1e-5))
 
     # the integrated layer cores: RoPE + the linear/sparse core, against the
     # PyTorch-autograd golden `glm53_attn_c.py` wrote
