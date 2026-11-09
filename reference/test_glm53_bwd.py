@@ -52,7 +52,7 @@ T2_DY = np.array([0.1, 0.2, -0.1, 0.3, -0.2, 0.4, -0.3, 0.5,
 
 def binary(source, tag):
     out = f"/tmp/glm53-bwd-{TAG}-{tag}"
-    deps = [os.path.join(EX, name) for name in (source, "lin_bwd.bend")]
+    deps = [os.path.join(EX, name) for name in (source, "lin_bwd.bend", "attn_c.bend")]
     if os.path.exists(out) and all(os.path.getmtime(out) >= os.path.getmtime(s) for s in deps):
         return out
     build = subprocess.run([BEND, "-o", out, os.path.join(EX, source)],
@@ -71,6 +71,26 @@ def run(source, tag):
         m = re.match(r"^([a-z_]+):\s*(.*)$", line)
         if m:
             out[m.group(1)] = np.array([np.float32(v) for v in m.group(2).split()], dtype=np.float64)
+    return out
+
+
+def run_layers():
+    proc = subprocess.run([binary("probe_attn_c.bend", "layers")], capture_output=True,
+                          text=True, env=ENV, cwd=ROOT)
+    if proc.returncode != 0:
+        raise SystemExit(f"probe_attn_c.bend did not run:\n{proc.stdout}{proc.stderr}")
+    out = {}
+    section = None
+    for line in proc.stdout.splitlines():
+        m = re.match(r"^(lin_y|sp_y|dq|dk|dv):\s*(.*)$", line)
+        if not m:
+            continue
+        key, value = m.group(1), np.array([np.float32(v) for v in m.group(2).split()], dtype=np.float64)
+        if key.endswith("_y"):
+            section = key.split("_")[0]
+            out[key] = value
+        else:
+            out[f"{section}_{key}"] = value
     return out
 
 
@@ -128,6 +148,15 @@ def main():
     golden = np.load(GOLDEN)
     for name in ("y", "dq", "dk", "dv"):
         ok.append(compare(f"t64/{name}", got64[name], golden[name].astype(np.float64)))
+
+    # the integrated layer cores: RoPE + the linear/sparse core, against the
+    # PyTorch-autograd golden `glm53_attn_c.py` wrote
+    layer = run_layers()
+    layer_golden = np.load(os.path.join(ROOT, "reference/glm53_attn_c_golden.npz"))
+    for prefix in ("lin", "sp"):
+        for name in ("y", "dq", "dk", "dv"):
+            ok.append(compare(f"layer/{prefix}_{name}", layer[f"{prefix}_{name}"],
+                              layer_golden[f"{prefix}_{name}"].astype(np.float64)))
 
     # can-fail: a changed dout must be rejected by the same t2 comparison
     bad = T2_DY.copy()

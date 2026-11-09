@@ -17,7 +17,7 @@ reused, 128 tokens a step. `reference/glm53_dense_data.py` writes the NumPy weig
 the frozen dev/confirm prompts; `reference/glm53_dense_twin.py` is the PyTorch-autograd twin.
 
 **The 20-step gate.** `reference/test_glm53_dense.py` runs Bend and compares with the twin:
-every step's loss max relative **5.174e-07** (gate 1e-4); the 74,144 final weights **3.455e-07**
+every step's loss max relative **5.599e-07** (gate 1e-4); the 74,144 final weights **3.455e-07**
 and the 74,144 final gradients **2.157e-07** whole-tensor relative (gate 1e-3, because 20 AdamW
 steps amplify last-bit rounding). Can-fail runs with one embedding weight moved by +2.0 and one
 input byte changed diverge at step 1 at **3.887e-03** and **4.485e-04**; the same gate rejects
@@ -34,19 +34,29 @@ result for a 74k model trained on one fixed 64-byte batch and evaluated beyond i
 length; it is not the 25.7M reference. The manifest is frozen in
 `reference/glm53_dense_eval_golden.json` and gated.
 
-**Gate count.** `env -u LD_LIBRARY_PATH make check` is **122/122** (two new test files; they print
-10 and 12 internal gates). The masked-CE gradient bug found during the work: `mask_one` called
+**Gate count.** `env -u LD_LIBRARY_PATH make check` is **123/123** (three new test files; they print
+10, 20 and 6 internal gates). The masked-CE gradient bug found during the work: `mask_one` called
 `T.ce_pick` but not `T.ce_row2`, so the gradient was the softmax, not `(p - onehot)/n`; a 2x3
 probe with an exact `T.CrossEntropy` comparison caught it before the 20-step gate.
 
 **Stage B backward, 2026-11-09.** `lin_bwd.bend` is the exact single-head backward in direct
-O(T²d) form. `reference/test_glm53_bwd.py` (12 gates in `make check`) measures t=2/hd=8 at
+O(T²d) form. `reference/test_glm53_bwd.py` (20 gates in `make check`) measures t=2/hd=8 at
 y/dq/dk/dv **1.19e-07 / 1.49e-06 / 4.52e-07 / 6.47e-08** relative against a NumPy twin, the
 one-hot dout at t=0 gives **dq = dk = dv = 0 exactly** for t>0, and t=64 matches the
 PyTorch-autograd golden at **1.51e-07 / 1.19e-06 / 1.17e-06 / 2.75e-07**. Local ISSUE-090 is
 closed; the old 64-step list implementation was not debugged.
 
-**What is not built.** Stage C, the MoE, the four-stream HyperConnection, RL and the 25.7M run.
+**Stage C, 2026-11-09.** `attn_c.bend` adds the qkv split, RoPE, the linear and sparse cores,
+and the attention layers; `model_c.bend` is one batch, 64 positions, one head of width 8, linear
+then sparse (window 16, stride 16) with SwiGLU 32, a final RMSNorm and the tied head (**4,168
+parameters**). `reference/test_glm53_c.py` (6 gates) runs 20 AdamW steps against the PyTorch twin:
+loss max relative **2.852e-07**, final weights **2.246e-08**, final gradients **9.914e-08**
+whole-tensor relative; can-fail runs diverge at step 1 at **7.860e-03** and **6.585e-04**. The
+loss is 5.5484023 -> 5.4986544; record in `results/glm53-c/run.json`. The layer cores are gated
+directly in `test_glm53_bwd.py` (20 checks) at **1.5e-07 .. 1.9e-06**. The sparse forward and
+backward are the reference's exact window-16/stride-16 gathered causal attention.
+
+**What is not built.** The MoE, the four-stream HyperConnection, RL and the full 25.7M run.
 ISSUE-091 (BendTorch feature gaps: ELU, causal cumsum, top-k/gather, masked CE, clipping,
 per-parameter scopes) remains **not filed**; no upstream issue was opened for this work.
 

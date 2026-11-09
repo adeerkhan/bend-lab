@@ -10,7 +10,7 @@ What changed for the people who run the lab. Internal refactors are not listed.
   `T.Train`, AdamW (lr 3e-4, betas (0.9, 0.95), eps 1e-8, weight decay 0.1) and the reference's
   masked cross-entropy. The data is the reference's synthetic Python corpus through its byte
   tokenizer: two fixed 64-byte rows, written once and reused, 128 tokens per step.
-- **The 20-step gate** (`reference/test_glm53_dense.py`): every step's loss within **5.174e-07**
+- **The 20-step gate** (`reference/test_glm53_dense.py`): every step's loss within **5.599e-07**
   relative of the PyTorch-autograd twin (`reference/glm53_dense_twin.py`), the 74,144 final weights
   at **3.455e-07** and the 74,144 final gradients at **2.157e-07** whole-tensor relative (the
   weights/gradients gate is 1e-3 because 20 AdamW steps amplify last-bit rounding). Can-fail runs
@@ -26,6 +26,23 @@ What changed for the people who run the lab. Internal refactors are not listed.
   is 0/8. The manifest is frozen in `reference/glm53_dense_eval_golden.json` and gated.
 - **`make check`** gains the dense gate (one test file, ten internal checks); it is **121/121**.
   The Stage B backward and Stage C remain open, and no upstream issue was filed.
+
+### GLM-5.3-Flash: Stage C, the integrated linear + sparse model at 20 steps
+
+- **`examples/language/glm53_flash/{attn_c,model_c,train_c}.bend`**: one batch, 64 positions, one
+  head of width 8, **linear attention then sparse attention** (window 16, stride 16), each with a
+  SwiGLU hidden 32, a final RMSNorm and the tied head: **4,168 parameters**. The sparse indices
+  are exactly the reference's `s <= t and (s % 16 == 0 or t - s < 16)`; the sparse backward is the
+  softmax backward on the gathered scores, with the scatter into dk/dv.
+- **The 20-step gate** (`reference/test_glm53_c.py`, 6 checks): every step's loss within
+  **2.852e-07** relative of the PyTorch twin (`reference/glm53_c_twin.py`), the 4,168 final
+  weights at **2.246e-08** and the 4,168 final gradients at **9.914e-08** whole-tensor relative
+  (gate 1e-3). The loss falls 5.5484023 -> 5.4986544. Can-fail runs with one weight moved (+2.0)
+  and one input byte changed diverge at step 1 at **7.860e-03** and **6.585e-04**.
+- **The layer cores** are also gated directly (`reference/test_glm53_bwd.py`, now 20 checks):
+  RoPE + the linear core and RoPE + the sparse core on the same 64 x 8 inputs, against
+  PyTorch-autograd goldens, all at **1.5e-07 .. 1.9e-06** relative.
+- **`make check`** is **123/123**. Record: `results/glm53-c/run.json`.
 
 ### GLM-5.3-Flash: the Stage B linear-attention backward, exact at t=2 and 64
 

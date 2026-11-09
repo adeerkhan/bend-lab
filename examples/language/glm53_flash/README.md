@@ -77,7 +77,7 @@ compares every step's loss and the final weights and gradients:
 
 | check | tolerance | measured |
 |---|---|---|
-| loss at every step | 1e-4 relative | max **5.174e-07** |
+| loss at every step | 1e-4 relative | max **5.599e-07** |
 | final weights (74,144) | 1e-3 relative | **3.455e-07** |
 | final gradients (74,144) | 1e-3 relative | **2.157e-07** |
 
@@ -125,9 +125,35 @@ The evaluation manifest is frozen in
 against the reference tasks, every verdict against the reference evaluator,
 the four summary counts, and the frozen 48-token sequence.
 
+## Stage C: the integrated linear + sparse model
+
+`attn_c.bend` holds the split, RoPE, the linear and sparse cores, and the
+attention layers; `model_c.bend` is one batch, 64 positions, one head of width
+8, **linear attention then sparse attention** (window 16, stride 16), each with
+a SwiGLU hidden 32, a final RMSNorm and the tied head: **4,168 parameters**.
+The sparse indices are exactly the reference's
+`s <= t and (s % 16 == 0 or t - s < 16)`; its backward is the softmax backward
+on the gathered scores with the scatter into dk/dv.
+
+`reference/test_glm53_c.py` (6 gates, no PyTorch) runs **20 AdamW steps**
+against `reference/glm53_c_twin.py`:
+
+| check | tolerance | measured |
+|---|---|---|
+| loss at every step | 1e-4 relative | max **2.852e-07** |
+| final weights (4,168) | 1e-3 relative | **2.246e-08** |
+| final gradients (4,168) | 1e-3 relative | **9.914e-08** |
+
+The loss falls 5.5484023 -> 5.4986544. Can-fail runs with one weight moved
+(+2.0) and one input byte changed diverge at step 1 at **7.860e-03** and
+**6.585e-04**. The record is `results/glm53-c/run.json`.
+
+The layer cores are also gated directly, RoPE + each core on the same 64 x 8
+inputs against PyTorch-autograd goldens, at **1.5e-07 .. 1.9e-06** relative
+(`reference/test_glm53_bwd.py`, 20 checks).
+
 ## What is not built
 
-- Stage C, the gathered sparse attention, and its backward.
 - The MoE, the four-stream HyperConnection, RL and the 25.7M model. Those are
   later stages.
 
@@ -144,6 +170,8 @@ $ reference/.venv/bin/python reference/glm53_dense_report.py
 $ reference/.venv/bin/python reference/glm53_dense_eval.py \
       --weights results/glm53-dense/final_weights.bin --out results/glm53-dense
 $ reference/.venv/bin/python reference/test_glm53_dense.py
+$ reference/.venv/bin/python reference/test_glm53_bwd.py
+$ reference/.venv/bin/python reference/test_glm53_c.py
 $ reference/.venv/bin/python reference/test_glm53_layers.py
 $ make check
 ```

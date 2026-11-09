@@ -1,0 +1,47 @@
+{
+  "stage": "integrated-linear-and-sparse-attention",
+  "model": "1 batch, 64 positions, 1 head of width 8, linear then sparse (window 16, stride 16), SwiGLU 32, tied head",
+  "params": 4168,
+  "steps": 20,
+  "tokens_seen": 1280,
+  "optimizer": {
+    "name": "AdamW",
+    "lr": 0.0003,
+    "betas": [
+      0.9,
+      0.95
+    ],
+    "eps": 1e-08,
+    "weight_decay": 0.1
+  },
+  "losses": [
+    5.5484023,
+    5.5461063,
+    5.5437927,
+    5.541456,
+    5.5391,
+    5.536717,
+    5.53431,
+    5.531873,
+    5.529404,
+    5.526896,
+    5.5243444,
+    5.521747,
+    5.5190954,
+    5.516387,
+    5.513616,
+    5.510777,
+    5.507867,
+    5.504877,
+    5.5018077,
+    5.4986544
+  ],
+  "twin": {
+    "loss_max_relative": 2.852421613772558e-07,
+    "weights_relative": 2.2461279976629747e-08,
+    "gradients_relative": 9.9138643807146e-08,
+    "corrupt_weight_step1_relative": 0.007859951159873165,
+    "corrupt_batch_step1_relative": 0.000658537844016747
+  },
+  "passed": true
+}

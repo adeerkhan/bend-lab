@@ -96,6 +96,7 @@ def gate_losses(got, want, limit=1e-4):
     ok = True
     rels = []
     for i, (a, b) in enumerate(zip(got, want), 1):
+        a, b = float(a), float(b)
         rel = abs(a - b) / max(abs(b), 1e-30)
         rels.append(rel)
         if rel > limit:

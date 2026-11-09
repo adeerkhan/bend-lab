@@ -14,7 +14,7 @@ relevant entry before changing performance-sensitive code or a law.
   `CrossEntropy` row was `-0.3497, 0.1661, 0.1836`, the masked row was the unnormalised softmax
   `0.3006, 0.3322, 0.3672`. Adding `T.ce_row2` made the tiny rows exact and the 74,144-value
   gradient agree with the Stage A golden at **2.24e-08**. The whole-tensor 20-step gate then
-  passed at **5.174e-07** on the loss and **3.455e-07 / 2.157e-07** on the final weights and
+  passed at **5.599e-07** on the loss and **3.455e-07 / 2.157e-07** on the final weights and
   gradients.
 - **The 1e-3 weights/gradients gate is measured, not guessed.** Twenty AdamW steps amplify the
   last-bit differences of BendTorch's and PyTorch's matrix products; the loss stays inside

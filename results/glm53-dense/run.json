@@ -37,7 +37,7 @@
   },
   "twin_20_step": {
     "loss_gate_passed": true,
-    "loss_max_relative": 5.174e-07,
+    "loss_max_relative": 5.599e-07,
     "weights_relative": 3.455e-07,
     "gradients_relative": 2.157e-07,
     "corrupt_weight_step1_relative": 0.003887,
