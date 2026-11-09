@@ -1,0 +1,72 @@
+{
+  "created_at": "2026-11-09T13:35:13.731979+00:00",
+  "stage": "dense-corpus-128",
+  "model": "dense Stage A: Embedding, 4 x (RMSNorm, RoPE, causal Attention, residual; RMSNorm, SwiGLU 128, residual), RMSNorm, tied head",
+  "params": 74144,
+  "steps": 400,
+  "batch": 8,
+  "positions": 128,
+  "tokens_seen": 409600,
+  "optimizer": {
+    "name": "AdamW",
+    "lr": 0.003,
+    "betas": [
+      0.9,
+      0.95
+    ],
+    "eps": 1e-08,
+    "weight_decay": 0.1
+  },
+  "data": {
+    "examples": 4000,
+    "positions": 128,
+    "batch": 8,
+    "steps": 400,
+    "tokens": 409600,
+    "val_offset": 409600,
+    "sha256": {
+      "train_batch.bin": "accfea75c01dfe97e51f5e39cd46f21b39a0464f28bf04b1cdb61dbb0e96182f",
+      "train_labels.bin": "f6accdf3192fa9759239a44d11f6f48f6e286a78dc8b3eda11f5e543f5bf5c76",
+      "val_batch.bin": "88e7336f18378a68ae39ab87d72089697970e65cdc61530c4a39b917903aac31",
+      "val_labels.bin": "e69ccd7f9dc6208f6fd0488e247795cbd6a248ade823f5dd35b2a78a8d9663a1"
+    }
+  },
+  "build_seconds": 53.786,
+  "seconds": 27.28,
+  "peak_rss_kib": 157436,
+  "loss": {
+    "first": 5.574197,
+    "final": 0.32177755,
+    "last_100_mean": 0.3530558247,
+    "min": 0.2983245,
+    "val": 0.30741644
+  },
+  "eval": {
+    "dev": {
+      "pass_at_1": 0.953125,
+      "tasks_solved": 61,
+      "tasks_total": 64,
+      "test_accuracy": 0.96875,
+      "tests_passed": 186,
+      "tests_total": 192,
+      "token_cap_hits": 0,
+      "valid_programs": 64
+    },
+    "confirm": {
+      "pass_at_1": 0.9375,
+      "tasks_solved": 60,
+      "tasks_total": 64,
+      "test_accuracy": 0.9583333333333334,
+      "tests_passed": 184,
+      "tests_total": 192,
+      "token_cap_hits": 0,
+      "valid_programs": 64
+    }
+  },
+  "commands": {
+    "build": "env LD_LIBRARY_PATH=$HOME/.local/lib/llvm22 BEND_MEM=6G scripts/bend-guard.sh bend -o /tmp/opencode/glm53/train_dense128 examples/language/glm53_flash/train_dense128.bend",
+    "run": "/tmp/opencode/glm53/train_dense128 --steps 400 --lr-ppm 3000 --data examples/language/glm53_flash/data --out /tmp/opencode/glm53/corpus128",
+    "eval": "reference/.venv/bin/python reference/glm53_dense_eval.py --weights results/glm53-corpus128/final_weights.bin --out results/glm53-corpus128 --golden reference/glm53_corpus_eval_golden.json --model-name model-128"
+  },
+  "passed": true
+}

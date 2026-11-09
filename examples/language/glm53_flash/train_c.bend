@@ -120,7 +120,7 @@ type Run is Type:
   Run{steps: Nat, data: String, out: String, lrppm: Nat, mask: Nat}
 
 def run_default() -> Run:
-  Run{STEPS(), "examples/language/glm53_flash/data", "/tmp/opencode/glm53/c", 300n, 64n}
+  Run{STEPS(), "examples/language/glm53_flash/data/c", "/tmp/opencode/glm53/c", 300n, 64n}
 
 def nat_or(m: Maybe<&2, Nat>, d: Nat) -> Nat:
   match m:

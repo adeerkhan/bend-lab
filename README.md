@@ -261,7 +261,7 @@ lane, and the seven diagnostic prototypes
 
 ## Status
 
-`make check` is 124/124. Diffusion is complete through the ViT, with the gate at
+`make check` is 125/125. Diffusion is complete through the ViT, with the gate at
 0.75 and the Bend model measured at 0.795 (DDIM) and 0.807 (DDPM). Flow matching
 has a measured 2D example and its frozen gate (`test_flow2d.py`, six gates). CIFAR-10 has its
 3072-output DDPM: 256 images, 40 steps, build 50.8 s and run 65.4 s, first loss
@@ -275,7 +275,9 @@ a 400-step record, and a frozen greedy dev/confirm manifest (`test_glm53_dense.p
 its Stage B linear-attention backward is gated at t=2 and 64 (`test_glm53_bwd.py`), and
 Stage C integrates linear + sparse attention in a 4,168-parameter model gated at 20 steps
 (`test_glm53_c.py`), with the ignored-label branch and a 16-label learning canary
-(`test_glm53_mask.py`, `results/glm53-c/canary-16.json`).
+(`test_glm53_mask.py`, `results/glm53-c/canary-16.json`). A corpus-trained dense baseline at
+128 positions solves **61/64 dev and 60/64 confirm** at 409,600 tokens and **64/64 / 64/64** at
+1,638,400 tokens (`results/glm53-corpus128{,-b32}`).
 
 ## Licence
 

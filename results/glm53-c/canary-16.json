@@ -3,7 +3,7 @@
   "model": "Stage C, 4,168 parameters, one batch of 64 positions, 16 labels",
   "commands": {
     "bend_build": "env LD_LIBRARY_PATH=$HOME/.local/lib/llvm22 BEND_MEM=6G scripts/bend-guard.sh bend -o /tmp/opencode/glm53/train_c_lr examples/language/glm53_flash/train_c.bend",
-    "bend_run": "/tmp/opencode/glm53/train_c_lr --steps 50 --lr-ppm 30000 --mask 16 --data examples/language/glm53_flash/data --out /tmp/opencode/glm53/c_canary",
+    "bend_run": "/tmp/opencode/glm53/train_c_lr --steps 50 --lr-ppm 30000 --mask 16 --data examples/language/glm53_flash/data/c --out /tmp/opencode/glm53/c_canary",
     "twin": "reference/.venv-rf/bin/python reference/glm53_c_twin.py --steps 50 --lr 0.03 --mask 16"
   },
   "steps": 50,

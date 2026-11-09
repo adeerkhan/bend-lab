@@ -18,6 +18,8 @@ module and adds the autograd twin.
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import os
 import sys
 
@@ -174,6 +176,34 @@ def write_eval_prompts(directory, split, per_family=8):
     return tasks, rows, lengths
 
 
+def write_windows(directory, steps=400, batch=8, positions=128, examples=4000):
+    """A deterministic corpus stream cut into fixed windows, plus one val batch."""
+    directory = os.path.abspath(directory)
+    os.makedirs(directory, exist_ok=True)
+    stream = corpus_stream(examples)
+    need = steps * batch * positions + positions + 1
+    if len(stream) < need:
+        raise SystemExit(f"corpus stream has {len(stream)} tokens, need {need}")
+    train = np.asarray(stream[:steps * batch * positions], dtype=np.uint8)
+    labels = np.asarray(stream[1:steps * batch * positions + 1], dtype=np.uint8)
+    val_at = steps * batch * positions
+    val = np.asarray(stream[val_at:val_at + batch * positions], dtype=np.uint8)
+    val_labels = np.asarray(stream[val_at + 1:val_at + batch * positions + 1], dtype=np.uint8)
+    out = {
+        "train_batch.bin": train, "train_labels.bin": labels,
+        "val_batch.bin": val, "val_labels.bin": val_labels,
+    }
+    for name, value in out.items():
+        open(os.path.join(directory, "corpus128-" + name), "wb").write(value.tobytes())
+    meta = {
+        "examples": examples, "positions": positions, "batch": batch, "steps": steps,
+        "tokens": int(train.size), "val_offset": int(val_at),
+        "sha256": {name: hashlib.sha256(value.tobytes()).hexdigest() for name, value in out.items()},
+    }
+    open(os.path.join(directory, "corpus128.json"), "w").write(json.dumps(meta, indent=2) + "\n")
+    return meta
+
+
 def prepare(directory=DATA, per_family=8):
     write_weights(directory)
     write_train_batch(directory)
@@ -185,11 +215,16 @@ def prepare(directory=DATA, per_family=8):
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--prepare", action="store_true")
+    ap.add_argument("--windows", action="store_true")
     ap.add_argument("--directory", default=DATA)
     args = ap.parse_args()
-    if not args.prepare:
-        ap.error("--prepare is required")
-    prepare(args.directory)
+    if not (args.prepare or args.windows):
+        ap.error("--prepare or --windows is required")
+    if args.prepare:
+        prepare(args.directory)
+    if args.windows:
+        meta = write_windows(args.directory)
+        print(json.dumps(meta, indent=2))
     x, y = train_batch()
     print(f"weights: {sum(int(np.prod(s)) for _, s in shapes())} values")
     print(f"train inputs: {x.size} bytes, labels: {y.size} bytes, masked labels: {int((y == IGNORE).sum())}")

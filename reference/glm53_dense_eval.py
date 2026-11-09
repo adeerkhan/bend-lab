@@ -146,7 +146,7 @@ def evaluate_split(args, tokenizer, tasks, rows, completions, exe, weights_sha):
         "status": "complete",
         "split": args.split,
         "model": "dense Stage A, 74,144 parameters, 192 positions",
-        "checkpoint": "results/glm53-dense/final_weights.bin",
+        "checkpoint": str(args.weights),
         "checkpoint_sha256": weights_sha,
         "inference": {
             "greedy": True,
@@ -186,6 +186,8 @@ def main():
     ap.add_argument("--max-new-tokens", type=int, default=48)
     ap.add_argument("--splits", default="dev,confirm")
     ap.add_argument("--binary", default="")
+    ap.add_argument("--golden", default="reference/glm53_dense_eval_golden.json")
+    ap.add_argument("--model-name", default="model-400")
     args = ap.parse_args()
     if args.max_new_tokens != D.GEN_POSITIONS and args.max_new_tokens > 48:
         raise SystemExit("the generator emits 48 tokens")
@@ -194,7 +196,7 @@ def main():
     if not flat.exists():
         raise SystemExit(f"{flat} does not exist; run train_a --steps 400 first")
     weights_sha = sha256_file(flat)
-    model_dir = args.out / "model-400"
+    model_dir = args.out / args.model_name
     D.write_flat_weights(__import__("numpy").fromfile(flat, dtype="<f4"), model_dir)
     exe = args.binary or binary("examples/language/glm53_flash/gen_a.bend")
     tokenizer = ByteTokenizer()
@@ -219,9 +221,13 @@ def main():
               f"{payload['elapsed_seconds']} s")
         for family, row in payload["by_family"].items():
             print(f"  {family}: {row['solved']}/{row['tasks']} solved, {row['tests_passed']}/{row['tests_total']} tests")
-    golden_path = Path("reference/glm53_dense_eval_golden.json")
-    golden_path.write_text(json.dumps(golden, indent=2, sort_keys=True) + "\n")
-    print(f"wrote {args.out}/eval-*.json and {golden_path}")
+    if args.golden:
+        golden_path = Path(args.golden)
+        golden_path.parent.mkdir(parents=True, exist_ok=True)
+        golden_path.write_text(json.dumps(golden, indent=2, sort_keys=True) + "\n")
+        print(f"wrote {args.out}/eval-*.json and {golden_path}")
+    else:
+        print(f"wrote {args.out}/eval-*.json")
 
 
 if __name__ == "__main__":

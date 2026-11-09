@@ -19,7 +19,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import glm53_dense_data as D  # noqa: E402
 
-DATA = os.path.join(ROOT, "examples/language/glm53_flash/data")
+DATA = os.path.join(ROOT, "examples/language/glm53_flash/data/c")
 V, DIM, H, T = 260, 8, 32, 64
 
 

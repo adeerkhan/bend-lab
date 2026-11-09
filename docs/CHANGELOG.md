@@ -27,6 +27,29 @@ What changed for the people who run the lab. Internal refactors are not listed.
 - **`make check`** gains the dense gate (one test file, ten internal checks); it is **121/121**.
   The Stage B backward and Stage C remain open, and no upstream issue was filed.
 
+### GLM-5.3-Flash: the dense baseline is real, 61/64 -> 64/64 with the token budget
+
+- **A corpus-trained dense baseline at 128 positions** (`train_dense128.bend`, `model_128.bend`):
+  74,144 parameters, batch 8, 400 steps, **409,600 tokens**. Loss 5.574197 -> **0.32177755**,
+  last-100 mean **0.3530558**, held-out **0.30741644**; build **53.786 s**, run **27.28 s**, peak
+  RSS **157,436 KiB**. Greedy dev/confirm: **61/64 and 60/64 solved**, **186/192 and 184/192
+  tests**, 64/64 valid programs, no cap hits. The three dev failures and four confirm failures are
+  all `square` completions that return `x * 2` instead of `x * x`; the other seven families are
+  8/8 in both splits.
+- **The token budget closes them.** At batch 32, 400 steps, **1,638,400 tokens** (the reference's
+  400-step budget): loss 5.5704083 -> **0.29012972**, last-100 **0.3012568**, held-out
+  **0.27868035**; build **75.499 s**, run **108.47 s**, peak RSS **445,252 KiB**. Greedy
+  dev/confirm: **64/64 and 64/64 solved**, **192/192 and 192/192 tests**, every family 8/8, no cap
+  hits. The square confusion was a data/compute effect, not a formatting or capacity defect.
+- **The earlier 0/64 was the fixed-batch, out-of-context run**, not a property of the dense model.
+  The corpus baseline is the number to beat; the 74k dense model is already at the ceiling of this
+  synthetic task at 1.6M tokens. Architecture work now has to be justified by efficiency or a
+  harder task, not accuracy on a solved corpus.
+- **The gates**: `reference/test_glm53_corpus.py` (14 checks) regenerates both window sets, checks
+  next-byte alignment and hashes, reruns the 400-step batch-8 training and requires the loss curve
+  to match at 1e-5, validates both dev/confirm manifests against their frozen goldens and the
+  reference evaluator, and rejects a corrupted batch at step 1. `make check` is **125/125**.
+
 ### GLM-5.3-Flash: the masked-label gate and the training canary
 
 - **The ignored-label branch is now gated** (`reference/test_glm53_mask.py`, 4 checks): a 2 x 3

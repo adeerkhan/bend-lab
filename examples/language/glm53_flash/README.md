@@ -115,10 +115,33 @@ the reference's prompts, greedy decode:
 
 Every family is 0/8 solved and 0/24 tests in both splits. This is the honest
 result for a 74k model trained on one fixed 64-byte batch and then asked to
-generate at positions it never trained on; it is **not** the reference 25.7M
-model and not a corpus-trained baseline. What it does establish is that the
-whole path (data, optimizer, backward, checkpoint, generation, evaluator)
-runs and is gated.
+generate at positions it never trained on. It is **not** the reference 25.7M
+model and it is **not** the corpus baseline below.
+
+## The corpus-trained dense baseline
+
+`model_128.bend` and `train_dense128.bend` move the same 74,144-parameter
+stack to **128 positions** and a real corpus stream: batch 8, 400 steps,
+**409,600 tokens**, AdamW at lr 3e-3. The evaluation is the same vendored
+evaluator, 8 identities per family.
+
+| check | batch 8 / 409,600 tokens | batch 32 / 1,638,400 tokens |
+|---|---:|---:|
+| loss first -> final | 5.574197 -> 0.32177755 | 5.5704083 -> 0.29012972 |
+| last-100 mean | 0.3530558 | 0.3012568 |
+| held-out loss | 0.30741644 | 0.27868035 |
+| build / run | 53.786 s / 27.28 s | 75.499 s / 108.47 s |
+| peak RSS | 157,436 KiB | 445,252 KiB |
+| dev solved / tests | **61/64 / 186/192** | **64/64 / 192/192** |
+| confirm solved / tests | **60/64 / 184/192** | **64/64 / 192/192** |
+
+At 409,600 tokens the only failures are `square` completions returning
+`x * 2` instead of `x * x` (5/8 dev, 4/8 confirm); the other seven families
+are 8/8. At the reference's 400-step token budget (1.6M) every family is 8/8
+in both splits, with no token-cap hits and 64/64 valid programs. The square
+confusion was a data/compute effect. The 74k dense model is at the ceiling of
+this synthetic corpus; the 0/64 above is the fixed-batch, out-of-context
+result, not a baseline.
 
 The evaluation manifest is frozen in
 `reference/glm53_dense_eval_golden.json`; `make check` re-checks every prompt

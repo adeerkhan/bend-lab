@@ -34,8 +34,8 @@ result for a 74k model trained on one fixed 64-byte batch and evaluated beyond i
 length; it is not the 25.7M reference. The manifest is frozen in
 `reference/glm53_dense_eval_golden.json` and gated.
 
-**Gate count.** `env -u LD_LIBRARY_PATH make check` is **124/124** (four new test files; they print
-10, 20, 7 and 4 internal gates). The masked-CE gradient bug found during the work: `mask_one` called
+**Gate count.** `env -u LD_LIBRARY_PATH make check` is **125/125** (five new test files; they print
+10, 20, 7, 4 and 14 internal gates). The masked-CE gradient bug found during the work: `mask_one` called
 `T.ce_pick` but not `T.ce_row2`, so the gradient was the softmax, not `(p - onehot)/n`; a 2x3
 probe with an exact `T.CrossEntropy` comparison caught it before the 20-step gate.
 
@@ -55,6 +55,20 @@ whole-tensor relative; can-fail runs diverge at step 1 at **7.860e-03** and **6.
 loss is 5.5484023 -> 5.4986544; record in `results/glm53-c/run.json`. The layer cores are gated
 directly in `test_glm53_bwd.py` (20 checks) at **1.5e-07 .. 1.9e-06**. The sparse forward and
 backward are the reference's exact window-16/stride-16 gathered causal attention.
+
+**The corpus baseline, 2026-11-09.** The 0/64 fixed-batch result was the experiment, not the
+model. `train_dense128.bend` trains the same 74,144-parameter stack at **128 positions**, batch 8,
+400 steps, **409,600 tokens** of the synthetic corpus: loss 5.574197 -> **0.32177755**, held-out
+**0.30741644**, build **53.786 s**, run **27.28 s**, peak RSS **157,436 KiB**. Greedy dev/confirm:
+**61/64 and 60/64 solved**, **186/192 and 184/192 tests**, all valid, no cap hits. The only
+failures are `square` returning `x * 2`; the other seven families are 8/8.
+
+At **batch 32, 1,638,400 tokens** (the reference's 400-step budget), the same model reaches
+**64/64 and 64/64**, **192/192 tests**, every family 8/8, no cap hits; loss 5.5704083 ->
+**0.29012972**, held-out **0.27868035**, build **75.499 s**, run **108.47 s**, peak RSS
+**445,252 KiB**. The token budget, not the architecture, closes the square confusion. The 74k
+dense model is at the ceiling of this synthetic corpus; the next architecture comparison has to
+be efficiency or a harder task, not accuracy on a solved corpus.
 
 **Diagnostics, 2026-11-09.** The masked-label branch is gated by
 `reference/test_glm53_mask.py` (4 checks): masked loss 1.2019429 vs 1.20194285, ignored-row
