@@ -4,6 +4,29 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### GLM-5.3-Flash: a trainable dense Stage A baseline, and its 400-step record
+
+- **`examples/language/glm53_flash/train_a.bend`**: the 74,144-parameter Stage A model under
+  `T.Train`, AdamW (lr 3e-4, betas (0.9, 0.95), eps 1e-8, weight decay 0.1) and the reference's
+  masked cross-entropy. The data is the reference's synthetic Python corpus through its byte
+  tokenizer: two fixed 64-byte rows, written once and reused, 128 tokens per step.
+- **The 20-step gate** (`reference/test_glm53_dense.py`): every step's loss within **5.174e-07**
+  relative of the PyTorch-autograd twin (`reference/glm53_dense_twin.py`), the 74,144 final weights
+  at **3.455e-07** and the 74,144 final gradients at **2.157e-07** whole-tensor relative (the
+  weights/gradients gate is 1e-3 because 20 AdamW steps amplify last-bit rounding). Can-fail runs
+  with one weight moved (+2.0) and one input byte changed diverge at step 1 at **3.887e-03** and
+  **4.485e-04**, and the same gate rejects them.
+- **The 400-step record** (`results/glm53-dense/`): first loss **5.595126**, final **1.724139**,
+  last-100 mean **2.0280423**, loss at the final weights **1.716634**, 51,200 tokens, build
+  **86.059 s**, run **7.13 s**, peak RSS **57,040 KiB**. The fixed batch makes this an overfit
+  baseline, not a corpus pass.
+- **Greedy dev/confirm** (`gen_a.bend`, `model_eval.bend` at 192 positions,
+  `reference/glm53_dense_eval.py`, the vendored evaluator): **0/64 solved, 0/192 tests** on dev
+  (57 token-cap hits) and **0/64 solved, 0/192 tests** on confirm (62 token-cap hits); every family
+  is 0/8. The manifest is frozen in `reference/glm53_dense_eval_golden.json` and gated.
+- **`make check`** gains the dense gate (one test file, ten internal checks); it is **121/121**.
+  The Stage B backward and Stage C remain open, and no upstream issue was filed.
+
 ### GLM-5.3-Flash-from-scratch: Stage A, and the linear-attention forward
 
 - **`reference/glm53_flash/`**: the educational 25.7M model vendored at commit `96d9c7c`, MIT,

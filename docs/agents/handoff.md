@@ -7,6 +7,43 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-09 — GLM Stage A becomes a trainable dense baseline
+
+**Done and in the tree.** `examples/language/glm53_flash/train_a.bend`: the 74,144-parameter
+Stage A stack under `T.Train`, AdamW (lr 3e-4, betas (0.9, 0.95), eps 1e-8, weight decay 0.1)
+and the reference's masked cross-entropy (`loss_masked.bend`). The data is the reference's
+synthetic Python corpus through its byte tokenizer: two fixed 64-byte rows, written once and
+reused, 128 tokens a step. `reference/glm53_dense_data.py` writes the NumPy weights, the batch and
+the frozen dev/confirm prompts; `reference/glm53_dense_twin.py` is the PyTorch-autograd twin.
+
+**The 20-step gate.** `reference/test_glm53_dense.py` runs Bend and compares with the twin:
+every step's loss max relative **5.174e-07** (gate 1e-4); the 74,144 final weights **3.455e-07**
+and the 74,144 final gradients **2.157e-07** whole-tensor relative (gate 1e-3, because 20 AdamW
+steps amplify last-bit rounding). Can-fail runs with one embedding weight moved by +2.0 and one
+input byte changed diverge at step 1 at **3.887e-03** and **4.485e-04**; the same gate rejects
+them.
+
+**The 400-step record** (`results/glm53-dense/`, one fixed batch, so overfit by design): first
+loss **5.595126**, final **1.724139**, last-100 mean **2.0280423**, loss at the final weights
+**1.716634**, 51,200 tokens, build **86.059 s**, run **7.13 s**, peak RSS **57,040 KiB**.
+
+**Greedy dev/confirm** (`gen_a.bend` and `model_eval.bend` at 192 positions,
+`reference/glm53_dense_eval.py`, the vendored evaluator): **0/64 solved, 0/192 tests** on dev
+(57 cap hits) and **0/64, 0/192** on confirm (62 cap hits), every family 0/8. That is the honest
+result for a 74k model trained on one fixed 64-byte batch and evaluated beyond its training
+length; it is not the 25.7M reference. The manifest is frozen in
+`reference/glm53_dense_eval_golden.json` and gated.
+
+**Gate count.** `env -u LD_LIBRARY_PATH make check` is **121/121** (one new test file; it prints
+10 internal gates). The masked-CE gradient bug found during the work: `mask_one` called
+`T.ce_pick` but not `T.ce_row2`, so the gradient was the softmax, not `(p - onehot)/n`; a 2x3
+probe with an exact `T.CrossEntropy` comparison caught it before the 20-step gate.
+
+**What is not built.** Stage B backward (the old 64-step list implementation is open as local
+ISSUE-090; do not debug it), Stage C, the MoE, the four-stream HyperConnection, RL and the 25.7M
+run. ISSUE-091 (BendTorch feature gaps: ELU, causal cumsum, top-k/gather, masked CE, clipping,
+per-parameter scopes) remains **not filed**; no upstream issue was opened for this work.
+
 ## 2026-11-08 (latest) — GLM-5.3-Flash-from-scratch: Stage A and the linear-attention forward
 
 **Done and in the tree.** `reference/glm53_flash/`: the educational 25.7M model vendored at

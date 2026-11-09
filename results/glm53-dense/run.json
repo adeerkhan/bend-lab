@@ -1,0 +1,179 @@
+{
+  "created_at": "2026-11-09T08:20:18.328404+00:00",
+  "stage": "dense-pretrain",
+  "model": "dense Stage A: Embedding, 4 x (RMSNorm, RoPE, causal Attention, residual; RMSNorm, SwiGLU 128, residual), RMSNorm, tied head",
+  "params": 74144,
+  "dataset": {
+    "name": "reference synthetic Python corpus, first 129 byte-tokenizer tokens",
+    "inputs": "examples/language/glm53_flash/data/train_batch.bin",
+    "labels": "examples/language/glm53_flash/data/train_labels.bin",
+    "rows": 2,
+    "positions": 64,
+    "tokens_per_step": 128,
+    "inputs_sha256": "f7ef194ed94ec72f5160fb880ebe2d8f2cfe637ef35c0588a334cbdd1a888307",
+    "labels_sha256": "007db5cf9a341576683e0e9ff60533678058eb8e2521eff551da8f4ff92b11ae",
+    "masked_labels": 0
+  },
+  "optimizer": {
+    "name": "AdamW",
+    "lr": 0.0003,
+    "betas": [
+      0.9,
+      0.95
+    ],
+    "eps": 1e-08,
+    "weight_decay": 0.1
+  },
+  "steps": 400,
+  "tokens_seen": 51200,
+  "build_seconds": 86.059,
+  "seconds": 7.13,
+  "peak_rss_kib": 57040,
+  "loss": {
+    "first": 5.595126,
+    "final": 1.724139,
+    "last_100_mean": 2.028042301,
+    "final_weights_forward": 1.716634
+  },
+  "twin_20_step": {
+    "loss_gate_passed": true,
+    "loss_max_relative": 5.174e-07,
+    "weights_relative": 3.455e-07,
+    "gradients_relative": 2.157e-07,
+    "corrupt_weight_step1_relative": 0.003887,
+    "corrupt_batch_step1_relative": 0.0004485,
+    "first_diverging_step": null
+  },
+  "machine": {
+    "platform": "Linux-7.2.15-300.fc45.x86_64-x86_64-with-glibc2.44",
+    "cpu_count": 28,
+    "numpy": "2.5.4"
+  },
+  "passed": true,
+  "evaluation": {
+    "dev": {
+      "summary": {
+        "pass_at_1": 0.0,
+        "tasks_solved": 0,
+        "tasks_total": 64,
+        "test_accuracy": 0.0,
+        "tests_passed": 0,
+        "tests_total": 192,
+        "token_cap_hits": 57,
+        "valid_programs": 0
+      },
+      "by_family": {
+        "absolute": {
+          "solved": 0,
+          "tasks": 8,
+          "tests_passed": 0,
+          "tests_total": 24
+        },
+        "double": {
+          "solved": 0,
+          "tasks": 8,
+          "tests_passed": 0,
+          "tests_total": 24
+        },
+        "even": {
+          "solved": 0,
+          "tasks": 8,
+          "tests_passed": 0,
+          "tests_total": 24
+        },
+        "increment": {
+          "solved": 0,
+          "tasks": 8,
+          "tests_passed": 0,
+          "tests_total": 24
+        },
+        "list_sum": {
+          "solved": 0,
+          "tasks": 8,
+          "tests_passed": 0,
+          "tests_total": 24
+        },
+        "nonnegative": {
+          "solved": 0,
+          "tasks": 8,
+          "tests_passed": 0,
+          "tests_total": 24
+        },
+        "reverse": {
+          "solved": 0,
+          "tasks": 8,
+          "tests_passed": 0,
+          "tests_total": 24
+        },
+        "square": {
+          "solved": 0,
+          "tasks": 8,
+          "tests_passed": 0,
+          "tests_total": 24
+        }
+      }
+    },
+    "confirm": {
+      "summary": {
+        "pass_at_1": 0.0,
+        "tasks_solved": 0,
+        "tasks_total": 64,
+        "test_accuracy": 0.0,
+        "tests_passed": 0,
+        "tests_total": 192,
+        "token_cap_hits": 62,
+        "valid_programs": 0
+      },
+      "by_family": {
+        "absolute": {
+          "solved": 0,
+          "tasks": 8,
+          "tests_passed": 0,
+          "tests_total": 24
+        },
+        "double": {
+          "solved": 0,
+          "tasks": 8,
+          "tests_passed": 0,
+          "tests_total": 24
+        },
+        "even": {
+          "solved": 0,
+          "tasks": 8,
+          "tests_passed": 0,
+          "tests_total": 24
+        },
+        "increment": {
+          "solved": 0,
+          "tasks": 8,
+          "tests_passed": 0,
+          "tests_total": 24
+        },
+        "list_sum": {
+          "solved": 0,
+          "tasks": 8,
+          "tests_passed": 0,
+          "tests_total": 24
+        },
+        "nonnegative": {
+          "solved": 0,
+          "tasks": 8,
+          "tests_passed": 0,
+          "tests_total": 24
+        },
+        "reverse": {
+          "solved": 0,
+          "tasks": 8,
+          "tests_passed": 0,
+          "tests_total": 24
+        },
+        "square": {
+          "solved": 0,
+          "tasks": 8,
+          "tests_passed": 0,
+          "tests_total": 24
+        }
+      }
+    }
+  }
+}

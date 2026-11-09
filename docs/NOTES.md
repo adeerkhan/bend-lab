@@ -3,6 +3,30 @@
 Every finding, every measurement and every discarded hypothesis, by date. Read the
 relevant entry before changing performance-sensitive code or a law.
 
+## 2026-11-09 — the dense Stage A baseline: a masked-CE gradient bug, and the length the baseline does not cover
+
+- **The masked loss had the right loss and the wrong gradient.** The first `train_a` run matched
+  the PyTorch twin at step 1 (5.595126) and then went the wrong way (step 2 5.596049 against the
+  twin's 5.562067). The cause was in `loss_masked.bend`: `mask_one` called `T.ce_pick`, which
+  returns `AS{z, loss}` with the row's softmax written over `z`, but skipped `T.ce_row2`, which
+  writes `(p - onehot)/n`. The backward therefore received the softmax itself. A 2x3 probe with
+  `T.CrossEntropy` and the masked loss on the same logits printed the two `dy` rows; the
+  `CrossEntropy` row was `-0.3497, 0.1661, 0.1836`, the masked row was the unnormalised softmax
+  `0.3006, 0.3322, 0.3672`. Adding `T.ce_row2` made the tiny rows exact and the 74,144-value
+  gradient agree with the Stage A golden at **2.24e-08**. The whole-tensor 20-step gate then
+  passed at **5.174e-07** on the loss and **3.455e-07 / 2.157e-07** on the final weights and
+  gradients.
+- **The 1e-3 weights/gradients gate is measured, not guessed.** Twenty AdamW steps amplify the
+  last-bit differences of BendTorch's and PyTorch's matrix products; the loss stays inside
+  1e-4 by a factor of 193, while the parameter trees need 1e-3. The gate is not widened for the
+  loss.
+- **The evaluation is a length extrapolation, and it scores 0.** The 400-step run reuses one
+  fixed 64-byte batch (the requested dense baseline), and `gen_a` evaluates at 192 positions
+  because the reference prompts are 76-95 tokens plus 48 new. Positions 64-191 and this corpus
+  distribution were never trained. Dev and confirm are **0/64 solved, 0/192 tests**, every family
+  0/8. The earlier Stage A loss 5.5654626 and the 400-step first loss 5.595126 differ because the
+  batches differ, not because the model moved.
+
 ## 2026-11-04 (later) — the pin is on 2.0.0.0, and nothing moved
 
 - **Adopted `bendtorch@2.0.0.0`** (released 2026-11-03): 22 files, 21 imports,
