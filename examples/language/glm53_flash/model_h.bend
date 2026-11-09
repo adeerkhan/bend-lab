@@ -126,13 +126,13 @@ def B3P() -> Type:
   T.Two<BlockP(), T.Two<BlockP(), BlockP()>>
 
 def B3S() -> Type:
-  T.Two<SpBlockS(), T.Two<LinBlockS(), LinBlockS()>>
+  T.Two<LinBlockS(), T.Two<LinBlockS(), SpBlockS()>>
 
 def B3() -> T.Layer<B3P(), A(DIM()), A(DIM()), B3S()>:
   T.Seq(~BlockP(), ~T.Two<BlockP(), BlockP>(), ~A(DIM()), ~A(DIM()), ~A(DIM()),
-    ~SpBlockS(), ~T.Two<LinBlockS(), LinBlockS>(),
-    ~SpBlock(), ~T.Seq(~BlockP(), ~BlockP(), ~A(DIM()), ~A(DIM()), ~A(DIM()), ~LinBlockS(), ~LinBlockS(),
-      ~LinBlock(), ~LinBlock()))
+    ~LinBlockS(), ~T.Two<LinBlockS(), SpBlockS>(),
+    ~LinBlock(), ~T.Seq(~BlockP(), ~BlockP(), ~A(DIM()), ~A(DIM()), ~A(DIM()), ~LinBlockS(), ~SpBlockS(),
+      ~LinBlock(), ~SpBlock()))
 
 def BlocksP() -> Type:
   T.Two<BlockP(), B3P()>

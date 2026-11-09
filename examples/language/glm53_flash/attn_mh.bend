@@ -220,9 +220,9 @@ def split_go(+left: Nat, +i: Nat, +xs: List<&2, F32>, qacc: List<&2, F32>,
     case 1n+p:
       +off = Nat.mul(i, W3())
       split_go(p, (i + 1n : Nat), xs,
-        List.append(&2, F32, qacc, take_row(xs, off, HD())),
-        List.append(&2, F32, kacc, take_row(xs, Nat.add(off, HD()), HD())),
-        List.append(&2, F32, vacc, take_row(xs, Nat.add(off, Nat.mul(HD(), 2n)), HD())))
+        List.append(&2, F32, qacc, take_row(xs, off, D())),
+        List.append(&2, F32, kacc, take_row(xs, Nat.add(off, D()), D())),
+        List.append(&2, F32, vacc, take_row(xs, Nat.add(off, Nat.mul(D(), 2n)), D())))
 
 def split_res(t: T.Three<List<&2, F32>, List<&2, F32>, List<&2, F32>>) -> T.Fwd<Unit, QKV(), Unit>:
   match t:
@@ -241,10 +241,10 @@ def join_go(+left: Nat, +i: Nat, +dq: List<&2, F32>, +dk: List<&2, F32>, +dv: Li
     case 0n:
       acc
     case 1n+p:
-      +off = Nat.mul(i, HD())
-      +a = List.append(&2, F32, acc, take_row(dq, off, HD()))
-      +b = List.append(&2, F32, a, take_row(dk, off, HD()))
-      +c = List.append(&2, F32, b, take_row(dv, off, HD()))
+      +off = Nat.mul(i, D())
+      +a = List.append(&2, F32, acc, take_row(dq, off, D()))
+      +b = List.append(&2, F32, a, take_row(dk, off, D()))
+      +c = List.append(&2, F32, b, take_row(dv, off, D()))
       join_go(p, (i + 1n : Nat), dq, dk, dv, c)
 
 def split_bwd3(dqm: M(), dkm: M(), dvm: M()) -> T.Bwd<Unit, C()>:

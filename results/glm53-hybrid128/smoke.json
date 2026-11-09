@@ -5,20 +5,29 @@
   "tokens_per_step": 128,
   "steps_measured": 1,
   "bend": {
-    "loss": 5.5622463,
-    "final_loss": 5.5622463,
-    "val_loss": 5.4333777,
-    "seconds": 21.0,
-    "peak_rss_kib": 15932,
-    "command": "/tmp/opencode/glm53/train_h128 --steps 1 --lr-ppm 3000 --data examples/language/glm53_flash/data/corpus128-b32 --weights examples/language/glm53_flash/data/h --out /tmp/opencode/glm53/hybrid_smoke"
+    "loss": 5.5634737,
+    "final_loss": 5.5634737,
+    "val_loss": 5.4198546,
+    "seconds": 18.97,
+    "peak_rss_kib": 16956,
+    "build_seconds": 30.915,
+    "command": "/tmp/opencode/glm53/train_h128 --steps 1 --lr-ppm 3000 --data examples/language/glm53_flash/data/corpus128-b32 --weights examples/language/glm53_flash/data/h --out /tmp/opencode/glm53/hybrid_smoke3"
   },
   "projected_1_6m_tokens": {
     "steps": 12800,
-    "seconds": 268800,
-    "hours": 74.7,
+    "seconds": 242816,
+    "hours": 67.4,
     "note": "Extrapolation from one measured step; not a run."
   },
   "accuracy": "unavailable",
-  "reason": "At 21.0 s for 128 tokens, the 1.6M-token corpus budget is a 75-hour run. A 51,200-token smoke (400 steps) is 2.3 hours and 32x below the dense baseline's token budget, so it is not a comparable baseline. The list-based sparse core and the per-head gather/scatter are the bottleneck.",
-  "next": "Vectorize the sparse core and batch the multi-head model (the same step that took the linear core from 11.4 s to 0.024 s); then run the 1.6M-token comparison and evaluate at 192."
+  "reason": "At 18.97 s for 128 tokens, the 1.6M-token budget is 12,800 steps / 67.4 h. A 400-step smoke is 2.1 h and 32x below the comparison budget, so it is not a comparable baseline. The list sparse backward and per-head gather remain the bottleneck.",
+  "next": "Vectorize the sparse core and batch the multi-head model (the same step that took the linear core from 11.4 s to 0.024 s); then run the 1.6M-token comparison and evaluate at 192.",
+  "forward_check": {
+    "probe": "reference/test_glm53_mh.py",
+    "result": "4/4 gates",
+    "linear_four_head_relative": 8.842e-08,
+    "sparse_four_head_relative": 1.233e-07,
+    "four_block_model_relative": 1.218e-07,
+    "note": "N=8 forward, NumPy reference verified against the vendored torch modules at 2e-08. It caught an 8-wide/32-wide split bug and a Lin,Sp,Lin,Lin block order; both fixed before this smoke."
+  }
 }

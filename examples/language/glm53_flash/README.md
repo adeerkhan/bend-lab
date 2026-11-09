@@ -238,13 +238,19 @@ more steps. This is the training variable, not the data, loss or init.
 ## The 4-block hybrid: implemented, corpus run blocked
 
 `attn_mh.bend`, `model_h.bend`, `weights_h.bend` and `train_h128.bend` implement the 4-block
-hybrid: three linear blocks and one sparse, width 32, four heads, 128 positions, SwiGLU 128,
-tied head, **74,144 parameters**. One step measures loss **5.5622463**, val **5.4333777**,
-**21.0 s** for 128 tokens and **15,932 KiB** peak RSS.
+hybrid: three linear blocks and one sparse (`Lin,Lin,Lin,Sp`, the reference's every-fourth
+schedule), width 32, four heads, 128 positions, SwiGLU 128, tied head, **74,144 parameters**.
+
+The N=8 forward check (`reference/test_glm53_mh.py`, 4/4) is the important gate. It found an
+8-wide/32-wide split bug and a `Lin,Sp,Lin,Lin` order before any training conclusion. After the
+fixes, the four-head linear/sparse and the full four-block model match the NumPy twin at
+**8.84e-08 / 1.23e-07 / 1.22e-07** relative. The NumPy twin itself matches the vendored torch
+modules at 2e-08. One training step of the fixed model measures loss **5.5634737**, val
+**5.4198546**, **18.97 s** for 128 tokens and **16,956 KiB** peak RSS.
 
 The corpus run is blocked on throughput: 128 tokens a step makes the 1,638,400-token budget
-**12,800 steps / 74.7 hours** (an extrapolation from the measured step, not a run). A 400-step
-smoke would be 2.3 hours and 32x below the dense baseline's token count, so it is not a
+**12,800 steps / 67.4 hours** (an extrapolation from the measured step, not a run). A 400-step
+smoke would be 2.1 hours and 32x below the dense baseline's token count, so it is not a
 comparable baseline. The list-based sparse backward (`List.set` scatter) and the per-head
 gather/scatter dominate. The next step is the same one that took the linear core from 11.4 s to
 0.024 s: a vectorized sparse core and a batched multi-head model, then the 192-position

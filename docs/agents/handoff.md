@@ -34,8 +34,8 @@ result for a 74k model trained on one fixed 64-byte batch and evaluated beyond i
 length; it is not the 25.7M reference. The manifest is frozen in
 `reference/glm53_dense_eval_golden.json` and gated.
 
-**Gate count.** `env -u LD_LIBRARY_PATH make check` is **125/125** (five new test files; they print
-10, 28, 7, 4 and 14 internal gates). The masked-CE gradient bug found during the work: `mask_one` called
+**Gate count.** `env -u LD_LIBRARY_PATH make check` is **126/126** (six new test files; they print
+10, 28, 7, 4, 14 and 4 internal gates). The masked-CE gradient bug found during the work: `mask_one` called
 `T.ce_pick` but not `T.ce_row2`, so the gradient was the softmax, not `(p - onehot)/n`; a 2x3
 probe with an exact `T.CrossEntropy` comparison caught it before the 20-step gate.
 
@@ -58,11 +58,14 @@ backward are the reference's exact window-16/stride-16 gathered causal attention
 
 **The 4-block hybrid, 2026-11-09.** `attn_mh.bend` (multi-head wrapper, 128 and 192 copies),
 `model_h.bend` (3 linear + 1 sparse, width 32, 4 heads, 128 positions, SwiGLU 128, 74,144
-parameters), `weights_h.bend` and `train_h128.bend` are implemented and type-check. The one-step
-smoke is loss **5.5622463**, val **5.4333777**, **21.0 s** for 128 tokens, peak RSS **15,932
-KiB**. At that rate the 1,638,400-token budget is **12,800 steps / 74.7 h**, so no corpus run or
-192-position accuracy is claimed. The sparse core's `List.set` scatter and the per-head gather
-are the bottleneck; the next step is the vectorized/batched sparse core.
+parameters), `weights_h.bend` and `train_h128.bend` are implemented and type-check. The N=8 forward check (`reference/test_glm53_mh.py`, 4/4) caught an 8-wide/32-wide split bug and
+a `Lin,Sp,Lin,Lin` block order; after fixing both, the four-head linear/sparse and the full
+four-block forward match the NumPy twin at **8.84e-08 / 1.23e-07 / 1.22e-07** relative. The
+one-step smoke of the fixed model is loss **5.5634737**, val **5.4198546**, **18.97 s** for 128
+tokens, peak RSS **16,956 KiB**, build **30.915 s**. At that rate the 1,638,400-token budget is
+**12,800 steps / 67.4 h**, so no corpus run or 192-position accuracy is claimed. The sparse core's
+`List.set` scatter and the per-head gather are the bottleneck; the next step is the
+vectorized/batched sparse core.
 
 **The held-out family, 2026-11-09.** With `reverse` removed from the pretraining stream, the
 74,144-parameter dense model at 128 positions, batch 32, 1,638,400 tokens reaches loss

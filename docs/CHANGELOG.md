@@ -34,10 +34,20 @@ What changed for the people who run the lab. Internal refactors are not listed.
   **74,144 parameters**. The multi-head wrapper gathers each head, runs the gated single-head
   fast linear core or the gated sparse core, and joins the four head outputs; the parameters and
   loader are separate from the dense Stage A tree.
-- **The one-step smoke**: loss **5.5622463**, val **5.4333777**, **21.0 s** for 128 tokens, peak
-  RSS **15,932 KiB** (`results/glm53-hybrid128/smoke.json`).
+- **The forward check found two bugs before any training conclusion.** A four-head forward at N=8
+  against the vendored `LinearAttention`/`SparseAttention` caught an 8-wide/32-wide split (the
+  q/k/v chunks are 32 wide, not one head) and a `Lin,Sp,Lin,Lin` block order (the reference is
+  sparse on every fourth block; four blocks are `Lin,Lin,Lin,Sp`). After both fixes:
+  linear **8.84e-08**, sparse **1.23e-07**, and the full four-block model **1.22e-07** relative
+  against the NumPy twin (`reference/test_glm53_mh.py`, 4/4). The one-step training smoke had
+  passed both bugs, which is why the forward check matters.
+- **`reference/test_glm53_mh.py`** (4 checks) is in `make check`: the two four-head forward
+  checks, the can-fail linear-vs-sparse check, and the full four-block model forward. `make
+  check` becomes **126/126**.
+- **The one-step smoke (fixed model)**: loss **5.5634737**, val **5.4198546**, **18.97 s** for
+  128 tokens, peak RSS **16,956 KiB**, build **30.915 s** (`results/glm53-hybrid128/smoke.json`).
 - **The blocker**: 128 tokens a step makes the dense baseline's 1,638,400-token budget a
-  **12,800-step, 74.7-hour** job. A 400-step / 51,200-token smoke would take 2.3 hours and is
+  **12,800-step, 67.4-hour** job. A 400-step / 51,200-token smoke would take 2.1 hours and is
   32x below the comparison budget, so it is not a baseline. The sparse core's `List.set` scatter
   and the per-head gather/scatter dominate; the linear core is already fast.
 - **Not claimed**: no 192-position accuracy is reported. The next step is a vectorized sparse

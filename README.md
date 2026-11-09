@@ -261,7 +261,7 @@ lane, and the seven diagnostic prototypes
 
 ## Status
 
-`make check` is 125/125. Diffusion is complete through the ViT, with the gate at
+`make check` is 126/126. Diffusion is complete through the ViT, with the gate at
 0.75 and the Bend model measured at 0.795 (DDIM) and 0.807 (DDPM). Flow matching
 has a measured 2D example and its frozen gate (`test_flow2d.py`, six gates). CIFAR-10 has its
 3072-output DDPM: 256 images, 40 steps, build 50.8 s and run 65.4 s, first loss
@@ -279,9 +279,9 @@ Stage C integrates linear + sparse attention in a 4,168-parameter model gated at
 128 positions solves **61/64 dev and 60/64 confirm** at 409,600 tokens and **64/64 / 64/64** at
 1,638,400 tokens (`results/glm53-corpus128{,-b32}`). With `reverse` held out of pretraining it is
 **56/64** on both splits, with `reverse` at **0/8** and every seen family at **8/8**
-(`results/glm53-corpus128-holdout-reverse`). The 4-block/4-head hybrid is implemented but its
-corpus run is blocked at 21 s per 128 tokens (75 h for the 1.6M-token budget); see
-`results/glm53-hybrid128/smoke.json`.
+(`results/glm53-corpus128-holdout-reverse`). The 4-block/4-head hybrid is implemented and its N=8 forward matches the reference attention
+modules at 1e-7; its corpus run is blocked at 19 s per 128 tokens (67 h for the 1.6M-token
+budget); see `results/glm53-hybrid128/smoke.json`.
 
 ## Licence
 
