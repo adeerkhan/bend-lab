@@ -47,12 +47,14 @@ What changed for the people who run the lab. Internal refactors are not listed.
 - **`examples/language/glm53_flash/lin_fast.bend`**: the prefix-state causal linear-attention
   core, `K_t/KV_t` forward and `N_s/Q_s` suffix backward. On the same 64 x 8 inputs as the direct
   core, y is bit-identical and dq/dk/dv agree at **6.07e-07 / 4.40e-07 / 2.75e-07** relative;
-  the fast-only probe runs in **0.024 s** against the direct core's **11.4 s**.
+  the fast-only probe runs in **0.024 s** against the direct core's **11.4 s**. At 128 positions
+  y is exact and dq/dk/dv agree at **3.27e-07 / 3.38e-07 / 4.23e-07**; the direct run takes
+  **73.8 s**.
 - **The integrated cores use it**: `attn_c.bend` now calls the prefix-state linear core, while the
   sparse core is unchanged. The Stage C 20-step gate still matches the PyTorch twin at
   **2.852e-07** on the loss, **3.705e-08** on the final weights and **1.487e-07** on the final
   gradients; the test takes **37 s** instead of 3 m 25 s.
-- **The gate** (`reference/test_glm53_bwd.py`, now 24 checks): fast vs direct at 64 at 1e-5, plus
+- **The gate** (`reference/test_glm53_bwd.py`, now 28 checks): fast vs direct at 64 at 1e-5, plus
   the direct t=2/t=64 and integrated layer gates. `make check` stays **125/125**.
 
 ### GLM-5.3-Flash: the dense baseline is real, 61/64 -> 64/64 with the token budget

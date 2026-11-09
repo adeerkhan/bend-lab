@@ -35,7 +35,7 @@ length; it is not the 25.7M reference. The manifest is frozen in
 `reference/glm53_dense_eval_golden.json` and gated.
 
 **Gate count.** `env -u LD_LIBRARY_PATH make check` is **125/125** (five new test files; they print
-10, 24, 7, 4 and 14 internal gates). The masked-CE gradient bug found during the work: `mask_one` called
+10, 28, 7, 4 and 14 internal gates). The masked-CE gradient bug found during the work: `mask_one` called
 `T.ce_pick` but not `T.ce_row2`, so the gradient was the softmax, not `(p - onehot)/n`; a 2x3
 probe with an exact `T.CrossEntropy` comparison caught it before the 20-step gate.
 
@@ -69,7 +69,7 @@ backward. Against the direct core at 64: y exact, dq/dk/dv **6.07e-07 / 4.40e-07
 relative; the fast-only probe is **0.024 s** against **11.4 s** for the direct core. `attn_c.bend`
 now uses it; the Stage C 20-step gate is **2.852e-07** loss, **3.705e-08** weights,
 **1.487e-07** gradients, and the test is **37 s** instead of 3 m 25 s. `test_glm53_bwd.py` is now
-24 checks.
+28 checks (fast vs direct at 64 and 128).
 
 **The corpus baseline, 2026-11-09.** The 0/64 fixed-batch result was the experiment, not the
 model. `train_dense128.bend` trains the same 74,144-parameter stack at **128 positions**, batch 8,

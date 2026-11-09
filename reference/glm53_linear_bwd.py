@@ -24,17 +24,17 @@ DATA = os.path.join(ROOT, "examples/language/glm53_flash/data")
 N, HD = 64, 8
 
 
-def inputs(seed=13):
+def inputs(seed=13, n=N):
     rng = np.random.default_rng(seed)
-    return {name: (rng.standard_normal((N, HD)) * 0.7).astype(np.float32)
+    return {name: (rng.standard_normal((n, HD)) * 0.7).astype(np.float32)
             for name in ("q", "k", "v", "dy")}
 
 
-def write_inputs(directory=DATA):
+def write_inputs(directory=DATA, n=N, seed=13):
     os.makedirs(directory, exist_ok=True)
-    w = inputs()
+    w = inputs(seed, n)
     for name, value in w.items():
-        value.astype("<f4").tofile(os.path.join(directory, f"lin64_{name}.bin"))
+        value.astype("<f4").tofile(os.path.join(directory, f"lin{n}_{name}.bin"))
     return w
 
 

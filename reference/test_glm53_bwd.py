@@ -154,6 +154,13 @@ def main():
     for name in ("y", "dq", "dk", "dv"):
         ok.append(compare(f"fast64/{name}", fast[f"fast_{name}"], fast[f"direct_{name}"], 1e-5))
 
+    # the prefix-state core against the direct core at 128
+    G.write_inputs(n=128, seed=23)
+    fast128 = run("probe_lin_fast128.bend", "fast128")
+    for name in ("y", "dq", "dk", "dv"):
+        ok.append(compare(f"fast128/{name}", fast128[f"fast_{name}"],
+                          fast128[f"direct_{name}"], 1e-5))
+
     # the integrated layer cores: RoPE + the linear/sparse core, against the
     # PyTorch-autograd golden `glm53_attn_c.py` wrote
     layer = run_layers()

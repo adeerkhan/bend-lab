@@ -173,14 +173,16 @@ The loss falls 5.5484023 -> 5.4986544. Can-fail runs with one weight moved
 
 The layer cores are also gated directly, RoPE + each core on the same 64 x 8
 inputs against PyTorch-autograd goldens, at **1.5e-07 .. 1.9e-06** relative
-(`reference/test_glm53_bwd.py`, 24 checks).
+(`reference/test_glm53_bwd.py`, 28 checks).
 
 `lin_fast.bend` is the prefix-state linear core: `K_t/KV_t` forward and
 `N_s/Q_s` suffix backward. Against the direct core at 64, y is exact and
 dq/dk/dv agree at **6.07e-07 / 4.40e-07 / 2.75e-07** relative; the fast-only
-probe runs in **0.024 s** against the direct core's **11.4 s**. The integrated
-attention layers use it, which took the 20-step Stage C test from 3 m 25 s to
-**37 s** without moving the twin gate.
+probe runs in **0.024 s** against the direct core's **11.4 s**. At 128
+positions y is exact and dq/dk/dv agree at **3.27e-07 / 3.38e-07 / 4.23e-07**;
+the direct run takes **73.8 s**. The integrated attention layers use it, which
+took the 20-step Stage C test from 3 m 25 s to **37 s** without moving the twin
+gate.
 
 ### A held-out family
 
