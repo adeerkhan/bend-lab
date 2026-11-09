@@ -34,14 +34,20 @@ result for a 74k model trained on one fixed 64-byte batch and evaluated beyond i
 length; it is not the 25.7M reference. The manifest is frozen in
 `reference/glm53_dense_eval_golden.json` and gated.
 
-**Gate count.** `env -u LD_LIBRARY_PATH make check` is **121/121** (one new test file; it prints
-10 internal gates). The masked-CE gradient bug found during the work: `mask_one` called
+**Gate count.** `env -u LD_LIBRARY_PATH make check` is **122/122** (two new test files; they print
+10 and 12 internal gates). The masked-CE gradient bug found during the work: `mask_one` called
 `T.ce_pick` but not `T.ce_row2`, so the gradient was the softmax, not `(p - onehot)/n`; a 2x3
 probe with an exact `T.CrossEntropy` comparison caught it before the 20-step gate.
 
-**What is not built.** Stage B backward (the old 64-step list implementation is open as local
-ISSUE-090; do not debug it), Stage C, the MoE, the four-stream HyperConnection, RL and the 25.7M
-run. ISSUE-091 (BendTorch feature gaps: ELU, causal cumsum, top-k/gather, masked CE, clipping,
+**Stage B backward, 2026-11-09.** `lin_bwd.bend` is the exact single-head backward in direct
+O(T²d) form. `reference/test_glm53_bwd.py` (12 gates in `make check`) measures t=2/hd=8 at
+y/dq/dk/dv **1.19e-07 / 1.49e-06 / 4.52e-07 / 6.47e-08** relative against a NumPy twin, the
+one-hot dout at t=0 gives **dq = dk = dv = 0 exactly** for t>0, and t=64 matches the
+PyTorch-autograd golden at **1.51e-07 / 1.19e-06 / 1.17e-06 / 2.75e-07**. Local ISSUE-090 is
+closed; the old 64-step list implementation was not debugged.
+
+**What is not built.** Stage C, the MoE, the four-stream HyperConnection, RL and the 25.7M run.
+ISSUE-091 (BendTorch feature gaps: ELU, causal cumsum, top-k/gather, masked CE, clipping,
 per-parameter scopes) remains **not filed**; no upstream issue was opened for this work.
 
 ## 2026-11-08 (latest) — GLM-5.3-Flash-from-scratch: Stage A and the linear-attention forward

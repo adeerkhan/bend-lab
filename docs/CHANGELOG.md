@@ -27,6 +27,21 @@ What changed for the people who run the lab. Internal refactors are not listed.
 - **`make check`** gains the dense gate (one test file, ten internal checks); it is **121/121**.
   The Stage B backward and Stage C remain open, and no upstream issue was filed.
 
+### GLM-5.3-Flash: the Stage B linear-attention backward, exact at t=2 and 64
+
+- **`examples/language/glm53_flash/lin_bwd.bend`**: the exact single-head causal linear-attention
+  backward in direct O(T²d) form. With `c_t = clamp(den_t, 1e-6)`, `dnum_t = dy_t/c_t`,
+  `dden_t = -dy_t·num_t/c_t²` and `a_{t,s} = dnum_t·v_s + dden_t`, the gradients are
+  `dq_t = Σ_{s≤t} a_{t,s} k~_s`, `dk_s = Σ_{t≥s} a_{t,s} q~_t` and
+  `dv_s = Σ_{t≥s} dnum_t (q~_t·k~_s)`, then the ELU chain.
+- **The gate** (`reference/test_glm53_bwd.py`, 12 checks): at t=2, one head, hd=8, y/dq/dk/dv
+  match a NumPy twin at **1.19e-07 / 1.49e-06 / 4.52e-07 / 6.47e-08** relative, and a one-hot
+  dout at t=0 gives **dq = dk = dv = 0 exactly** for every t>0. At t=64 the 512-value tensors
+  match the PyTorch-autograd golden at **1.51e-07 / 1.19e-06 / 1.17e-06 / 2.75e-07**. The
+  one-hot case is the can-fail the old 64-step list implementation lacked (local ISSUE-090,
+  closed).
+- **`make check`** is **122/122**.
+
 ### GLM-5.3-Flash-from-scratch: Stage A, and the linear-attention forward
 
 - **`reference/glm53_flash/`**: the educational 25.7M model vendored at commit `96d9c7c`, MIT,

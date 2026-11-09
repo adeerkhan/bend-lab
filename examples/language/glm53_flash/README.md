@@ -37,6 +37,29 @@ even/odd pairs, BendTorch rotates half-split pairs, and the q/k weight rows are
 permuted by `[0,4,1,5,2,6,3,7]` on the way in. The Stage A gradients are
 compared in the file layout, so the permutation is part of the gate.
 
+**Stage B, linear attention.** `lin_core.bend` implements the reference's
+`ELU+1`, causal prefix of `k` and `k⊗v`, numerator `q·KV`, denominator `q·K`
+and the `1e-6` clamp, in list form; its forward matches the NumPy twin.
+`lin_bwd.bend` is the exact backward, single head, direct O(T²d): with
+`c_t = clamp(den_t, 1e-6)`, `dnum_t = dy_t/c_t`,
+`dden_t = -dy_t·num_t/c_t²` and `a_{t,s} = dnum_t·v_s + dden_t`,
+`dq_t = Σ_{s≤t} a_{t,s} k~_s`, `dk_s = Σ_{t≥s} a_{t,s} q~_t` and
+`dv_s = Σ_{t≥s} dnum_t (q~_t·k~_s)`, then the ELU chain. Measured by
+`reference/test_glm53_bwd.py` (12 gates, no PyTorch in the gate):
+
+| check | result |
+|---|---|
+| t=2, one head, hd=8: y | relative **1.19e-07** |
+| t=2: dq / dk / dv | **1.49e-06 / 4.52e-07 / 6.47e-08** |
+| t=2, one-hot dout at t=0 | dq = dk = dv = **0** for every t>0 |
+| t=64, one head: y | relative **1.51e-07** |
+| t=64: dq / dk / dv | **1.19e-06 / 1.17e-06 / 2.75e-07** |
+
+The one-hot test is the can-fail the old 64-step list implementation lacked;
+it is local ISSUE-090, now closed. The 64-position golden is
+`reference/glm53_linear_bwd_golden.npz`, written by
+`reference/glm53_linear_bwd.py` (PyTorch autograd on the same four files).
+
 ## The dense Stage A baseline
 
 `train_a.bend` is the Stage A model under `T.Train`: AdamW at
@@ -104,7 +127,6 @@ the four summary counts, and the frozen 48-token sequence.
 
 ## What is not built
 
-- Stage B backward (dq, dk, dv).
 - Stage C, the gathered sparse attention, and its backward.
 - The MoE, the four-stream HyperConnection, RL and the 25.7M model. Those are
   later stages.
