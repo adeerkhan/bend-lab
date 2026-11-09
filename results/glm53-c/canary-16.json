@@ -1,0 +1,27 @@
+{
+  "purpose": "training canary: overfit the first 16 labels of the fixed batch",
+  "model": "Stage C, 4,168 parameters, one batch of 64 positions, 16 labels",
+  "commands": {
+    "bend_build": "env LD_LIBRARY_PATH=$HOME/.local/lib/llvm22 BEND_MEM=6G scripts/bend-guard.sh bend -o /tmp/opencode/glm53/train_c_lr examples/language/glm53_flash/train_c.bend",
+    "bend_run": "/tmp/opencode/glm53/train_c_lr --steps 50 --lr-ppm 30000 --mask 16 --data examples/language/glm53_flash/data --out /tmp/opencode/glm53/c_canary",
+    "twin": "reference/.venv-rf/bin/python reference/glm53_c_twin.py --steps 50 --lr 0.03 --mask 16"
+  },
+  "steps": 50,
+  "learning_rate": 0.03,
+  "masked_labels": 16,
+  "bend": {
+    "build_seconds": 22.869,
+    "seconds": 446.418,
+    "final_loss": 0.04192061,
+    "final_weights_loss": 0.03682779
+  },
+  "twin": {
+    "final_loss": 0.04192125,
+    "final_weights_loss": 0.03683004
+  },
+  "relative": {
+    "final_loss": 1.527e-05,
+    "final_weights_loss": 6.109e-05
+  },
+  "note": "The same 16-label overfit at lr 3e-4 reached only 4.651 after 200 steps in the twin; at lr 3e-2 it reached 0.0419 after 50 steps. The 20-step parity gate at lr 3e-4 is a correctness gate, not a learning benchmark."
+}

@@ -152,6 +152,41 @@ The layer cores are also gated directly, RoPE + each core on the same 64 x 8
 inputs against PyTorch-autograd goldens, at **1.5e-07 .. 1.9e-06** relative
 (`reference/test_glm53_bwd.py`, 20 checks).
 
+## Diagnostics: the mask and the learning canary
+
+The 64-byte training batch has no ignored labels, so the masked-loss branch was untested until
+`reference/test_glm53_mask.py` (4 checks). A 2 x 3 case with row 0 labelled and row 1 ignored
+gives loss **1.2019429** (expected 1.20194285), a gradient row 0 of
+`[-0.6994, 0.3322, 0.3672]`, and an ignored row that is **exactly zero**; the mean uses one valid
+row, not two.
+
+The 20-step Stage C parity gate is a correctness gate, not a learning run: it uses the
+reference's 25.7M learning rate, 3e-4, on a 4,168-parameter model. The learning canary overfits
+the first 16 labels at lr 0.03 for 50 steps (`results/glm53-c/canary-16.json`):
+
+| quantity | Bend | PyTorch twin |
+|---|---:|---:|
+| final loss | **0.04192061** | **0.04192125** |
+| loss at final weights | **0.03682779** | **0.03683004** |
+| build | 22.869 s | - |
+| run | 446.4 s | - |
+
+Relative difference: **1.5e-05** on the final loss, **6.1e-05** at the final weights. The Bend
+loss, backward, AdamW and data can drive a loss down, not only match a twin.
+
+The twin's learning-rate sweep on the full 64-byte batch, 400 steps:
+
+| lr | final loss |
+|---:|---:|
+| 3e-4 | 3.955 |
+| 1e-3 | 2.236 |
+| 3e-3 | 0.175 |
+| 1e-2 | 0.00263 |
+
+On a 16-label overfit, 200 steps: 3e-4 **4.651**, 3e-3 **0.723**, 1e-2 **0.00286**,
+3e-2 **0.00041**. The 3e-4 rate is the reference's; a small model needs a larger rate or many
+more steps. This is the training variable, not the data, loss or init.
+
 ## What is not built
 
 - The MoE, the four-stream HyperConnection, RL and the 25.7M model. Those are

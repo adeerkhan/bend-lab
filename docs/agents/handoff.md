@@ -34,8 +34,8 @@ result for a 74k model trained on one fixed 64-byte batch and evaluated beyond i
 length; it is not the 25.7M reference. The manifest is frozen in
 `reference/glm53_dense_eval_golden.json` and gated.
 
-**Gate count.** `env -u LD_LIBRARY_PATH make check` is **123/123** (three new test files; they print
-10, 20 and 7 internal gates). The masked-CE gradient bug found during the work: `mask_one` called
+**Gate count.** `env -u LD_LIBRARY_PATH make check` is **124/124** (four new test files; they print
+10, 20, 7 and 4 internal gates). The masked-CE gradient bug found during the work: `mask_one` called
 `T.ce_pick` but not `T.ce_row2`, so the gradient was the softmax, not `(p - onehot)/n`; a 2x3
 probe with an exact `T.CrossEntropy` comparison caught it before the 20-step gate.
 
@@ -55,6 +55,15 @@ whole-tensor relative; can-fail runs diverge at step 1 at **7.860e-03** and **6.
 loss is 5.5484023 -> 5.4986544; record in `results/glm53-c/run.json`. The layer cores are gated
 directly in `test_glm53_bwd.py` (20 checks) at **1.5e-07 .. 1.9e-06**. The sparse forward and
 backward are the reference's exact window-16/stride-16 gathered causal attention.
+
+**Diagnostics, 2026-11-09.** The masked-label branch is gated by
+`reference/test_glm53_mask.py` (4 checks): masked loss 1.2019429 vs 1.20194285, ignored-row
+gradient exactly zero, mean over one valid row. The training canary
+(`results/glm53-c/canary-16.json`) overfits 16 labels at lr 0.03 for 50 steps: Bend final
+**0.04192061** vs twin **0.04192125** (relative **1.5e-05**), final-weight loss 0.03682779 vs
+0.03683004; build 22.869 s, run 446.4 s. The twin's 400-step fixed-batch sweep is 3.955 / 2.236
+/ 0.175 / 0.00263 at lr 3e-4 / 1e-3 / 3e-3 / 1e-2. The 20-step gate at 3e-4 is a correctness
+gate; the learning rate was the missing variable, not the data, loss or init.
 
 **What is not built.** The MoE, the four-stream HyperConnection, RL and the full 25.7M run.
 ISSUE-091 (BendTorch feature gaps: ELU, causal cumsum, top-k/gather, masked CE, clipping,

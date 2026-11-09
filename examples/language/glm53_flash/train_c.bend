@@ -15,8 +15,8 @@ def STEPS() -> Nat:
 def IGNORE() -> Nat:
   260n
 
-def cfg() -> T.OptCfg:
-  T.CAdamW{0.0003, 0.9, 0.95, 0.00000001, 0.1, 0.1, 0.05}
+def cfg(+lr: F32) -> T.OptCfg:
+  T.CAdamW{lr, 0.9, 0.95, 0.00000001, 0.1, 0.1, 0.05}
 
 def ce(z: M.Y(), labels: List<&2, Nat>) -> T.LossOut<M.Y()>:
   L.CrossEntropyMasked(64n, 260n, z, labels, IGNORE())
@@ -92,18 +92,35 @@ def save_final(tr: T.Train<M.P()>, +out: String, +ids: List<&2, Nat>, +labels: L
         fg : FG <- IO.pure(FG, final_fg(p1v, ids, labels))
         save_grads(fg, out)
 
-def run_loaded(+steps: Nat, p: M.P(), +ids: List<&2, Nat>, +labels: List<&2, Nat>, +out: String) -> IO(Unit):
+def run_loaded(+steps: Nat, +lr: F32, p: M.P(), +ids: List<&2, Nat>, +labels: List<&2, Nat>, +out: String) -> IO(Unit):
   do IO<Unit>:
     tr : T.Train<M.P()> <- IO.pure(T.Train<M.P()>,
-      T.Train.new(~M.P(), ~M.X(), ~M.Y(), ~M.S(), ~M.Model(), cfg(), p))
+      T.Train.new(~M.P(), ~M.X(), ~M.Y(), ~M.S(), ~M.Model(), cfg(lr), p))
     tr1 : T.Train<M.P()> <- train_all(steps, 0n, ids, labels, tr)
     save_final(tr1, out, ids, labels)
 
+def keep_one(keep: Bool, +y: Nat) -> Nat:
+  match keep:
+    case True{}:
+      y
+    case False{}:
+      IGNORE()
+
+def mask_go(labels: List<&2, Nat>, +i: Nat, +mask: Nat) -> List<&2, Nat>:
+  match labels:
+    case Nil{}:
+      Nil{}
+    case Con{+y, t}:
+      Con{keep_one(Nat.is_lt(i, mask), y), mask_go(t, (i + 1n : Nat), mask)}
+
+def mask_labels(+mask: Nat, labels: List<&2, Nat>) -> List<&2, Nat>:
+  mask_go(labels, 0n, mask)
+
 type Run is Type:
-  Run{steps: Nat, data: String, out: String}
+  Run{steps: Nat, data: String, out: String, lrppm: Nat, mask: Nat}
 
 def run_default() -> Run:
-  Run{STEPS(), "examples/language/glm53_flash/data", "/tmp/opencode/glm53/c"}
+  Run{STEPS(), "examples/language/glm53_flash/data", "/tmp/opencode/glm53/c", 300n, 64n}
 
 def nat_or(m: Maybe<&2, Nat>, d: Nat) -> Nat:
   match m:
@@ -124,24 +141,40 @@ def run_go(args: List<String>, r: Run) -> Run:
               r
             case Con{b, more}:
               match r:
-                case Run{steps, data, out}:
-                  run_go(more, Run{nat_or(Nat.read(b), steps), data, out})
+                case Run{steps, data, out, lrppm, mask}:
+                  run_go(more, Run{nat_or(Nat.read(b), steps), data, out, lrppm, mask})
         case "--data":
           match rest:
             case Nil{}:
               r
             case Con{b, more}:
               match r:
-                case Run{steps, data, out}:
-                  run_go(more, Run{steps, b, out})
+                case Run{steps, data, out, lrppm, mask}:
+                  run_go(more, Run{steps, b, out, lrppm, mask})
         case "--out":
           match rest:
             case Nil{}:
               r
             case Con{b, more}:
               match r:
-                case Run{steps, data, out}:
-                  run_go(more, Run{steps, data, b})
+                case Run{steps, data, out, lrppm, mask}:
+                  run_go(more, Run{steps, data, b, lrppm, mask})
+        case "--lr-ppm":
+          match rest:
+            case Nil{}:
+              r
+            case Con{b, more}:
+              match r:
+                case Run{steps, data, out, lrppm, mask}:
+                  run_go(more, Run{steps, data, out, nat_or(Nat.read(b), lrppm), mask})
+        case "--mask":
+          match rest:
+            case Nil{}:
+              r
+            case Con{b, more}:
+              match r:
+                case Run{steps, data, out, lrppm, mask}:
+                  run_go(more, Run{steps, data, out, lrppm, nat_or(Nat.read(b), mask)})
         case _:
           run_go(rest, r)
 
@@ -152,18 +185,23 @@ def run_of(args: List<String>) -> Run:
     case Con{program, rest}:
       run_go(rest, run_default())
 
+def run_io_lr(+steps: Nat, +lr: F32, +data: String, +out: String, +mask: Nat) -> IO(Unit):
+  do IO<Unit>:
+    T.OptCfg.check(cfg(lr))
+    IO.print(String.append("params: ",
+      U32.show(T.Layer.count(M.P(), M.X(), M.Y(), M.S(), M.Model()))))
+    IO.print(String.append("steps: ", Nat.show(steps)))
+    IO.print(String.append("lr: ", F32.show(lr)))
+    IO.print(String.append("mask: ", Nat.show(mask)))
+    p : M.P() <- W.load_params(data)
+    ids : List<&2, U32> <- T.read_at(String.append(data, "/c_batch.bin"), 0, 64)
+    labels : List<&2, U32> <- T.read_at(String.append(data, "/c_labels.bin"), 0, 64)
+    run_loaded(steps, lr, p, nats(ids), mask_labels(mask, nats(labels)), out)
+
 def run_io(r: Run) -> IO(Unit):
   match r:
-    case Run{+steps, +data, out}:
-      do IO<Unit>:
-        T.OptCfg.check(cfg())
-        IO.print(String.append("params: ",
-          U32.show(T.Layer.count(M.P(), M.X(), M.Y(), M.S(), M.Model()))))
-        IO.print(String.append("steps: ", Nat.show(steps)))
-        p : M.P() <- W.load_params(data)
-        ids : List<&2, U32> <- T.read_at(String.append(data, "/c_batch.bin"), 0, 64)
-        labels : List<&2, U32> <- T.read_at(String.append(data, "/c_labels.bin"), 0, 64)
-        run_loaded(steps, p, nats(ids), nats(labels), out)
+    case Run{+steps, +data, out, +lrppm, +mask}:
+      run_io_lr(steps, (F32.div(F32.from_nat(lrppm), 1000000.0) : F32), data, out, mask)
 
 def main() -> IO(Unit):
   do IO<Unit>:

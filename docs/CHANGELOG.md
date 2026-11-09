@@ -27,6 +27,24 @@ What changed for the people who run the lab. Internal refactors are not listed.
 - **`make check`** gains the dense gate (one test file, ten internal checks); it is **121/121**.
   The Stage B backward and Stage C remain open, and no upstream issue was filed.
 
+### GLM-5.3-Flash: the masked-label gate and the training canary
+
+- **The ignored-label branch is now gated** (`reference/test_glm53_mask.py`, 4 checks): a 2 x 3
+  logits matrix with row 0 labelled 0 and row 1 ignored. The masked loss is **1.2019429**
+  (expected 1.20194285), the ignored row's gradient is **exactly zero**, and the mean uses one
+  valid row, not two. The 64-byte training batch has no ignored labels, so this branch was
+  previously untested; a padded corpus batch will use it.
+- **The learning canary** (`results/glm53-c/canary-16.json`): the Stage C model overfits the
+  first 16 labels at lr 0.03 for 50 steps. Bend: **0.04192061** final loss, **0.03682779** at the
+  final weights, build **22.869 s**, run **446.4 s**. The PyTorch twin: **0.04192125** and
+  **0.03683004**, a relative difference of **1.5e-05 / 6.1e-05**. This proves the Bend loss,
+  backward, AdamW and data can drive a loss down, not only match a twin.
+- **The learning-rate sweep** (PyTorch twin, same fixed 64-byte batch, 400 steps): lr 3e-4
+  **3.955**, 1e-3 **2.236**, 3e-3 **0.175**, 1e-2 **0.00263**. On a 16-label overfit, 200 steps:
+  lr 3e-4 **4.651**, 3e-3 **0.723**, 1e-2 **0.00286**, 3e-2 **0.00041**. The 3e-4 rate is the
+  reference's 25.7M rate; the 20-step parity gate is not a learning benchmark.
+- **`make check`** is **124/124**.
+
 ### GLM-5.3-Flash: Stage C, the integrated linear + sparse model at 20 steps
 
 - **`examples/language/glm53_flash/{attn_c,model_c,train_c}.bend`**: one batch, 64 positions, one

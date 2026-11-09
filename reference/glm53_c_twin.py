@@ -107,23 +107,30 @@ def main():
     ap.add_argument("--steps", type=int, default=20)
     ap.add_argument("--data", type=Path, default=Path(D.DATA))
     ap.add_argument("--golden", type=Path, default=None)
+    ap.add_argument("--lr", type=float, default=3e-4)
+    ap.add_argument("--mask", type=int, default=64)
     args = ap.parse_args()
     torch.set_num_threads(1)
     torch.set_float32_matmul_precision("highest")
     D.prepare(str(args.data))
     ids = torch.from_numpy(np.fromfile(args.data / "c_batch.bin", dtype=np.uint8).astype(np.int64))
     labels = torch.from_numpy(np.fromfile(args.data / "c_labels.bin", dtype=np.uint8).astype(np.int64))
+    if args.mask < T:
+        labels = labels.clone()
+        labels[args.mask:] = -100
     w = load_weights(str(args.data))
-    opt = torch.optim.AdamW(list(w.values()), lr=3e-4, betas=(0.9, 0.95), eps=1e-8, weight_decay=0.1)
+    opt = torch.optim.AdamW(list(w.values()), lr=args.lr, betas=(0.9, 0.95), eps=1e-8, weight_decay=0.1)
     losses = []
-    for _ in range(args.steps):
+    for step in range(1, args.steps + 1):
         opt.zero_grad(set_to_none=True)
-        loss = F.cross_entropy(forward(w, ids), labels)
+        loss = F.cross_entropy(forward(w, ids), labels, ignore_index=-100)
         losses.append(float(loss.detach()))
         loss.backward()
         opt.step()
+        if step == 1 or step % 10 == 0:
+            print(f"step {step}: {float(loss.detach()):.9g}")
     opt.zero_grad(set_to_none=True)
-    final = F.cross_entropy(forward(w, ids), labels)
+    final = F.cross_entropy(forward(w, ids), labels, ignore_index=-100)
     final.backward()
     for i, value in enumerate(losses, 1):
         print(f"step {i}: {value:.9g}")
