@@ -27,8 +27,16 @@ What changed for the people who run the lab. Internal refactors are not listed.
   the torch twin. Final loss **3.7224956** vs **3.7224958**; the worst final weight is
   `b0/qkv` at **5.673e-05** relative (gate **1e-03**); the lr 0.004 can-fail is rejected at
   **4.937e-02**. A single step did not show this.
+- **Two-sequence isolation** (`test_glm53_iso2.py`, 3 checks): a 2 x 128 model with a
+  block-diagonal mask. Changing sequence 0 leaves sequence 1's logits at **0** and its parameter
+  gradient at **0**, while sequence 0's logits move by **0.53063375**. The first gradient version
+  leaked **13.299267** because the denominator term was not masked; fixing it brought the leak to
+  zero.
+- **4096-row limit** (`probe_mask4096.bend`): one block mask materialises **16,777,216** cells in
+  **159.60 s** and peaks at **589,356 KiB**. Batch 32 is not practical with this builder; step 4
+  stops at the measured limit.
 - **128 `make check` is not rerun after these additions.** The targeted suite is 34 + 4 + 12 +
-  3 + 6 + 33.
+  3 + 6 + 33 + 3.
 
 ### GLM-5.3-Flash: the linear core is dense, and the model step is 1.5 s
 

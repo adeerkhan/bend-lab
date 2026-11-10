@@ -75,6 +75,34 @@ def mask_mat_ws(+n: Nat, +window: Nat, +stride: Nat) -> TA.Mat<n, n>:
 def mask_mat(+n: Nat) -> TA.Mat<n, n>:
   mask_mat_ws(n, 16n, 16n)
 
+# Two sequences of `half` rows, block-diagonal: no row sees the other block.
+def block_valid(+t: Nat, +s: Nat, +half: Nat, +window: Nat, +stride: Nat) -> Bool:
+  Bool.and(Nat.is_eq(Nat.div(t, half), Nat.div(s, half)),
+    valid_ws(Nat.mod(t, half), Nat.mod(s, half), window, stride))
+
+def block_row(+left: Nat, +t: Nat, +half: Nat, +window: Nat, +stride: Nat, +neg: Bool,
+    acc: List<&2, F32>) -> List<&2, F32>:
+  match left:
+    case 0n:
+      acc
+    case 1n+p:
+      +ok = block_valid(t, p, half, window, stride)
+      +v = Bool.pick(F32, ok, Bool.pick(F32, neg, 0.0, 1.0),
+        Bool.pick(F32, neg, (0.0 - 1.0e30 : F32), 0.0))
+      block_row(p, t, half, window, stride, neg, Con{v, acc})
+
+def block_rows(+n: Nat, +left: Nat, +t: Nat, +half: Nat, +window: Nat, +stride: Nat,
+    +neg: Bool, acc: List<&2, F32>) -> List<&2, F32>:
+  match left:
+    case 0n:
+      acc
+    case 1n+p:
+      block_rows(n, p, (t + 1n : Nat), half, window, stride, neg,
+        List.append(&2, F32, acc, block_row(n, t, half, window, stride, neg, Nil{})))
+
+def mask_block_ws(+n: Nat, +half: Nat, +window: Nat, +stride: Nat, +neg: Bool) -> TA.Mat<n, n>:
+  TA.Mat.from_list(n, n, block_rows(n, n, 0n, half, window, stride, neg, Nil{}))
+
 # ---- element-wise scale ----
 
 def scale_one(+i: U32, +c: F32, av: Array<F32> & F32) -> Array<F32>:

@@ -143,8 +143,7 @@ def dd_row(+left: Nat, +t: Nat, +d: F32, acc: List<&2, F32>) -> List<&2, F32>:
     case 0n:
       acc
     case 1n+p:
-      +v = Bool.pick(F32, Nat.is_le(p, t), d, 0.0)
-      dd_row(p, t, d, Con{v, acc})
+      dd_row(p, t, d, Con{d, acc})
 
 def dd_rows(+n: Nat, +left: Nat, +t: Nat, +dden: List<&2, F32>, acc: List<&2, F32>) -> List<&2, F32>:
   match left:
@@ -228,21 +227,21 @@ def bwd_ds(+n: Nat, +hd: Nat, dnum2: TA.Mat<n, hd>,
 def bwd_dnum(+n: Nat, +hd: Nat, dnumd: T.Two<TA.Mat<n, hd>, TA.Mat<n, hd>>,
     v2: TA.Mat<n, hd>, +ddenl: List<&2, F32>, m3: TA.Mat<n, n>,
     qe2: TA.Mat<n, hd>, ke2: TA.Mat<n, hd>,
-    qdr: TA.Mat<n, hd>, kdr: TA.Mat<n, hd>) -> DBW<n, hd>:
+    qdr: TA.Mat<n, hd>, kdr: TA.Mat<n, hd>, mask: TA.Mat<n, n>) -> DBW<n, hd>:
   match dnumd:
     case T.Two{da, db}:
       dsbase = SD.mmulnt_c(n, hd, n, TA.Mat.matmul_nt(n, hd, n, 0n, da, v2))
-      dsm = mul2_fwd(n, n, dsbase, causal_mat(n))
-      ds = SD.mpair_a(n, n, TA.Mat.add(n, n, dsm, dd_mat(n, ddenl)))
+      dsum = SD.mpair_a(n, n, TA.Mat.add(n, n, dsbase, dd_mat(n, ddenl)))
+      ds = mul2_fwd(n, n, dsum, mask)
       bwd_ds(n, hd, db, T.Mat.dup(n, n, ds), m3, qe2, ke2, qdr, kdr)
 
 def bwd_nd(+n: Nat, +hd: Nat, nd: T.Two<List<&2, F32>, List<&2, F32>>,
     v2: TA.Mat<n, hd>, m3: TA.Mat<n, n>, qe2: TA.Mat<n, hd>, ke2: TA.Mat<n, hd>,
-    qdr: TA.Mat<n, hd>, kdr: TA.Mat<n, hd>) -> DBW<n, hd>:
+    qdr: TA.Mat<n, hd>, kdr: TA.Mat<n, hd>, mask: TA.Mat<n, n>) -> DBW<n, hd>:
   match nd:
     case T.Two{dnuml, ddenl}:
       dnum = TA.Mat.from_list(n, hd, dnuml)
-      bwd_dnum(n, hd, T.Mat.dup(n, hd, dnum), v2, ddenl, m3, qe2, ke2, qdr, kdr)
+      bwd_dnum(n, hd, T.Mat.dup(n, hd, dnum), v2, ddenl, m3, qe2, ke2, qdr, kdr, mask)
 
 def bwd_dy(+n: Nat, +hd: Nat, dyd: T.Two<TA.Mat<n, hd>, TA.Mat<n, hd>>,
     num: TA.Mat<n, hd>, +dens: List<&2, F32>) -> T.Two<List<&2, F32>, List<&2, F32>>:
@@ -253,30 +252,31 @@ def bwd_dy(+n: Nat, +hd: Nat, dyd: T.Two<TA.Mat<n, hd>, TA.Mat<n, hd>>,
 def bwd_three(+n: Nat, +hd: Nat, m3: T.Three<TA.Mat<n, n>, TA.Mat<n, n>, TA.Mat<n, n>>,
     v1: TA.Mat<n, hd>, v2: TA.Mat<n, hd>, dy: TA.Mat<n, hd>,
     qe2: TA.Mat<n, hd>, ke2: TA.Mat<n, hd>,
-    qdr: TA.Mat<n, hd>, kdr: TA.Mat<n, hd>) -> DBW<n, hd>:
+    qdr: TA.Mat<n, hd>, kdr: TA.Mat<n, hd>, mask: TA.Mat<n, n>) -> DBW<n, hd>:
   match m3:
     case T.Three{m1, m2, m3}:
       dens = row_sums(n, m1)
       num = SD.mmul_c(n, n, hd, TA.Mat.matmul(n, n, hd, 0n, m2, v1))
       bwd_nd(n, hd, bwd_dy(n, hd, T.Mat.dup(n, hd, dy), num, dens),
-        v2, m3, qe2, ke2, qdr, kdr)
+        v2, m3, qe2, ke2, qdr, kdr, mask)
 
-def bwd_pairs3(+n: Nat, +hd: Nat, qd: T.Two<TA.Mat<n, hd>, TA.Mat<n, hd>>,
-    kd: T.Two<TA.Mat<n, hd>, TA.Mat<n, hd>>, vd: T.Two<TA.Mat<n, hd>, TA.Mat<n, hd>>,
-    m3: T.Three<TA.Mat<n, n>, TA.Mat<n, n>, TA.Mat<n, n>>, dy: TA.Mat<n, hd>,
-    qdr: TA.Mat<n, hd>, kdr: TA.Mat<n, hd>) -> DBW<n, hd>:
-  match qd kd vd:
-    case T.Two{q1, q2} T.Two{k1, k2} T.Two{v1, v2}:
-      bwd_three(n, hd, m3, v1, v2, dy, q2, k2, qdr, kdr)
+def bwd_masked(+n: Nat, +hd: Nat, md: T.Two<TA.Mat<n, n>, TA.Mat<n, n>>,
+    s: TA.Mat<n, n>, v1: TA.Mat<n, hd>, v2: TA.Mat<n, hd>, dy: TA.Mat<n, hd>,
+    qe2: TA.Mat<n, hd>, ke2: TA.Mat<n, hd>, qdr: TA.Mat<n, hd>,
+    kdr: TA.Mat<n, hd>) -> DBW<n, hd>:
+  match md:
+    case T.Two{ma, mb}:
+      masked = mul2_fwd(n, n, s, ma)
+      bwd_three(n, hd, dup3(n, n, masked), v1, v2, dy, qe2, ke2, qdr, kdr, mb)
 
 def bwd_qkv(+n: Nat, +hd: Nat, qd: T.Two<TA.Mat<n, hd>, TA.Mat<n, hd>>,
     kd: T.Two<TA.Mat<n, hd>, TA.Mat<n, hd>>, vd: T.Two<TA.Mat<n, hd>, TA.Mat<n, hd>>,
-    dy: TA.Mat<n, hd>, qdr: TA.Mat<n, hd>, kdr: TA.Mat<n, hd>) -> DBW<n, hd>:
+    dy: TA.Mat<n, hd>, qdr: TA.Mat<n, hd>, kdr: TA.Mat<n, hd>,
+    mask: TA.Mat<n, n>) -> DBW<n, hd>:
   match qd kd vd:
     case T.Two{q1, q2} T.Two{k1, k2} T.Two{v1, v2}:
       s = SD.mmulnt_c(n, hd, n, TA.Mat.matmul_nt(n, hd, n, 0n, q1, k1))
-      masked = mul2_fwd(n, n, s, causal_mat(n))
-      bwd_three(n, hd, dup3(n, n, masked), v1, v2, dy, q2, k2, qdr, kdr)
+      bwd_masked(n, hd, T.Mat.dup(n, n, mask), s, v1, v2, dy, q2, k2, qdr, kdr)
 
 type QKR<-n: Nat, -hd: Nat> is Type:
   QKR{qe: TA.Mat<n, hd>, qdr: TA.Mat<n, hd>, ke: TA.Mat<n, hd>, kdr: TA.Mat<n, hd>}
@@ -289,15 +289,20 @@ def qk_make(+n: Nat, +hd: Nat, qraw: T.Two<TA.Mat<n, hd>, TA.Mat<n, hd>>,
           map_mat(~elu1_f, n, hd, k1), map_mat(~deriv_f, n, hd, k2)}
 
 def bwd_qk2(+n: Nat, +hd: Nat, qk: QKR<n, hd>, v: TA.Mat<n, hd>,
-    dy: TA.Mat<n, hd>) -> DBW<n, hd>:
+    dy: TA.Mat<n, hd>, mask: TA.Mat<n, n>) -> DBW<n, hd>:
   match qk:
     case QKR{qe, qdr, ke, kdr}:
       bwd_qkv(n, hd, T.Mat.dup(n, hd, qe), T.Mat.dup(n, hd, ke), T.Mat.dup(n, hd, v),
-        dy, qdr, kdr)
+        dy, qdr, kdr, mask)
 
 def bwd_qk(+n: Nat, +hd: Nat, q: TA.Mat<n, hd>, k: TA.Mat<n, hd>,
     v: TA.Mat<n, hd>, dy: TA.Mat<n, hd>) -> DBW<n, hd>:
-  bwd_qk2(n, hd, qk_make(n, hd, T.Mat.dup(n, hd, q), T.Mat.dup(n, hd, k)), v, dy)
+  bwd_qk2(n, hd, qk_make(n, hd, T.Mat.dup(n, hd, q), T.Mat.dup(n, hd, k)), v, dy,
+    causal_mat(n))
+
+def lin_bwd_mask(+n: Nat, +hd: Nat, dy: TA.Mat<n, hd>, q: TA.Mat<n, hd>, k: TA.Mat<n, hd>,
+    v: TA.Mat<n, hd>, mask: TA.Mat<n, n>) -> DBW<n, hd>:
+  bwd_qk2(n, hd, qk_make(n, hd, T.Mat.dup(n, hd, q), T.Mat.dup(n, hd, k)), v, dy, mask)
 
 def lin_bwd(+n: Nat, +hd: Nat, dy: TA.Mat<n, hd>, q: TA.Mat<n, hd>, k: TA.Mat<n, hd>,
     v: TA.Mat<n, hd>) -> DBW<n, hd>:

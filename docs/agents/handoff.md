@@ -20,9 +20,21 @@ token **5.5687194** and a different hash. `test_glm53_attn_bwd128.py` (12): four
 `test_glm53_train20.py` (33): 20 AdamW steps, final loss **3.7224956** vs **3.7224958**, worst
 final weight **5.673e-05**, lr 0.004 rejected **4.937e-02**.
 
-**Not done.** The two-sequence isolation, the 4096-row batch-32 path and the memory ceiling.
-The 128 `make check` has not been rerun after these six files; the targeted suite is 34 + 4 +
-12 + 3 + 6 + 33. No training claim.
+**Not done.** The 4096-row batch-32 path and the full memory ceiling. The 128 `make check` has
+not been rerun after these six files; the targeted suite is 34 + 4 + 12 + 3 + 6 + 33 + 3. No
+training claim.
+
+**Two-sequence result.** The 2 x 128 model is in (`attn_mh2` / `model_h2` / `probe_h2_iso` /
+`probe_h2_bwd`). Changing sequence 0 leaves sequence 1's logits and parameter gradient at **0**;
+sequence 0 moves **0.53063375**. The first gradient version leaked **13.299267** through the
+unmasked `dden` term (ISSUE-097); fixed by adding it before the mask.
+
+**Batch-32 limit.** `probe_mask4096.bend`: one 4096 x 4096 block mask is **16,777,216** cells,
+**159.60 s**, **589,356 KiB**. Several are needed per step, so batch 32 stops at the measured
+limit (ISSUE-098); it needs a tiled-mask constructor and a batch dimension.
+
+**Next.** Build the tiled 4096 mask, or run the 1.6M batch-1 baseline at 3.98 h and label it as
+batch 1. Do not call either one batch 32 until the 4096 equivalence test exists.
 
 **Next.** Sequence isolation (2 x 128), then the 4096-row path or a measured limit.
 

@@ -28,6 +28,17 @@ relevant entry before changing performance-sensitive code or a law.
   33 checks) has final loss **3.7224956** against torch **3.7224958**; the worst final weight
   is `b0/qkv` at **5.673e-05** (gate 1e-3). The lr 0.004 can-fail is **4.937e-02**, so the
   optimizer path is load-bearing, not a formality.
+- **Two sequences are isolated, forward and backward.** The 2 x 128 model gives sequence 1 a
+  logit difference of **0** and a parameter-gradient difference of **0** when sequence 0
+  changes; sequence 0 itself moves **0.53063375**, so the comparison is not blind. The first
+  gradient version leaked **13.299267**: `dS = dnum V^T + dden` masked only the first term, so
+  the per-row denominator term carried sequence 0 into sequence 1. Adding `dden` before the
+  mask, then masking once, fixed it. This is exactly the leak a forward-only isolation test
+  cannot see.
+- **Batch 32 is blocked by the mask builder, not the math.** One 4096 x 4096 block mask is
+  16,777,216 cells, builds in **159.60 s**, and peaks at **589,356 KiB**. A step needs several,
+  so the model needs a tiled-mask constructor and a batch dimension before a 4096 equivalence
+  test makes sense. The stop condition is met honestly: measured limit, not an estimate.
 - **What would have passed without these tests?** A 128-only shape or RoPE/gather bug (the N=8
   gate), a row-order bug inside a tolerance (the canary), a wrong 32/32 mask (the mask golden),
   and a 0/8 result from a leak (the leak test). Each test removes one of those false
