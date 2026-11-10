@@ -35,8 +35,9 @@ What changed for the people who run the lab. Internal refactors are not listed.
 - **4096-row limit** (`probe_mask4096.bend`): one block mask materialises **16,777,216** cells in
   **159.60 s** and peaks at **589,356 KiB**. Batch 32 is not practical with this builder; step 4
   stops at the measured limit.
-- **128 `make check` is not rerun after these additions.** The targeted suite is 34 + 4 + 12 +
-  3 + 6 + 33 + 3.
+- **`make check` is 137/137** with all seven new files, including `test_glm53_iso2.py`. A
+  shared `/tmp` probe cache between the N=8 and N=128 tests made the first run 135/137; the 128
+  caches now have their own names and the full check passes.
 
 ### GLM-5.3-Flash: the linear core is dense, and the model step is 1.5 s
 

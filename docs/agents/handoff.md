@@ -20,9 +20,10 @@ token **5.5687194** and a different hash. `test_glm53_attn_bwd128.py` (12): four
 `test_glm53_train20.py` (33): 20 AdamW steps, final loss **3.7224956** vs **3.7224958**, worst
 final weight **5.673e-05**, lr 0.004 rejected **4.937e-02**.
 
-**Not done.** The 4096-row batch-32 path and the full memory ceiling. The 128 `make check` has
-not been rerun after these six files; the targeted suite is 34 + 4 + 12 + 3 + 6 + 33 + 3. No
-training claim.
+**Not done.** The 4096-row batch-32 path beyond the measured mask limit. `make check` is
+**137/137** with all seven new files, including `test_glm53_iso2.py`; the first full run was
+135/137 because the N=8 and N=128 probes shared a `/tmp` binary cache (ISSUE-099), now fixed.
+No training claim.
 
 **Two-sequence result.** The 2 x 128 model is in (`attn_mh2` / `model_h2` / `probe_h2_iso` /
 `probe_h2_bwd`). Changing sequence 0 leaves sequence 1's logits and parameter gradient at **0**;
