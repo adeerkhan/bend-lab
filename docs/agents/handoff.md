@@ -7,6 +7,22 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-10 — the four-head attention backward is gated
+
+**Done and in the tree.** `examples/language/glm53_flash/probe_attn_bwd.bend` runs
+`T.Layer.bwd` on `LinAttention` and `SpAttention` at N=8, with the same x, qkv and out as
+`test_glm53_mh.py`, and prints `y`, `dx`, `dqkv` and `dout`. The torch-autograd golden is
+`reference/glm53_attn_bwd.py` -> `reference/glm53_attn_bwd_golden.npz`; the gate is
+`reference/test_glm53_attn_bwd.py` (12 checks, in `make check`).
+
+**The numbers.** Linear `y/dx/dqkv/dout` at **3.172e-07 / 2.069e-07 / 1.580e-07 / 1.983e-07**
+relative; sparse at **1.359e-07 / 2.593e-07 / 3.231e-07 / 2.660e-07**. The moved-`dout`
+gradients are rejected at **3.212e-01 / 1.763e-01 / 4.601e-01** and match their own golden at
+**1.992e-07**. `reference/.venv/bin/python reference/test_glm53_attn_bwd.py` prints **12/12**.
+
+**Next.** Step 2: one full-model step at N=8, every parameter gradient against a torch twin,
+with a can-fail run that diverges at step 1.
+
 ## 2026-11-09 — GLM Stage A becomes a trainable dense baseline
 
 **Done and in the tree.** `examples/language/glm53_flash/train_a.bend`: the 74,144-parameter

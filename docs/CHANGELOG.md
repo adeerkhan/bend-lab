@@ -4,6 +4,21 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### GLM-5.3-Flash: the four-head attention backward is gated at N=8
+
+- **`probe_attn_bwd.bend`** runs the whole `LinAttention` and `SpAttention` layer at N=8:
+  the qkv projection, the split, RoPE, the four-head core and the out projection. It
+  prints `y`, `dx`, the qkv weight gradient and the out weight gradient for each core,
+  and the same for a deliberately moved `dout`.
+- **The gate** (`reference/test_glm53_attn_bwd.py`, 12 checks) compares all eight tensors
+  against PyTorch autograd on the vendored modules
+  (`reference/glm53_attn_bwd.py`, golden `reference/glm53_attn_bwd_golden.npz`). The
+  largest relative error is **3.231e-07** (sparse/dqkv); the linear ones are
+  **1.58e-07 .. 3.17e-07**. The moved-`dout` gradients are rejected at **3.212e-01**,
+  **1.763e-01** and **4.601e-01** relative, and match their own golden at **1.992e-07**,
+  so the can-fail is the comparison's and not a broken probe.
+- **`make check`** gains the gate (one test file, 12 internal checks).
+
 ### GLM-5.3-Flash: a trainable dense Stage A baseline, and its 400-step record
 
 - **`examples/language/glm53_flash/train_a.bend`**: the 74,144-parameter Stage A model under
