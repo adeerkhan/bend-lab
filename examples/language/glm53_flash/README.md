@@ -272,6 +272,17 @@ JSONL and `make dash` renders it. `--save-every N` writes `out/step_<i>.bin` eve
 same flat layout as `final_weights.bin`; `step_4.bin` and `final_weights.bin` are byte-identical
 after a four-step run.
 
+## The reference on this machine
+
+The vendored 25.7M model pretrained for 400 steps (1,381,760 tokens) in **78.758 s** at **2.143
+GiB** peak on an RTX 5060 Laptop; the reference's README reports 63.1 s and 2.139 GiB on a 3080
+Ti. Checkpoint 400 scores **64/64** on the confirmed benchmark and **63/64** on dev; checkpoint
+100 scores **15/64**. With `reverse` truly removed from pretraining, checkpoint 400 scores
+**56/64** and **0/8 on reverse** (dev and confirm), and the 74,144-parameter port has the same
+pattern: 56/64 and 0/8. The held-out family is not learned by pretraining at either scale; the
+first attempt kept reverse in the corpus and its 8/8 was invalid (ISSUE-103).
+`results/glm53-reference/run.json` has the commands and every number.
+
 ## What is not built
 
 - The MoE, the four-stream HyperConnection, RL and the 25.7M model. Those are

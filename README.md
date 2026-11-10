@@ -292,7 +292,10 @@ forward matches the reference attention modules at 1e-7; one training iteration 
 in the stage record (median **1.9 s** over 1,398 run steps) with forward **45.0%** and backward
 **63.8%**, and a 192-position evaluation is **5.6 h per split** at 6.48 s a forward, so the
 vectorized attention comes first; see `results/glm53-hybrid128/run.json` and
-`training-partial.json`. `make trace` and `make dash` render a run's steps live.
+`training-partial.json`. `make trace` and `make dash` render a run's steps live. The reference itself, run on this
+machine, reaches **64/64** seen; with `reverse` removed from pretraining it is **56/64** and
+**0/8** on that family, the same pattern as the 74k port
+(`results/glm53-reference/run.json`).
 
 ## Licence
 

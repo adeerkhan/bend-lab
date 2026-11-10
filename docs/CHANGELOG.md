@@ -36,6 +36,22 @@ What changed for the people who run the lab. Internal refactors are not listed.
   loss and step sparklines, tokens/s, the record's stage table, and with `PID` the `/proc` RSS,
   peak and CPU. Standard library only, and it decides nothing; the trace is ignored by git.
 
+### The reference itself, on this machine
+
+- **Pretraining reproduced**: 400 steps, 1,381,760 tokens, **78.758 s**, **2.143 GiB** peak on an
+  RTX 5060 Laptop (the reference's README reports 63.1 s and 2.139 GiB on a 3080 Ti, a lane
+  banner). `results/glm53-reference/run.json` carries the run and both checkpoint evaluations.
+- **Checkpoint 400 solves the benchmark**: **24/24** on the three trained families and **64/64**
+  on all eight (dev **63/64**). Checkpoint 100 is **3/24** and **15/64**; the README's before-RL
+  0/24 is that earlier checkpoint and does not reproduce exactly (ISSUE-102).
+- **The held-out family is not learned at either scale.** With `reverse` truly removed from
+  pretraining (`family.name`, not the object), checkpoint 400 scores **56/64** and **0/8 reverse**
+  on confirm and dev; checkpoint 200 is also **0/8**. The 74,144-parameter port has the same
+  pattern: **56/64** and **0/8**. A sweep at **1.9M, 4.3M and 7.6M** parameters (dim 64/96/128,
+  eight layers) is **0/8** too, so pretraining does not learn the family at any scale tested. The
+  first attempt filtered `Family` objects against the string `"reverse"`, kept the family, and its
+  8/8 was invalid (ISSUE-103); the docs here are corrected.
+
 ### The hybrid trains, and its evaluation is the next wall
 
 - **The partial run**: 1,398 steps (178,944 tokens) at 128 positions, loss **5.5634737 -> 0.3845**

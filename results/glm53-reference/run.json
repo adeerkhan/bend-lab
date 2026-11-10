@@ -1,0 +1,92 @@
+{
+  "reference": "reference/glm53_flash at the vendored revision, MIT",
+  "device": "NVIDIA GeForce RTX 5060 Laptop GPU 8 GiB, torch 2.11.0+cu128",
+  "pretrain": {
+    "steps": 400,
+    "batch": 32,
+    "positions": 128,
+    "lr": 0.0003,
+    "tokens_seen": 1381760,
+    "seconds": 78.758,
+    "peak_vram_gib": 2.143,
+    "loss_last": 0.2494983822107315,
+    "command": "reference/.venv-rf/bin/python reference/glm53_flash/scripts/train_pretrain.py --output /tmp/opencode/glm53/ref-pretrain-3e4 --steps 400 --device cuda"
+  },
+  "with_reverse": {
+    "checkpoint_100": {
+      "confirm_three_trained_families": "3/24",
+      "confirm_all_eight": "15/64"
+    },
+    "checkpoint_400": {
+      "confirm_three_trained_families": "24/24",
+      "confirm_all_eight": "64/64",
+      "dev_all_eight": "63/64"
+    }
+  },
+  "without_reverse": {
+    "command": "reference/.venv-rf/bin/python /tmp/opencode/glm53/ref_sweep.py /tmp/opencode/glm53/ref-no-reverse3 --dim 192 --layers 12 --no-reverse --device cpu",
+    "device": "cpu, because the GPU was in use by another process",
+    "tokens_seen": 1381760,
+    "seconds": 1636.277,
+    "checkpoint_200": {
+      "confirm_reverse": "0/8"
+    },
+    "checkpoint_400": {
+      "confirm_reverse": "0/8",
+      "dev_reverse": "0/8",
+      "confirm_all_eight": "56/64"
+    },
+    "port_comparison": {
+      "result": "56/64 confirm, reverse 0/8",
+      "record": "results/glm53-corpus128-holdout-reverse/run.json"
+    },
+    "note": "the first attempt filtered Family objects against the string 'reverse', so reverse stayed in the corpus and its 8/8 was invalid (ISSUE-103); this run filters family.name"
+  },
+  "published": {
+    "pretrain": "63.1 s, 2.139 GiB on an RTX 3080 Ti",
+    "rl": "greedy 0/24 -> 16/24 on three trained families; pass@8 25/64 -> 34/64",
+    "checkpoint_selection": "checkpoint 100 chosen because checkpoint 400 saturated the benchmark"
+  },
+  "note": "The reference's code reproduces its pretraining (78.758 s against 63.1 s on a 3080 Ti). Checkpoint 400 solves the seen benchmark 64/64. With reverse truly removed, it scores 56/64 and 0/8 on reverse, exactly the 74,144-parameter port's pattern: the held-out family is not learned by pretraining at either scale. The published before-RL 0/24 is checkpoint 100 (3/24 here).",
+  "without_reverse_sweep": {
+    "note": "400 steps, reverse removed, confirm reverse; every arm is 0/8",
+    "arms": [
+      {
+        "dim": 64,
+        "layers": 8,
+        "heads": 2,
+        "parameters": 1922432,
+        "seconds": 37.477,
+        "confirm_reverse": "0/8",
+        "device": "cuda"
+      },
+      {
+        "dim": 96,
+        "layers": 8,
+        "heads": 3,
+        "parameters": 4309024,
+        "seconds": 44.446,
+        "confirm_reverse": "0/8",
+        "device": "cuda"
+      },
+      {
+        "dim": 128,
+        "layers": 8,
+        "heads": 4,
+        "parameters": 7645888,
+        "seconds": 48.155,
+        "confirm_reverse": "0/8",
+        "device": "cuda"
+      },
+      {
+        "dim": 192,
+        "layers": 12,
+        "heads": 6,
+        "parameters": 25730592,
+        "seconds": 1636.277,
+        "confirm_reverse": "0/8",
+        "device": "cpu"
+      }
+    ]
+  }
+}

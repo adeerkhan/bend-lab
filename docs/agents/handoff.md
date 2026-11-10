@@ -7,6 +7,29 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-10 — the reference control: 64/64 seen, 8/8 held-out at 25.7M
+
+**The reference, run here.** The vendored 25.7M model pretrained for 400 steps (1,381,760 tokens)
+in **78.758 s** and **2.143 GiB** on an RTX 5060 Laptop (the README's 63.1 s and 2.139 GiB are a
+3080 Ti). Checkpoint 400 scores **24/24** on the three trained families and **64/64** on all eight
+(dev **63/64**); checkpoint 100 scores **3/24** and **15/64**. The README's before-RL 0/24 is the
+earlier checkpoint and does not reproduce exactly (ISSUE-102).
+
+**The held-out test.** With `reverse` truly removed from pretraining (`family.name`, not the
+object), checkpoint 400 scores **56/64** and **0/8 reverse** on confirm and dev; checkpoint 200 is
+also **0/8**. The 74,144-parameter port has the same pattern: **56/64** and **0/8**
+(`results/glm53-corpus128-holdout-reverse`). The first attempt filtered `Family` objects against
+the string and kept reverse, so its 8/8 was invalid (ISSUE-103); the docs here are corrected. A
+sweep at **1.9M, 4.3M and 7.6M** parameters (dim 64/96/128, eight layers) is also **0/8**, so
+pretraining does not learn the family at any scale tested; what remains is RL or a harder task.
+Record: `results/glm53-reference/run.json`.
+
+**What that changes.** The architecture question belongs at 25.7M, not 74k. The next cheap
+experiments are the held-out threshold across widths/depths in the reference's own code and the
+architecture ablation (all-linear vs 9+3, MoE vs SwiGLU, 1 vs 4 streams) at 25.7M; the Bend port
+of that scale waits for the vectorized attention. The RL code is not in the vendored tree, so the
+published 0/24 -> 16/24 cannot be reproduced here.
+
 ## 2026-11-10 — the hybrid step is 1 s, and the lab has a trace and a dashboard
 
 **The loop bug first.** `train_h128.bend`'s `step_print` was `step_res(step(...))`: the pure
