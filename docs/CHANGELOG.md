@@ -23,8 +23,12 @@ What changed for the people who run the lab. Internal refactors are not listed.
 - **Evaluation leakage** (`test_glm53_eval_leak.py`, 6 checks): the holdout stream contains
   **0 of 263** reverse tasks, the full stream contains them, dev and confirm each have **8/8**
   reverse tasks, and the frozen manifest records **0/8** on both.
+- **Twenty-step drift** (`test_glm53_train20.py`, 33 checks): 20 AdamW steps at 128 against
+  the torch twin. Final loss **3.7224956** vs **3.7224958**; the worst final weight is
+  `b0/qkv` at **5.673e-05** relative (gate **1e-03**); the lr 0.004 can-fail is rejected at
+  **4.937e-02**. A single step did not show this.
 - **128 `make check` is not rerun after these additions.** The targeted suite is 34 + 4 + 12 +
-  3 + 6.
+  3 + 6 + 33.
 
 ### GLM-5.3-Flash: the linear core is dense, and the model step is 1.5 s
 

@@ -24,6 +24,10 @@ relevant entry before changing performance-sensitive code or a law.
   reverse tasks; the full stream contains them; dev and confirm each have **8/8** reverse
   tasks; the frozen manifest records **0/8** on both. What remains is whether the model can
   learn it, not whether the data contains it.
+- **Twenty steps show what one step cannot.** The 20-step gate (`test_glm53_train20.py`,
+  33 checks) has final loss **3.7224956** against torch **3.7224958**; the worst final weight
+  is `b0/qkv` at **5.673e-05** (gate 1e-3). The lr 0.004 can-fail is **4.937e-02**, so the
+  optimizer path is load-bearing, not a formality.
 - **What would have passed without these tests?** A 128-only shape or RoPE/gather bug (the N=8
   gate), a row-order bug inside a tolerance (the canary), a wrong 32/32 mask (the mask golden),
   and a 0/8 result from a leak (the leak test). Each test removes one of those false

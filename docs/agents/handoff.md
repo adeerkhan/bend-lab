@@ -17,10 +17,12 @@ token **5.5687194** and a different hash. `test_glm53_attn_bwd128.py` (12): four
 128, worst **4.389e-07**, moved dout **3.676e-01**. `test_glm53_sparse_mask.py` (3): 16/16 and
 32/32 match `_indices` in **0/4,096** cells, 8/8 differs in **436**. `test_glm53_eval_leak.py`
 (6): holdout has **0/263** reverse tasks, full has them, dev/confirm **8/8**, manifest **0/8**.
+`test_glm53_train20.py` (33): 20 AdamW steps, final loss **3.7224956** vs **3.7224958**, worst
+final weight **5.673e-05**, lr 0.004 rejected **4.937e-02**.
 
-**Not done.** The two-sequence isolation, the 4096-row batch-32 path, the memory ceiling and
-the 20-step drift. The 128 `make check` has not been rerun after these five files; the targeted
-suite is 34 + 4 + 12 + 3 + 6. No training claim.
+**Not done.** The two-sequence isolation, the 4096-row batch-32 path and the memory ceiling.
+The 128 `make check` has not been rerun after these six files; the targeted suite is 34 + 4 +
+12 + 3 + 6 + 33. No training claim.
 
 **Next.** Sequence isolation (2 x 128), then the 4096-row path or a measured limit.
 
