@@ -4,6 +4,19 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### GLM-5.3-Flash: the four-block hybrid's full gradient is gated at N=8
+
+- **`probe_model_bwd.bend`** runs one masked-cross-entropy backward through the whole
+  74,144-parameter hybrid at N=8 and writes every parameter gradient in the parameter tree's
+  dump order.
+- **The gate** (`reference/test_glm53_h_bwd.py`, 33 checks) compares the 74,144 gradients per
+  tensor against PyTorch autograd on the vendored modules (`reference/glm53_h_bwd.py`, golden
+  `reference/glm53_h_bwd_golden.npz`). The loss is **5.5453690** against **5.5453691**
+  (**2.673e-08** relative); the worst tensor is `b2/down` at **6.761e-07** relative, and the
+  largest whole-tensor difference is **1.788e-07**. The moved-label gradient is rejected at
+  **1.286** relative and matches its own bad-label golden at **3.701e-07**.
+- **`make check`** gains the gate (one test file, 33 internal checks).
+
 ### GLM-5.3-Flash: the four-head attention backward is gated at N=8
 
 - **`probe_attn_bwd.bend`** runs the whole `LinAttention` and `SpAttention` layer at N=8:

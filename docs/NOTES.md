@@ -3,6 +3,26 @@
 Every finding, every measurement and every discarded hypothesis, by date. Read the
 relevant entry before changing performance-sensitive code or a law.
 
+## 2026-11-10 — every parameter gradient of the hybrid, at one step
+
+- **The full backward is gated, not just the cores.** `probe_model_bwd.bend` runs the masked
+  cross-entropy on the first eight corpus tokens, `T.Layer.bwd` through `model_h8`, and dumps
+  all 74,144 gradients with `T.Layer.dump`. The dump order is `glm53_h_data.shapes()`': the
+  per-tensor comparison would be meaningless otherwise, and it holds because every tensor
+  matches at its own offset.
+- **Measured against PyTorch autograd** (`glm53_h_bwd.py`, golden `glm53_h_bwd_golden.npz`):
+  loss **5.5453690** against **5.5453691** (**2.673e-08** relative); the worst of the 30
+  tensors is `b2/down` at **6.761e-07**, the largest whole-tensor difference **1.788e-07**,
+  and all 30 are inside **7e-07** (the gate is 1e-5). The eight-token batch is the first row of
+  `corpus128-train_batch.bin` and its next-token labels; the bad label moves `39` to `40`.
+- **The can-fail is a moved label, and the step-1 gradient sees it.** The bad-label gradient
+  misses the correct golden by **1.286** relative (the gate rejects it) while matching the
+  bad-label golden at **3.701e-07**. A step-1 corruption therefore cannot pass.
+- **Trap: `match` cannot inspect a local binder inside a `case`.** The first version bound
+  `fw`, `lo` and `bw` with `=` and matched them in place; the checker reports "a match cannot
+  scrutinize a local binder: give it its own def". The working shape is one def per stage,
+  each taking the value as a parameter (`res_fwd`, `res_loss`, `res_bwd`).
+
 ## 2026-11-10 — the four-head layer's backward, at the same weights as its forward
 
 - **The backward is now gated through the layer, not only through the core.** The Stage B gate

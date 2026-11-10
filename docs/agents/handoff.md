@@ -7,6 +7,23 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-10 — the full-model gradient is gated
+
+**Done and in the tree.** `examples/language/glm53_flash/probe_model_bwd.bend` runs the masked
+cross-entropy on the first eight corpus tokens, one `T.Layer.bwd` through `model_h8`, and writes
+all 74,144 gradients in `T.Layer.dump` order. The torch-autograd golden is
+`reference/glm53_h_bwd.py` -> `reference/glm53_h_bwd_golden.npz`; the gate is
+`reference/test_glm53_h_bwd.py` (33 checks, in `make check`).
+
+**The numbers.** Loss **5.5453690** against **5.5453691** (**2.673e-08** relative). All 30
+tensors match; the worst is `b2/down` at **6.761e-07**, the largest whole-tensor difference
+**1.788e-07** (gate 1e-5). The moved-label gradient is rejected at **1.286** relative and matches
+its own bad-label golden at **3.701e-07**; `reference/.venv/bin/python
+reference/test_glm53_h_bwd.py` prints **33/33**.
+
+**Next.** Step 3: the vectorized sparse core (batched heads, matmul plus the window/stride mask),
+gated against the current core at ~1e-7 and at least 20x faster at 128 tokens a step.
+
 ## 2026-11-10 — the four-head attention backward is gated
 
 **Done and in the tree.** `examples/language/glm53_flash/probe_attn_bwd.bend` runs
@@ -20,8 +37,7 @@ relative; sparse at **1.359e-07 / 2.593e-07 / 3.231e-07 / 2.660e-07**. The moved
 gradients are rejected at **3.212e-01 / 1.763e-01 / 4.601e-01** and match their own golden at
 **1.992e-07**. `reference/.venv/bin/python reference/test_glm53_attn_bwd.py` prints **12/12**.
 
-**Next.** Step 2: one full-model step at N=8, every parameter gradient against a torch twin,
-with a can-fail run that diverges at step 1.
+**Then.** Step 2 followed: the full-model gradient gate is the section above.
 
 ## 2026-11-09 — GLM Stage A becomes a trainable dense baseline
 
