@@ -245,16 +245,20 @@ The N=8 forward check (`reference/test_glm53_mh.py`, 4/4) is the important gate.
 8-wide/32-wide split bug and a `Lin,Sp,Lin,Lin` order before any training conclusion. After the
 fixes, the four-head linear/sparse and the full four-block model match the NumPy twin at
 **8.84e-08 / 1.23e-07 / 1.22e-07** relative. The NumPy twin itself matches the vendored torch
-modules at 2e-08. One training step of the fixed model measures loss **5.5634737**, val
-**5.4198546**, **18.97 s** for 128 tokens and **16,956 KiB** peak RSS.
+modules at 2e-08.
 
-The corpus run is blocked on throughput: 128 tokens a step makes the 1,638,400-token budget
-**12,800 steps / 67.4 hours** (an extrapolation from the measured step, not a run). A 400-step
-smoke would be 2.1 hours and 32x below the dense baseline's token count, so it is not a
-comparable baseline. The list-based sparse backward (`List.set` scatter) and the per-head
-gather/scatter dominate. The next step is the same one that took the linear core from 11.4 s to
-0.024 s: a vectorized sparse core and a batched multi-head model, then the 192-position
-evaluation at the 1.6M-token budget.
+One training step of the fixed model measures loss **5.5634737**, val **5.4198546**, **0.99 s**
+for 128 tokens and **11,860 KiB** peak RSS with `--no-val --no-save` (`/usr/bin/time -f '%e %M'`);
+with validation and the weight save it is **1.45 s** and **16,572 KiB**. `--trace` prints one
+JSON line per iteration, `{"step": 1, "tokens": 128, "loss": 5.5634737, "ms": 1018}`, with the
+batch read and `T.Train.step` under one timer.
+
+The earlier **18.97 s** smoke was a loop bug, not the sparse core: `step_res(step(...))` matched
+the pure `Train` value at every field projection, so one logical step ran about eighteen times.
+Binding it once with `IO.pure` gives the 0.99 s above, with the same loss and the same weight
+sha256. The 1,638,400-token budget is therefore **12,800 steps / about 3.5 hours** at the measured
+step (an extrapolation, not a run), not 67.4 hours. The next step is the stage split and the
+vectorized sparse core, then the 192-position evaluation at that budget.
 
 ## What is not built
 

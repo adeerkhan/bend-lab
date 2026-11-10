@@ -4,6 +4,21 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The hybrid step costs 1 s, not 19: a loop re-evaluation bug
+
+- **`--trace` on `train_h128.bend`**: one JSON line per iteration,
+  `{"step": 1, "tokens": 128, "loss": 5.5634737, "ms": 1018}`, with the batch read and
+  `T.Train.step` under one timer. A traced and an untraced run print the same loss, and two
+  traced runs agree within 2%.
+- **The 18.97 s smoke was the loop, not the sparse core.** `step_res(step(...))` matched the pure
+  `Train` value at every field projection and rebuilt it for the return, so one logical step ran
+  about eighteen times. Binding it once with `IO.pure` gives **0.99 s** with `--no-val --no-save`
+  and **1.45 s** with validation and the weight save. Three steps print identical losses in both
+  builds, and the canary's weight sha256 `1856080434…c71c3ce` is unchanged.
+- The 1,638,400-token budget is therefore **12,800 steps / about 3.5 hours** at the measured step
+  (an extrapolation, not a run), not 67.4 hours. The vectorization target comes from the stage
+  split.
+
 ### GLM-5.3-Flash: the 128 gate, the canary and the evaluation-leak tests
 
 - **128 full-model gradient** (`test_glm53_h_bwd128.py`, 34 checks): one masked-CE backward
