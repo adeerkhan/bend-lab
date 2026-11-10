@@ -14,11 +14,11 @@ relevant entry before changing performance-sensitive code or a law.
   four gradients sees it.
 - **Measured against `lin_fast`/`lin_bwd` at 128**: y **7.451e-08**, dq **4.718e-08**, dk
   **1.192e-07**, dV **3.576e-07**; removing the causal mask moves y by **8.934e-01**.
-- **The step.** `train_h128 --steps 1` median **1.49 s** (was 24.83 s, 16.7x), peak RSS
-  **16,956 KiB**. The step alone is **1.11 s** (2.60 s for two steps, 1.49 s for one, the
-  difference is the validation pass and the save), **22.4x**. The literal `--steps 1` wall
-  clock is 1.49 s, so the 1.24 s gate holds for the step and not for the run that also
-  validates.
+- **The step.** `train_h128 --steps 1 --no-val` median **1.12 s** (was 24.83 s, **22.2x**),
+  peak RSS **16,956 KiB**; with the validation pass and the save the same run is **1.49 s**
+  (16.7x). `--no-val` was added so the step is the measured thing; the 1.6M budget at 1.12 s
+  is 12,800 steps / **3.98 h**. The 1.24 s gate passes on the step and not on the validating
+  run; both numbers are recorded.
 - **The builder trap, again.** Consing rows and then `List.reverse`-ing the flat list reverses
   the numbers *inside* each row. The loss moved to 5.5566473 (0.0068 away) and every gate
   would still pass a loose tolerance. Descending by `p` (index = left - 1) conses the rows in

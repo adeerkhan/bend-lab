@@ -105,10 +105,10 @@ def save_final(tr: T.Train<M.P()>, +out: String, +data: String) -> IO(Unit):
 # ---- arguments ----
 
 type Run is Type:
-  Run{steps: Nat, lrppm: Nat, data: String, out: String, weights: String}
+  Run{steps: Nat, lrppm: Nat, data: String, out: String, weights: String, val: Bool}
 
 def run_default() -> Run:
-  Run{STEPS(), 3000n, "examples/language/glm53_flash/data/corpus128-b32", "/tmp/opencode/glm53/hybrid128", "examples/language/glm53_flash/data/h"}
+  Run{STEPS(), 3000n, "examples/language/glm53_flash/data/corpus128-b32", "/tmp/opencode/glm53/hybrid128", "examples/language/glm53_flash/data/h", True{}}
 
 def nat_or(m: Maybe<&2, Nat>, d: Nat) -> Nat:
   match m:
@@ -129,32 +129,36 @@ def run_go(args: List<String>, r: Run) -> Run:
               r
             case Con{b, more}:
               match r:
-                case Run{steps, lrppm, data, out, weights}:
-                  run_go(more, Run{nat_or(Nat.read(b), steps), lrppm, data, out, weights})
+                case Run{steps, lrppm, data, out, weights, val}:
+                  run_go(more, Run{nat_or(Nat.read(b), steps), lrppm, data, out, weights, val})
         case "--lr-ppm":
           match rest:
             case Nil{}:
               r
             case Con{b, more}:
               match r:
-                case Run{steps, lrppm, data, out, weights}:
-                  run_go(more, Run{steps, nat_or(Nat.read(b), lrppm), data, out, weights})
+                case Run{steps, lrppm, data, out, weights, val}:
+                  run_go(more, Run{steps, nat_or(Nat.read(b), lrppm), data, out, weights, val})
         case "--data":
           match rest:
             case Nil{}:
               r
             case Con{b, more}:
               match r:
-                case Run{steps, lrppm, data, out, weights}:
-                  run_go(more, Run{steps, lrppm, b, out, weights})
+                case Run{steps, lrppm, data, out, weights, val}:
+                  run_go(more, Run{steps, lrppm, b, out, weights, val})
         case "--out":
           match rest:
             case Nil{}:
               r
             case Con{b, more}:
               match r:
-                case Run{steps, lrppm, data, out, weights}:
-                  run_go(more, Run{steps, lrppm, data, b, weights})
+                case Run{steps, lrppm, data, out, weights, val}:
+                  run_go(more, Run{steps, lrppm, data, b, weights, val})
+        case "--no-val":
+          match r:
+            case Run{steps, lrppm, data, out, weights, val}:
+              run_go(rest, Run{steps, lrppm, data, out, weights, False{}})
         case _:
           run_go(rest, r)
 
@@ -165,7 +169,22 @@ def run_of(args: List<String>) -> Run:
     case Con{program, rest}:
       run_go(rest, run_default())
 
-def run_io_lr(+steps: Nat, +lr: F32, +data: String, +out: String, +weights: String) -> IO(Unit):
+def save_only(tr: T.Train<M.P()>, +out: String) -> IO(Unit):
+  match tr:
+    case T.Train{p, g, st, c, p1, p2, +l}:
+      do IO<Unit>:
+        p1v : M.P() <- T.Params.save(~M.P(), ~M.X(), ~M.Y(), ~M.S(), ~M.Model(),
+          String.append(out, "/final_weights.bin"), p)
+        return Unit{}
+
+def finish(tr: T.Train<M.P()>, +out: String, +data: String, +do_val: Bool) -> IO(Unit):
+  match do_val:
+    case True{}:
+      save_final(tr, out, data)
+    case False{}:
+      save_only(tr, out)
+
+def run_io_lr(+steps: Nat, +lr: F32, +data: String, +out: String, +weights: String, +do_val: Bool) -> IO(Unit):
   do IO<Unit>:
     T.OptCfg.check(cfg(lr))
     IO.print(String.append("params: ",
@@ -176,12 +195,12 @@ def run_io_lr(+steps: Nat, +lr: F32, +data: String, +out: String, +weights: Stri
     tr : T.Train<M.P()> <- IO.pure(T.Train<M.P()>,
       T.Train.new(~M.P(), ~M.X(), ~M.Y(), ~M.S(), ~M.Model(), cfg(lr), p))
     tr1 : T.Train<M.P()> <- train_all(steps, 0n, data, tr)
-    save_final(tr1, out, data)
+    finish(tr1, out, data, do_val)
 
 def run_io(r: Run) -> IO(Unit):
   match r:
-    case Run{+steps, +lrppm, +data, out, +weights}:
-      run_io_lr(steps, (F32.div(F32.from_nat(lrppm), 1000000.0) : F32), data, out, weights)
+    case Run{+steps, +lrppm, +data, out, +weights, +val}:
+      run_io_lr(steps, (F32.div(F32.from_nat(lrppm), 1000000.0) : F32), data, out, weights, val)
 
 def main() -> IO(Unit):
   do IO<Unit>:

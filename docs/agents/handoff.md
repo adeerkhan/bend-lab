@@ -15,15 +15,15 @@ linear core; `attn_mh.bend` uses it for the three linear blocks. The oracle stay
 `probe_lin_dense.bend`.
 
 **The numbers.** y/dq/dk/dV at 128: **7.451e-08 / 4.718e-08 / 1.192e-07 / 3.576e-07** (gate
-1e-06); the uncased can-fail is **8.934e-01**. `train_h128 --steps 1`: **1.49 s** median
-(was 24.83 s, **16.7x**), peak RSS **16,956 KiB**. The step alone is **1.11 s** (two steps
-2.60 s, one 1.49 s; the difference is the validation pass and the save), **22.4x**. Loss
-**5.5634737**, val **5.4198546**, bit-identical to the old model.
+1e-06); the uncased can-fail is **8.934e-01**. `train_h128 --steps 1 --no-val`: **1.12 s**
+median (was 24.83 s, **22.2x**), peak RSS **16,956 KiB**; the validating run is **1.49 s**
+(16.7x). Loss **5.5634737**, val **5.4198546**, bit-identical to the old model. The 1.6M-token
+budget at 1.12 s is 12,800 steps / **3.98 h**.
 
 **Not done.** The four heads are still four per-head calls, not one batched-head matmul; a
 block-diagonal four-head path is four times the arithmetic at these sizes. Batch 32 is a
-4096-row block-diagonal model, not started. The literal `--steps 1` wall clock is 1.49 s, so
-the 1.24 s gate holds for the step (1.11 s) and not for the run that also validates.
+4096-row block-diagonal model, not started; a 32x loop is not batching. The 1.24 s gate holds
+for `--steps 1 --no-val` (1.12 s), not for the validating `--steps 1` (1.49 s).
 
 **Next.** Step 4's batch-32 path, or a decision that the 22.4x step is the speed gate.
 
