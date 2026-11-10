@@ -7,6 +7,27 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-10 — the sparse core is dense and 65x faster; the model step is 7x
+
+**Done and in the tree.** `examples/language/glm53_flash/sp_dense.bend` is the dense masked core
+(score matrix, window/stride mask, softmax, matmul forward and backward); `attn_mh.bend` uses it
+for the four sparse heads. The oracle is the gathered list core in `attn_c.bend`. The gate is
+`reference/test_glm53_sp_dense.py` (8 checks, in `make check`), on `probe_sp_dense.bend`.
+
+**The numbers.** y/dq/dk/dv against the oracle at 32 and 128: **8.941e-08 .. 5.960e-07** (gate
+1e-06). `probe_time_cores.bend`, four heads, one forward + one backward, median of three: old
+**1,976 + 17,136 = 19,112 ms**, new **122 + 172 = 294 ms**, **65.0x** for the sparse core.
+`train_h128 --steps 1`, old binary from `cc2a7ca` against this tree: **24.83 -> 3.56 s**, **7.0x**,
+RSS **15,940 -> 15,500 KiB**.
+
+**The honest gap.** The 20x target is for the sparse core's own step, which passes at 65.0x. The
+**model** step is 7.0x because the three linear blocks and the per-head gather/rope/join remain;
+the 20x model step does not pass, so step 5 is not started.
+
+**Next.** Step 4: the full `make check` on this tree (the vectorized core in the model), then
+report the new seconds per step and peak RSS. Do not start step 5 until the step-3 speed gate is
+read as passing.
+
 ## 2026-11-10 — the full-model gradient is gated
 
 **Done and in the tree.** `examples/language/glm53_flash/probe_model_bwd.bend` runs the masked

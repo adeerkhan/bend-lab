@@ -4,6 +4,28 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### GLM-5.3-Flash: the sparse core is dense, batched and 65x faster
+
+- **`sp_dense.bend`** replaces the per-query `List.set` scatter with a dense T x T score matrix,
+  the reference's window-16 / stride-16 causal mask, one row softmax, and four matmuls for the
+  forward and every gradient. The gathered list core in `attn_c.bend` stays as the oracle.
+- **The gate** (`reference/test_glm53_sp_dense.py`, 8 checks) runs both cores at 32 and 128
+  positions on the same q, k, v and dy. The largest differences are **8.941e-08** (y), 1.192e-07
+  to 8.941e-08 (dq), 1.192e-07 to 3.576e-07 (dk) and 3.576e-07 to 5.960e-07 (dv), against a
+  **1e-06** gate.
+- **The sparse core's own forward and backward**: 32 and 128 positions, four heads, one pass
+  each, `probe_time_cores.bend` on `cc2a7ca` and on this tree, median of three:
+  **1,976 + 17,136 = 19,112 ms** old against **122 + 172 = 294 ms** new, a **65.0x** speedup.
+- **The full model step is 7.0x, not 20x.** `train_h128 --steps 1` (the same command, old binary
+  from `cc2a7ca` against the new one): **24.83 s -> 3.56 s** (median of three), peak RSS
+  **15,940 -> 15,500 KiB**. The remaining time is the linear core and the per-head gather/rope/
+  join, not the sparse core. Read the step-3 gate as the sparse core's own step; the model step
+  is reported honestly at 7.0x.
+- **Two bugs the forward comparison caught, both invisible to the gradients.** The first mask
+  row omitted s = t, which moved y by 0.30 at 4 positions and 0.48 at 128 while every gradient
+  stayed right; `y_of` also forgot to scale q by hd^-1/2, which changed y while the backward
+  (which does scale) matched. This is why the gate checks y and every gradient.
+
 ### GLM-5.3-Flash: the four-block hybrid's full gradient is gated at N=8
 
 - **`probe_model_bwd.bend`** runs one masked-cross-entropy backward through the whole

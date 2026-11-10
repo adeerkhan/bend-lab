@@ -5,7 +5,7 @@ import bendtorch@2.0.0.0/main.bend as T
 import bend-ml-tensor-array@0.1.18.0/main.bend as TA
 import ./lin_bwd.bend as L
 import ./lin_fast.bend as LF
-import ./attn_c.bend as AC
+import ./sp_dense.bend as SD
 
 def N() -> Nat:
   128n
@@ -188,22 +188,33 @@ def lin_bwd4(+dy: List<&2, F32>, +q: List<&2, F32>, +k: List<&2, F32>,
 
 # ---- sparse attention, four heads ----
 
+def mlh(ml: TA.ML<N(), HD()>) -> List<&2, F32>:
+  match ml:
+    case TA.ML{m, xs}:
+      xs
+
 def sp_head(+h: Nat, +q: List<&2, F32>, +k: List<&2, F32>, +v: List<&2, F32>) -> List<&2, F32>:
-  AC.sp_y_go(N(), 0n, rope_all(gather_head(q, h)), rope_all(gather_head(k, h)),
-    gather_head(v, h), Nil{})
+  mlh(TA.Mat.to_list(N(), HD(), SD.y_of(N(), HD(),
+    TA.Mat.from_list(N(), HD(), rope_all(gather_head(q, h))),
+    TA.Mat.from_list(N(), HD(), rope_all(gather_head(k, h))),
+    TA.Mat.from_list(N(), HD(), gather_head(v, h)), SD.mask_mat(N()))))
 
 def sp_y4(+q: List<&2, F32>, +k: List<&2, F32>, +v: List<&2, F32>) -> List<&2, F32>:
-  +y0 = sp_head(0n, q, k, v)
-  +y1 = sp_head(1n, q, k, v)
-  +y2 = sp_head(2n, q, k, v)
-  +y3 = sp_head(3n, q, k, v)
-  join_heads(y0, y1, y2, y3)
+  join_heads(sp_head(0n, q, k, v), sp_head(1n, q, k, v), sp_head(2n, q, k, v), sp_head(3n, q, k, v))
+
+def dbw_parts(dbw: SD.DBW<N(), HD()>) -> L.BW:
+  match dbw:
+    case SD.DBW{dq, dk, dv}:
+      L.BW{unrope_all(mlh(TA.Mat.to_list(N(), HD(), dq))),
+        unrope_all(mlh(TA.Mat.to_list(N(), HD(), dk))),
+        mlh(TA.Mat.to_list(N(), HD(), dv))}
 
 def sp_bwd_head(+h: Nat, +dy: List<&2, F32>, +q: List<&2, F32>, +k: List<&2, F32>,
     +v: List<&2, F32>) -> L.BW:
-  unrope_bw(AC.sp_t_go(N(), 0n, gather_head(dy, h), rope_all(gather_head(q, h)),
-    rope_all(gather_head(k, h)), gather_head(v, h),
-    zline(Nat.mul(N(), HD())), zline(Nat.mul(N(), HD())), zline(Nat.mul(N(), HD()))))
+  dbw_parts(SD.bwd(N(), HD(), TA.Mat.from_list(N(), HD(), gather_head(dy, h)),
+    TA.Mat.from_list(N(), HD(), rope_all(gather_head(q, h))),
+    TA.Mat.from_list(N(), HD(), rope_all(gather_head(k, h))),
+    TA.Mat.from_list(N(), HD(), gather_head(v, h)), SD.mask_mat(N())))
 
 def sp_bwd4(+dy: List<&2, F32>, +q: List<&2, F32>, +k: List<&2, F32>,
     +v: List<&2, F32>) -> ACC:

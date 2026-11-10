@@ -3,6 +3,33 @@
 Every finding, every measurement and every discarded hypothesis, by date. Read the
 relevant entry before changing performance-sensitive code or a law.
 
+## 2026-11-10 — the sparse core becomes dense, and the model step is 7x
+
+- **The dense core.** `sp_dense.bend` computes the reference's gathered causal attention as a
+  dense T x T score matrix plus a mask, one row softmax and matmuls: `S = Q K^T`, `P =
+  softmax(S + mask)`, `Y = P V`; backward `dP = dY V^T`, `dS = softmax_bwd(P, dP)`, `dQ = dS K`,
+  `dK = dS^T Q`, `dV = P^T dY`. The mask is `s <= t && (s % 16 == 0 || t - s < 16)`, the
+  reference's `_indices`. At 32 and 128 positions the y/dq/dk/dv differences against the list
+  core are **8.9e-08 .. 5.96e-07**, gate **1e-06**.
+- **The speed, measured with one command.** `probe_time_cores.bend`, four heads, one forward and
+  one backward, median of three: old **1,976 + 17,136 = 19,112 ms**; new **122 + 172 = 294 ms**;
+  **65.0x** for the sparse core. The full model step (`train_h128 --steps 1`, old binary from
+  `cc2a7ca` and the new tree) is **24.83 -> 3.56 s**, **7.0x**, RSS **15,940 -> 15,500 KiB**.
+  The gap is the linear core (three blocks) and the per-head gather/rope/join, not the sparse
+  core; the 20x model-step target is **not** met and step 5 is not started on a false premise.
+- **A mask that is wrong only in the forward.** The first `mask_row` started at s = t - 1, so
+  the diagonal was missing. Gradients still matched the oracle (the backward rebuilt its own
+  softmax from a row that also missed the diagonal, and the comparison was between two equally
+  wrong paths); y moved by **0.30** at 4 positions and **0.48** at 128. Checking y as well as
+  every gradient is what found it.
+- **A scale that is wrong only in the forward.** `y_of` passed raw q to `p_of` while the
+  backward scaled q by hd^-1/2. The gradients matched and y did not; adding the scale to `y_of`
+  brought y to **8.941e-08**. Two independent forward-only bugs, both caught by the same gate.
+- **Trap: a `Mat` is affine and a `T.Two<Mat, Mat>` cannot be matched as a local binder.** The
+  working shape is a chain of helper defs, each taking the pair as a parameter and matching it
+  once (`bwd_start`, `bwd_p`, `bwd_fin` in `sp_dense.bend`). `T.Mat.dup` copies the matrix; the
+  helpers use each half once.
+
 ## 2026-11-10 — every parameter gradient of the hybrid, at one step
 
 - **The full backward is gated, not just the cores.** `probe_model_bwd.bend` runs the masked
