@@ -265,7 +265,9 @@ summing to **1243 ms against the 1135 ms step (+9.5%)** and the difference print
 `unaccounted in step`. The split is a twin program, not the run, and the record says so. The next
 step is the vectorized sparse core, with the backward as the target, then the 192-position
 evaluation at the 1.6M-token budget. `make trace TASK=glm53-hybrid128 STEPS=20` writes the live
-JSONL and `make dash` renders it.
+JSONL and `make dash` renders it. `--save-every N` writes `out/step_<i>.bin` every N steps, in the
+same flat layout as `final_weights.bin`; `step_4.bin` and `final_weights.bin` are byte-identical
+after a four-step run.
 
 ## What is not built
 

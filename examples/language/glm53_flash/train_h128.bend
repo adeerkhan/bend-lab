@@ -78,6 +78,27 @@ def step_print(+trace: Bool, +i: Nat, tr: T.Train<M.P()>, +ids: List<&2, Nat>, +
     t1 : Nat <- IO.now()
     step_res(trace, i, Nat.sub(t1, t0), tr1)
 
+def every(+k: Nat, +i: Nat) -> Bool:
+  match k:
+    case 0n:
+      False{}
+    case _:
+      Nat.is_eq(Nat.mod(i, k), 0n)
+
+# A checkpoint every k steps, at the same weight layout the final save uses.
+# `--save-every 0` writes none; the step index is in the filename.
+def save_if(+hit: Bool, +i: Nat, +out: String, tr: T.Train<M.P()>) -> IO(T.Train<M.P()>):
+  match hit:
+    case False{}:
+      IO.pure(T.Train<M.P()>, tr)
+    case True{}:
+      match tr:
+        case T.Train{p, g, st, c, p1, p2, l}:
+          do IO<T.Train<M.P()>>:
+            p1v : M.P() <- T.Params.save(~M.P(), ~M.X(), ~M.Y(), ~M.S(), ~M.Model(),
+              String.append(out, String.append("/step_", String.append(Nat.show(i), ".bin"))), p)
+            return T.Train{p1v, g, st, c, p1, p2, l}
+
 def show_final(+trace: Bool, +l: F32) -> IO(Unit):
   match trace:
     case True{}:
@@ -85,7 +106,8 @@ def show_final(+trace: Bool, +l: F32) -> IO(Unit):
     case False{}:
       IO.print(String.append("final_loss: ", F32.show(l)))
 
-def train_all(+trace: Bool, +left: Nat, +i: Nat, +data: String, tr: T.Train<M.P()>) -> IO(T.Train<M.P()>):
+def train_all(+trace: Bool, +save_every: Nat, +out: String, +left: Nat, +i: Nat,
+    +data: String, tr: T.Train<M.P()>) -> IO(T.Train<M.P()>):
   match left:
     case 0n:
       match tr:
@@ -100,7 +122,8 @@ def train_all(+trace: Bool, +left: Nat, +i: Nat, +data: String, tr: T.Train<M.P(
         labels : List<&2, U32> <- T.read_at(String.append(data, "/corpus128-train_labels.bin"),
           U32.from_nat(Nat.mul(i, ROWS())), U32.from_nat(ROWS()))
         tr1 : T.Train<M.P()> <- step_print(trace, (i + 1n : Nat), tr, nats(ids), nats(labels))
-        train_all(trace, rest, (i + 1n : Nat), data, tr1)
+        tr2 : T.Train<M.P()> <- save_if(every(save_every, (i + 1n : Nat)), (i + 1n : Nat), out, tr1)
+        train_all(trace, save_every, out, rest, (i + 1n : Nat), data, tr2)
 
 # ---- the held-out loss ----
 
@@ -136,10 +159,10 @@ def save_final(tr: T.Train<M.P()>, +out: String, +data: String) -> IO(Unit):
 
 type Run is Type:
   Run{steps: Nat, lrppm: Nat, data: String, out: String, weights: String, val: Bool,
-      trace: Bool, save: Bool}
+      trace: Bool, save: Bool, save_every: Nat}
 
 def run_default() -> Run:
-  Run{STEPS(), 3000n, "examples/language/glm53_flash/data/corpus128-b32", "/tmp/opencode/glm53/hybrid128", "examples/language/glm53_flash/data/h", True{}, False{}, True{}}
+  Run{STEPS(), 3000n, "examples/language/glm53_flash/data/corpus128-b32", "/tmp/opencode/glm53/hybrid128", "examples/language/glm53_flash/data/h", True{}, False{}, True{}, 0n}
 
 def nat_or(m: Maybe<&2, Nat>, d: Nat) -> Nat:
   match m:
@@ -160,44 +183,53 @@ def run_go(args: List<String>, r: Run) -> Run:
               r
             case Con{b, more}:
               match r:
-                case Run{steps, lrppm, data, out, weights, val, trace, save}:
-                  run_go(more, Run{nat_or(Nat.read(b), steps), lrppm, data, out, weights, val, trace, save})
+                case Run{steps, lrppm, data, out, weights, val, trace, save, se}:
+                  run_go(more, Run{nat_or(Nat.read(b), steps), lrppm, data, out, weights, val, trace, save, se})
         case "--lr-ppm":
           match rest:
             case Nil{}:
               r
             case Con{b, more}:
               match r:
-                case Run{steps, lrppm, data, out, weights, val, trace, save}:
-                  run_go(more, Run{steps, nat_or(Nat.read(b), lrppm), data, out, weights, val, trace, save})
+                case Run{steps, lrppm, data, out, weights, val, trace, save, se}:
+                  run_go(more, Run{steps, nat_or(Nat.read(b), lrppm), data, out, weights, val, trace, save, se})
         case "--data":
           match rest:
             case Nil{}:
               r
             case Con{b, more}:
               match r:
-                case Run{steps, lrppm, data, out, weights, val, trace, save}:
-                  run_go(more, Run{steps, lrppm, b, out, weights, val, trace, save})
+                case Run{steps, lrppm, data, out, weights, val, trace, save, se}:
+                  run_go(more, Run{steps, lrppm, b, out, weights, val, trace, save, se})
         case "--out":
           match rest:
             case Nil{}:
               r
             case Con{b, more}:
               match r:
-                case Run{steps, lrppm, data, out, weights, val, trace, save}:
-                  run_go(more, Run{steps, lrppm, data, b, weights, val, trace, save})
+                case Run{steps, lrppm, data, out, weights, val, trace, save, se}:
+                  run_go(more, Run{steps, lrppm, data, b, weights, val, trace, save, se})
         case "--no-val":
           match r:
-            case Run{steps, lrppm, data, out, weights, val, trace, save}:
-              run_go(rest, Run{steps, lrppm, data, out, weights, False{}, trace, save})
+            case Run{steps, lrppm, data, out, weights, val, trace, save, se}:
+              run_go(rest, Run{steps, lrppm, data, out, weights, False{}, trace, save, se})
         case "--trace":
           match r:
-            case Run{steps, lrppm, data, out, weights, val, trace, save}:
-              run_go(rest, Run{steps, lrppm, data, out, weights, val, True{}, save})
+            case Run{steps, lrppm, data, out, weights, val, trace, save, se}:
+              run_go(rest, Run{steps, lrppm, data, out, weights, val, True{}, save, se})
         case "--no-save":
           match r:
-            case Run{steps, lrppm, data, out, weights, val, trace, save}:
-              run_go(rest, Run{steps, lrppm, data, out, weights, val, trace, False{}})
+            case Run{steps, lrppm, data, out, weights, val, trace, save, se}:
+              run_go(rest, Run{steps, lrppm, data, out, weights, val, trace, False{}, se})
+        case "--save-every":
+          match rest:
+            case Nil{}:
+              r
+            case Con{b, more}:
+              match r:
+                case Run{steps, lrppm, data, out, weights, val, trace, save, se}:
+                  run_go(more, Run{steps, lrppm, data, out, weights, val, trace, save,
+                    nat_or(Nat.read(b), se)})
         case _:
           run_go(rest, r)
 
@@ -240,20 +272,21 @@ def show_header(+trace: Bool, +steps: Nat, +lr: F32) -> IO(Unit):
         return Unit{}
 
 def run_io_lr(+steps: Nat, +lr: F32, +data: String, +out: String, +weights: String,
-    +do_val: Bool, +trace: Bool, +save: Bool) -> IO(Unit):
+    +do_val: Bool, +trace: Bool, +save: Bool, +save_every: Nat) -> IO(Unit):
   do IO<Unit>:
     T.OptCfg.check(cfg(lr))
     show_header(trace, steps, lr)
     p : M.P() <- W.load_params(weights)
     tr : T.Train<M.P()> <- IO.pure(T.Train<M.P()>,
       T.Train.new(~M.P(), ~M.X(), ~M.Y(), ~M.S(), ~M.Model(), cfg(lr), p))
-    tr1 : T.Train<M.P()> <- train_all(trace, steps, 0n, data, tr)
+    tr1 : T.Train<M.P()> <- train_all(trace, save_every, out, steps, 0n, data, tr)
     finish(tr1, out, data, save, do_val)
 
 def run_io(r: Run) -> IO(Unit):
   match r:
-    case Run{+steps, +lrppm, +data, out, +weights, +val, +trace, +save}:
-      run_io_lr(steps, (F32.div(F32.from_nat(lrppm), 1000000.0) : F32), data, out, weights, val, trace, save)
+    case Run{+steps, +lrppm, +data, out, +weights, +val, +trace, +save, +save_every}:
+      run_io_lr(steps, (F32.div(F32.from_nat(lrppm), 1000000.0) : F32), data, out, weights,
+        val, trace, save, save_every)
 
 def main() -> IO(Unit):
   do IO<Unit>:

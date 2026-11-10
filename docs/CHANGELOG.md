@@ -23,6 +23,9 @@ What changed for the people who run the lab. Internal refactors are not listed.
   **1135 ms**: forward **514 ms (45.0%)**, backward **729 ms (63.8%)**, loss and update below
   **1 ms** each. The parts sum to **1243 ms (+9.5%)**, timed on a fresh state; the page prints
   `unaccounted in step -108.0 ms` rather than hiding the gap.
+- **Checkpoints**: `train_h128 --save-every N` writes `out/step_<i>.bin` every N steps in the
+  same flat layout as the final save; a four-step run proves `step_4.bin` is byte-identical to
+  `final_weights.bin`. A 12,800-step run can now be interrupted without losing the model.
 - **The task and the record**: `glm53-hybrid128` in `TASKS` runs one step with
   `--no-val --no-save` and writes schema 3 with `variant.batch` and `variant.positions`.
   `results/glm53-hybrid128/run.json` replaces the hand-written `smoke.json` and carries the
