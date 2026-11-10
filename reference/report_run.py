@@ -96,7 +96,8 @@ def page(record, against=None):
         root = stages[0]["ms"]
         if source:
             lines.append(
-                f"stages   {ms_text(root)} ms · {source.get('program', '?')}"
+                f"stages   {ms_text(root)} ms · {source.get('kind', 'split')}"
+                f" {source.get('program', '?')}"
                 f" (median of {source.get('repeats', 1)}) · {source.get('note', 'a stage split')}")
         else:
             lines.append(f"stages   {ms_text(root)} ms")
@@ -205,7 +206,7 @@ def totals(record, stages, root):
     for value in counts.values():
         if isinstance(value, dict) and "unclaimed_ms" in value:
             unclaimed = (unclaimed or 0.0) + value["unclaimed_ms"]
-    return [
+    lines = [
         "",
         pad("on device", 30) + pad(ms_text(root), 8, True) + " ms   "
         + (f"{launches} launches" if launches is not None else "launches unavailable"),
@@ -214,6 +215,19 @@ def totals(record, stages, root):
         pad("unclaimed", 30) + pad("unavailable" if unclaimed is None else f"{unclaimed:.1f} ms", 8, True)
         + "   kernels no stage claimed",
     ]
+    # a step whose children are timed separately can over- or under-fill it; say
+    # which way and by how much rather than letting the shares sum past 100%
+    step = next((entry for entry in stages if entry["path"] == "run/step"), None)
+    if step is not None:
+        parts = sum(entry["ms"] for entry in stages
+                    if entry["path"].startswith("run/step/"))
+        if parts and abs(step["ms"] - parts) >= 0.5:
+            gap = step["ms"] - parts
+            lines.append(
+                pad("  unaccounted in step", 30) + pad(f"{gap:+.1f}", 8, True) + " ms   "
+                + ("the parts exceed the step: they are timed separately"
+                   if gap < 0 else "step work no part claims"))
+    return lines
 
 
 def ladder(record, stages, root):

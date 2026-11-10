@@ -18,7 +18,7 @@ string: a `1` record has no `stages`, `variant`, `peaks`, `bounds`, `counts` or
 | `task` | `name`, `description`, `program`, `dataset` (files, bytes, `sha256`, `expected_sha256`, `fetch_seconds`, cache), `seed` |
 | `seeds` | every seed the run covered |
 | `trainer` | `bend` or `numpy` |
-| `variant` | `trainer`, `lane` (`cpu`, `gpu`), `threads` (`--threads` passed to the runtime; `null` when the program ran at the runtime's default), `bend` |
+| `variant` | `trainer`, `lane` (`cpu`, `gpu`), `threads` (`--threads` passed to the runtime; `null` when the program ran at the runtime's default), `bend`, and any extra the task declares (e.g. `batch`, `positions`) |
 | `git` | `commit`, `branch`, `dirty` |
 | `bend` | `version` |
 | `packages` | every `mlbend-*`, `bend-ml-*` and `bendtorch-*` package at its hub hash |
@@ -62,6 +62,43 @@ median, and turns the `<name>_ms` lines into the stages of appendix A's shape.
 The program is a benchmark, not the task's run; `stages_source.note` says so,
 and so does a note in the record. A task without `stages` writes `[]`, and every
 existing task keeps working.
+
+### The trace and the dashboard
+
+A task whose program prints one JSON object per step gets a live trace:
+
+```console
+$ make trace TASK=glm53-hybrid128 STEPS=20
+{"step": 1, "tokens": 128, "loss": 5.5634737, "ms": 1208}
+```
+
+The four keys are `step` (1-based), `tokens`, `loss` and `ms`; `reference/trace.py`
+refuses a line that is not JSON or misses a key. `ms` is one loop iteration: for
+the GLM task it is the batch read and `T.Train.step` under one timer, so the
+stage split's `load + step` is the same work. The trace is written and flushed
+line by line, which is what `make dash TASK=… WATCH=1` follows; the trace is an
+observation, not the record, and no gate reads it.
+
+The split a trace is held against declares `"tree": "glm53"`:
+
+```python
+"stages": {"program": "bench/plumbing_glm53/main.bend", "tree": "glm53"}
+```
+
+`run` is `init + train_new + load + step`, the parts of `run/step` are
+`forward`, `loss`, `backward` and `update`, and the note prints the parts' sum
+against the step. The parts are timed on a fresh `Train` state from the same
+weights, so the sum is close to, not equal to, the step; a difference is
+measurement, and the note says which way it went.
+
+### What is not measurable from a Bend program
+
+`IO.now` counts whole milliseconds: a stage below it prints `<1 ms`, and a
+per-op span at these shapes would be all zeros. BendTorch exposes no device
+timestamps to a Bend program, so a device timeline and a launch count are
+`unavailable`, never zero. Per-op attribution would need call-site wrappers or
+an upstream observer; the dashboard reports the stages a task declares, not
+every op the library ran.
 
 ## Example
 

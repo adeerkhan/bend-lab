@@ -46,6 +46,11 @@ ENV = dict(os.environ, BEND_NO_TELEMETRY="1")
 ENV_DIR = os.path.join(ROOT, ".bend", "env")
 if os.path.isdir(ENV_DIR):
     ENV["BEND_LIB"] = ENV_DIR
+# the build needs clang's shared libraries; the test harnesses set this too, and
+# a shell without it fails before the first program builds
+LLVM_LIB = os.path.expanduser("~/.local/lib/llvm22")
+if os.path.isdir(LLVM_LIB) and LLVM_LIB not in ENV.get("LD_LIBRARY_PATH", "").split(":"):
+    ENV["LD_LIBRARY_PATH"] = ":".join(filter(None, [LLVM_LIB, ENV.get("LD_LIBRARY_PATH")]))
 
 SCHEMA = "mlbend.experiment/3"
 
@@ -210,6 +215,21 @@ def parse_vit_step(out):
 
 def reference_vit_step(context=None):
     return {"loss_after_3": None}
+
+
+def parse_glm53(out):
+    """The hybrid's one-step numbers: the parameter count and the first/final loss."""
+    params = re.search(r"^params: ([0-9]+)$", out, re.M)
+    first = re.search(r"^loss: ([0-9.eE+-]+)$", out, re.M)
+    final = re.search(r"^final_loss: ([0-9.eE+-]+)$", out, re.M)
+    return {"params": int(params.group(1)) if params else None,
+            "first_loss": float(first.group(1)) if first else None,
+            "final_loss": float(final.group(1)) if final else None}
+
+
+def reference_glm53(context=None):
+    # the parameter count is a structural fact; the losses are reported, not compared
+    return {"params": 74144, "first_loss": None, "final_loss": None}
 
 
 def parse_diffusion_vit(out):
@@ -686,6 +706,26 @@ TASKS = {
             "loss_after_3": {"tolerance": 0, "mode": "report"},
         },
     },
+    "glm53-hybrid128": {
+        "description": "one training step of the 4-block GLM-5.3-Flash hybrid (three linear and one sparse block, width 32, four heads, 128 positions, 74,144 parameters) on the reference's synthetic corpus",
+        "program": "examples/language/glm53_flash/train_h128.bend",
+        "dataset": {"name": "glm53-corpus128", "rows": 128, "features": 1,
+                    "source": "generated: reference/glm53_dense_data.py, the reference's synthetic Python corpus, byte-tokenised"},
+        "seed": 0,
+        "args": ["--steps", "1", "--no-val", "--no-save"],
+        "variant": {"batch": 1, "positions": 128},
+        "stages": {"program": "bench/plumbing_glm53/main.bend", "tree": "glm53",
+                   "note": "one training iteration at 128 positions: the batch read and T.Train.step; the four step parts are timed on a fresh state from the same weights"},
+        "notes": ["forward check: reference/test_glm53_mh.py 4/4 (linear 8.84e-08, sparse 1.23e-07, four-block model 1.22e-07 relative, N=8)",
+                  "the 1,638,400-token budget is 12,800 steps, about 3.5 h at the measured 0.99-1.18 s step (an extrapolation, not a run)"],
+        "parse": parse_glm53,
+        "reference": reference_glm53,
+        "metrics": {
+            "params": {"tolerance": 0, "mode": "exact"},
+            "first_loss": {"tolerance": 0, "mode": "report"},
+            "final_loss": {"tolerance": 0, "mode": "report"},
+        },
+    },
     "transformer-periodic": {
         "description": "a one-block causal transformer trained on a periodic sequence, BendTorch against NumPy",
         "program": "examples/transformers/periodic/main.bend",
@@ -779,13 +819,13 @@ def rts(threads):
     return [] if not threads else ["+RTS", "--threads", str(threads), "-RTS"]
 
 
-def run_binary(task, binary, seed=0, repeat=1, threads=None):
+def run_binary(task, binary, seed=0, repeat=1, threads=None, extra=None):
     """Run a built program; the seed is its first argument, the threads its RTS flag."""
     times, output = [], None
     for _ in range(max(1, repeat)):
         start = time.perf_counter()
-        out = subprocess.run([binary, str(seed)] + rts(threads), capture_output=True, text=True,
-                             env=ENV, cwd=ROOT)
+        out = subprocess.run([binary, str(seed)] + list(extra or []) + rts(threads),
+                             capture_output=True, text=True, env=ENV, cwd=ROOT)
         times.append(time.perf_counter() - start)
         if out.returncode != 0:
             raise SystemExit(f"{task}: the program did not run:\n{out.stdout}{out.stderr}")
@@ -946,7 +986,7 @@ def evaluate(task, cfg, seed, repeat, trainer, binary, build_seconds,
     if trainer == "numpy":
         times, parsed = [], None
     else:
-        out, times = run_binary(task, binary, seed, repeat, threads)
+        out, times = run_binary(task, binary, seed, repeat, threads, cfg.get("args"))
         parsed = cfg["parse"](out)
     if reference_mode == "live" and np is None:
         raise SystemExit("live references need NumPy, which is not installed here: "
@@ -1022,13 +1062,14 @@ def peaks_for(machine_info):
 
 def manifest_for(task, cfg, evals, repeat, probe, trainer="bend", lane="cpu", threads=None,
                  stages_list=None, stage_counts=None, stage_notes=None, stage_source=None,
-                 reference_mode="live"):
+                 reference_mode="live", variant_extra=None):
     run_seconds = min(e["run_seconds"] for e in evals) if evals else 0.0
     build_seconds = evals[0]["build_seconds"] if evals else 0.0
     reference_seconds = max(e["reference_seconds"] for e in evals) if evals else 0.0
     table = aggregate_tables([e["table"] for e in evals])
     seeds = [e["seed"] for e in evals]
     notes = list(stage_notes or [])
+    notes.extend(cfg.get("notes") or [])
     if notes:
         notes.append("the stage split is one step, not the whole run")
     if reference_mode == "frozen":
@@ -1046,8 +1087,8 @@ def manifest_for(task, cfg, evals, repeat, probe, trainer="bend", lane="cpu", th
                  "dataset": dict(cfg["dataset"], **probe), "seed": seeds[0] if seeds else None},
         "seeds": seeds,
         "trainer": trainer,
-        "variant": {"trainer": trainer, "lane": lane, "threads": threads,
-                    "bend": bend_version()},
+        "variant": dict({"trainer": trainer, "lane": lane, "threads": threads,
+                         "bend": bend_version()}, **(variant_extra or {})),
         "git": git_state(),
         "bend": {"version": bend_version()},
         "packages": packages(),
@@ -1272,7 +1313,8 @@ def main():
                                 lane=args.lane, threads=args.threads,
                                 stages_list=stages_list, stage_counts=stage_counts,
                                 stage_notes=stage_notes, stage_source=stage_source,
-                                reference_mode=args.references)
+                                reference_mode=args.references,
+                                variant_extra=cfg.get("variant"))
         path = write_report(manifest, args.out, latest=not args.no_latest)
         if args.freeze_references:
             target = frozen_refs.path(name)

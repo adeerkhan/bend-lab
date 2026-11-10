@@ -8,7 +8,7 @@ BEND := $(or $(BEND_BIN),$(HOME)/.bend/bin/bend)
 BEND_VERSION := 2.0.38
 BEND_REF := ../bend-ref
 
-.PHONY: setup check laws sync-bend clean lint env env-check release experiment experiments results report peaks bounds bench plumbing flow flow64 doctor figures select plots sweep sweep-agent
+.PHONY: setup check laws sync-bend clean lint env env-check release experiment experiments results report trace dash peaks bounds bench plumbing flow flow64 doctor figures select plots sweep sweep-agent
 
 setup:            ## Bend, Lean and the Python venv
 	scripts/setup.sh
@@ -46,6 +46,14 @@ results:          ## regenerate results/RESULTS.md from the latest reports
 report:           ## the page of a task's latest record; AGAINST=<record> compares two runs
 	@test -n "$(TASK)" || (echo "usage: make report TASK=<task> [AGAINST=<record>]" && false)
 	$(PY) reference/report_run.py --task $(TASK) $(if $(AGAINST),--against $(AGAINST),)
+
+trace:            ## one task's program with --trace: one JSON line per step, written as it arrives
+	@test -n "$(TASK)" || (echo "usage: make trace TASK=<task> [STEPS=<n>]" && false)
+	$(PY) reference/trace.py --task $(TASK) $(if $(STEPS),--steps $(STEPS),)
+
+dash:             ## the live page of a task's trace (WATCH=1, PID=<pid> for memory)
+	@test -n "$(TASK)" || (echo "usage: make dash TASK=<task> [WATCH=1] [PID=<pid>]" && false)
+	$(PY) reference/dash.py --task $(TASK) $(if $(WATCH),--watch,) $(if $(PID),--sample-pid $(PID),)
 
 references:       ## freeze every task's reference numbers under results/reference/
 	$(PY) reference/references.py --freeze --all $(if $(REFRESH),--refresh-references,)

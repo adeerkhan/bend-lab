@@ -139,12 +139,20 @@ Bend 2.0.38, Lean 4.34.0, clang and the Python environment, one command:
 make setup                                               # toolchain, lock, environment
 bendenv run -- bend examples/diffusion/vit/main.bend     # train and sample the ViT
 make check                                               # the gate: proofs, kernels, twins, comparisons
+make trace TASK=glm53-hybrid128 STEPS=20                 # one JSON line per step, written as it runs
+make dash TASK=glm53-hybrid128                           # loss, step time, tokens/s, the stage split
+make dash TASK=glm53-hybrid128 WATCH=1                   # follow a run while it writes
 ```
 
 `make check` is the gate. It checks the proofs and the kernel with Lean, runs
 the programs that must be refused, and compares every measured number with a
 NumPy or scikit-learn reference. On a cold machine it builds each program once,
 which is the slow part.
+
+`make trace` runs a task's program in trace mode and streams one JSON line per
+step to `results/<task>/trace.jsonl`; `make dash` reads it and prints the live
+page, with the task's record underneath. Neither decides pass or fail, and the
+trace is standard library only: no library support is needed to time our runs.
 
 ## The corpus
 
@@ -261,7 +269,7 @@ lane, and the seven diagnostic prototypes
 
 ## Status
 
-`make check` is 126/126. Diffusion is complete through the ViT, with the gate at
+`make check` is 138/138. Diffusion is complete through the ViT, with the gate at
 0.75 and the Bend model measured at 0.795 (DDIM) and 0.807 (DDPM). Flow matching
 has a measured 2D example and its frozen gate (`test_flow2d.py`, six gates). CIFAR-10 has its
 3072-output DDPM: 256 images, 40 steps, build 50.8 s and run 65.4 s, first loss
@@ -279,9 +287,11 @@ Stage C integrates linear + sparse attention in a 4,168-parameter model gated at
 128 positions solves **61/64 dev and 60/64 confirm** at 409,600 tokens and **64/64 / 64/64** at
 1,638,400 tokens (`results/glm53-corpus128{,-b32}`). With `reverse` held out of pretraining it is
 **56/64** on both splits, with `reverse` at **0/8** and every seen family at **8/8**
-(`results/glm53-corpus128-holdout-reverse`). The 4-block/4-head hybrid is implemented and its N=8 forward matches the reference attention
-modules at 1e-7; its corpus run is blocked at 19 s per 128 tokens (67 h for the 1.6M-token
-budget); see `results/glm53-hybrid128/smoke.json`.
+(`results/glm53-corpus128-holdout-reverse`). The 4-block/4-head hybrid is implemented and its N=8
+forward matches the reference attention modules at 1e-7; one training iteration measures **1.30 s**
+for 128 tokens with forward **43.3%** and backward **60.9%** of it, so the 1.6M-token budget is
+**12,800 steps / about 3.5 h** (an extrapolation, not a run); see
+`results/glm53-hybrid128/run.json`. `make trace` and `make dash` render a run's steps live.
 
 ## Licence
 

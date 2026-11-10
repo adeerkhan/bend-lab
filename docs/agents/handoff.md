@@ -7,6 +7,40 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-10 — the hybrid step is 1 s, and the lab has a trace and a dashboard
+
+**The loop bug first.** `train_h128.bend`'s `step_print` was `step_res(step(...))`: the pure
+`Train` value was matched at every field projection and rebuilt for the return, so one logical
+step ran about eighteen times. Binding it once with `IO.pure` takes a one-step run from **18.05 s**
+to **0.99 s** (`--no-val --no-save`; **1.45 s** with validation and the save), with identical
+losses for three steps and the canary's weight sha256 unchanged. The 1,638,400-token budget is
+**12,800 steps / about 3.5 h**, not 67.4 h. Local ledger: ISSUE-100.
+
+**`--trace`.** `train_h128.bend` prints one JSON line per iteration,
+`{"step": 1, "tokens": 128, "loss": 5.5634737, "ms": 1018}`, and nothing else in that mode; the
+timer brackets the batch read and `T.Train.step`, so the probe's split sums to it. Traced and
+untraced runs print the same loss; two traced runs agree within 2%.
+
+**The stage split.** `bench/plumbing_glm53/main.bend` times load, forward, loss, backward and
+update on the hybrid's real shape and prints `<name>_ms:`; `reference/stages.py` grows a `glm53`
+tree. One step measures **1301 ms**: forward **566 ms (43.3%)**, backward **797 ms (60.9%)**,
+loss and update each about **1 ms**; the four parts sum to **1364 ms (+4.8%)**, timed on a fresh
+state. The split is a twin, and the record says so.
+
+**The task and the record.** `glm53-hybrid128` is in `TASKS`, runs one step with
+`--no-val --no-save`, and writes schema 3 with `variant.batch/positions` and the forward-check
+note. `results/glm53-hybrid128/run.json` replaces the hand-written `smoke.json`;
+`make report TASK=glm53-hybrid128` prints stages, shares and unaccounted, and `PASS`.
+
+**The dashboard.** `reference/trace.py` streams the JSONL as the run prints it
+(`make trace TASK=… [STEPS=n]`); `reference/dash.py` renders the live page
+(`make dash TASK=… [WATCH=1] [PID=<pid>]`) with a loss and step sparkline, tokens/s, the record's
+stage table, and, with `PID`, `/proc` RSS and peak. It is standard library only and decides
+nothing. A 20-line trace renders while the file grows; a one-step trace renders in full.
+
+**Not done.** No 1.6M-token corpus run and no 192-position accuracy. The next step is the
+vectorized sparse core, with the split as the target: the backward is **61%** of the step.
+
 ## 2026-11-10 — the 128 gate, the canary and the leak test
 
 **Done and in the tree.** `reference/test_glm53_h_bwd128.py` (34 checks) runs one masked-CE
@@ -177,11 +211,10 @@ backward are the reference's exact window-16/stride-16 gathered causal attention
 parameters), `weights_h.bend` and `train_h128.bend` are implemented and type-check. The N=8 forward check (`reference/test_glm53_mh.py`, 4/4) caught an 8-wide/32-wide split bug and
 a `Lin,Sp,Lin,Lin` block order; after fixing both, the four-head linear/sparse and the full
 four-block forward match the NumPy twin at **8.84e-08 / 1.23e-07 / 1.22e-07** relative. The
-one-step smoke of the fixed model is loss **5.5634737**, val **5.4198546**, **18.97 s** for 128
-tokens, peak RSS **16,956 KiB**, build **30.915 s**. At that rate the 1,638,400-token budget is
-**12,800 steps / 67.4 h**, so no corpus run or 192-position accuracy is claimed. The sparse core's
-`List.set` scatter and the per-head gather are the bottleneck; the next step is the
-vectorized/batched sparse core.
+one-step smoke of the fixed model is loss **5.5634737**, val **5.4198546**, and **18.97 s** for
+128 tokens as measured then. That 18.97 s was a loop re-evaluation (ISSUE-100), not the sparse
+core: the step is **0.99 s** and the 1,638,400-token budget is **12,800 steps / about 3.5 h**; the
+corrected split is below. No corpus run or 192-position accuracy is claimed.
 
 **The held-out family, 2026-11-09.** With `reverse` removed from the pretraining stream, the
 74,144-parameter dense model at 128 positions, batch 32, 1,638,400 tokens reaches loss

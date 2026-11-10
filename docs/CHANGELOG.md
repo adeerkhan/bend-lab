@@ -4,7 +4,7 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
-### The hybrid step costs 1 s, not 19: a loop re-evaluation bug
+### The hybrid step is 1 s, and the lab has a trace and a dashboard
 
 - **`--trace` on `train_h128.bend`**: one JSON line per iteration,
   `{"step": 1, "tokens": 128, "loss": 5.5634737, "ms": 1018}`, with the batch read and
@@ -18,6 +18,20 @@ What changed for the people who run the lab. Internal refactors are not listed.
 - The 1,638,400-token budget is therefore **12,800 steps / about 3.5 hours** at the measured step
   (an extrapolation, not a run), not 67.4 hours. The vectorization target comes from the stage
   split.
+- **The stage split** (`bench/plumbing_glm53/main.bend`, the `glm53` tree in
+  `reference/stages.py`): load, forward, loss, backward and update at the real shape. One step
+  **1301 ms**: forward **566 ms (43.3%)**, backward **797 ms (60.9%)**, loss and update about
+  **1 ms** each. The parts sum to **1364 ms (+4.8%)**, timed on a fresh state; the page prints
+  `unaccounted in step -63.0 ms` rather than hiding the gap.
+- **The task and the record**: `glm53-hybrid128` in `TASKS` runs one step with
+  `--no-val --no-save` and writes schema 3 with `variant.batch` and `variant.positions`.
+  `results/glm53-hybrid128/run.json` replaces the hand-written `smoke.json` and carries the
+  forward check and the projection as notes; `make report TASK=glm53-hybrid128` prints the split
+  and `PASS`.
+- **`make trace` and `make dash`**: `reference/trace.py` streams the program's JSON lines to
+  `results/<task>/trace.jsonl` as they arrive, and `reference/dash.py` renders the live page: the
+  loss and step sparklines, tokens/s, the record's stage table, and with `PID` the `/proc` RSS,
+  peak and CPU. Standard library only, and it decides nothing; the trace is ignored by git.
 
 ### GLM-5.3-Flash: the 128 gate, the canary and the evaluation-leak tests
 
@@ -168,11 +182,13 @@ What changed for the people who run the lab. Internal refactors are not listed.
   checks, the can-fail linear-vs-sparse check, and the full four-block model forward. `make
   check` becomes **126/126**.
 - **The one-step smoke (fixed model)**: loss **5.5634737**, val **5.4198546**, **18.97 s** for
-  128 tokens, peak RSS **16,956 KiB**, build **30.915 s** (`results/glm53-hybrid128/smoke.json`).
-- **The blocker**: 128 tokens a step makes the dense baseline's 1,638,400-token budget a
-  **12,800-step, 67.4-hour** job. A 400-step / 51,200-token smoke would take 2.1 hours and is
-  32x below the comparison budget, so it is not a baseline. The sparse core's `List.set` scatter
-  and the per-head gather/scatter dominate; the linear core is already fast.
+  128 tokens, peak RSS **16,956 KiB**, build **30.915 s** (`results/glm53-hybrid128/run.json`).
+  The 18.97 s and the 67.4-hour projection below were the loop's re-evaluation (see the entry at
+  the top of this file); the corrected step is **0.99 s**, and the record is now schema 3.
+- **The blocker as measured then**: 128 tokens a step made the dense baseline's 1,638,400-token
+  budget a **12,800-step, 67.4-hour** job. The loop fix removed that figure; the stage split now
+  puts **60.9%** in the backward and **43.3%** in the forward, with the optimizer at about a
+  millisecond.
 - **Not claimed**: no 192-position accuracy is reported. The next step is a vectorized sparse
   core and a batched multi-head model, before the hybrid can enter the 1.6M-token comparison.
 

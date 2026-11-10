@@ -121,6 +121,49 @@ def tree(measure):
     return stages, counts, notes
 
 
+def glm53_tree(measure):
+    """One hybrid training iteration: the batch read and the four step parts.
+
+    The probe's `full_step_x3_ms` is three full iterations (read the row, then
+    one `T.Train.step`), so one step is a third. `load` is the row read on its
+    own. The four parts are timed on a separate `Train` state from the same
+    weights; their sum is close to, not equal to, the step, and the note says
+    which way.
+    """
+    step = measure["full_step_x3_ms"] / 3.0
+    init = measure.get("init_params_ms", 0.0)
+    train_new = measure.get("train_new_ms", 0.0)
+    load = measure.get("load_ms", 0.0)
+    forward = measure.get("forward_ms", 0.0)
+    loss = measure.get("loss_ms", 0.0)
+    backward = measure.get("backward_ms", 0.0)
+    update = measure.get("update_ms", 0.0)
+    parts = forward + loss + backward + update
+    stages = [
+        stage("run", 0, init + train_new + load + step, "wall"),
+        stage("run/init", 1, init, "once"),
+        stage("run/train_new", 1, train_new, "once"),
+        stage("run/load", 1, load, "host"),
+        stage("run/step", 1, step, "wall"),
+        stage("run/step/forward", 2, forward, "wall"),
+        stage("run/step/loss", 2, loss, "wall"),
+        stage("run/step/backward", 2, backward, "wall"),
+        stage("run/step/update", 2, update, "wall"),
+    ]
+    notes = [
+        "clock: IO.now is milliseconds; a stage below 1 ms prints <1 ms",
+        f"the trace line measures the batch read and T.Train.step: {load + step:.0f} ms",
+        (f"the four parts sum to {parts:.0f} ms against the {step:.0f} ms step "
+         f"({100.0 * (parts - step) / step:+.1f}%); they are timed on a fresh state, "
+         "so the difference is measurement, not work") if step else
+        "the four parts have no step to compare against",
+        "the three timed steps read rows 0, 1 and 2; split_loss is the loop's first-step loss",
+    ]
+    if "params" in measure:
+        notes.append(f"parameters {int(measure['params'])}")
+    return stages, {}, notes
+
+
 def capture(cfg, repeats=3):
     """The stages, counts and notes of a task that declares `stages`.
 
@@ -130,7 +173,10 @@ def capture(cfg, repeats=3):
     spec = cfg["stages"]
     program = spec.get("program", "bench/plumbing/main.bend")
     measure = run_program(program, repeats)
-    stages, counts, notes = tree(measure)
+    if spec.get("tree") == "glm53":
+        stages, counts, notes = glm53_tree(measure)
+    else:
+        stages, counts, notes = tree(measure)
     source = {
         "kind": "plumbing",
         "program": program,
