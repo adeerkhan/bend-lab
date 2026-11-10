@@ -1,0 +1,19 @@
+{
+  "schema": "mlbend.reference/1",
+  "task": "glm53-hybrid128",
+  "created_at": "2026-11-10T14:13:33.810235+00:00",
+  "frozen_at": "2026-11-10T14:13:33.863864+00:00",
+  "command": "reference/.venv/bin/python reference/experiment.py --task glm53-hybrid128 --freeze-references --references live",
+  "source": {
+    "record": "results/latest/glm53-hybrid128.json",
+    "created_at": "2026-11-10T14:13:33.810235+00:00"
+  },
+  "bend": "2.0.38",
+  "git": "b7a9739",
+  "machine": "Linux-7.2.15-300.fc45.x86_64-x86_64-with-glibc2.44",
+  "seeds": {
+    "0": {
+      "params": 74144
+    }
+  }
+}

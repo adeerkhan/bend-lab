@@ -259,9 +259,9 @@ Binding it once with `IO.pure` gives the 0.99 s above, with the same loss and th
 sha256. The 1,638,400-token budget is therefore **12,800 steps / about 3.5 hours** at the measured
 step (an extrapolation, not a run), not 67.4 hours.
 
-`make experiment TASK=glm53-hybrid128` splits that step by stage: **forward 566 ms (43.3%)**,
-**backward 797 ms (60.9%)**, loss and the optimizer each about **1 ms**, with the four parts
-summing to **1364 ms against the 1301 ms step (+4.8%)** and the difference printed as
+`make experiment TASK=glm53-hybrid128` splits that step by stage: **forward 514 ms (45.0%)**,
+**backward 729 ms (63.8%)**, loss and the optimizer below **1 ms**, with the four parts
+summing to **1243 ms against the 1135 ms step (+9.5%)** and the difference printed as
 `unaccounted in step`. The split is a twin program, not the run, and the record says so. The next
 step is the vectorized sparse core, with the backward as the target, then the 192-position
 evaluation at the 1.6M-token budget. `make trace TASK=glm53-hybrid128 STEPS=20` writes the live

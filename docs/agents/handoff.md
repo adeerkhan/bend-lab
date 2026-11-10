@@ -23,8 +23,8 @@ untraced runs print the same loss; two traced runs agree within 2%.
 
 **The stage split.** `bench/plumbing_glm53/main.bend` times load, forward, loss, backward and
 update on the hybrid's real shape and prints `<name>_ms:`; `reference/stages.py` grows a `glm53`
-tree. One step measures **1301 ms**: forward **566 ms (43.3%)**, backward **797 ms (60.9%)**,
-loss and update each about **1 ms**; the four parts sum to **1364 ms (+4.8%)**, timed on a fresh
+tree. One step measures **1135 ms**: forward **514 ms (45.0%)**, backward **729 ms (63.8%)**,
+loss and update below **1 ms**; the four parts sum to **1243 ms (+9.5%)**, timed on a fresh
 state. The split is a twin, and the record says so.
 
 **The task and the record.** `glm53-hybrid128` is in `TASKS`, runs one step with

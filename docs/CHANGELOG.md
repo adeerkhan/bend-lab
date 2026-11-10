@@ -20,9 +20,9 @@ What changed for the people who run the lab. Internal refactors are not listed.
   split.
 - **The stage split** (`bench/plumbing_glm53/main.bend`, the `glm53` tree in
   `reference/stages.py`): load, forward, loss, backward and update at the real shape. One step
-  **1301 ms**: forward **566 ms (43.3%)**, backward **797 ms (60.9%)**, loss and update about
-  **1 ms** each. The parts sum to **1364 ms (+4.8%)**, timed on a fresh state; the page prints
-  `unaccounted in step -63.0 ms` rather than hiding the gap.
+  **1135 ms**: forward **514 ms (45.0%)**, backward **729 ms (63.8%)**, loss and update below
+  **1 ms** each. The parts sum to **1243 ms (+9.5%)**, timed on a fresh state; the page prints
+  `unaccounted in step -108.0 ms` rather than hiding the gap.
 - **The task and the record**: `glm53-hybrid128` in `TASKS` runs one step with
   `--no-val --no-save` and writes schema 3 with `variant.batch` and `variant.positions`.
   `results/glm53-hybrid128/run.json` replaces the hand-written `smoke.json` and carries the
@@ -187,7 +187,7 @@ What changed for the people who run the lab. Internal refactors are not listed.
   the top of this file); the corrected step is **0.99 s**, and the record is now schema 3.
 - **The blocker as measured then**: 128 tokens a step made the dense baseline's 1,638,400-token
   budget a **12,800-step, 67.4-hour** job. The loop fix removed that figure; the stage split now
-  puts **60.9%** in the backward and **43.3%** in the forward, with the optimizer at about a
+  puts **63.8%** in the backward and **45.0%** in the forward, with the optimizer below a
   millisecond.
 - **Not claimed**: no 192-position accuracy is reported. The next step is a vectorized sparse
   core and a batched multi-head model, before the hybrid can enter the 1.6M-token comparison.
