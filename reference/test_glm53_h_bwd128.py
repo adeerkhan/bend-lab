@@ -33,7 +33,7 @@ LLVM_LIB = os.path.expanduser("~/.local/lib/llvm22")
 if os.path.isdir(LLVM_LIB) and LLVM_LIB not in ENV.get("LD_LIBRARY_PATH", "").split(":"):
     ENV["LD_LIBRARY_PATH"] = ":".join(filter(None, [LLVM_LIB, ENV.get("LD_LIBRARY_PATH")]))
 TAG = hashlib.sha1(ROOT.encode()).hexdigest()[:8]
-BIN = f"/tmp/glm53-h-bwd-{TAG}"
+BIN = f"/tmp/glm53-h-bwd128-{TAG}"
 EX = os.path.join(ROOT, "examples/language/glm53_flash")
 DATA = os.path.join(EX, "data/ref8")
 GOLDEN = os.path.join(ROOT, "reference/glm53_h_bwd128_golden.npz")
