@@ -36,7 +36,7 @@ TAG = hashlib.sha1(ROOT.encode()).hexdigest()[:8]
 BIN = f"/tmp/glm53-train20-{TAG}"
 EX = os.path.join(ROOT, "examples/language/glm53_flash")
 GOLDEN = os.path.join(ROOT, "reference/glm53_h_train128_golden.npz")
-BAD = "/tmp/opencode/glm53_h_train128_bad.npz"
+BAD = os.path.join(ROOT, "reference/glm53_h_train128_bad.npz")
 
 
 def binary():
