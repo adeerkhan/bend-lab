@@ -3,6 +3,30 @@
 Every finding, every measurement and every discarded hypothesis, by date. Read the
 relevant entry before changing performance-sensitive code or a law.
 
+## 2026-11-10 — the linear core becomes dense, and the step falls to 1.1 s
+
+- **The formula, in matmuls.** `S = q~ k~^T`, `S_masked` to `s <= t`, `den = rowsum(S_masked)`,
+  `num = S_masked V`, `y = num / clamp(den, 1e-6)`. Backward: `dnum = dy/c`,
+  `dden = -sum(dy*num)/c^2` when unclamped, `dS = dnum V^T` **masked to s <= t** plus `dden`
+  on the allowed cells, `dq~ = dS k~`, `dk~ = dS^T q~`, `dV = S_masked^T dnum`, then the ELU
+  derivative. The first version forgot the mask on `dnum V^T`: dV matched the oracle at
+  3.6e-07 while dq and dk were 8.43 and 0.67 out. dV does not read dS, so only a gate on all
+  four gradients sees it.
+- **Measured against `lin_fast`/`lin_bwd` at 128**: y **7.451e-08**, dq **4.718e-08**, dk
+  **1.192e-07**, dV **3.576e-07**; removing the causal mask moves y by **8.934e-01**.
+- **The step.** `train_h128 --steps 1` median **1.49 s** (was 24.83 s, 16.7x), peak RSS
+  **16,956 KiB**. The step alone is **1.11 s** (2.60 s for two steps, 1.49 s for one, the
+  difference is the validation pass and the save), **22.4x**. The literal `--steps 1` wall
+  clock is 1.49 s, so the 1.24 s gate holds for the step and not for the run that also
+  validates.
+- **The builder trap, again.** Consing rows and then `List.reverse`-ing the flat list reverses
+  the numbers *inside* each row. The loss moved to 5.5566473 (0.0068 away) and every gate
+  would still pass a loose tolerance. Descending by `p` (index = left - 1) conses the rows in
+  ascending order with no reverse, and the loss is again **5.5634737** bit for bit.
+- **Still not 20x on the literal run, and no batch 32.** The four-head path is still four
+  per-head calls; a single block-diagonal four-head matmul is four times the arithmetic at
+  these sizes. Batch 32 needs a 4096-row block-diagonal model, which is a separate change.
+
 ## 2026-11-10 — the sparse core becomes dense, and the model step is 7x
 
 - **The dense core.** `sp_dense.bend` computes the reference's gathered causal attention as a

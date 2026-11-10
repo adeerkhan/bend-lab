@@ -4,7 +4,7 @@ import Base
 import bendtorch@2.0.0.0/main.bend as T
 import bend-ml-tensor-array@0.1.18.0/main.bend as TA
 import ./lin_bwd.bend as L
-import ./lin_fast.bend as LF
+import ./lin_dense.bend as LD
 import ./sp_dense.bend as SD
 
 def N() -> Nat:
@@ -96,64 +96,72 @@ def unrope_j(+left: Nat, +xs: List<&2, F32>, +t: Nat, +j: Nat) -> List<&2, F32>:
 def rope_row(xs: List<&2, F32>, +t: Nat) -> List<&2, F32>:
   rope_j(4n, xs, t, 0n)
 
-def rope_all_go(+left: Nat, +t: Nat, +src: List<&2, F32>, acc: List<&2, F32>) -> List<&2, F32>:
+def rope_all_go(+left: Nat, +src: List<&2, F32>, acc: List<&2, F32>) -> List<&2, F32>:
   match left:
     case 0n:
       acc
     case 1n+p:
-      rope_all_go(p, (t + 1n : Nat), src, L.push_row(acc, rope_row(take_row(src, Nat.mul(t, HD()), HD()), t)))
+      rope_all_go(p, src,
+        List.append(&2, F32, rope_row(take_row(src, Nat.mul(p, HD()), HD()), p), acc))
 
 def rope_all(+src: List<&2, F32>) -> List<&2, F32>:
-  rope_all_go(N(), 0n, src, Nil{})
+  rope_all_go(N(), src, Nil{})
 
-def unrope_all_go(+left: Nat, +t: Nat, +src: List<&2, F32>, acc: List<&2, F32>) -> List<&2, F32>:
+def unrope_all_go(+left: Nat, +src: List<&2, F32>, acc: List<&2, F32>) -> List<&2, F32>:
   match left:
     case 0n:
       acc
     case 1n+p:
-      unrope_all_go(p, (t + 1n : Nat), src,
-        L.push_row(acc, unrope_j(4n, take_row(src, Nat.mul(t, HD()), HD()), t, 0n)))
+      unrope_all_go(p, src,
+        List.append(&2, F32, unrope_j(4n, take_row(src, Nat.mul(p, HD()), HD()), p, 0n), acc))
 
 def unrope_all(+src: List<&2, F32>) -> List<&2, F32>:
-  unrope_all_go(N(), 0n, src, Nil{})
+  unrope_all_go(N(), src, Nil{})
 
 # ---- head gather and scatter ----
 
-def gather_go(+left: Nat, +t: Nat, +h: Nat, +flat: List<&2, F32>, acc: List<&2, F32>) -> List<&2, F32>:
+def gather_go(+left: Nat, +h: Nat, +flat: List<&2, F32>, acc: List<&2, F32>) -> List<&2, F32>:
   match left:
     case 0n:
       acc
     case 1n+p:
-      +off = Nat.add(Nat.mul(t, D()), Nat.mul(h, HD()))
-      gather_go(p, (t + 1n : Nat), h, flat, List.append(&2, F32, acc, take_row(flat, off, HD())))
+      +off = Nat.add(Nat.mul(p, D()), Nat.mul(h, HD()))
+      gather_go(p, h, flat, List.append(&2, F32, take_row(flat, off, HD()), acc))
 
 def gather_head(+flat: List<&2, F32>, +h: Nat) -> List<&2, F32>:
-  gather_go(N(), 0n, h, flat, Nil{})
+  gather_go(N(), h, flat, Nil{})
 
-def join_heads_go(+left: Nat, +t: Nat, +h0: List<&2, F32>, +h1: List<&2, F32>,
+def join_heads_go(+left: Nat, +h0: List<&2, F32>, +h1: List<&2, F32>,
     +h2: List<&2, F32>, +h3: List<&2, F32>, acc: List<&2, F32>) -> List<&2, F32>:
   match left:
     case 0n:
       acc
     case 1n+p:
-      +o = Nat.mul(t, HD())
+      +o = Nat.mul(p, HD())
       +r0 = take_row(h0, o, HD())
       +r1 = take_row(h1, o, HD())
       +r2 = take_row(h2, o, HD())
       +r3 = take_row(h3, o, HD())
       +row = List.append(&2, F32, r0, List.append(&2, F32, r1,
         List.append(&2, F32, r2, r3)))
-      join_heads_go(p, (t + 1n : Nat), h0, h1, h2, h3, List.append(&2, F32, acc, row))
+      join_heads_go(p, h0, h1, h2, h3, List.append(&2, F32, row, acc))
 
 def join_heads(+h0: List<&2, F32>, +h1: List<&2, F32>, +h2: List<&2, F32>,
     +h3: List<&2, F32>) -> List<&2, F32>:
-  join_heads_go(N(), 0n, h0, h1, h2, h3, Nil{})
+  join_heads_go(N(), h0, h1, h2, h3, Nil{})
+
+def mlh(ml: TA.ML<N(), HD()>) -> List<&2, F32>:
+  match ml:
+    case TA.ML{m, xs}:
+      xs
 
 # ---- linear attention, four heads ----
 
 def lin_head(+h: Nat, +q: List<&2, F32>, +k: List<&2, F32>, +v: List<&2, F32>) -> List<&2, F32>:
-  LF.lin_y_fast(N(), HD(), rope_all(gather_head(q, h)), rope_all(gather_head(k, h)),
-    gather_head(v, h))
+  mlh(TA.Mat.to_list(N(), HD(), LD.lin_y(N(), HD(),
+    TA.Mat.from_list(N(), HD(), rope_all(gather_head(q, h))),
+    TA.Mat.from_list(N(), HD(), rope_all(gather_head(k, h))),
+    TA.Mat.from_list(N(), HD(), gather_head(v, h)))))
 
 def lin_y4(+q: List<&2, F32>, +k: List<&2, F32>, +v: List<&2, F32>) -> List<&2, F32>:
   +y0 = lin_head(0n, q, k, v)
@@ -167,10 +175,19 @@ def unrope_bw(bw: L.BW) -> L.BW:
     case L.BW{dq, dk, dv}:
       L.BW{unrope_all(dq), unrope_all(dk), dv}
 
+def lin_dbw_parts(dbw: LD.DBW<N(), HD()>) -> L.BW:
+  match dbw:
+    case LD.DBW{dq, dk, dv}:
+      L.BW{unrope_all(mlh(TA.Mat.to_list(N(), HD(), dq))),
+        unrope_all(mlh(TA.Mat.to_list(N(), HD(), dk))),
+        mlh(TA.Mat.to_list(N(), HD(), dv))}
+
 def lin_bwd_head(+h: Nat, +dy: List<&2, F32>, +q: List<&2, F32>, +k: List<&2, F32>,
     +v: List<&2, F32>) -> L.BW:
-  unrope_bw(LF.lin_bwd_fast(N(), HD(), rope_all(gather_head(q, h)), rope_all(gather_head(k, h)),
-    gather_head(v, h), gather_head(dy, h)))
+  lin_dbw_parts(LD.lin_bwd(N(), HD(), TA.Mat.from_list(N(), HD(), gather_head(dy, h)),
+    TA.Mat.from_list(N(), HD(), rope_all(gather_head(q, h))),
+    TA.Mat.from_list(N(), HD(), rope_all(gather_head(k, h))),
+    TA.Mat.from_list(N(), HD(), gather_head(v, h))))
 
 type ACC is Type:
   ACC{dq: List<&2, F32>, dk: List<&2, F32>, dv: List<&2, F32>}
@@ -187,11 +204,6 @@ def lin_bwd4(+dy: List<&2, F32>, +q: List<&2, F32>, +k: List<&2, F32>,
     lin_bwd_head(2n, dy, q, k, v), lin_bwd_head(3n, dy, q, k, v))
 
 # ---- sparse attention, four heads ----
-
-def mlh(ml: TA.ML<N(), HD()>) -> List<&2, F32>:
-  match ml:
-    case TA.ML{m, xs}:
-      xs
 
 def sp_head(+h: Nat, +q: List<&2, F32>, +k: List<&2, F32>, +v: List<&2, F32>) -> List<&2, F32>:
   mlh(TA.Mat.to_list(N(), HD(), SD.y_of(N(), HD(),

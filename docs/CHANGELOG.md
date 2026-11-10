@@ -4,6 +4,23 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### GLM-5.3-Flash: the linear core is dense, and the model step is 1.5 s
+
+- **`lin_dense.bend`** replaces the per-position list prefix with dense causal matmuls:
+  `q~ = ELU(q)+1`, `k~ = ELU(k)+1`, `S = q~k~^T` masked to `s <= t`, `den` the row sums,
+  `num = S V`, `y = num / clamp(den, 1e-6)`; backward `dnum`, `dden`, `dS`, `dq~`, `dk~`,
+  `dV`, then the ELU derivative. The list prefix in `lin_fast`/`lin_bwd` stays as the oracle.
+- **The gate** (`reference/test_glm53_lin_dense.py`, 5 checks, in `make check`): y/dq/dk/dv
+  at 128 positions are **7.451e-08 / 4.718e-08 / 1.192e-07 / 3.576e-07** relative (gate
+  **1e-6**); removing the causal mask moves y by **8.934e-01**, so the mask is load-bearing.
+- **The model step**: `train_h128 --steps 1`, median of three, **1.49 s** (from **24.83 s**,
+  **16.7x**), peak RSS **16,956 KiB**. The step alone is **1.11 s** (the 2-step run is 2.60 s
+  and the 1-step run 1.49 s), **22.4x**; the difference is the validation pass and the weight
+  save. The 1.24 s gate is met by the step, not by the `--steps 1` wall clock.
+- **The four-head wrapper's builders** now cons and descend in index order instead of appending
+  and reversing; a flat `List.reverse` had reversed the numbers inside each row. The loss is
+  bit-identical: **5.5634737**, val **5.4198546**, as before.
+
 ### GLM-5.3-Flash: the sparse core is dense, batched and 65x faster
 
 - **`sp_dense.bend`** replaces the per-query `List.set` scatter with a dense T x T score matrix,

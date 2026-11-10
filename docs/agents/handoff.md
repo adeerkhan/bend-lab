@@ -7,6 +7,26 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-10 — the linear core is dense; the step is 1.11 s
+
+**Done and in the tree.** `examples/language/glm53_flash/lin_dense.bend` is the dense causal
+linear core; `attn_mh.bend` uses it for the three linear blocks. The oracle stays `lin_fast` /
+`lin_bwd`. The gate is `reference/test_glm53_lin_dense.py` (5 checks, in `make check`), on
+`probe_lin_dense.bend`.
+
+**The numbers.** y/dq/dk/dV at 128: **7.451e-08 / 4.718e-08 / 1.192e-07 / 3.576e-07** (gate
+1e-06); the uncased can-fail is **8.934e-01**. `train_h128 --steps 1`: **1.49 s** median
+(was 24.83 s, **16.7x**), peak RSS **16,956 KiB**. The step alone is **1.11 s** (two steps
+2.60 s, one 1.49 s; the difference is the validation pass and the save), **22.4x**. Loss
+**5.5634737**, val **5.4198546**, bit-identical to the old model.
+
+**Not done.** The four heads are still four per-head calls, not one batched-head matmul; a
+block-diagonal four-head path is four times the arithmetic at these sizes. Batch 32 is a
+4096-row block-diagonal model, not started. The literal `--steps 1` wall clock is 1.49 s, so
+the 1.24 s gate holds for the step (1.11 s) and not for the run that also validates.
+
+**Next.** Step 4's batch-32 path, or a decision that the 22.4x step is the speed gate.
+
 ## 2026-11-10 — the sparse core is dense and 65x faster; the model step is 7x
 
 **Done and in the tree.** `examples/language/glm53_flash/sp_dense.bend` is the dense masked core
