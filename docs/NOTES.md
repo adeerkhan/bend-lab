@@ -3,6 +3,32 @@
 Every finding, every measurement and every discarded hypothesis, by date. Read the
 relevant entry before changing performance-sensitive code or a law.
 
+## 2026-11-10 — the 128 gate, the canary, the mask and the leak
+
+- **The full-model gate now runs at the size the model runs.** `test_glm53_h_bwd128.py` sends
+  one masked-CE backward through `model_h.bend` at 128 positions and compares all 74,144
+  gradients per tensor. Worst tensor **b3/ln2 = 4.837e-07**; loss **5.5634737** against torch
+  **5.563475** (**2.5e-07** relative). The N=8 gate could not see a 128-only shape, RoPE,
+  gather or join; this one does. It also runs twice with the same gradient sha256.
+- **The canary is the cheapest test with the widest reach.** Two runs of `train_h128 --steps 1
+  --no-val` give **5.5634737** and the same weight sha256; one changed input token gives
+  **5.5687194** and a different hash. A row-order or scale bug can move the loss by 0.007
+  (ISSUE-093) and pass a 1e-2 tolerance; the hash cannot.
+- **The four-head 128 gate is separate from the core gates.** The wrapper at 128 against the
+  vendored `LinearAttention`/`SparseAttention` is **4.389e-07** worst, with a moved-dout
+  rejection at **3.676e-01**. The N=8 wrapper test did not cover this path.
+- **The mask is exact, and 32/32 is now a real function.** 16/16 and 32/32 match the reference
+  `_indices` in every one of 4,096 cells; the 8/8 can-fail differs in **436**. The 32/32 mask
+  is not wired into the model yet.
+- **The 0/8 reverse result is not a data leak.** The holdout stream contains **0 of 263**
+  reverse tasks; the full stream contains them; dev and confirm each have **8/8** reverse
+  tasks; the frozen manifest records **0/8** on both. What remains is whether the model can
+  learn it, not whether the data contains it.
+- **What would have passed without these tests?** A 128-only shape or RoPE/gather bug (the N=8
+  gate), a row-order bug inside a tolerance (the canary), a wrong 32/32 mask (the mask golden),
+  and a 0/8 result from a leak (the leak test). Each test removes one of those false
+  confidences.
+
 ## 2026-11-10 — the linear core becomes dense, and the step falls to 1.1 s
 
 - **The formula, in matmuls.** `S = q~ k~^T`, `S_masked` to `s <= t`, `den = rowsum(S_masked)`,

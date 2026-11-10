@@ -20,12 +20,25 @@ OUT = os.path.join(ROOT, "examples/language/glm53_flash/data/ref8")
 N = 8
 
 
-def batch():
-    ids = np.fromfile(os.path.join(CORPUS, "corpus128-train_batch.bin"), dtype=np.uint8)[:N]
-    labels = np.fromfile(os.path.join(CORPUS, "corpus128-train_labels.bin"), dtype=np.uint8)[:N]
+def batch_n(n):
+    ids = np.fromfile(os.path.join(CORPUS, "corpus128-train_batch.bin"), dtype=np.uint8)[:n]
+    labels = np.fromfile(os.path.join(CORPUS, "corpus128-train_labels.bin"), dtype=np.uint8)[:n]
     bad = labels.copy()
     bad[0] = (int(bad[0]) + 1) % 256
     return ids.astype(np.uint8), labels.astype(np.uint8), bad.astype(np.uint8)
+
+
+def batch():
+    return batch_n(N)
+
+
+def write128(directory=OUT):
+    os.makedirs(directory, exist_ok=True)
+    ids, labels, bad = batch_n(128)
+    ids.tofile(os.path.join(directory, "model128_ids.bin"))
+    labels.tofile(os.path.join(directory, "model128_labels.bin"))
+    bad.tofile(os.path.join(directory, "model128_labels_bad.bin"))
+    return ids, labels, bad
 
 
 def write(directory=OUT):

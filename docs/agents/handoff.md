@@ -7,6 +7,23 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-10 — the 128 gate, the canary and the leak test
+
+**Done and in the tree.** `reference/test_glm53_h_bwd128.py` (34 checks) runs one masked-CE
+backward through `model_h.bend`, all 74,144 gradients per tensor: worst **b3/ln2 = 4.837e-07**,
+loss **5.5634737** vs torch **5.563475**, moved label rejected **1.534e-01**, own golden
+**1.672e-07**. `test_glm53_canary.py` (4): two runs **5.5634737**, same weight sha256, one changed
+token **5.5687194** and a different hash. `test_glm53_attn_bwd128.py` (12): four-head wrapper at
+128, worst **4.389e-07**, moved dout **3.676e-01**. `test_glm53_sparse_mask.py` (3): 16/16 and
+32/32 match `_indices` in **0/4,096** cells, 8/8 differs in **436**. `test_glm53_eval_leak.py`
+(6): holdout has **0/263** reverse tasks, full has them, dev/confirm **8/8**, manifest **0/8**.
+
+**Not done.** The two-sequence isolation, the 4096-row batch-32 path, the memory ceiling and
+the 20-step drift. The 128 `make check` has not been rerun after these five files; the targeted
+suite is 34 + 4 + 12 + 3 + 6. No training claim.
+
+**Next.** Sequence isolation (2 x 128), then the 4096-row path or a measured limit.
+
 ## 2026-11-10 — the linear core is dense; the step is 1.11 s
 
 **Done and in the tree.** `examples/language/glm53_flash/lin_dense.bend` is the dense causal

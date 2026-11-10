@@ -43,29 +43,37 @@ def bwd_dx(-P: Type, -X: Type, r: T.Bwd<P, X>) -> X:
 
 # ---- the mask ----
 
-def valid(+t: Nat, +s: Nat) -> Bool:
+def valid_ws(+t: Nat, +s: Nat, +window: Nat, +stride: Nat) -> Bool:
   +le = Nat.is_le(s, t)
-  +anchor = Nat.is_eq(Nat.mod(s, 16n), 0n)
-  +local = Nat.is_lt(Nat.sub(t, s), 16n)
+  +anchor = Nat.is_eq(Nat.mod(s, stride), 0n)
+  +local = Nat.is_lt(Nat.sub(t, s), window)
   Bool.and(le, Bool.or(anchor, local))
 
-def mask_row(+left: Nat, +t: Nat, acc: List<&2, F32>) -> List<&2, F32>:
-  match left:
-    case 0n:
-      acc
-    case 1n+p:
-      +v = Bool.pick(F32, valid(t, p), 0.0, (0.0 - 1.0e30 : F32))
-      mask_row(p, t, Con{v, acc})
+def valid(+t: Nat, +s: Nat) -> Bool:
+  valid_ws(t, s, 16n, 16n)
 
-def mask_rows(+n: Nat, +left: Nat, +t: Nat, acc: List<&2, F32>) -> List<&2, F32>:
+def mask_row_ws(+left: Nat, +t: Nat, +window: Nat, +stride: Nat, acc: List<&2, F32>) -> List<&2, F32>:
   match left:
     case 0n:
       acc
     case 1n+p:
-      mask_rows(n, p, (t + 1n : Nat), List.append(&2, F32, acc, mask_row(n, t, Nil{})))
+      +v = Bool.pick(F32, valid_ws(t, p, window, stride), 0.0, (0.0 - 1.0e30 : F32))
+      mask_row_ws(p, t, window, stride, Con{v, acc})
+
+def mask_rows_ws(+n: Nat, +left: Nat, +t: Nat, +window: Nat, +stride: Nat,
+    acc: List<&2, F32>) -> List<&2, F32>:
+  match left:
+    case 0n:
+      acc
+    case 1n+p:
+      mask_rows_ws(n, p, (t + 1n : Nat), window, stride,
+        List.append(&2, F32, acc, mask_row_ws(n, t, window, stride, Nil{})))
+
+def mask_mat_ws(+n: Nat, +window: Nat, +stride: Nat) -> TA.Mat<n, n>:
+  TA.Mat.from_list(n, n, mask_rows_ws(n, n, 0n, window, stride, Nil{}))
 
 def mask_mat(+n: Nat) -> TA.Mat<n, n>:
-  TA.Mat.from_list(n, n, mask_rows(n, n, 0n, Nil{}))
+  mask_mat_ws(n, 16n, 16n)
 
 # ---- element-wise scale ----
 

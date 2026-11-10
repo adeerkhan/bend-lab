@@ -4,6 +4,28 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### GLM-5.3-Flash: the 128 gate, the canary and the evaluation-leak tests
+
+- **128 full-model gradient** (`test_glm53_h_bwd128.py`, 34 checks): one masked-CE backward
+  through `model_h.bend`, all 74,144 gradients per tensor. Worst tensor **b3/ln2 at 4.837e-07**;
+  loss **5.5634737** against torch **5.563475**; a moved label is rejected at **1.534e-01** and
+  matches its own golden at **1.672e-07**. Two identical probe runs have the same gradient
+  sha256, so the 128 path is deterministic.
+- **Bit-identical step canary** (`test_glm53_canary.py`, 4 checks): two `train_h128 --steps 1
+  --no-val` runs print **5.5634737** and the same final-weight sha256
+  `1856080434…c71c3ce`; a corpus copy with one input token changed prints **5.5687194** and a
+  different hash. This is the gate that catches a row-order or scale bug a tolerance hides.
+- **Four-head 128 forward/backward** (`test_glm53_attn_bwd128.py`, 12 checks): the wrapper at
+  128 against the vendored modules; the largest relative error is **4.389e-07**, and the moved
+  dout is rejected at **3.676e-01**.
+- **Mask golden** (`test_glm53_sparse_mask.py`, 3 checks): 16/16 and 32/32 match `_indices` in
+  **0** of 4,096 cells; the 8/8 can-fail differs in **436** cells.
+- **Evaluation leakage** (`test_glm53_eval_leak.py`, 6 checks): the holdout stream contains
+  **0 of 263** reverse tasks, the full stream contains them, dev and confirm each have **8/8**
+  reverse tasks, and the frozen manifest records **0/8** on both.
+- **128 `make check` is not rerun after these additions.** The targeted suite is 34 + 4 + 12 +
+  3 + 6.
+
 ### GLM-5.3-Flash: the linear core is dense, and the model step is 1.5 s
 
 - **`lin_dense.bend`** replaces the per-position list prefix with dense causal matmuls:
