@@ -38,8 +38,15 @@ note. `results/glm53-hybrid128/run.json` replaces the hand-written `smoke.json`;
 stage table, and, with `PID`, `/proc` RSS and peak. It is standard library only and decides
 nothing. A 20-line trace renders while the file grows; a one-step trace renders in full.
 
-**Not done.** No 1.6M-token corpus run and no 192-position accuracy. The next step is the
-vectorized sparse core, with the split as the target: the backward is **61%** of the step.
+**Not done.** No 1.6M-token corpus run and no 192-position accuracy. The training reached
+**1,398 steps / 178,944 tokens** (loss 5.5634737 -> **0.3845** at step 1,000, **0.3953** at the
+end, median step **1,917 ms**) and was stopped because its accuracy cannot be evaluated in
+reasonable time: a hybrid forward is **1.22 s** at 128 and **6.48 s** at 192, so a 64-episode
+split is **5.6 h**, and the frozen prompts do not fit 128 (`dev-absolute-000`). The 192 generator
+(`model_h192` / `gen_h192`) and the hybrid flat-weight layout (`reference/glm53_hybrid_data.py`,
+74,144 values) are ready; `results/glm53-hybrid128/training-partial.json` and the checkpoint
+`run/step_1000.bin` carry the run. The next step is the **vectorized attention**, with the split
+as the target: the backward is **64%** of the step.
 
 ## 2026-11-10 — the 128 gate, the canary and the leak test
 

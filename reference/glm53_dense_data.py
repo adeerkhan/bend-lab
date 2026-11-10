@@ -168,7 +168,7 @@ def write_train_batch(directory):
     return x, y
 
 
-def eval_prompts(split, per_family=8):
+def eval_prompts(split, per_family=8, positions=GEN_POSITIONS):
     if VENDOR not in sys.path:
         sys.path.insert(0, VENDOR)
     from glm53_flash.tasks import frozen_tasks
@@ -177,17 +177,17 @@ def eval_prompts(split, per_family=8):
     rows, lengths = [], []
     for task in tasks:
         ids = tokenizer.encode(task.prompt, bos=True)
-        if len(ids) + 48 > GEN_POSITIONS:
-            raise SystemExit(f"{task.task_id}: prompt plus 48 tokens exceeds {GEN_POSITIONS}")
-        rows.append(ids + [0] * (GEN_POSITIONS - len(ids)))
+        if len(ids) + 48 > positions:
+            raise SystemExit(f"{task.task_id}: prompt plus 48 tokens exceeds {positions}")
+        rows.append(ids + [0] * (positions - len(ids)))
         lengths.append(len(ids))
     return tasks, np.asarray(rows, dtype=np.uint8), np.asarray(lengths, dtype=np.uint8)
 
 
-def write_eval_prompts(directory, split, per_family=8):
+def write_eval_prompts(directory, split, per_family=8, positions=GEN_POSITIONS):
     directory = os.path.abspath(directory)
     os.makedirs(directory, exist_ok=True)
-    tasks, rows, lengths = eval_prompts(split, per_family)
+    tasks, rows, lengths = eval_prompts(split, per_family, positions)
     open(os.path.join(directory, f"eval-{split}.bin"), "wb").write(rows.tobytes())
     open(os.path.join(directory, f"eval-{split}-len.bin"), "wb").write(lengths.tobytes())
     return tasks, rows, lengths
@@ -221,11 +221,11 @@ def write_windows(directory, steps=400, batch=8, positions=128, examples=4000, h
     return meta
 
 
-def prepare(directory=DATA, per_family=8):
+def prepare(directory=DATA, per_family=8, positions=GEN_POSITIONS):
     write_weights(directory)
     write_train_batch(directory)
     for split in ("dev", "confirm"):
-        write_eval_prompts(directory, split, per_family)
+        write_eval_prompts(directory, split, per_family, positions)
     return directory
 
 

@@ -1,0 +1,16 @@
+{
+  "status": "partial: stopped at step 1398, not a baseline",
+  "model": "4 blocks, 3 linear + 1 sparse (window 16, stride 16), width 32, 4 heads, 128 positions, 74,144 parameters",
+  "steps": 1398,
+  "tokens": 178944,
+  "loss_first": 5.5634737,
+  "loss_at_1000": 0.38454315,
+  "loss_last": 0.39527008,
+  "step_ms_median": 1917.0,
+  "step_ms_min": 1034,
+  "step_ms_max": 9211,
+  "command": "/tmp/opencode/glm53/train_ckpt --steps 12800 --lr-ppm 3000 --data examples/language/glm53_flash/data/corpus128-b32 --weights examples/language/glm53_flash/data/h --out results/glm53-hybrid128/run --no-val --save-every 1000 --trace",
+  "checkpoint": "results/glm53-hybrid128/run/step_1000.bin",
+  "reason": "stopped because a 192-position evaluation of the hybrid is 5.6 h per split at 6.48 s a forward (ISSUE-101); the vectorized attention comes first",
+  "accuracy": "unavailable"
+}

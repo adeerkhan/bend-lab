@@ -289,9 +289,10 @@ Stage C integrates linear + sparse attention in a 4,168-parameter model gated at
 **56/64** on both splits, with `reverse` at **0/8** and every seen family at **8/8**
 (`results/glm53-corpus128-holdout-reverse`). The 4-block/4-head hybrid is implemented and its N=8
 forward matches the reference attention modules at 1e-7; one training iteration measures **1.14 s**
-for 128 tokens with forward **45.0%** and backward **63.8%** of it, so the 1.6M-token budget is
-**12,800 steps / about 3.5 h** (an extrapolation, not a run); see
-`results/glm53-hybrid128/run.json`. `make trace` and `make dash` render a run's steps live.
+in the stage record (median **1.9 s** over 1,398 run steps) with forward **45.0%** and backward
+**63.8%**, and a 192-position evaluation is **5.6 h per split** at 6.48 s a forward, so the
+vectorized attention comes first; see `results/glm53-hybrid128/run.json` and
+`training-partial.json`. `make trace` and `make dash` render a run's steps live.
 
 ## Licence
 

@@ -36,6 +36,22 @@ What changed for the people who run the lab. Internal refactors are not listed.
   loss and step sparklines, tokens/s, the record's stage table, and with `PID` the `/proc` RSS,
   peak and CPU. Standard library only, and it decides nothing; the trace is ignored by git.
 
+### The hybrid trains, and its evaluation is the next wall
+
+- **The partial run**: 1,398 steps (178,944 tokens) at 128 positions, loss **5.5634737 -> 0.3845**
+  at step 1,000 and **0.3953** at the end, median step **1,917 ms**
+  (`results/glm53-hybrid128/training-partial.json`). It is stopped, not a baseline: the
+  checkpoint is `run/step_1000.bin`.
+- **The 192 wall**: a hybrid forward is **1.22 s** at 128 positions and **6.48 s** at 192, so a
+  64-episode split is **5.6 h**, and the frozen prompts do not fit 128 (`dev-absolute-000` needs
+  prompt+48 > 128). The first hybrid evaluation waits for the vectorized attention (ISSUE-101);
+  the model is about **200x** the dense model per token.
+- **The evaluation path**: `model_h192`, `gen_h192`, `gen_h128`, `gen_a128` and
+  `reference/glm53_hybrid_data.py` (74,144 values, checked against a checkpoint). The evaluator
+  takes `--positions` and `--layout`, and the eval prompts are no longer always 192 wide; the
+  dense 409,600-token model still scores **61/64 dev, 60/64 confirm** at 192, so the path did not
+  regress. Generators emit 64 episodes, so `--per-family` is refused unless it is 8.
+
 ### GLM-5.3-Flash: the 128 gate, the canary and the evaluation-leak tests
 
 - **128 full-model gradient** (`test_glm53_h_bwd128.py`, 34 checks): one masked-CE backward

@@ -263,8 +263,11 @@ step (an extrapolation, not a run), not 67.4 hours.
 **backward 729 ms (63.8%)**, loss and the optimizer below **1 ms**, with the four parts
 summing to **1243 ms against the 1135 ms step (+9.5%)** and the difference printed as
 `unaccounted in step`. The split is a twin program, not the run, and the record says so. The next
-step is the vectorized sparse core, with the backward as the target, then the 192-position
-evaluation at the 1.6M-token budget. `make trace TASK=glm53-hybrid128 STEPS=20` writes the live
+step is the vectorized attention, not the corpus run: a hybrid forward is **1.22 s** at 128
+positions and **6.48 s** at 192, so a 64-episode split is **5.6 h**, and the frozen prompts do
+not fit 128. A 1,398-step run reaches loss **0.38** in 178,944 tokens and is stopped there
+(`results/glm53-hybrid128/training-partial.json`); the run and its 192 evaluation wait for the
+fast core. `make trace TASK=glm53-hybrid128 STEPS=20` writes the live
 JSONL and `make dash` renders it. `--save-every N` writes `out/step_<i>.bin` every N steps, in the
 same flat layout as `final_weights.bin`; `step_4.bin` and `final_weights.bin` are byte-identical
 after a four-step run.

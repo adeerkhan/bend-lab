@@ -145,7 +145,7 @@ def evaluate_split(args, tokenizer, tasks, rows, completions, exe, weights_sha):
         "schema_version": "1.0",
         "status": "complete",
         "split": args.split,
-        "model": "dense Stage A, 74,144 parameters, 192 positions",
+        "model": args.label or "dense Stage A, 74,144 parameters, 192 positions",
         "checkpoint": str(args.weights),
         "checkpoint_sha256": weights_sha,
         "inference": {
@@ -188,16 +188,29 @@ def main():
     ap.add_argument("--binary", default="")
     ap.add_argument("--golden", default="reference/glm53_dense_eval_golden.json")
     ap.add_argument("--model-name", default="model-400")
+    ap.add_argument("--positions", type=int, default=192,
+                    help="the prompt width; the generator's POS must match")
+    ap.add_argument("--layout", choices=["dense", "hybrid"], default="dense",
+                    help="the flat checkpoint's tensor layout")
+    ap.add_argument("--label", default="",
+                    help="the model line in the manifest; default names the dense stack")
     args = ap.parse_args()
     if args.max_new_tokens != D.GEN_POSITIONS and args.max_new_tokens > 48:
         raise SystemExit("the generator emits 48 tokens")
-    D.prepare(str(args.data), args.per_family)
+    if args.per_family != 8:
+        raise SystemExit("the generator emits 64 episodes (8 per family); per_family is fixed at 8")
+    D.prepare(str(args.data), args.per_family, args.positions)
     flat = Path(args.weights)
     if not flat.exists():
         raise SystemExit(f"{flat} does not exist; run train_a --steps 400 first")
     weights_sha = sha256_file(flat)
     model_dir = args.out / args.model_name
-    D.write_flat_weights(__import__("numpy").fromfile(flat, dtype="<f4"), model_dir)
+    flat_values = __import__("numpy").fromfile(flat, dtype="<f4")
+    if args.layout == "hybrid":
+        import glm53_hybrid_data as HY
+        HY.write_flat_weights(flat_values, model_dir)
+    else:
+        D.write_flat_weights(flat_values, model_dir)
     exe = args.binary or binary("examples/language/glm53_flash/gen_a.bend")
     tokenizer = ByteTokenizer()
     args.out.mkdir(parents=True, exist_ok=True)
