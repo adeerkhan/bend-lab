@@ -18,6 +18,9 @@ What changed for the people who run the lab. Internal refactors are not listed.
   With the validation pass and weight save (`--steps 1`), the run is **1.49 s** (16.7x);
   `--no-val` is the option that isolates the step. The 1.6M-token budget at 1.12 s is
   12,800 steps / **3.98 h**.
+- **`make check`** is **130/130** with the dense linear core in the model, including
+  `test_glm53_lin_dense.py` (5 checks), `test_glm53_sp_dense.py` (8),
+  `test_glm53_attn_bwd.py` (12) and `test_glm53_h_bwd.py` (33).
 - **The four-head wrapper's builders** now cons and descend in index order instead of appending
   and reversing; a flat `List.reverse` had reversed the numbers inside each row. The loss is
   bit-identical: **5.5634737**, val **5.4198546**, as before.

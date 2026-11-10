@@ -25,6 +25,10 @@ block-diagonal four-head path is four times the arithmetic at these sizes. Batch
 4096-row block-diagonal model, not started; a 32x loop is not batching. The 1.24 s gate holds
 for `--steps 1 --no-val` (1.12 s), not for the validating `--steps 1` (1.49 s).
 
+**Step 4 re-gate (the linear core).** `env -u LD_LIBRARY_PATH make check` is **130/130** with
+the dense linear core in the model, including `test_glm53_lin_dense.py` (5),
+`test_glm53_sp_dense.py` (8), `test_glm53_attn_bwd.py` (12) and `test_glm53_h_bwd.py` (33).
+
 **Next.** Step 4's batch-32 path, or a decision that the 22.4x step is the speed gate.
 
 ## 2026-11-10 — the sparse core is dense and 65x faster; the model step is 7x
