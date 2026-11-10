@@ -21,6 +21,8 @@ What changed for the people who run the lab. Internal refactors are not listed.
   **15,940 -> 15,500 KiB**. The remaining time is the linear core and the per-head gather/rope/
   join, not the sparse core. Read the step-3 gate as the sparse core's own step; the model step
   is reported honestly at 7.0x.
+- **`make check`** is **129/129** with the vectorized core in the model, including
+  `test_glm53_attn_bwd.py` (12), `test_glm53_h_bwd.py` (33) and `test_glm53_sp_dense.py` (8).
 - **Two bugs the forward comparison caught, both invisible to the gradients.** The first mask
   row omitted s = t, which moved y by 0.30 at 4 positions and 0.48 at 128 while every gradient
   stayed right; `y_of` also forgot to scale q by hd^-1/2, which changed y while the backward

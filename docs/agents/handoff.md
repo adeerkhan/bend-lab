@@ -28,6 +28,13 @@ the 20x model step does not pass, so step 5 is not started.
 report the new seconds per step and peak RSS. Do not start step 5 until the step-3 speed gate is
 read as passing.
 
+**Step 4, done.** `env -u LD_LIBRARY_PATH make check` is **129/129** with the vectorized core in
+the model, including `test_glm53_attn_bwd.py` (12), `test_glm53_h_bwd.py` (33) and
+`test_glm53_sp_dense.py` (8). The new step is **3.56 s**, peak RSS **15,500 KiB**, against the
+old **24.83 s / 15,940 KiB**. Step 5 is **not started**: the model step is 7.0x, not the 20x the
+step-5 budget assumes. The remaining cost is the three linear blocks and the per-head
+gather/rope/join; the sparse core itself is 65.0x.
+
 ## 2026-11-10 — the full-model gradient is gated
 
 **Done and in the tree.** `examples/language/glm53_flash/probe_model_bwd.bend` runs the masked
