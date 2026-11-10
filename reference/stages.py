@@ -26,6 +26,9 @@ ENV = dict(os.environ, BEND_NO_TELEMETRY="1",
 ENV_DIR = os.path.join(ROOT, ".bend", "env")
 if os.path.isdir(ENV_DIR):
     ENV["BEND_LIB"] = ENV_DIR
+LLVM_LIB = os.path.expanduser("~/.local/lib/llvm22")
+if os.path.isdir(LLVM_LIB) and LLVM_LIB not in ENV.get("LD_LIBRARY_PATH", "").split(":"):
+    ENV["LD_LIBRARY_PATH"] = ":".join(filter(None, [LLVM_LIB, ENV.get("LD_LIBRARY_PATH")]))
 
 # A program that could not read its dataset still exits 0 and prints every
 # key: an empty batch and a fast one have the same shape, so a split measured
