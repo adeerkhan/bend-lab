@@ -176,6 +176,10 @@ def main():
             f = os.path.relpath(os.path.join(dirpath, name), ROOT)
             run(f"{f}: type-checks", BEND.split() + [f, "--check-only"], verdict_ok)
 
+    # 5b. Mamba-3 SISO: forward, backward, can-fail, training and generation.
+    run("reference/check_mamba3_bend.py: the Mamba-3 gates",
+        [PY, "reference/check_mamba3_bend.py"])
+
     # 5. the numbers, against NumPy and scikit-learn
     for name in sorted(os.listdir(os.path.join(ROOT, "reference"))):
         if not (name.startswith("test_") and name.endswith(".py")):

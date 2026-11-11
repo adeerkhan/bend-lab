@@ -7,6 +7,44 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-11 — Mamba-3 SISO: forward and backward gated, training and generation run
+
+**Landed.** `examples/language/mamba3/` carries one SISO layer from the
+vendored `state-spaces/mamba` (`e9594ce1c732d97440f0332fdc43170a2294dbfa`,
+Apache-2.0, `reference/mamba3/VENDORED.md`), the F32 twin
+(`reference/mamba3_twin.py`), the goldens (`reference/mamba3_golden.npz`) and
+the gates (`reference/check_mamba3_bend.py`). `make check` runs them through
+`reference/check_all.py`; the bins are regenerated from the npz by
+`reference/mamba3_bins.py`, NumPy only.
+
+**The lanes.** The public `Mamba3` module casts Q, K, V, Trap, Angles and Z to
+bf16 (`2.5e-03` relative against the twin). The SISO forward kernel called
+directly with float32 and `TRITON_F32_DEFAULT=ieee` agrees to `2.0e-07` on
+`out_v` and `4.0e-07` on the final state. The Bend gate is against the F32
+twin, which is the mathematical oracle.
+
+**Measured, from `reference/check_mamba3_bend.py`.** Forward at seqlen 8 max
+relative `9.2e-07` over 18 tensors (gate `1e-05`); seqlen 4 and 16 `7.4e-07`
+and `9.6e-07`. Backward max relative `2.9e-06` over every parameter and
+retained tensor (gate `1e-04`). The moved-`dy` can-fail matches `du_bad` at
+`6.9e-07` and changes `du`. Ten-step copy task: loss max relative `1.1e-07`,
+tokens `[3, 6, 0, 5, 0, 7, 0, 7]`, 80 tokens in `4.20 s` wall, peak RSS
+`354264 KiB`. Sixteen-token generation, two weight-tied layers:
+`[0, 1, 2, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]`, exact.
+
+**What the port cost, recorded in `.local/issues-hit.md`.** Records are not
+first-class values in Bend: no field projection, no `match` on a local binder,
+no reusable record parameter, no mutual recursion, no forward references. The
+block is flat `List<&2,F32>` because `TA.Mat` is a load/store container, not a
+compute substrate. `F32.mod` is C `fmod` on a negative dividend, so the angle
+needs a wrap to `[0, 2π)`. There is no scan primitive, no AD, and no
+softmax/CE/argmax in Base. The exact loop is the reference; a chunked scan is
+the next performance step, not a correctness change.
+
+**Next.** (1) A chunked scan for longer sequences, with the loop kept as the
+oracle and gated first. (2) A 64-token lane to see where the list substrate
+stops being acceptable. (3) GLM 192 remains blocked by the list core, unchanged.
+
 ## 2026-11-11 — the vectorization probe: attention is the cost, lists are the substrate
 
 **Per block at 128 positions** (`probe_blocks`): `LinBlock` forward **217 ms**, forward+backward

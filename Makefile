@@ -19,6 +19,9 @@ check:            ## the proofs, the kernel (--verdict), the rejected programs, 
 check-fast:       ## the proofs and the frozen references only: the cheap gate, under a minute
 	$(PY) reference/check_all.py --fast
 
+mamba3:           ## the Mamba-3 SISO gates: forward, backward, training, generation
+	$(PY) reference/check_mamba3_bend.py
+
 validate:         ## one gate: env-check, the cheap gate, the full gate, the smoke (QUICK=1, LONG=1)
 	QUICK=$(QUICK) LONG=$(LONG) scripts/validate.sh $(ARGS)
 

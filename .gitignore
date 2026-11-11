@@ -19,6 +19,7 @@ __pycache__/
 # downloaded data
 data/
 *.bin
+reference/mamba3_data/
 
 # bend-lint (make lint)
 node_modules/

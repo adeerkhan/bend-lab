@@ -4,6 +4,32 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### Mamba-3 SISO: the reference block, forward and backward, in Bend
+
+- **Vendored** `state-spaces/mamba` at `e9594ce1c732d97440f0332fdc43170a2294dbfa`
+  (Apache-2.0): the SISO module, the combined/fwd/bwd Triton kernels, the angle
+  cumsum, `layernorm_gated.py`, and the generation and varlen tests. The tree is
+  importable with `PYTHONPATH=reference/mamba3`.
+- **A pure-PyTorch twin** of the kernel math, as an explicit loop over `t`
+  (`reference/mamba3_twin.py`). The public module is a bf16 lane (`2.5e-03`
+  relative against the twin); the forward kernel called directly with float32
+  and IEEE dots agrees to `2.0e-07` on `out_v` and `4.0e-07` on the state.
+- **The Bend block** (`examples/language/mamba3/`): the recurrent scan over
+  `List<&2,F32>`, gated RMSNorm, the `DT`-scaled angle cumsum, the trapezoid
+  state, the `D + gamma*(q.k)` skip, the SiLU gate and the projections.
+- **Gates, all against the F32 twin**: forward at seqlen 8 max relative
+  `9.2e-07` (gate `1e-05`), at seqlen 4 and 16 `7.4e-07` and `9.6e-07`;
+  backward on every parameter and retained tensor max relative `2.9e-06`
+  (gate `1e-04`); the moved-`dy` can-fail matches its own golden and changes
+  `du`.
+- **Ten-step copy task**: loss max relative `1.1e-07`, final tokens
+  `[3, 6, 0, 5, 0, 7, 0, 7]`; 80 tokens in `4.20 s` wall, peak RSS `354264 KiB`.
+- **Sixteen-token generation**, two weight-tied layers: exact
+  `[0, 1, 2, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]`.
+- The gates run from `reference/check_mamba3_bend.py`, and `make check` calls
+  them through `reference/check_all.py`; the bins come from the committed
+  `reference/mamba3_golden.npz` with NumPy only.
+
 ### The hybrid step is 1 s, and the lab has a trace and a dashboard
 
 - **`--trace` on `train_h128.bend`**: one JSON line per iteration,
