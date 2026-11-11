@@ -33,6 +33,16 @@ All gates are in `reference/check_mamba3_bend.py`, against the F32 twin.
 | twin forward, `out_v` / final state | F32, CUDA | kernel, F32 + IEEE dots | `2.0e-07` / `4.0e-07` |
 | public module, whole block | bf16, CUDA | twin | `2.5e-03` |
 
+The same input, first four values of `y` at token 0 and of `du` at the first
+token:
+
+| tensor | Bend | twin |
+| --- | --- | --- |
+| `y[0:4]` | `-0.02732083, -0.01525306, 0.03155780, 0.02665956` | `-0.02732083, -0.01525307, 0.03155781, 0.02665959` |
+| `du[0:4]` | `-6.3932296e-03, -3.3832359e-04, -1.1846449e-02, -2.9656259e-05` | `-6.3932259e-03, -3.3832528e-04, -1.1846456e-02, -2.9659655e-05` |
+
+The max absolute differences are `8.75e-08` on `y` and `2.61e-08` on `du`.
+
 The order matters. The Bend port is a float32 computation and is closer to
 the mathematical oracle than the public module, which casts Q, K, V, Trap,
 Angles and Z to bfloat16 before the kernel. The kernel itself is not wrong:
