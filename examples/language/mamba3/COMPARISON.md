@@ -73,9 +73,11 @@ old lists alive longer than one call does. That is a real property of the
 list substrate, not a timing artifact.
 
 Against the same-lane CPU twin, the Bend forward is **25x** slower and the
-forward+backward is **99x** slower. Against the CUDA twin, the forward is
-**11x** slower and the forward+backward **40x** slower, but that comparison
-crosses the lane. The public bf16 module is **63x** faster than the Bend
+forward+backward is **99x** slower on this run. A second run of the same
+command gave Bend `42.6 ms` and `482 ms` and the CPU twin `2.46 ms` and
+`5.44 ms`; the ratio is about `17-25x` and `89-99x`, not a fixed constant.
+Against the CUDA twin, the forward is **11x** slower and the forward+backward
+**40x** slower, but that comparison crosses the lane. The public bf16 module is **63x** faster than the Bend
 forward, and it is the least accurate of the four: speed and accuracy move in
 opposite directions here.
 
