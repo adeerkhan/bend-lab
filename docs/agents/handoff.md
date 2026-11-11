@@ -50,6 +50,15 @@ tokens `[4, 2, 6, 3, 3, 5, 0, 4]` and generation
 `17.68 s`; the PyTorch CPU twin's training plus generation is `0.145 s`. The
 gate is in `reference/check_mamba3_bend.py` and `make mamba3`.
 
+**The GPU lane.** BendTorch does have one: `gpu.bend` over
+`bend-ml-tensor-gpu`, built with NVRTC. Fetched `bendtorch` devel `65c8038`
+and `bend-ml` main `8af6052`; a `LinearNBF(8,64,304)` forward+backward gives
+**0 differing words** CPU vs GPU, and the process is visible in `nvidia-smi`.
+At that size the GPU is launch-bound (`0.28-0.36 s` against `<0.01 s`).
+Mamba-3 is still CPU because BendTorch has no selective-scan layer; the next
+step is a `T.Layer` wrapper and a chunked GPU scan. `GPU.md` and
+`probe_bendtorch_gpu.bend` have the test.
+
 **The comparison.** `examples/language/mamba3/COMPARISON.md`, from
 `reference/mamba3_compare.py`, is the measured table: Bend `37.2 ms` forward
 and `440.8 ms` forward+backward at T=8; the CPU twin `1.48 / 4.47 ms`; the

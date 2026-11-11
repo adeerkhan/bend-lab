@@ -186,11 +186,43 @@ tensor memory. The allocated peak (`17.46 MB`) is the comparable number.
 - The training and generation tokens match exactly, so the slow Bend lane can
   still be used as a correctness oracle for a faster future implementation.
 
+## Why the reference is the Python twin, not BendTorch
+
+BendTorch is the training framework, not an implementation of Mamba-3. It has
+`Linear`, `RMSNorm`, `SiLU`, `Residual`, `Embedding`, `CrossEntropy`, four
+optimizers and one `Train.step`, but no selective scan or state-space layer.
+`bend-ml`'s `tensor-array` is used here for `TA.Mat`, the storage the probes
+load. The Python twin is the oracle because it is the only implementation of
+the recurrence that can be checked line by line against the kernel. The
+hand-written backward was also the point of the original port: the goal asked
+for it, not for `T.Train`.
+
+The right use of BendTorch is the next step: wrap the block as a `T.Layer`,
+use `T.Train.step` for the optimizer, and use the `gpu.bend` names for the
+dense pieces. That is a framework change, not a replacement for the oracle.
+
+## The BendTorch GPU lane
+
+BendTorch does have a CUDA lane (`gpu.bend` over `bend-ml-tensor-gpu`), built
+with NVRTC. A `LinearNBF(8, 64, 304)` forward and backward, run once with the
+CPU layer and once with the GPU layer, gives **0 differing words** in `y`,
+`dX` and `dW`; the process appears in `nvidia-smi` while it runs. At this size
+the GPU run is slower (`0.28-0.36 s` including the GPU program load against
+under `0.01 s` on the CPU), which is the launch-bound result BendTorch reports
+for its tiny models.
+
+Mamba-3 is not on that lane yet because its scan is not a BendTorch layer. The
+linear, norm, SiLU, embedding and head pieces can move; the `t` recursion with
+the `headdim x d_state` state is the part that needs a chunked GPU scan or a
+custom bang. `GPU.md` has the build and the caveats. This is a missing
+implementation, not a missing Bend GPU.
+
 ## What is not compared
 
 MIMO, `ngroups > 1`, `rope_fraction 1.0`, `is_outproj_norm=True`, varlen,
-batch greater than one, the 25.7M model, the Triton backward, and a Bend GPU
-lane. The full two-layer LM is now in the measured table; the variants are
-not. Those are roadmap items, not
+batch greater than one, the 25.7M model, the Triton backward, and Mamba-3 on
+the BendTorch GPU lane. The lane itself is tested on a linear layer; the scan
+is not on it. The full two-layer LM is in the measured table; the variants
+are not. Those are roadmap items, not
 measurements. The comparison is one layer, one batch, eight positions, one
 CPU, one GPU, and one pinned reference commit.

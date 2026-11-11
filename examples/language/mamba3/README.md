@@ -105,6 +105,7 @@ The pieces:
 | `bench_mamba3_fwd.bend`, `bench_mamba3_bwd.bend` | quiet one-call timing probes |
 | `bench_mamba3_fwd_n.bend`, `bench_mamba3_bwd_n.bend` | 20 and 10 calls in one process, for the slope |
 | `COMPARISON.md` | Bend beside the twin, the kernel, the public module and the full LM |
+| `GPU.md` | the BendTorch CUDA lane, the linear test, and why the scan is still CPU |
 | `ROADMAP.md` | what to build next and what each step teaches |
 
 ## The lanes
@@ -167,7 +168,8 @@ greedy `argmax`; the full LM uses two independent layers. The prompt is
 ## What is not here
 
 MIMO, `ngroups > 1`, `rope_fraction 1.0`, `is_outproj_norm=True`, varlen,
-batch greater than one, the 25.7M model, the Triton backward and a Bend GPU
-lane. The full LM is two independent layers, but still one batch and eight
-positions, on one CPU. `COMPARISON.md` keeps those out of the measured table, and
+batch greater than one, the 25.7M model, the Triton backward and Mamba-3 on
+the BendTorch GPU lane. The BendTorch CUDA lane itself is tested on a linear
+layer (0 differing words, `GPU.md`); the scan is still the CPU list code. The
+full LM is two independent layers, but still one batch and eight positions. `COMPARISON.md` keeps those out of the measured table, and
 `ROADMAP.md` puts them in an order.

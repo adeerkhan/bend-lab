@@ -157,6 +157,34 @@ A `make mamba3` target and the `make check` gate already exist. Add a small
 CI lane for the C build (gcc is available; clang is not, so `bend -o` fails
 and `bend -o .c` plus gcc is the working route).
 
+## 7b. Use BendTorch and the GPU lane
+
+The block is a `T.Layer` in everything but name: parameters, a forward that
+saves state, a backward that returns `dX` and adds `dP`, and an optimizer
+step. Wrapping it as `T.Layer<P, TA.Mat<8, 64>, TA.Mat<8, 64>, S>` lets
+`T.Seq`, `Residual` and `T.Train.step` own the composition, loss, optimizer
+and checkpoint. The hand-written SGD and CE in `probe_mamba3_lm.bend` then
+disappear, and the model joins the rest of BendTorch's tests.
+
+The GPU lane is `gpu.bend` over `bend-ml-tensor-gpu`: the dense pieces
+(`Linear`, `RMSNorm`, `SiLU`, `Residual`, `Embedding`, `CrossEntropy`) already
+have device names. The scan does not. The order is:
+
+1. Wrap the block as a `T.Layer` and train it with `T.Train.step` on the CPU
+   lane. This is a framework test, not a math change; the twin stays the
+   oracle.
+2. Use `G.LinearF` and `G.RMSNorm` for the dense pieces and measure the
+   host/device transfers around the CPU scan. This is the hybrid.
+3. Move the scan to a chunked GPU bang: the intra-chunk causal matrix and the
+   carried state are matrix products, which `tensor-gpu` already has. Gate it
+   against the exact loop and the twin.
+4. Only then call it a GPU Mamba-3.
+
+`GPU.md` records the lane test: a `LinearNBF(8, 64, 32)` forward and backward
+gives 0 differing words between CPU and GPU, and at that size the GPU is
+slower because it is launch-bound. That is the baseline to improve, not a
+reason to skip the lane.
+
 ## 8. Research questions worth the measurement
 
 1. **Does the trapezoid matter?** Fix `trap = 0.5` or `trap = 1` and train the
@@ -190,5 +218,7 @@ should preserve.
 - Do not replace the loop before the chunked form is gated against it.
 - Do not call the public bf16 module the oracle.
 - Do not compare a CPU Bend number to a CUDA PyTorch number without saying so.
+- Do not call the Mamba-3 scan a GPU lane just because a `Linear` beside it
+  ran on the GPU; the scan is the model.
 - Do not port MIMO before batch and varlen are stable.
 - Do not widen a tolerance to make a run fit; bring the config down.

@@ -43,6 +43,15 @@ What changed for the people who run the lab. Internal refactors are not listed.
   `[0, 1, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]` are exact. The native
   probe is `17.68 s` against `0.145 s` for the PyTorch CPU twin's training
   plus generation.
+- **The BendTorch GPU lane is real.** `probe_bendtorch_gpu.bend` runs a
+  `LinearNBF(8, 64, 304)` forward and backward once on the CPU and once on the
+  GPU: **0 differing words** in `y`, `dX` and `dW`; the process is visible in
+  `nvidia-smi`. At that size the GPU is slower (`0.28-0.36 s` against under
+  `0.01 s`), which is launch-bound. Mamba-3's scan is not on the lane yet:
+  BendTorch has no selective-scan layer, so the block stays CPU until the scan
+  becomes a chunked GPU bang. `examples/language/mamba3/GPU.md` records the
+  build and the caveat. The upstream branches were fetched at `65c8038`
+  (BendTorch devel) and `8af6052` (bend-ml).
 - **The roadmap** (`examples/language/mamba3/ROADMAP.md`): array core and
   chunked scan, step decode, batch/varlen/GQA, a real tiny LM, MIMO, and the
   numerical and ablation questions, in that order.
