@@ -1715,6 +1715,21 @@ def show_gen(+tokens: List<&2, Nat>, +n: Nat) -> IO(Unit):
     show_tag("gen_tokens", nat_row_f32(n, tokens, Nil{}))
     return Unit{}
 
+def sum_fwd(f: FWD) -> F32:
+  match f:
+    case FWD{pre, z, x, Braw, Craw, dd_dt, dd_A, trap_raw, ang_raw,
+        A, DT, ADT, trap, gamma, shift, scale, Bn, Cn, angle, q, k,
+        qk, states, out_v, y_inner, y}:
+      sum_list(y)
+
+def sum_grad(g: GRAD) -> F32:
+  match g:
+    case GRAD{du, dW_in, ddt_bias, dB_bias, dC_bias, dB_norm_w,
+        dC_norm_w, dD, dW_out, do_v, dq, dk, dz, dx, dqk, dscale,
+        dADT, dBn, dCn, dDT, dtrap, ddd_dt, ddd_A, dBraw, dCraw,
+        dang_raw}:
+      (sum_list(du) + sum_list(dW_in) : F32)
+
 def show_grad(g: GRAD) -> IO(Unit):
   match g:
     case GRAD{du, dW_in, ddt_bias, dB_bias, dC_bias, dB_norm_w,

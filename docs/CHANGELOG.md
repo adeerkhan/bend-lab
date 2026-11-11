@@ -23,12 +23,25 @@ What changed for the people who run the lab. Internal refactors are not listed.
   (gate `1e-04`); the moved-`dy` can-fail matches its own golden and changes
   `du`.
 - **Ten-step copy task**: loss max relative `1.1e-07`, final tokens
-  `[3, 6, 0, 5, 0, 7, 0, 7]`; 80 tokens in `4.20 s` wall, peak RSS `354264 KiB`.
+  `[3, 6, 0, 5, 0, 7, 0, 7]`, 80 tokens. The gate's `bend` process took
+  `4.20 s` in one run (`4.2` to `8.1 s` observed under load) and `354264 KiB`
+  including the compiler and checker; the native C binary of the same probe
+  takes `5.77 s` and `6.0 MB`, and the PyTorch CPU twin `0.048 s`.
 - **Sixteen-token generation**, two weight-tied layers: exact
-  `[0, 1, 2, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]`.
+  `[0, 1, 2, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]`; `1.17 s` native,
+  `0.039 s` PyTorch CPU twin.
+- **The comparison** (`examples/language/mamba3/COMPARISON.md`, from
+  `reference/mamba3_compare.py`): Bend is `25x` the same-lane CPU twin on the
+  forward and `99x` on forward+backward; the public bf16 Triton module is
+  `0.596 ms` and `2.5e-03` relative, the fastest and least accurate lane. At
+  this shape the CUDA twin is launch-bound and slower than the CPU twin.
+- **The roadmap** (`examples/language/mamba3/ROADMAP.md`): array core and
+  chunked scan, step decode, batch/varlen/GQA, a real tiny LM, MIMO, and the
+  numerical and ablation questions, in that order.
 - The gates run from `reference/check_mamba3_bend.py`, and `make check` calls
   them through `reference/check_all.py`; the bins come from the committed
-  `reference/mamba3_golden.npz` with NumPy only.
+  `reference/mamba3_golden.npz` with NumPy only. `make mamba3` is the same
+  gate on its own.
 
 ### The hybrid step is 1 s, and the lab has a trace and a dashboard
 

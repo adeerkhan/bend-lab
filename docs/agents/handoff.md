@@ -28,8 +28,9 @@ relative `9.2e-07` over 18 tensors (gate `1e-05`); seqlen 4 and 16 `7.4e-07`
 and `9.6e-07`. Backward max relative `2.9e-06` over every parameter and
 retained tensor (gate `1e-04`). The moved-`dy` can-fail matches `du_bad` at
 `6.9e-07` and changes `du`. Ten-step copy task: loss max relative `1.1e-07`,
-tokens `[3, 6, 0, 5, 0, 7, 0, 7]`, 80 tokens in `4.20 s` wall, peak RSS
-`354264 KiB`. Sixteen-token generation, two weight-tied layers:
+tokens `[3, 6, 0, 5, 0, 7, 0, 7]`, 80 tokens. The gate's `bend` process
+was `4.20 s` in one run (`4.2` to `8.1 s` under load), `354264 KiB` including
+the compiler and checker; the native C binary is `5.77 s` and `6.0 MB`. Sixteen-token generation, two weight-tied layers:
 `[0, 1, 2, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]`, exact.
 
 **What the port cost, recorded in `.local/issues-hit.md`.** Records are not
@@ -41,9 +42,19 @@ needs a wrap to `[0, 2π)`. There is no scan primitive, no AD, and no
 softmax/CE/argmax in Base. The exact loop is the reference; a chunked scan is
 the next performance step, not a correctness change.
 
-**Next.** (1) A chunked scan for longer sequences, with the loop kept as the
-oracle and gated first. (2) A 64-token lane to see where the list substrate
-stops being acceptable. (3) GLM 192 remains blocked by the list core, unchanged.
+**The comparison.** `examples/language/mamba3/COMPARISON.md`, from
+`reference/mamba3_compare.py`, is the measured table: Bend `37.2 ms` forward
+and `440.8 ms` forward+backward at T=8; the CPU twin `1.48 / 4.47 ms`; the
+CUDA twin `3.27 / 11.0 ms`; the public bf16 Triton module `0.596 ms` forward.
+The ten-step task is `5.77 s` native against `0.048 s` CPU twin; generation
+`1.17 s` against `0.039 s`. The native C binary is `5.1` to `6.4 MB` RSS; the
+`354 MB` earlier was the `bend` compiler/checker process, not the program. The
+CUDA live allocation is `17.46 MB` (reserved `291.5 MB`).
+
+**Next.** `examples/language/mamba3/ROADMAP.md` has the order: array core and
+chunked scan gated against the loop, then step decode, batch/varlen/GQA, a
+real tiny LM, MIMO, then the numerical and ablation questions. GLM 192 remains
+blocked by the list core, unchanged.
 
 ## 2026-11-11 — the vectorization probe: attention is the cost, lists are the substrate
 
