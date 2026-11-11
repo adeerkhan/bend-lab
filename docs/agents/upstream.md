@@ -10,7 +10,7 @@ target** (`bendtorch@2.0.0.0`, tensor-array `0.1.18.0`).
 
 | Artifact | What it asks |
 |---|---|
-| [BendTorch#39](https://github.com/nuxyel/BendTorch/issues/39) | `MaxPool2d` with the arg-max backward, and a no-bias `Conv2d`: the image reference's two layer gaps. The no-bias half is #40; `MaxPool2d` remains. |
+| [BendTorch#39](https://github.com/nuxyel/BendTorch/issues/39) | `MaxPool2d` with the arg-max backward, and a no-bias `Conv2d`: the image reference's two layer gaps. The no-bias half is #40. `MaxPool2d` is implemented on `feat/maxpool2d` (stacked on the Conv2dNB branch, no PR until #40 is reviewed): `(n,c,h,w,k,s)`, the arg-max recomputed from the input, ties first-in-window, overlap adds; y and dX are 0.000e+00 against `F.max_pool2d(..., return_indices=True)`. The two laws are next. |
 | [BendTorch#40](https://github.com/nuxyel/BendTorch/pull/40) | `Conv2dNB`: `Conv2d` without the bias, open PR. y, dX and dW are 0.000e+00 against `F.conv2d(..., bias=None)` on the three shapes the Conv2d check uses. |
 | [BendTorch#36](https://github.com/nuxyel/BendTorch/issues/36) | Gradient accumulation over k micro-batches, so a typed batch of 2 can reach an effective 8-16; the k=4 arm is still blocked on a Bend syntax error. |
 | [BendTorch#29](https://github.com/nuxyel/BendTorch/issues/29) | `Conv2d`: the adjoint law is still tested rather than stated. |
