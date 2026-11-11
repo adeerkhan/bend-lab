@@ -9,7 +9,7 @@ leaves the next one blind.
 
 ## 2026-11-11 — Mamba-3 SISO: forward and backward gated, training and generation run
 
-**Landed.** `examples/language/mamba3/` carries one SISO layer from the
+**Landed** in `bf28ddf`. `examples/language/mamba3/` carries one SISO layer from the
 vendored `state-spaces/mamba` (`e9594ce1c732d97440f0332fdc43170a2294dbfa`,
 Apache-2.0, `reference/mamba3/VENDORED.md`), the F32 twin
 (`reference/mamba3_twin.py`), the goldens (`reference/mamba3_golden.npz`) and
