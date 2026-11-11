@@ -50,6 +50,13 @@ tokens `[4, 2, 6, 3, 3, 5, 0, 4]` and generation
 `17.68 s`; the PyTorch CPU twin's training plus generation is `0.145 s`. The
 gate is in `reference/check_mamba3_bend.py` and `make mamba3`.
 
+**The Mat product.** The `q.S^T` product through
+`TA.Mat.matmul_nt(1,16,32, ...)` is **65x** the list `take_row` + `dot`
+version: `0.04 s` against `2.59 s` for 20,000 products, same output to about
+`5e-8` each (`bench_qs_list.bend`, `bench_qs_mat.bend`). This is the
+substrate lever; it is a component, not the full scan. Integrate it into
+`scan_head` and gate the block next.
+
 **The GPU lane.** BendTorch does have one: `gpu.bend` over
 `bend-ml-tensor-gpu`, built with NVRTC. Fetched `bendtorch` devel `65c8038`
 and `bend-ml` main `8af6052`; a `LinearNBF(8,64,304)` forward+backward gives

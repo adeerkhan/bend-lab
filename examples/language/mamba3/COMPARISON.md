@@ -201,6 +201,32 @@ The right use of BendTorch is the next step: wrap the block as a `T.Layer`,
 use `T.Train.step` for the optimizer, and use the `gpu.bend` names for the
 dense pieces. That is a framework change, not a replacement for the oracle.
 
+## The Mat product
+
+The scan's largest dense product is `q_t S_t^T`: one `1 x 16` query against
+one `32 x 16` state. The list version drops a row for every one of the 32
+outputs and calls `dot` on lists. The bend-ml version is one
+`TA.Mat.matmul_nt(1, 16, 32, ...)`.
+
+`bench_qs_list.bend` and `bench_qs_mat.bend` run the same product 20,000
+times on the same query and state, extracted from the golden at `t=3`, head
+0, and print a checksum:
+
+| path | 20,000 products | per product |
+| --- | --- | --- |
+| list `take_row` + `dot` | `2.59 s` | `129 us` |
+| `TA.Mat.matmul_nt` | `0.04 s` | `2 us` |
+
+The Mat product is about **65x** faster. The two checksums differ by
+`1e-3` over 20,000 products (about `5e-8` each); the printed 32 values agree
+to the last one or two decimal digits. This is the substrate lever: one qS
+product is a small part of the full scan, but the full scan has one per head
+per token, and the state update and output have the same list overhead.
+
+The next step is to put this product inside `scan_head` and gate the full
+block again; the measured 65x will not carry over whole, because the
+elementwise state update and allocations remain.
+
 ## The BendTorch GPU lane
 
 BendTorch does have a CUDA lane (`gpu.bend` over `bend-ml-tensor-gpu`), built

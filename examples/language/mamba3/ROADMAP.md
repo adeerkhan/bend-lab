@@ -34,6 +34,13 @@ best way to understand why the kernel is written the way it is.
 would remove the list traversal even in the loop. It is a smaller change and
 it makes the chunked version easier to write.
 
+A first measured piece: the `q.S^T` product through
+`TA.Mat.matmul_nt(1, 16, 32, ...)` is **65x** the list `take_row` + `dot`
+version (`bench_qs_list.bend` against `bench_qs_mat.bend`: `2.59 s` against
+`0.04 s` for 20,000 products). Put that product inside `scan_head` next, then
+gate the full block; the end-to-end gain will be smaller because the state
+update and allocations remain.
+
 ## 2. A decode step and a real generation loop
 
 **What.** Implement the reference's step path: one token at a time, carrying

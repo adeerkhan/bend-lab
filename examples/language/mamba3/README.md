@@ -16,6 +16,7 @@ gives the four heads the rest of the work assumes.
 | ten-step copy task | `5.77 s` native, `0.048 s` PyTorch CPU twin, same loss and tokens |
 | sixteen-token generation | exact match; `1.17 s` native, `0.039 s` PyTorch CPU twin |
 | full two-layer LM | forward, ten-step training and generation exact; `17.68 s` native against `0.145 s` CPU twin |
+| bend-ml Mat product | `65x` the list `q.S^T` product: `0.04 s` against `2.59 s` for 20,000 |
 | block parameters | `27,816`; the full LM is `56,720` |
 
 The full comparison, with the measurement boundaries and the lane caveats, is
@@ -104,6 +105,7 @@ The pieces:
 | `probe_mamba3_lm.bend` | the full two-layer LM: forward, ten SGD steps, generation |
 | `bench_mamba3_fwd.bend`, `bench_mamba3_bwd.bend` | quiet one-call timing probes |
 | `bench_mamba3_fwd_n.bend`, `bench_mamba3_bwd_n.bend` | 20 and 10 calls in one process, for the slope |
+| `bench_qs_list.bend`, `bench_qs_mat.bend` | the `q.S^T` product, list versus `Mat.matmul_nt` |
 | `COMPARISON.md` | Bend beside the twin, the kernel, the public module and the full LM |
 | `GPU.md` | the BendTorch CUDA lane, the linear test, and why the scan is still CPU |
 | `ROADMAP.md` | what to build next and what each step teaches |
@@ -148,6 +150,9 @@ greedy `argmax`; the full LM uses two independent layers. The prompt is
 
 - The port is numerically right, with a wide margin on every gate. The
   backward is right to `2.9e-06` relative, not merely close on the loss.
+- The bend-ml `Mat.matmul_nt` product is about `65x` the list `q.S^T` product
+  in a 20,000-call test. That is the substrate lever; the full scan still has
+  the state update and allocations around it.
 - The port is slow: `25x` the CPU twin on the forward and `99x` on
   forward+backward. The cause is the list substrate and the scalar
   per-element work, not the recurrence. The chunked kernel exists to remove

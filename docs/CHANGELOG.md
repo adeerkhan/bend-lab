@@ -52,6 +52,11 @@ What changed for the people who run the lab. Internal refactors are not listed.
   becomes a chunked GPU bang. `examples/language/mamba3/GPU.md` records the
   build and the caveat. The upstream branches were fetched at `65c8038`
   (BendTorch devel) and `8af6052` (bend-ml).
+- **The bend-ml Mat product is 65x the list product.** The `q.S^T` product
+  of one Mamba-3 head, 20,000 times: `2.59 s` with `take_row` + `dot`,
+  `0.04 s` with `TA.Mat.matmul_nt(1,16,32, ...)`, same output to about
+  `5e-8` per product. This is the substrate lever; it is a component, not yet
+  the full scan. `bench_qs_list.bend` and `bench_qs_mat.bend`.
 - **The roadmap** (`examples/language/mamba3/ROADMAP.md`): array core and
   chunked scan, step decode, batch/varlen/GQA, a real tiny LM, MIMO, and the
   numerical and ablation questions, in that order.
