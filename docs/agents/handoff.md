@@ -7,6 +7,23 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-11 — the vectorization probe: attention is the cost, lists are the substrate
+
+**Per block at 128 positions** (`probe_blocks`): `LinBlock` forward **217 ms**, forward+backward
+**658 ms**; `SpBlock` **275 / 609 ms**. Three linear blocks and one sparse, so the linear path is
+about **72%** of the forward and **80%** of the backward.
+
+**Inside `LinBlock`** (`probe_linblock`, light load): linear attention **112 ms** forward,
+**274 ms** forward+backward; SwiGLU **1 / 1 ms**. Under load 6.5: attention **233 / 577**, SwiGLU
+**1 / 3**. The MLP is free; the attention is the whole cost.
+
+**The null result.** The core reads each row with `take_row(q, t*hd, hd)`, which walks `t*hd`
+cells: O(n²). A single-pass version that takes the first `hd` and drops `hd` per step measured
+**234 / 573 ms** against the old **233 / 577** — neutral. Reading lists from the front does not
+remove the quadratic; the list substrate is the cost. Reverted; the tree is clean. The next commit
+is the **array-based core** (`Mat`/`Array.get`, O(1) per cell), forward first for the 192
+evaluation, then the backward for training.
+
 ## 2026-11-11 — RLOO from the description: it learns, then collapses
 
 **Implemented.** `reference/glm53_rloo.py`: 96 prompts (`rl` split, 32 each of `increment`,
