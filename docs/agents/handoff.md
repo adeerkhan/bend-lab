@@ -7,6 +7,24 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-11 — RLOO from the description: it learns, then collapses
+
+**Implemented.** `reference/glm53_rloo.py`: 96 prompts (`rl` split, 32 each of `increment`,
+`double`, `even`), 16 samples, reward 1/0/-0.1, leave-one-out advantages, one update per prompt,
+96 updates from checkpoint 100. The reference's RL code is not vendored; the hyperparameters are
+inferred from its report.
+
+**Result at lr 3e-6.** **71/96** reward-bearing updates; dev peaks at **15/24** (step 80) and
+falls to 12/24; confirm three trained families **3/24 -> 12/24**, all-eight greedy **15/64 ->
+21/64**, pass@8 at T=0.8 **10/64 -> 13/64**. At the policy temperature 0.35 pass@8 is **30/64**
+against the baseline's **33/64**. At lr 1e-5 it collapses by step 32 (confirm 11/24 at step 16,
+9/24 at 96). The published 0/24 -> 16/24 and 25/64 -> 34/64 are not reproduced in magnitude; the
+report does not state the RL learning rate or the pass@8 temperature. Record:
+`results/glm53-reference/rloo-summary.json`.
+
+**Next.** The RL implementation is the lab's to tune: lower lr with early stopping on dev, or a KL
+anchor, and a pass@8 measured at the policy temperature. The Bend port of RL remains later.
+
 ## 2026-11-10 — the reference control: 64/64 seen, 8/8 held-out at 25.7M
 
 **The reference, run here.** The vendored 25.7M model pretrained for 400 steps (1,381,760 tokens)

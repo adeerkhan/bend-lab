@@ -1,0 +1,987 @@
+{
+  "confirm_all_eight_greedy": {
+    "solved": 21,
+    "tasks": 64,
+    "tests_passed": 72,
+    "tests_total": 192,
+    "valid": 27
+  },
+  "confirm_all_eight_pass8": {
+    "solved": 13,
+    "tasks": 64,
+    "tests_passed": 49,
+    "tests_total": 1536,
+    "valid": 34
+  },
+  "confirm_three_families_greedy": {
+    "solved": 12,
+    "tasks": 24,
+    "tests_passed": 38,
+    "tests_total": 72,
+    "valid": 14
+  },
+  "dev_three_families_greedy": {
+    "solved": 12,
+    "tasks": 24,
+    "tests_passed": 38,
+    "tests_total": 72,
+    "valid": 14
+  },
+  "elapsed_seconds": 1240.0,
+  "group": 16,
+  "history": [
+    {
+      "loss": 0.04903322830796242,
+      "reward_mean": 0.05,
+      "reward_updates": 1,
+      "seconds": 5.2,
+      "solved": 1,
+      "step": 1,
+      "task": "rl-increment-000"
+    },
+    {
+      "loss": 0.021191664040088654,
+      "reward_mean": 0.05625,
+      "reward_updates": 1,
+      "seconds": 7.2,
+      "solved": 1,
+      "step": 2,
+      "task": "rl-increment-001"
+    },
+    {
+      "loss": 0.043198127299547195,
+      "reward_mean": 0.024999999999999998,
+      "reward_updates": 1,
+      "seconds": 9.3,
+      "solved": 1,
+      "step": 3,
+      "task": "rl-increment-002"
+    },
+    {
+      "reward_mean": -0.1,
+      "reward_updates": 0,
+      "seconds": 12.2,
+      "solved": 0,
+      "step": 4,
+      "task": "rl-increment-003"
+    },
+    {
+      "loss": 0.22916845977306366,
+      "reward_mean": -0.03125000000000001,
+      "reward_updates": 1,
+      "seconds": 15.3,
+      "solved": 1,
+      "step": 5,
+      "task": "rl-increment-004"
+    },
+    {
+      "loss": -0.13823726773262024,
+      "reward_mean": -0.05,
+      "reward_updates": 1,
+      "seconds": 18.2,
+      "solved": 0,
+      "step": 6,
+      "task": "rl-increment-005"
+    },
+    {
+      "loss": 0.21793362498283386,
+      "reward_mean": 0.25,
+      "reward_updates": 1,
+      "seconds": 19.9,
+      "solved": 5,
+      "step": 7,
+      "task": "rl-increment-006"
+    },
+    {
+      "dev": {
+        "solved": 6,
+        "tasks": 24,
+        "tests_passed": 18,
+        "tests_total": 72,
+        "valid": 9
+      },
+      "loss": 0.056334979832172394,
+      "reward_mean": -0.07500000000000001,
+      "reward_updates": 1,
+      "seconds": 22.0,
+      "solved": 0,
+      "step": 8,
+      "task": "rl-increment-007"
+    },
+    {
+      "loss": 0.14901569485664368,
+      "reward_mean": 0.1625,
+      "reward_updates": 1,
+      "seconds": 54.9,
+      "solved": 3,
+      "step": 9,
+      "task": "rl-increment-008"
+    },
+    {
+      "loss": 0.04114667326211929,
+      "reward_mean": 0.075,
+      "reward_updates": 1,
+      "seconds": 56.7,
+      "solved": 2,
+      "step": 10,
+      "task": "rl-increment-009"
+    },
+    {
+      "loss": 0.09509922564029694,
+      "reward_mean": 0.1125,
+      "reward_updates": 1,
+      "seconds": 58.7,
+      "solved": 2,
+      "step": 11,
+      "task": "rl-increment-010"
+    },
+    {
+      "loss": 0.011308763176202774,
+      "reward_mean": -0.09375,
+      "reward_updates": 1,
+      "seconds": 61.8,
+      "solved": 0,
+      "step": 12,
+      "task": "rl-increment-011"
+    },
+    {
+      "loss": -0.0056512728333473206,
+      "reward_mean": -0.018750000000000003,
+      "reward_updates": 1,
+      "seconds": 64.9,
+      "solved": 1,
+      "step": 13,
+      "task": "rl-increment-012"
+    },
+    {
+      "loss": -0.19286462664604187,
+      "reward_mean": 0.09375,
+      "reward_updates": 1,
+      "seconds": 67.4,
+      "solved": 2,
+      "step": 14,
+      "task": "rl-increment-013"
+    },
+    {
+      "reward_mean": -0.1,
+      "reward_updates": 0,
+      "seconds": 70.1,
+      "solved": 0,
+      "step": 15,
+      "task": "rl-increment-014"
+    },
+    {
+      "dev": {
+        "solved": 5,
+        "tasks": 24,
+        "tests_passed": 16,
+        "tests_total": 72,
+        "valid": 9
+      },
+      "reward_mean": -0.1,
+      "reward_updates": 0,
+      "seconds": 72.8,
+      "solved": 0,
+      "step": 16,
+      "task": "rl-increment-015"
+    },
+    {
+      "reward_mean": -0.1,
+      "reward_updates": 0,
+      "seconds": 106.1,
+      "solved": 0,
+      "step": 17,
+      "task": "rl-increment-016"
+    },
+    {
+      "loss": 0.16270707547664642,
+      "reward_mean": 0.30625,
+      "reward_updates": 1,
+      "seconds": 107.7,
+      "solved": 5,
+      "step": 18,
+      "task": "rl-increment-017"
+    },
+    {
+      "loss": -0.16459432244300842,
+      "reward_mean": 0.6,
+      "reward_updates": 1,
+      "seconds": 109.5,
+      "solved": 10,
+      "step": 19,
+      "task": "rl-increment-018"
+    },
+    {
+      "reward_mean": -0.1,
+      "reward_updates": 0,
+      "seconds": 112.4,
+      "solved": 0,
+      "step": 20,
+      "task": "rl-increment-019"
+    },
+    {
+      "loss": -0.09339357912540436,
+      "reward_mean": -0.025000000000000005,
+      "reward_updates": 1,
+      "seconds": 117.4,
+      "solved": 1,
+      "step": 21,
+      "task": "rl-increment-020"
+    },
+    {
+      "loss": -0.14631590247154236,
+      "reward_mean": 0.2875,
+      "reward_updates": 1,
+      "seconds": 119.6,
+      "solved": 5,
+      "step": 22,
+      "task": "rl-increment-021"
+    },
+    {
+      "loss": -0.15009695291519165,
+      "reward_mean": 0.2875,
+      "reward_updates": 1,
+      "seconds": 121.8,
+      "solved": 5,
+      "step": 23,
+      "task": "rl-increment-022"
+    },
+    {
+      "dev": {
+        "solved": 8,
+        "tasks": 24,
+        "tests_passed": 25,
+        "tests_total": 72,
+        "valid": 11
+      },
+      "loss": -0.23623621463775635,
+      "reward_mean": 0.15625,
+      "reward_updates": 1,
+      "seconds": 124.1,
+      "solved": 3,
+      "step": 24,
+      "task": "rl-increment-023"
+    },
+    {
+      "reward_mean": -0.1,
+      "reward_updates": 0,
+      "seconds": 157.1,
+      "solved": 0,
+      "step": 25,
+      "task": "rl-increment-024"
+    },
+    {
+      "loss": -0.05805803835391998,
+      "reward_mean": 0.5,
+      "reward_updates": 1,
+      "seconds": 158.9,
+      "solved": 8,
+      "step": 26,
+      "task": "rl-increment-025"
+    },
+    {
+      "loss": 0.14780130982398987,
+      "reward_mean": -0.03125000000000001,
+      "reward_updates": 1,
+      "seconds": 162.0,
+      "solved": 1,
+      "step": 27,
+      "task": "rl-increment-026"
+    },
+    {
+      "loss": -0.18711307644844055,
+      "reward_mean": 0.2375,
+      "reward_updates": 1,
+      "seconds": 164.2,
+      "solved": 4,
+      "step": 28,
+      "task": "rl-increment-027"
+    },
+    {
+      "loss": -0.2652398347854614,
+      "reward_mean": 0.13125,
+      "reward_updates": 1,
+      "seconds": 167.1,
+      "solved": 3,
+      "step": 29,
+      "task": "rl-increment-028"
+    },
+    {
+      "loss": -0.5673226714134216,
+      "reward_mean": 0.4125,
+      "reward_updates": 1,
+      "seconds": 169.3,
+      "solved": 7,
+      "step": 30,
+      "task": "rl-increment-029"
+    },
+    {
+      "loss": -0.6153118014335632,
+      "reward_mean": 0.61875,
+      "reward_updates": 1,
+      "seconds": 171.4,
+      "solved": 10,
+      "step": 31,
+      "task": "rl-increment-030"
+    },
+    {
+      "dev": {
+        "solved": 13,
+        "tasks": 24,
+        "tests_passed": 39,
+        "tests_total": 72,
+        "valid": 13
+      },
+      "loss": -1.111741065979004,
+      "reward_mean": 0.60625,
+      "reward_updates": 1,
+      "seconds": 173.8,
+      "solved": 10,
+      "step": 32,
+      "task": "rl-increment-031"
+    },
+    {
+      "loss": -0.5226637125015259,
+      "reward_mean": 0.25,
+      "reward_updates": 1,
+      "seconds": 207.6,
+      "solved": 5,
+      "step": 33,
+      "task": "rl-double-000"
+    },
+    {
+      "loss": -0.5960979461669922,
+      "reward_mean": 0.4625,
+      "reward_updates": 1,
+      "seconds": 209.8,
+      "solved": 8,
+      "step": 34,
+      "task": "rl-double-001"
+    },
+    {
+      "loss": -0.9598208665847778,
+      "reward_mean": 0.40625,
+      "reward_updates": 1,
+      "seconds": 213.3,
+      "solved": 7,
+      "step": 35,
+      "task": "rl-double-002"
+    },
+    {
+      "loss": -0.13793087005615234,
+      "reward_mean": 0.06874999999999999,
+      "reward_updates": 1,
+      "seconds": 215.6,
+      "solved": 2,
+      "step": 36,
+      "task": "rl-double-003"
+    },
+    {
+      "loss": -0.05831127613782883,
+      "reward_mean": 0.40625,
+      "reward_updates": 1,
+      "seconds": 217.9,
+      "solved": 7,
+      "step": 37,
+      "task": "rl-double-004"
+    },
+    {
+      "loss": -0.9085773229598999,
+      "reward_mean": 0.5375,
+      "reward_updates": 1,
+      "seconds": 220.1,
+      "solved": 9,
+      "step": 38,
+      "task": "rl-double-005"
+    },
+    {
+      "loss": -0.44585222005844116,
+      "reward_mean": 0.39375,
+      "reward_updates": 1,
+      "seconds": 222.6,
+      "solved": 7,
+      "step": 39,
+      "task": "rl-double-006"
+    },
+    {
+      "dev": {
+        "solved": 14,
+        "tasks": 24,
+        "tests_passed": 42,
+        "tests_total": 72,
+        "valid": 14
+      },
+      "loss": 0.07227810472249985,
+      "reward_mean": 0.049999999999999996,
+      "reward_updates": 1,
+      "seconds": 224.8,
+      "solved": 2,
+      "step": 40,
+      "task": "rl-double-007"
+    },
+    {
+      "loss": -0.12187343835830688,
+      "reward_mean": 0.4375,
+      "reward_updates": 1,
+      "seconds": 256.9,
+      "solved": 7,
+      "step": 41,
+      "task": "rl-double-008"
+    },
+    {
+      "loss": 0.11815576255321503,
+      "reward_mean": 0.25,
+      "reward_updates": 1,
+      "seconds": 258.8,
+      "solved": 5,
+      "step": 42,
+      "task": "rl-double-009"
+    },
+    {
+      "loss": -0.20555365085601807,
+      "reward_mean": 0.25625,
+      "reward_updates": 1,
+      "seconds": 260.8,
+      "solved": 5,
+      "step": 43,
+      "task": "rl-double-010"
+    },
+    {
+      "loss": -1.0526012182235718,
+      "reward_mean": 0.60625,
+      "reward_updates": 1,
+      "seconds": 262.9,
+      "solved": 10,
+      "step": 44,
+      "task": "rl-double-011"
+    },
+    {
+      "loss": -1.468588948249817,
+      "reward_mean": 0.525,
+      "reward_updates": 1,
+      "seconds": 265.4,
+      "solved": 9,
+      "step": 45,
+      "task": "rl-double-012"
+    },
+    {
+      "loss": -0.4232790768146515,
+      "reward_mean": 0.325,
+      "reward_updates": 1,
+      "seconds": 267.4,
+      "solved": 6,
+      "step": 46,
+      "task": "rl-double-013"
+    },
+    {
+      "loss": -0.5419790744781494,
+      "reward_mean": 0.35625,
+      "reward_updates": 1,
+      "seconds": 269.4,
+      "solved": 6,
+      "step": 47,
+      "task": "rl-double-014"
+    },
+    {
+      "dev": {
+        "solved": 13,
+        "tasks": 24,
+        "tests_passed": 39,
+        "tests_total": 72,
+        "valid": 13
+      },
+      "loss": -0.6847891807556152,
+      "reward_mean": 0.6625,
+      "reward_updates": 1,
+      "seconds": 271.6,
+      "solved": 11,
+      "step": 48,
+      "task": "rl-double-015"
+    },
+    {
+      "loss": -0.1467563807964325,
+      "reward_mean": -0.025000000000000005,
+      "reward_updates": 1,
+      "seconds": 316.0,
+      "solved": 1,
+      "step": 49,
+      "task": "rl-double-016"
+    },
+    {
+      "loss": -0.8543480038642883,
+      "reward_mean": 0.48125,
+      "reward_updates": 1,
+      "seconds": 318.4,
+      "solved": 8,
+      "step": 50,
+      "task": "rl-double-017"
+    },
+    {
+      "reward_mean": -0.1,
+      "reward_updates": 0,
+      "seconds": 321.6,
+      "solved": 0,
+      "step": 51,
+      "task": "rl-double-018"
+    },
+    {
+      "loss": -1.0818946361541748,
+      "reward_mean": 0.60625,
+      "reward_updates": 1,
+      "seconds": 324.1,
+      "solved": 10,
+      "step": 52,
+      "task": "rl-double-019"
+    },
+    {
+      "loss": -0.8870874643325806,
+      "reward_mean": 0.3125,
+      "reward_updates": 1,
+      "seconds": 328.1,
+      "solved": 6,
+      "step": 53,
+      "task": "rl-double-020"
+    },
+    {
+      "loss": 0.026127414777874947,
+      "reward_mean": -0.08750000000000001,
+      "reward_updates": 1,
+      "seconds": 331.2,
+      "solved": 0,
+      "step": 54,
+      "task": "rl-double-021"
+    },
+    {
+      "loss": -1.0090153217315674,
+      "reward_mean": 0.8,
+      "reward_updates": 1,
+      "seconds": 336.4,
+      "solved": 13,
+      "step": 55,
+      "task": "rl-double-022"
+    },
+    {
+      "dev": {
+        "solved": 13,
+        "tasks": 24,
+        "tests_passed": 39,
+        "tests_total": 72,
+        "valid": 13
+      },
+      "loss": -0.9325604438781738,
+      "reward_mean": 0.6625,
+      "reward_updates": 1,
+      "seconds": 338.6,
+      "solved": 11,
+      "step": 56,
+      "task": "rl-double-023"
+    },
+    {
+      "loss": -0.8794471025466919,
+      "reward_mean": 0.4625,
+      "reward_updates": 1,
+      "seconds": 375.8,
+      "solved": 8,
+      "step": 57,
+      "task": "rl-double-024"
+    },
+    {
+      "loss": 0.08426223695278168,
+      "reward_mean": -0.03125000000000001,
+      "reward_updates": 1,
+      "seconds": 378.8,
+      "solved": 1,
+      "step": 58,
+      "task": "rl-double-025"
+    },
+    {
+      "loss": -1.0309889316558838,
+      "reward_mean": 0.475,
+      "reward_updates": 1,
+      "seconds": 382.1,
+      "solved": 8,
+      "step": 59,
+      "task": "rl-double-026"
+    },
+    {
+      "reward_mean": -0.1,
+      "reward_updates": 0,
+      "seconds": 390.9,
+      "solved": 0,
+      "step": 60,
+      "task": "rl-double-027"
+    },
+    {
+      "loss": 0.011257403530180454,
+      "reward_mean": -0.09375,
+      "reward_updates": 1,
+      "seconds": 396.7,
+      "solved": 0,
+      "step": 61,
+      "task": "rl-double-028"
+    },
+    {
+      "loss": -0.6785924434661865,
+      "reward_mean": 0.24375,
+      "reward_updates": 1,
+      "seconds": 400.0,
+      "solved": 5,
+      "step": 62,
+      "task": "rl-double-029"
+    },
+    {
+      "loss": -0.8181160688400269,
+      "reward_mean": 0.31875,
+      "reward_updates": 1,
+      "seconds": 403.0,
+      "solved": 6,
+      "step": 63,
+      "task": "rl-double-030"
+    },
+    {
+      "dev": {
+        "solved": 12,
+        "tasks": 24,
+        "tests_passed": 36,
+        "tests_total": 72,
+        "valid": 12
+      },
+      "loss": 0.005441227927803993,
+      "reward_mean": -0.08125,
+      "reward_updates": 1,
+      "seconds": 405.4,
+      "solved": 0,
+      "step": 64,
+      "task": "rl-double-031"
+    },
+    {
+      "reward_mean": -0.1,
+      "reward_updates": 0,
+      "seconds": 453.6,
+      "solved": 0,
+      "step": 65,
+      "task": "rl-even-000"
+    },
+    {
+      "reward_mean": -0.1,
+      "reward_updates": 0,
+      "seconds": 456.1,
+      "solved": 0,
+      "step": 66,
+      "task": "rl-even-001"
+    },
+    {
+      "reward_mean": -0.1,
+      "reward_updates": 0,
+      "seconds": 459.2,
+      "solved": 0,
+      "step": 67,
+      "task": "rl-even-002"
+    },
+    {
+      "loss": -0.005874171853065491,
+      "reward_mean": -0.08125,
+      "reward_updates": 1,
+      "seconds": 462.7,
+      "solved": 0,
+      "step": 68,
+      "task": "rl-even-003"
+    },
+    {
+      "loss": 0.02982306480407715,
+      "reward_mean": -0.03125000000000001,
+      "reward_updates": 1,
+      "seconds": 468.2,
+      "solved": 1,
+      "step": 69,
+      "task": "rl-even-004"
+    },
+    {
+      "reward_mean": -0.1,
+      "reward_updates": 0,
+      "seconds": 471.4,
+      "solved": 0,
+      "step": 70,
+      "task": "rl-even-005"
+    },
+    {
+      "loss": -0.005648484453558922,
+      "reward_mean": -0.09375,
+      "reward_updates": 1,
+      "seconds": 475.6,
+      "solved": 0,
+      "step": 71,
+      "task": "rl-even-006"
+    },
+    {
+      "dev": {
+        "solved": 14,
+        "tasks": 24,
+        "tests_passed": 42,
+        "tests_total": 72,
+        "valid": 14
+      },
+      "reward_mean": -0.1,
+      "reward_updates": 0,
+      "seconds": 477.8,
+      "solved": 0,
+      "step": 72,
+      "task": "rl-even-007"
+    },
+    {
+      "loss": 0.0029340675100684166,
+      "reward_mean": -0.09375,
+      "reward_updates": 1,
+      "seconds": 521.4,
+      "solved": 0,
+      "step": 73,
+      "task": "rl-even-008"
+    },
+    {
+      "reward_mean": -0.1,
+      "reward_updates": 0,
+      "seconds": 527.0,
+      "solved": 0,
+      "step": 74,
+      "task": "rl-even-009"
+    },
+    {
+      "reward_mean": -0.1,
+      "reward_updates": 0,
+      "seconds": 531.8,
+      "solved": 0,
+      "step": 75,
+      "task": "rl-even-010"
+    },
+    {
+      "reward_mean": -0.1,
+      "reward_updates": 0,
+      "seconds": 534.8,
+      "solved": 0,
+      "step": 76,
+      "task": "rl-even-011"
+    },
+    {
+      "reward_mean": -0.1,
+      "reward_updates": 0,
+      "seconds": 538.2,
+      "solved": 0,
+      "step": 77,
+      "task": "rl-even-012"
+    },
+    {
+      "loss": -0.0007844269275665283,
+      "reward_mean": -0.09375,
+      "reward_updates": 1,
+      "seconds": 542.5,
+      "solved": 0,
+      "step": 78,
+      "task": "rl-even-013"
+    },
+    {
+      "loss": -0.02627551555633545,
+      "reward_mean": -0.025000000000000005,
+      "reward_updates": 1,
+      "seconds": 546.0,
+      "solved": 1,
+      "step": 79,
+      "task": "rl-even-014"
+    },
+    {
+      "dev": {
+        "solved": 15,
+        "tasks": 24,
+        "tests_passed": 45,
+        "tests_total": 72,
+        "valid": 15
+      },
+      "reward_mean": -0.1,
+      "reward_updates": 0,
+      "seconds": 548.9,
+      "solved": 0,
+      "step": 80,
+      "task": "rl-even-015"
+    },
+    {
+      "reward_mean": -0.1,
+      "reward_updates": 0,
+      "seconds": 590.1,
+      "solved": 0,
+      "step": 81,
+      "task": "rl-even-016"
+    },
+    {
+      "loss": -0.3947800397872925,
+      "reward_mean": 0.11249999999999999,
+      "reward_updates": 1,
+      "seconds": 593.2,
+      "solved": 3,
+      "step": 82,
+      "task": "rl-even-017"
+    },
+    {
+      "loss": -0.13817039132118225,
+      "reward_mean": 0.03749999999999999,
+      "reward_updates": 1,
+      "seconds": 596.5,
+      "solved": 2,
+      "step": 83,
+      "task": "rl-even-018"
+    },
+    {
+      "reward_mean": -0.1,
+      "reward_updates": 0,
+      "seconds": 598.7,
+      "solved": 0,
+      "step": 84,
+      "task": "rl-even-019"
+    },
+    {
+      "loss": -0.33932361006736755,
+      "reward_mean": 0.175,
+      "reward_updates": 1,
+      "seconds": 602.0,
+      "solved": 4,
+      "step": 85,
+      "task": "rl-even-020"
+    },
+    {
+      "reward_mean": -0.1,
+      "reward_updates": 0,
+      "seconds": 606.7,
+      "solved": 0,
+      "step": 86,
+      "task": "rl-even-021"
+    },
+    {
+      "loss": -0.21884635090827942,
+      "reward_mean": -0.025000000000000005,
+      "reward_updates": 1,
+      "seconds": 611.0,
+      "solved": 1,
+      "step": 87,
+      "task": "rl-even-022"
+    },
+    {
+      "dev": {
+        "solved": 12,
+        "tasks": 24,
+        "tests_passed": 38,
+        "tests_total": 72,
+        "valid": 13
+      },
+      "reward_mean": -0.1,
+      "reward_updates": 0,
+      "seconds": 614.0,
+      "solved": 0,
+      "step": 88,
+      "task": "rl-even-023"
+    },
+    {
+      "loss": -0.00990151334553957,
+      "reward_mean": -0.09375,
+      "reward_updates": 1,
+      "seconds": 653.4,
+      "solved": 0,
+      "step": 89,
+      "task": "rl-even-024"
+    },
+    {
+      "loss": -0.18938159942626953,
+      "reward_mean": 0.04375,
+      "reward_updates": 1,
+      "seconds": 656.9,
+      "solved": 2,
+      "step": 90,
+      "task": "rl-even-025"
+    },
+    {
+      "reward_mean": -0.1,
+      "reward_updates": 0,
+      "seconds": 661.6,
+      "solved": 0,
+      "step": 91,
+      "task": "rl-even-026"
+    },
+    {
+      "loss": 0.12063770741224289,
+      "reward_mean": 0.03749999999999999,
+      "reward_updates": 1,
+      "seconds": 664.7,
+      "solved": 2,
+      "step": 92,
+      "task": "rl-even-027"
+    },
+    {
+      "loss": -0.3106841742992401,
+      "reward_mean": 0.10625,
+      "reward_updates": 1,
+      "seconds": 671.0,
+      "solved": 3,
+      "step": 93,
+      "task": "rl-even-028"
+    },
+    {
+      "reward_mean": -0.1,
+      "reward_updates": 0,
+      "seconds": 676.1,
+      "solved": 0,
+      "step": 94,
+      "task": "rl-even-029"
+    },
+    {
+      "loss": -0.06336155533790588,
+      "reward_mean": -0.08125,
+      "reward_updates": 1,
+      "seconds": 681.1,
+      "solved": 0,
+      "step": 95,
+      "task": "rl-even-030"
+    },
+    {
+      "dev": {
+        "solved": 12,
+        "tasks": 24,
+        "tests_passed": 38,
+        "tests_total": 72,
+        "valid": 14
+      },
+      "reward_mean": -0.1,
+      "reward_updates": 0,
+      "seconds": 683.4,
+      "solved": 0,
+      "step": 96,
+      "task": "rl-even-031"
+    }
+  ],
+  "lr": 3e-06,
+  "reward_updates": 71,
+  "rollouts": 1536,
+  "start_checkpoint": "/tmp/opencode/glm53/ref-pretrain-3e4/checkpoint-0100",
+  "temperature": 0.35,
+  "updates": 96,
+  "pass8_comparison": {
+    "c100_baseline": {
+      "temperature_0.35": "33/64",
+      "temperature_0.80": "10/64"
+    },
+    "rloo_c96": {
+      "temperature_0.35": "30/64",
+      "temperature_0.80": "13/64"
+    },
+    "note": "sampled 8 completions per task on the confirm split, all eight families"
+  },
+  "published": {
+    "greedy_three_trained_families": "0/24 -> 16/24",
+    "sampled_pass8_all_eight": "25/64 -> 34/64",
+    "note": "the RL code is not in the vendored tree; this run is an implementation from the report's description"
+  },
+  "earlier_run_lr_1e_5": {
+    "dev_peak": "13/24 at steps 8 and 16",
+    "confirm_three_trained_families_at_step_16": "11/24",
+    "final_confirm_three_trained_families": "9/24",
+    "final_confirm_all_eight_greedy": "10/64",
+    "final_confirm_all_eight_pass8_temperature_0.8": "4/64",
+    "note": "collapsed after about 32 updates; the per-checkpoint files were removed, the numbers are from the run's output"
+  }
+}

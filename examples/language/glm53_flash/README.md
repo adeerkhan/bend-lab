@@ -283,6 +283,16 @@ pattern: 56/64 and 0/8. The held-out family is not learned by pretraining at eit
 first attempt kept reverse in the corpus and its 8/8 was invalid (ISSUE-103).
 `results/glm53-reference/run.json` has the commands and every number.
 
+## RLOO, from the description
+
+The reference's RL code is not vendored, so `reference/glm53_rloo.py` implements its report:
+96 prompts across three families, 16 samples, reward 1/0/-0.1, leave-one-out advantages, 96
+updates. At lr 3e-6 the confirm score on the three trained families moves **3/24 -> 12/24** and
+all-eight greedy **15/64 -> 21/64**; the dev curve peaks at 15/24 and declines, and at lr 1e-5
+the policy collapses by step 32. The published 0/24 -> 16/24 and 25/64 -> 34/64 are not
+reproduced in magnitude, and pass@8 at the policy temperature does not improve (30/64 against
+33/64). `results/glm53-reference/rloo-summary.json` has the curve and every number.
+
 ## What is not built
 
 - The MoE, the four-stream HyperConnection, RL and the 25.7M model. Those are

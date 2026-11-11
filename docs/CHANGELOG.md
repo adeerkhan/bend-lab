@@ -36,6 +36,22 @@ What changed for the people who run the lab. Internal refactors are not listed.
   loss and step sparklines, tokens/s, the record's stage table, and with `PID` the `/proc` RSS,
   peak and CPU. Standard library only, and it decides nothing; the trace is ignored by git.
 
+### RLOO, implemented from the reference's description
+
+- **`reference/glm53_rloo.py`**: 96 prompts across `increment`, `double` and `even` (the `rl`
+  split, seed 3907), 16 sampled completions each, reward **1 / 0 / -0.1**, leave-one-out
+  advantages, one AdamW update per prompt, 96 updates from checkpoint 100. The reference's RL code
+  is not in the vendored tree, so the hyperparameters are inferred from its report.
+- **It learns, then collapses.** At lr **3e-6**: confirm three trained families **3/24 -> 12/24**,
+  all-eight greedy **15/64 -> 21/64**, pass@8 at T=0.8 **10/64 -> 13/64**. The dev curve peaks at
+  **15/24** (step 80) and falls to 12/24; at lr 1e-5 it collapses by step 32 (confirm 11/24 at
+  step 16, 9/24 at 96).
+- **The published magnitude is not reproduced**: the report's 0/24 -> 16/24 and 25/64 -> 34/64
+  need a stable run and a sampling temperature the summary does not state. At the policy's own
+  temperature (0.35) pass@8 is **30/64** after RL against the baseline's **33/64**, so the RL gain
+  is in greedy trained-family decoding, not in sampled pass@8.
+  Record: `results/glm53-reference/rloo-summary.json`.
+
 ### The reference itself, on this machine
 
 - **Pretraining reproduced**: 400 steps, 1,381,760 tokens, **78.758 s**, **2.143 GiB** peak on an
