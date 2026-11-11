@@ -32,8 +32,11 @@ BEND = os.environ.get("BEND", "bend")
 SCRATCH = os.path.join(ROOT, ".scratch/mamba3_compare")
 GOLDEN = os.path.join(ROOT, "reference/mamba3_golden.npz")
 DATA = os.path.join(ROOT, "reference/mamba3_data")
+LM_GOLDEN = os.path.join(ROOT, "reference/mamba3_lm_golden.npz")
+LM_DATA = os.path.join(ROOT, "reference/mamba3_lm_data")
 PROGRAMS = ["bench_mamba3_fwd", "bench_mamba3_fwd_n", "bench_mamba3_bwd",
-            "bench_mamba3_bwd_n", "probe_mamba3_train", "probe_mamba3_gen"]
+            "bench_mamba3_bwd_n", "probe_mamba3_train", "probe_mamba3_gen",
+            "probe_mamba3_lm"]
 
 
 def build():
@@ -194,11 +197,101 @@ def module_forward(device, reps=20):
     return (time.perf_counter() - t) / reps * 1000.0
 
 
+def make_lm(device):
+    torch.manual_seed(71)
+    m1 = W.Mamba3(d_model=64, d_state=16, expand=2, headdim=32, ngroups=1,
+                  is_mimo=False).to(device).float()
+    torch.manual_seed(72)
+    m2 = W.Mamba3(d_model=64, d_state=16, expand=2, headdim=32, ngroups=1,
+                  is_mimo=False).to(device).float()
+    z = np.load(LM_GOLDEN)
+    E = torch.tensor(z["E0"], device=device).clone().requires_grad_(True)
+    Wh = torch.tensor(z["Wh0"], device=device).clone().requires_grad_(True)
+    nw = torch.tensor(z["nw0"], device=device).clone().requires_grad_(True)
+    return m1, m2, E, Wh, nw
+
+
+def lm_forward_device(m1, m2, E, Wh, nw, tokens, device):
+    u = E[torch.tensor(tokens, device=device)].unsqueeze(0)
+    f1 = W.twin_forward(m1, u)
+    h1 = u + f1["y"]
+    f2 = W.twin_forward(m2, h1)
+    h2 = h1 + f2["y"]
+    hn = W.rms(h2, nw, eps=1e-5)
+    return hn, hn @ Wh.T
+
+
+def lm_train(device, steps=10, lr=1e-3):
+    m1, m2, E, Wh, nw = make_lm(device)
+    targets = torch.arange(8, device=device)
+    for _ in range(steps):
+        _, logits = lm_forward_device(m1, m2, E, Wh, nw, list(range(8)), device)
+        loss = F.cross_entropy(logits.reshape(8, 8), targets)
+        loss.backward()
+        with torch.no_grad():
+            for m in (m1, m2):
+                for p in m.parameters():
+                    p -= lr * p.grad
+                    p.grad = None
+            E -= lr * E.grad
+            Wh -= lr * Wh.grad
+            nw -= lr * nw.grad
+            E.grad = None
+            Wh.grad = None
+            nw.grad = None
+    return m1, m2, E.detach(), Wh.detach(), nw.detach()
+
+
+def lm_generate(m1, m2, E, Wh, nw, device, steps=12):
+    toks = [0, 1, 2, 3]
+    for _ in range(steps):
+        _, logits = lm_forward_device(m1, m2, E, Wh, nw, toks, device)
+        toks.append(int(logits[0, -1].argmax()))
+    return toks
+
+
+def time_lm(device, reps=3):
+    m1, m2, E, Wh, nw = make_lm(device)
+    for _ in range(3):
+        lm_forward_device(m1, m2, E, Wh, nw, list(range(8)), device)
+    if device == "cuda":
+        torch.cuda.synchronize()
+    t = time.perf_counter()
+    for _ in range(20):
+        lm_forward_device(m1, m2, E, Wh, nw, list(range(8)), device)
+    if device == "cuda":
+        torch.cuda.synchronize()
+    fwd = (time.perf_counter() - t) / 20 * 1000.0
+    tt = []
+    for _ in range(reps):
+        if device == "cuda":
+            torch.cuda.synchronize()
+        t = time.perf_counter()
+        mt = lm_train(device)
+        if device == "cuda":
+            torch.cuda.synchronize()
+        tt.append(time.perf_counter() - t)
+    tg = []
+    toks = None
+    for _ in range(reps):
+        m1t, m2t, Et, Wht, nwt = mt
+        if device == "cuda":
+            torch.cuda.synchronize()
+        t = time.perf_counter()
+        toks = lm_generate(m1t, m2t, Et, Wht, nwt, device)
+        if device == "cuda":
+            torch.cuda.synchronize()
+        tg.append(time.perf_counter() - t)
+    return fwd, statistics.median(tt), statistics.median(tg), toks
+
+
 def main():
     if not os.path.exists(GOLDEN):
         raise SystemExit("run reference/mamba3_twin.py first")
     subprocess.run([sys.executable, os.path.join(ROOT, "reference/mamba3_bins.py"),
                     GOLDEN, DATA], check=True, capture_output=True)
+    subprocess.run([sys.executable, os.path.join(ROOT, "reference/mamba3_bins.py"),
+                    LM_GOLDEN, LM_DATA], check=True, capture_output=True)
     print("building the Bend C binaries ...", flush=True)
     exes = build()
 
@@ -208,10 +301,12 @@ def main():
     t_bwd10, c_bwd10 = time_exe(exes["bench_mamba3_bwd_n"], 3)
     t_train, c_train = time_exe(exes["probe_mamba3_train"], 3)
     t_gen, c_gen = time_exe(exes["probe_mamba3_gen"], 3)
+    t_lm, c_lm = time_exe(exes["probe_mamba3_lm"], 1)
     rss_fwd = peak_rss(exes["bench_mamba3_fwd"])
     rss_bwd = peak_rss(exes["bench_mamba3_bwd"])
     rss_train = peak_rss(exes["probe_mamba3_train"])
     rss_gen = peak_rss(exes["probe_mamba3_gen"])
+    rss_lm = peak_rss(exes["probe_mamba3_lm"])
 
     bend_fwd = t_fwd * 1000.0
     bend_fwd_slope = (t_fwd20 - t_fwd) / 19.0 * 1000.0
@@ -227,6 +322,8 @@ def main():
     print(f"twelve generation steps     {t_gen:8.3f} s    ({c_gen})")
     print(f"peak RSS fwd {rss_fwd:.1f} MB, fwd+bwd {rss_bwd:.1f} MB, "
           f"train {rss_train:.1f} MB, gen {rss_gen:.1f} MB")
+    print(f"full two-layer LM probe     {t_lm:8.3f} s    ({c_lm[:40]}...)")
+    print(f"peak RSS full LM            {rss_lm:8.1f} MB")
 
     print("\nPyTorch twin, warm in-process, 20 reps")
     print(f"CPU forward                 {bench_forward('cpu'):8.3f} ms")
@@ -253,6 +350,14 @@ def main():
     print(f"CUDA ten-step copy task     {tg:8.3f} s")
     print(f"CPU twelve generation steps {gc:8.3f} s   {toks_c}")
     print(f"CUDA twelve generation steps {gg:8.3f} s   {toks_g}")
+
+    lc = time_lm("cpu")
+    lg = time_lm("cuda")
+    print("\nPyTorch full two-layer LM (golden initial weights, ten SGD steps)")
+    print(f"CPU forward                 {lc[0]:8.3f} ms")
+    print(f"CPU ten-step + generation   {lc[1]:8.3f} s + {lc[2]:8.3f} s   {lc[3]}")
+    print(f"CUDA forward                {lg[0]:8.3f} ms")
+    print(f"CUDA ten-step + generation  {lg[1]:8.3f} s + {lg[2]:8.3f} s   {lg[3]}")
 
     params = sum(p.numel() for p in make_module("cpu").parameters())
     print(f"\nblock parameters {params}, plus 512 embedding and 512 head")

@@ -15,7 +15,8 @@ gives the four heads the rest of the work assumes.
 | speed, one block, T=8 | `37.2 ms` forward, `440.8 ms` forward+backward, native C, CPU |
 | ten-step copy task | `5.77 s` native, `0.048 s` PyTorch CPU twin, same loss and tokens |
 | sixteen-token generation | exact match; `1.17 s` native, `0.039 s` PyTorch CPU twin |
-| block parameters | `27,816`, plus a `512` embedding and a `512` head for the tiny LM |
+| full two-layer LM | forward, ten-step training and generation exact; `17.68 s` native against `0.145 s` CPU twin |
+| block parameters | `27,816`; the full LM is `56,720` |
 
 The full comparison, with the measurement boundaries and the lane caveats, is
 in [COMPARISON.md](COMPARISON.md). The next steps are in
@@ -39,6 +40,23 @@ B and C are RMS-normalized (eps 1e-5) before their biases. The `q_t . k_t`
 skip uses the pre-rope biased vectors, exactly as the kernel computes it
 before applying rotary. The scan is the loop, not a chunked or associative
 form.
+
+## The full model
+
+The block above is one layer. The full model in `probe_mamba3_lm.bend` is two
+independent blocks with a residual around each, a final RMSNorm and an untied
+`8 x 64` head:
+
+    u    = E[tokens]
+    h1   = u + block1(u)
+    h2   = h1 + block2(h1)
+    hn   = rms_norm(h2)
+    out  = hn @ Wh^T
+
+The training target is the same token sequence (`0..7`), the loss is mean
+cross-entropy, and the update is plain SGD. The generation prompt is
+`[0, 1, 2, 3]`, with twelve greedy tokens after it. The full model is
+`56,720` parameters and is compared with `reference/mamba3_lm_twin.py`.
 
 The two details that are easy to get wrong:
 
@@ -83,9 +101,10 @@ The pieces:
 | `probe_mamba3_train.bend` | ten SGD steps on the copy task |
 | `probe_mamba3_gen.bend` | sixteen greedy tokens, two weight-tied layers |
 | `probe_mamba3_n.bend` | the forward at seqlen 4 and 16 |
+| `probe_mamba3_lm.bend` | the full two-layer LM: forward, ten SGD steps, generation |
 | `bench_mamba3_fwd.bend`, `bench_mamba3_bwd.bend` | quiet one-call timing probes |
 | `bench_mamba3_fwd_n.bend`, `bench_mamba3_bwd_n.bend` | 20 and 10 calls in one process, for the slope |
-| `COMPARISON.md` | Bend beside the twin, the kernel and the public module |
+| `COMPARISON.md` | Bend beside the twin, the kernel, the public module and the full LM |
 | `ROADMAP.md` | what to build next and what each step teaches |
 
 ## The lanes
@@ -114,12 +133,15 @@ module.
 | moved-`dy` can-fail | `du_bad` at `6.9e-07`; `du` changes |
 | ten-step copy task | loss max relative `1.1e-07`; tokens `[3, 6, 0, 5, 0, 7, 0, 7]` |
 | sixteen-token generation | `[0, 1, 2, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]`, exact |
+| full LM forward, `lm_hn` / `lm_logits` / loss | `1.03e-07` / `3.48e-07` / `8.85e-08` |
+| full LM ten-step loss / tokens | `1.77e-07`; `[4, 2, 6, 3, 3, 5, 0, 4]`, exact |
+| full LM generation | `[0, 1, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]`, exact |
 
 The copy task is `tokens 0..7 in, the same tokens out`: an embedding table
 `8 x 64`, the block, a `64 x 8` head, mean cross-entropy, plain SGD at
-`lr=1e-3`. Generation uses the trained weights with two weight-tied layers and
-greedy `argmax`. The prompt is `[0, 1, 2, 3]`; twelve more tokens are
-generated.
+`lr=1e-3`. The single-block generation probe uses two weight-tied layers and
+greedy `argmax`; the full LM uses two independent layers. The prompt is
+`[0, 1, 2, 3]`; twelve more tokens are generated.
 
 ## What the comparison says
 
@@ -128,7 +150,8 @@ generated.
 - The port is slow: `25x` the CPU twin on the forward and `99x` on
   forward+backward. The cause is the list substrate and the scalar
   per-element work, not the recurrence. The chunked kernel exists to remove
-  exactly that work.
+  exactly that work. The full two-layer LM is about `122x` the CPU twin on
+  training plus generation.
 - The public module is the fastest lane (`0.596 ms` forward) and the least
   accurate (`2.5e-03`). Speed and accuracy move in opposite directions here.
 - At this tiny shape the GPU is launch-bound: the CUDA twin is slower than
@@ -144,7 +167,7 @@ generated.
 ## What is not here
 
 MIMO, `ngroups > 1`, `rope_fraction 1.0`, `is_outproj_norm=True`, varlen,
-batch greater than one, independent two-layer weights, the 25.7M model, the
-Triton backward and a Bend GPU lane. The port is one layer, one batch, eight
-positions, one CPU. `COMPARISON.md` keeps those out of the measured table, and
+batch greater than one, the 25.7M model, the Triton backward and a Bend GPU
+lane. The full LM is two independent layers, but still one batch and eight
+positions, on one CPU. `COMPARISON.md` keeps those out of the measured table, and
 `ROADMAP.md` puts them in an order.

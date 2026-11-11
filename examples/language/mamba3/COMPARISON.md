@@ -109,6 +109,43 @@ The CUDA twin is slower than the CPU twin on training too (`0.104` against
 better PyTorch lane; the GPU becomes useful when the batch, the sequence or
 the model grows, or when the fused Triton kernel replaces the explicit loop.
 
+## The full two-layer LM
+
+The block comparison above is one layer. The full model is two independent
+blocks with a residual around each, a final RMSNorm and an untied `8 x 64`
+head: `55,632` block parameters plus `512` embedding, `512` head and `64`
+norm, `56,720` in total. The gate is `probe_mamba3_lm.bend`; the Python twin
+is `reference/mamba3_lm_twin.py`.
+
+| path | lane | forward | ten SGD steps | twelve generation steps |
+| --- | --- | --- | --- | --- |
+| Bend, native C, one probe | F32, CPU | included | included | included, `17.682 s` total |
+| PyTorch full LM | F32, CPU | `3.370 ms` | `0.102 s` | `0.043 s` |
+| PyTorch full LM | F32, CUDA | `6.034 ms` | `0.235 s` | `0.076 s` |
+
+The Bend probe prints the initial forward (`lm_hn`, `lm_logits`, `lm_loss`),
+runs ten SGD steps, then generates twelve tokens from the final weights. The
+whole native binary is `17.682 s` and `6.9 MB` RSS; against the CPU twin's
+`0.102 + 0.043 s` that is about **122x**, and against the CUDA twin's
+`0.235 + 0.076 s` about **57x**. The probe's own forward is inside the total,
+so the ratio is conservative.
+
+Correctness of the full model:
+
+| quantity | max relative |
+| --- | --- |
+| `lm_hn` | `1.03e-07` |
+| `lm_logits` | `3.48e-07` |
+| `lm_loss` | `8.85e-08` |
+| ten-step loss curve | `1.77e-07` |
+| final tokens | `[4, 2, 6, 3, 3, 5, 0, 4]`, exact |
+| generation tokens | `[0, 1, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]`, exact |
+
+This is the whole model, not a block: the residual, the final norm, the head,
+the embedding and both layers' backward all enter the loss curve. The Python
+twin uses autograd; the Bend side is the hand-written chain from the block,
+the norm and the head.
+
 ## Memory
 
 | path | what is measured | value |
@@ -150,7 +187,8 @@ tensor memory. The allocated peak (`17.46 MB`) is the comparable number.
 ## What is not compared
 
 MIMO, `ngroups > 1`, `rope_fraction 1.0`, `is_outproj_norm=True`, varlen,
-batch greater than one, independent two-layer weights, the 25.7M model, the
-Triton backward, and a Bend GPU lane. Those are roadmap items, not
+batch greater than one, the 25.7M model, the Triton backward, and a Bend GPU
+lane. The full two-layer LM is now in the measured table; the variants are
+not. Those are roadmap items, not
 measurements. The comparison is one layer, one batch, eight positions, one
 CPU, one GPU, and one pinned reference commit.

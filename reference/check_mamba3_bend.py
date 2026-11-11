@@ -20,6 +20,8 @@ import numpy as np
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GOLDEN = os.path.join(ROOT, "reference/mamba3_golden.npz")
 DATA = os.path.join(ROOT, "reference/mamba3_data")
+LM_GOLDEN = os.path.join(ROOT, "reference/mamba3_lm_golden.npz")
+LM_DATA = os.path.join(ROOT, "reference/mamba3_lm_data")
 FORWARD_GATE = 1e-5
 BACKWARD_GATE = 1e-4
 TRAIN_GATE = 1e-4
@@ -92,6 +94,8 @@ def main():
     golden = np.load(GOLDEN)
     subprocess.run([sys.executable, os.path.join(ROOT, "reference/mamba3_bins.py"),
                     GOLDEN, DATA], check=True)
+    subprocess.run([sys.executable, os.path.join(ROOT, "reference/mamba3_bins.py"),
+                    LM_GOLDEN, LM_DATA], check=True)
 
     ok = True
     tags = parse(run_bend("examples/language/mamba3/mamba3_siso.bend"))
@@ -153,6 +157,22 @@ def main():
         print(f"     first differing position {i}: bend {a[i]} golden {w[i]}")
     print("GENERATION", "PASS" if gnok else "FAIL")
     ok = ok and gnok
+
+    lmg = np.load(LM_GOLDEN)
+    lmt = parse(run_bend("examples/language/mamba3/probe_mamba3_lm.bend"))
+    lmok = compare("lm_hn", lmt["lm_hn"], lmg["lm_hn"], FORWARD_GATE)
+    lmok = compare("lm_logits", lmt["lm_logits"], lmg["lm_logits"],
+                   FORWARD_GATE) and lmok
+    lmok = compare("lm_loss", lmt["lm_loss"], lmg["lm_loss"],
+                   FORWARD_GATE) and lmok
+    lmok = compare("lm_train_loss", lmt["lm_train_loss"],
+                   lmg["lm_train_loss"], TRAIN_GATE) and lmok
+    lmok = exact("lm_train_tokens", lmt["lm_train_tokens"],
+                 lmg["lm_train_tokens"]) and lmok
+    lmok = exact("lm_gen_tokens", lmt["lm_gen_tokens"],
+                 lmg["lm_gen_tokens"]) and lmok
+    print("LM", "PASS" if lmok else "FAIL")
+    ok = ok and lmok
 
     print("MAMBA3", "PASS" if ok else "FAIL")
     return 0 if ok else 1

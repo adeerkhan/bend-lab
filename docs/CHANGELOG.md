@@ -35,6 +35,14 @@ What changed for the people who run the lab. Internal refactors are not listed.
   forward and `99x` on forward+backward; the public bf16 Triton module is
   `0.596 ms` and `2.5e-03` relative, the fastest and least accurate lane. At
   this shape the CUDA twin is launch-bound and slower than the CPU twin.
+- **The full two-layer LM** (`probe_mamba3_lm.bend`,
+  `reference/mamba3_lm_twin.py`): two independent blocks with a residual
+  around each, a final RMSNorm and an untied head, `56,720` parameters. The
+  forward `lm_hn` is `1.03e-07` relative, the ten-step loss `1.77e-07`, and
+  both the final tokens `[4, 2, 6, 3, 3, 5, 0, 4]` and the generation
+  `[0, 1, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]` are exact. The native
+  probe is `17.68 s` against `0.145 s` for the PyTorch CPU twin's training
+  plus generation.
 - **The roadmap** (`examples/language/mamba3/ROADMAP.md`): array core and
   chunked scan, step decode, batch/varlen/GQA, a real tiny LM, MIMO, and the
   numerical and ablation questions, in that order.

@@ -1,7 +1,8 @@
 # Mamba-3: what to do next, and why
 
-The SISO block is correct and gated. This is the list of things that are worth
-doing next, in the order that keeps the oracle intact. Each item says what it
+The SISO block and a full two-layer tiny LM are correct and gated. This is
+the list of things that are worth doing next, in the order that keeps the
+oracle intact. Each item says what it
 changes, what it teaches, and how it would be accepted. None of it is a reason
 to loosen a gate.
 
@@ -78,16 +79,19 @@ projections and a headwise norm. It is the largest remaining model feature and
 it needs its own oracle: the SISO twin does not cover it. Do not start it
 until batch/varlen and the step are stable.
 
-**3e. Independent two-layer weights.** Generation currently uses two
-weight-tied layers. An independent second layer is a parameter-plumbing
-change, and it makes the "tiny LM" closer to a real stack.
+**3e. Independent two-layer weights.** Done for the full LM
+(`probe_mamba3_lm.bend`); the single-block generation demo remains
+weight-tied. A deeper stack (4, 8, 16 layers) is the next version of this
+item, with a residual and a final norm per stack.
 
 ## 4. Train a real tiny LM, not only a copy task
 
 **What.** A small vocabulary, a real tokenized corpus, a multi-layer stack,
 AdamW with weight decay, gradient clipping, a learning-rate schedule, and a
 held-out split. The current ten-step copy task is a plumbing and gradient
-test, not a language-model result.
+test, not a language-model result. The two-layer LM already has the stack,
+the residual, the final norm and the head; what is missing is data, an
+optimizer and a held-out evaluation.
 
 **Why.** A ten-step loss curve proves the backward. It does not prove that the
 block learns a useful sequence transformation, that the trapezoid helps, or
@@ -174,9 +178,12 @@ and `bend -o .c` plus gcc is the working route).
 1. Array-based core and a chunked scan, gated against the loop.
 2. Step decode and the step-generation protocol.
 3. Batch, varlen, `ngroups`, `rope_fraction`, `is_outproj_norm`.
-4. A real tiny LM and a report card.
-5. MIMO and the fused norm.
+4. A real tiny LM on a real corpus, and a report card.
+5. A deeper stack (4/8 layers), then MIMO and the fused norm.
 6. The numerical and research questions.
+
+The two-layer full LM is already done; it is the baseline the next stack
+should preserve.
 
 ## What not to do
 

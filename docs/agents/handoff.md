@@ -42,6 +42,14 @@ needs a wrap to `[0, 2π)`. There is no scan primitive, no AD, and no
 softmax/CE/argmax in Base. The exact loop is the reference; a chunked scan is
 the next performance step, not a correctness change.
 
+**The full LM.** `probe_mamba3_lm.bend` is two independent blocks with a
+residual around each, a final RMSNorm and an untied head, `56,720`
+parameters. `lm_hn` `1.03e-07` relative, ten-step loss `1.77e-07`, final
+tokens `[4, 2, 6, 3, 3, 5, 0, 4]` and generation
+`[0, 1, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]` exact. The native probe is
+`17.68 s`; the PyTorch CPU twin's training plus generation is `0.145 s`. The
+gate is in `reference/check_mamba3_bend.py` and `make mamba3`.
+
 **The comparison.** `examples/language/mamba3/COMPARISON.md`, from
 `reference/mamba3_compare.py`, is the measured table: Bend `37.2 ms` forward
 and `440.8 ms` forward+backward at T=8; the CPU twin `1.48 / 4.47 ms`; the

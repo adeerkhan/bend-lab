@@ -1624,6 +1624,18 @@ def show_train(tr: TR) -> IO(Unit):
 # ---------------------------------------------------------------------------
 # greedy generation, two weight-tied layers, sixteen tokens
 
+def nats_to(+left: Nat, +i: Nat,
+    acc: List<&2, Nat>) -> List<&2, Nat>:
+  match left:
+    case 0n:
+      acc
+    case 1n+p:
+      nats_to(p, (i + 1n : Nat),
+        List.append(&2, Nat, acc, Con{i, Nil{}}))
+
+def prompt8() -> List<&2, Nat>:
+  nats_to(8n, 0n, Nil{})
+
 def nth_nat(+n: Nat, xs: List<&2, Nat>) -> Nat:
   match n xs:
     case 0n Con{h, t}:
@@ -1714,6 +1726,367 @@ def show_gen(+tokens: List<&2, Nat>, +n: Nat) -> IO(Unit):
   do IO<Unit>:
     show_tag("gen_tokens", nat_row_f32(n, tokens, Nil{}))
     return Unit{}
+
+# ---------------------------------------------------------------------------
+# the full model: two residual blocks, a final RMSNorm and a head
+
+def block_y(f: FWD) -> List<&2, F32>:
+  match f:
+    case FWD{pre, z, x, Braw, Craw, dd_dt, dd_A, trap_raw, ang_raw,
+        A, DT, ADT, trap, gamma, shift, scale, Bn, Cn, angle, q, k,
+        qk, states, out_v, y_inner, y}:
+      y
+
+def rms_rows_go(+left: Nat, +t: Nat, +x: List<&2, F32>,
+    +w: List<&2, F32>, acc: List<&2, F32>) -> List<&2, F32>:
+  match left:
+    case 0n:
+      acc
+    case 1n+p:
+      +row = take_row(x, Nat.mul(t, 64n), 64n)
+      rms_rows_go(p, (t + 1n : Nat), x, w,
+        push_row(acc, rms(row, w, 64n)))
+
+def rms_rows(+x: List<&2, F32>, +w: List<&2, F32>,
+    +n: Nat) -> List<&2, F32>:
+  rms_rows_go(n, 0n, x, w, Nil{})
+
+def head_logits_go(+left: Nat, +t: Nat, +x: List<&2, F32>,
+    +Wh: List<&2, F32>, acc: List<&2, F32>) -> List<&2, F32>:
+  match left:
+    case 0n:
+      acc
+    case 1n+p:
+      +row = take_row(x, Nat.mul(t, 64n), 64n)
+      head_logits_go(p, (t + 1n : Nat), x, Wh,
+        push_row(acc, matvec(Wh, row, 64n)))
+
+def head_logits(+x: List<&2, F32>, +Wh: List<&2, F32>,
+    +n: Nat) -> List<&2, F32>:
+  head_logits_go(n, 0n, x, Wh, Nil{})
+
+def last_tok_y(+y: List<&2, F32>, +Wh: List<&2, F32>,
+    +n: Nat) -> Nat:
+  +row = take_row(y, Nat.mul((n - 1n : Nat), 64n), 64n)
+  argmax(matvec(Wh, row, 64n), 8n)
+
+def rms_bwd_flat(+xs: List<&2, F32>, +ws: List<&2, F32>,
+    +dys: List<&2, F32>, +n: Nat) -> List<&2, F32>:
+  +nf = F32.from_nat(n)
+  +mean = (sumsq(xs) / nf : F32)
+  +r = (1.0 / F32.sqrt((mean + 0.00001 : F32)) : F32)
+  +s = rms_s(xs, ws, dys)
+  +c = (((r * r : F32) * r : F32) / nf : F32)
+  cat2(rms_dx_go(xs, ws, dys, r, (c * s : F32), Nil{}),
+    rms_dw_go(xs, ws, dys, r, Nil{}))
+
+type RBR is Type:
+  RBR{dx: List<&2, F32>, dw: List<&2, F32>}
+
+def rms_rows_bwd_go(+left: Nat, +t: Nat, +x: List<&2, F32>,
+    +w: List<&2, F32>, +d: List<&2, F32>,
+    +accx: List<&2, F32>, +accw: List<&2, F32>) -> RBR:
+  match left:
+    case 0n:
+      RBR{accx, accw}
+    case 1n+p:
+      +row = take_row(x, Nat.mul(t, 64n), 64n)
+      +drow = take_row(d, Nat.mul(t, 64n), 64n)
+      +flat = rms_bwd_flat(row, w, drow, 64n)
+      rms_rows_bwd_go(p, (t + 1n : Nat), x, w, d,
+        push_row(accx, take_row(flat, 0n, 64n)),
+        add_lists(accw, take_row(flat, 64n, 64n)))
+
+def rms_rows_bwd(+x: List<&2, F32>, +w: List<&2, F32>,
+    +d: List<&2, F32>, +n: Nat) -> RBR:
+  rms_rows_bwd_go(n, 0n, x, w, d, Nil{}, zline(64n))
+
+type LM is Type:
+  LM{w1: List<&2, F32>, dt1: List<&2, F32>,
+     bb1: List<&2, F32>, cb1: List<&2, F32>,
+     bw1: List<&2, F32>, cw1: List<&2, F32>,
+     D1: List<&2, F32>, wo1: List<&2, F32>,
+     w2: List<&2, F32>, dt2: List<&2, F32>,
+     bb2: List<&2, F32>, cb2: List<&2, F32>,
+     bw2: List<&2, F32>, cw2: List<&2, F32>,
+     D2: List<&2, F32>, wo2: List<&2, F32>,
+     E: List<&2, F32>, Wh: List<&2, F32>,
+     nw: List<&2, F32>}
+
+type LMO is Type:
+  LMO{hn: List<&2, F32>, logits: List<&2, F32>, loss: F32}
+
+def lm_h2(+u: List<&2, F32>, +w1: List<&2, F32>,
+    +dt1: List<&2, F32>, +bb1: List<&2, F32>,
+    +cb1: List<&2, F32>, +bw1: List<&2, F32>,
+    +cw1: List<&2, F32>, +D1: List<&2, F32>,
+    +wo1: List<&2, F32>, +w2: List<&2, F32>,
+    +dt2: List<&2, F32>, +bb2: List<&2, F32>,
+    +cb2: List<&2, F32>, +bw2: List<&2, F32>,
+    +cw2: List<&2, F32>, +D2: List<&2, F32>,
+    +wo2: List<&2, F32>, +n: Nat) -> List<&2, F32>:
+  +y1 = block_y(forward(u, w1, dt1, bb1, cb1, bw1, cw1, D1, wo1, n))
+  +h1 = add_lists(u, y1)
+  +y2 = block_y(forward(h1, w2, dt2, bb2, cb2, bw2, cw2, D2, wo2, n))
+  add_lists(h1, y2)
+
+def lm_forward(p: LM, +tokens: List<&2, Nat>,
+    +n: Nat) -> LMO:
+  match p:
+    case LM{+w1, +dt1, +bb1, +cb1, +bw1, +cw1, +D1, +wo1,
+        +w2, +dt2, +bb2, +cb2, +bw2, +cw2, +D2, +wo2,
+        +E, +Wh, +nw}:
+      +u = embed(tokens, E, n)
+      +h2 = lm_h2(u, w1, dt1, bb1, cb1, bw1, cw1, D1, wo1,
+        w2, dt2, bb2, cb2, bw2, cw2, D2, wo2, n)
+      +hn = rms_rows(h2, nw, n)
+      +logits = head_logits(hn, Wh, n)
+      LMO{hn, logits, loss_go(n, 0n, hn, Wh, 0.0)}
+
+type L2U is Type:
+  L2U{w2: List<&2, F32>, dt2: List<&2, F32>,
+      bb2: List<&2, F32>, cb2: List<&2, F32>,
+      bw2: List<&2, F32>, cw2: List<&2, F32>,
+      D2: List<&2, F32>, wo2: List<&2, F32>}
+
+type SLM is Type:
+  SLM{loss: F32, p: LM}
+
+def lm_after_g1(g1: GRAD, l2u: L2U, +dh1: List<&2, F32>,
+    +dnw: List<&2, F32>, +dWh: List<&2, F32>, +loss: F32,
+    +w1: List<&2, F32>, +dt1: List<&2, F32>,
+    +bb1: List<&2, F32>, +cb1: List<&2, F32>,
+    +bw1: List<&2, F32>, +cw1: List<&2, F32>,
+    +D1: List<&2, F32>, +wo1: List<&2, F32>,
+    +E: List<&2, F32>, +Wh: List<&2, F32>,
+    +nw: List<&2, F32>, +lr: F32) -> SLM:
+  match g1 l2u:
+    case GRAD{du, dW_in, ddt_bias, dB_bias, dC_bias, dB_norm_w,
+        dC_norm_w, dD, dW_out, do_v, dq, dk, dz, dx, dqk, dscale,
+        dADT, dBn, dCn, dDT, dtrap, ddd_dt, ddd_A, dBraw, dCraw,
+        dang_raw}
+        L2U{w2, dt2, bb2, cb2, bw2, cw2, D2, wo2}:
+      +due = add_lists(dh1, du)
+      SLM{loss,
+        LM{sgd(w1, dW_in, lr), sgd(dt1, ddt_bias, lr),
+          sgd(bb1, dB_bias, lr), sgd(cb1, dC_bias, lr),
+          sgd(bw1, dB_norm_w, lr), sgd(cw1, dC_norm_w, lr),
+          sgd(D1, dD, lr), sgd(wo1, dW_out, lr),
+          w2, dt2, bb2, cb2, bw2, cw2, D2, wo2,
+          sgd(E, due, lr), sgd(Wh, dWh, lr), sgd(nw, dnw, lr)}}
+
+def lm_after_g2(g2: GRAD, +dh2: List<&2, F32>,
+    +dnw: List<&2, F32>, +dWh: List<&2, F32>, +loss: F32,
+    +u: List<&2, F32>, +h1: List<&2, F32>,
+    +w1: List<&2, F32>, +dt1: List<&2, F32>,
+    +bb1: List<&2, F32>, +cb1: List<&2, F32>,
+    +bw1: List<&2, F32>, +cw1: List<&2, F32>,
+    +D1: List<&2, F32>, +wo1: List<&2, F32>,
+    +w2: List<&2, F32>, +dt2: List<&2, F32>,
+    +bb2: List<&2, F32>, +cb2: List<&2, F32>,
+    +bw2: List<&2, F32>, +cw2: List<&2, F32>,
+    +D2: List<&2, F32>, +wo2: List<&2, F32>,
+    +E: List<&2, F32>, +Wh: List<&2, F32>,
+    +nw: List<&2, F32>, +lr: F32) -> SLM:
+  match g2:
+    case GRAD{du, dW_in, ddt_bias, dB_bias, dC_bias, dB_norm_w,
+        dC_norm_w, dD, dW_out, do_v, dq, dk, dz, dx, dqk, dscale,
+        dADT, dBn, dCn, dDT, dtrap, ddd_dt, ddd_A, dBraw, dCraw,
+        dang_raw}:
+      +dh1 = add_lists(dh2, du)
+      l2u : L2U = L2U{sgd(w2, dW_in, lr), sgd(dt2, ddt_bias, lr),
+        sgd(bb2, dB_bias, lr), sgd(cb2, dC_bias, lr),
+        sgd(bw2, dB_norm_w, lr), sgd(cw2, dC_norm_w, lr),
+        sgd(D2, dD, lr), sgd(wo2, dW_out, lr)}
+      lm_after_g1(backward(forward(u, w1, dt1, bb1, cb1, bw1, cw1,
+        D1, wo1, 8n), u, dh1, w1, wo1, bw1, cw1, dt1, bb1, cb1,
+        D1, 8n), l2u, dh1, dnw, dWh, loss, w1, dt1, bb1, cb1,
+        bw1, cw1, D1, wo1, E, Wh, nw, lr)
+
+def lm_after_rms(rbr: RBR, +loss: F32, +dWh: List<&2, F32>,
+    +u: List<&2, F32>, +h1: List<&2, F32>,
+    +w1: List<&2, F32>, +dt1: List<&2, F32>,
+    +bb1: List<&2, F32>, +cb1: List<&2, F32>,
+    +bw1: List<&2, F32>, +cw1: List<&2, F32>,
+    +D1: List<&2, F32>, +wo1: List<&2, F32>,
+    +w2: List<&2, F32>, +dt2: List<&2, F32>,
+    +bb2: List<&2, F32>, +cb2: List<&2, F32>,
+    +bw2: List<&2, F32>, +cw2: List<&2, F32>,
+    +D2: List<&2, F32>, +wo2: List<&2, F32>,
+    +E: List<&2, F32>, +Wh: List<&2, F32>,
+    +nw: List<&2, F32>, +lr: F32) -> SLM:
+  match rbr:
+    case RBR{+dh2, dnw}:
+      lm_after_g2(backward(forward(h1, w2, dt2, bb2, cb2, bw2, cw2,
+        D2, wo2, 8n), h1, dh2, w2, wo2, bw2, cw2, dt2, bb2, cb2,
+        D2, 8n), dh2, dnw, dWh, loss, u, h1, w1, dt1, bb1, cb1,
+        bw1, cw1, D1, wo1, w2, dt2, bb2, cb2, bw2, cw2, D2, wo2,
+        E, Wh, nw, lr)
+
+def lm_step(p: LM, +lr: F32) -> SLM:
+  match p:
+    case LM{+w1, +dt1, +bb1, +cb1, +bw1, +cw1, +D1, +wo1,
+        +w2, +dt2, +bb2, +cb2, +bw2, +cw2, +D2, +wo2,
+        +E, +Wh, +nw}:
+      +u = embed(prompt8(), E, 8n)
+      +y1 = block_y(forward(u, w1, dt1, bb1, cb1, bw1, cw1, D1,
+        wo1, 8n))
+      +h1 = add_lists(u, y1)
+      +y2 = block_y(forward(h1, w2, dt2, bb2, cb2, bw2, cw2, D2,
+        wo2, 8n))
+      +h2 = add_lists(h1, y2)
+      +hn = rms_rows(h2, nw, 8n)
+      +loss = loss_go(8n, 0n, hn, Wh, 0.0)
+      +dWh = dWh_go(8n, 0n, hn, Wh, zline(512n))
+      +dhn = dy_all_go(8n, 0n, hn, Wh, Nil{})
+      rbr : RBR = rms_rows_bwd(h2, nw, dhn, 8n)
+      lm_after_rms(rbr, loss, dWh, u, h1, w1, dt1, bb1, cb1, bw1,
+        cw1, D1, wo1, w2, dt2, bb2, cb2, bw2, cw2, D2, wo2, E,
+        Wh, nw, lr)
+
+type TRL is Type:
+  TRL{losses: List<&2, F32>, p: LM}
+
+def lm_rest10(sl: SLM, +losses: List<&2, F32>) -> TRL:
+  match sl:
+    case SLM{loss, p}:
+      TRL{push_row(losses, Con{loss, Nil{}}), p}
+
+def lm_rest9(sl: SLM, +lr: F32,
+    +losses: List<&2, F32>) -> TRL:
+  match sl:
+    case SLM{loss, p}:
+      lm_rest10(lm_step(p, lr), push_row(losses, Con{loss, Nil{}}))
+
+def lm_rest8(sl: SLM, +lr: F32,
+    +losses: List<&2, F32>) -> TRL:
+  match sl:
+    case SLM{loss, p}:
+      lm_rest9(lm_step(p, lr), lr, push_row(losses, Con{loss, Nil{}}))
+
+def lm_rest7(sl: SLM, +lr: F32,
+    +losses: List<&2, F32>) -> TRL:
+  match sl:
+    case SLM{loss, p}:
+      lm_rest8(lm_step(p, lr), lr, push_row(losses, Con{loss, Nil{}}))
+
+def lm_rest6(sl: SLM, +lr: F32,
+    +losses: List<&2, F32>) -> TRL:
+  match sl:
+    case SLM{loss, p}:
+      lm_rest7(lm_step(p, lr), lr, push_row(losses, Con{loss, Nil{}}))
+
+def lm_rest5(sl: SLM, +lr: F32,
+    +losses: List<&2, F32>) -> TRL:
+  match sl:
+    case SLM{loss, p}:
+      lm_rest6(lm_step(p, lr), lr, push_row(losses, Con{loss, Nil{}}))
+
+def lm_rest4(sl: SLM, +lr: F32,
+    +losses: List<&2, F32>) -> TRL:
+  match sl:
+    case SLM{loss, p}:
+      lm_rest5(lm_step(p, lr), lr, push_row(losses, Con{loss, Nil{}}))
+
+def lm_rest3(sl: SLM, +lr: F32,
+    +losses: List<&2, F32>) -> TRL:
+  match sl:
+    case SLM{loss, p}:
+      lm_rest4(lm_step(p, lr), lr, push_row(losses, Con{loss, Nil{}}))
+
+def lm_rest2(sl: SLM, +lr: F32,
+    +losses: List<&2, F32>) -> TRL:
+  match sl:
+    case SLM{loss, p}:
+      lm_rest3(lm_step(p, lr), lr, push_row(losses, Con{loss, Nil{}}))
+
+def lm_rest1(sl: SLM, +lr: F32,
+    +losses: List<&2, F32>) -> TRL:
+  match sl:
+    case SLM{loss, p}:
+      lm_rest2(lm_step(p, lr), lr, push_row(losses, Con{loss, Nil{}}))
+
+def lm_train10(p: LM, +lr: F32) -> TRL:
+  lm_rest1(lm_step(p, lr), lr, Nil{})
+
+def lm_tokens_fields(+u: List<&2, F32>, +w1: List<&2, F32>,
+    +dt1: List<&2, F32>, +bb1: List<&2, F32>,
+    +cb1: List<&2, F32>, +bw1: List<&2, F32>,
+    +cw1: List<&2, F32>, +D1: List<&2, F32>,
+    +wo1: List<&2, F32>, +w2: List<&2, F32>,
+    +dt2: List<&2, F32>, +bb2: List<&2, F32>,
+    +cb2: List<&2, F32>, +bw2: List<&2, F32>,
+    +cw2: List<&2, F32>, +D2: List<&2, F32>,
+    +wo2: List<&2, F32>, +Wh: List<&2, F32>,
+    +nw: List<&2, F32>) -> List<&2, F32>:
+  +h2 = lm_h2(u, w1, dt1, bb1, cb1, bw1, cw1, D1, wo1, w2, dt2,
+    bb2, cb2, bw2, cw2, D2, wo2, 8n)
+  +hn = rms_rows(h2, nw, 8n)
+  tok_go(8n, 0n, hn, Wh, Nil{})
+
+def lm_gen_go(+left: Nat, +n: Nat, +tokens: List<&2, Nat>,
+    +w1: List<&2, F32>, +dt1: List<&2, F32>,
+    +bb1: List<&2, F32>, +cb1: List<&2, F32>,
+    +bw1: List<&2, F32>, +cw1: List<&2, F32>,
+    +D1: List<&2, F32>, +wo1: List<&2, F32>,
+    +w2: List<&2, F32>, +dt2: List<&2, F32>,
+    +bb2: List<&2, F32>, +cb2: List<&2, F32>,
+    +bw2: List<&2, F32>, +cw2: List<&2, F32>,
+    +D2: List<&2, F32>, +wo2: List<&2, F32>,
+    +E: List<&2, F32>, +Wh: List<&2, F32>,
+    +nw: List<&2, F32>) -> List<&2, Nat>:
+  match left:
+    case 0n:
+      tokens
+    case 1n+p:
+      +u = embed(tokens, E, n)
+      +h2 = lm_h2(u, w1, dt1, bb1, cb1, bw1, cw1, D1, wo1, w2,
+        dt2, bb2, cb2, bw2, cw2, D2, wo2, n)
+      +hn = rms_rows(h2, nw, n)
+      +next = last_tok_y(hn, Wh, n)
+      lm_gen_go(p, (n + 1n : Nat),
+        List.append(&2, Nat, tokens, Con{next, Nil{}}), w1, dt1,
+        bb1, cb1, bw1, cw1, D1, wo1, w2, dt2, bb2, cb2, bw2,
+        cw2, D2, wo2, E, Wh, nw)
+
+type FNL is Type:
+  FNL{tokens: List<&2, F32>, gen: List<&2, Nat>}
+
+def lm_final(p: LM) -> FNL:
+  match p:
+    case LM{+w1, +dt1, +bb1, +cb1, +bw1, +cw1, +D1, +wo1,
+        +w2, +dt2, +bb2, +cb2, +bw2, +cw2, +D2, +wo2,
+        +E, +Wh, +nw}:
+      +tok = lm_tokens_fields(embed(prompt8(), E, 8n), w1, dt1,
+        bb1, cb1, bw1, cw1, D1, wo1, w2, dt2, bb2, cb2, bw2, cw2,
+        D2, wo2, Wh, nw)
+      +gen = lm_gen_go(12n, 4n, nats_to(4n, 0n, Nil{}), w1, dt1,
+        bb1, cb1, bw1, cw1, D1, wo1, w2, dt2, bb2, cb2, bw2, cw2,
+        D2, wo2, E, Wh, nw)
+      FNL{tok, gen}
+
+def show_fnl(fnl: FNL, +losses: List<&2, F32>) -> IO(Unit):
+  match fnl:
+    case FNL{tokens, gen}:
+      do IO<Unit>:
+        show_tag("lm_train_loss", losses)
+        show_tag("lm_train_tokens", tokens)
+        show_tag("lm_gen_tokens", nat_row_f32(16n, gen, Nil{}))
+        return Unit{}
+
+def show_lm_train(tr: TRL) -> IO(Unit):
+  match tr:
+    case TRL{losses, p}:
+      show_fnl(lm_final(p), losses)
+
+def show_lm(o: LMO) -> IO(Unit):
+  match o:
+    case LMO{hn, logits, loss}:
+      do IO<Unit>:
+        show_tag("lm_hn", hn)
+        show_tag("lm_logits", logits)
+        show_tag("lm_loss", Con{loss, Nil{}})
+        return Unit{}
 
 def sum_fwd(f: FWD) -> F32:
   match f:
