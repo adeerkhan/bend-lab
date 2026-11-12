@@ -108,6 +108,21 @@ publishes to BendHub and tags the released commit `<name>-v<version>`.
 9. Public text (READMEs, `docs/`) is written in a neutral, professional voice:
    no first person, no dash dividers, no private ledger links.
 
+## Every run goes in the dashboard
+
+The run store (`results/runs.sqlite3`, `reference/runs.py`) is the log, and
+`make dashboard PORT=8787` is the view. Do not run a training or test command
+outside it:
+
+- **training that writes steps**: `make trace TASK=<task> [STEPS=<n>]`;
+- **any command or test**: `make session TASK=<name> CMD="make check-fast"`;
+- **an experiment**: `make experiment TASK=<task>` registers itself.
+
+The page shows every run, live sessions, CPU, RAM and GPU use, the parameter
+count, the configuration and the selected run's steps and record. A run that is
+not in the store is not observable; add it rather than quoting a terminal log
+alone.
+
 ## Measurement rules
 
 - **A number comes from a command.** In a report, a README, a commit or a
