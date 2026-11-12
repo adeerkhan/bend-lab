@@ -12,7 +12,7 @@ gives the four heads the rest of the work assumes.
 | | |
 | --- | --- |
 | correctness | forward `9.2e-07`, backward `2.9e-06` relative against the F32 twin |
-| speed, one block, T=8 | `37.2 ms` forward, `440.8 ms` forward+backward, native C, CPU |
+| speed, one block, T=8 | `19-22 ms` forward (the chunked array scan); `440.8 ms` forward+backward as measured on the list scan (the backward is still list) |
 | ten-step copy task | `5.77 s` native, `0.048 s` PyTorch CPU twin, same loss and tokens |
 | sixteen-token generation | exact match; `1.17 s` native, `0.039 s` PyTorch CPU twin |
 | full two-layer LM | forward, ten-step training and generation exact; `17.68 s` native against `0.145 s` CPU twin |
@@ -39,8 +39,8 @@ in [COMPARISON.md](COMPARISON.md). The next steps are in
 
 B and C are RMS-normalized (eps 1e-5) before their biases. The `q_t . k_t`
 skip uses the pre-rope biased vectors, exactly as the kernel computes it
-before applying rotary. The scan is the loop, not a chunked or associative
-form.
+before applying rotary. The exact loop stays in the tree as the reference; the
+live path (`pass_c`) is the chunked array scan.
 
 ## The full model
 
@@ -86,9 +86,10 @@ The comparison table:
 
     reference/.venv-rf/bin/python reference/mamba3_compare.py
 
-`make mamba3` runs the gates. `make check` runs them through
-`reference/check_all.py` after the package proofs. The bins are regenerated
-from the committed `reference/mamba3_golden.npz` by
+`make mamba3` runs the gates; `make mamba3-bench` builds and runs the
+20-forward benchmark and prints its checksum and wall time. `make check` runs
+the gates through `reference/check_all.py` after the package proofs. The bins
+are regenerated from the committed `reference/mamba3_golden.npz` by
 `reference/mamba3_bins.py`, so the gate needs NumPy and `bend`, not torch.
 
 The pieces:
@@ -124,7 +125,11 @@ The CPU scan keeps each head's 512-float state in one `Array<F32>` and updates
 the 32x16 cells in place, instead of rebuilding 32 rows per token. Twenty
 forwards at seqlen 8 are `0.37-0.38 s` against `0.71-0.73 s` for the list path,
 and the ten-step train probe is `3.64-3.67 s` against `9.81-10.50 s`; every
-gate still passes. A chunked scan over tokens is the next step.
+gate still passes. The chunked scan then carries one 2048-float array across
+all four heads and all tokens: in a same-session A/B (`scripts/mamba3_ab.sh`),
+twenty forwards are `0.37-0.45 s` against `0.49-0.56 s` for the per-head array
+core (medians `0.44 s` against `0.52 s`), with the train probe equal within
+noise.
 
 The public `Mamba3` module is a bf16 lane: `mamba3_siso_combined` casts Q, K,
 V, Trap, Angles and Z before it calls the kernel. The F32 kernel check is not
@@ -181,6 +186,6 @@ greedy `argmax`; the full LM uses two independent layers. The prompt is
 MIMO, `ngroups > 1`, `rope_fraction 1.0`, `is_outproj_norm=True`, varlen,
 batch greater than one, the 25.7M model, the Triton backward and Mamba-3 on
 the BendTorch GPU lane. The BendTorch CUDA lane itself is tested on a linear
-layer (0 differing words, `GPU.md`); the scan is still the CPU list code. The
+layer (0 differing words, `GPU.md`); the scan is still the CPU array code. The
 full LM is two independent layers, but still one batch and eight positions. `COMPARISON.md` keeps those out of the measured table, and
 `ROADMAP.md` puts them in an order.

@@ -425,6 +425,12 @@ type SH is Type:
 type ST is Type:
   ST{state: List<&2, F32>, sc: SC}
 
+type SA is Type:
+  SA{arr: Array<F32>, out: List<&2, F32>}
+
+type STA is Type:
+  STA{arr: Array<F32>, sc: SC}
+
 # ---- the array state: 32x16 floats, updated in place ----
 
 def fill_arr(+left: Nat, xs: List<&2, F32>, +i: U32, arr: Array<F32>) -> Array<F32>:
@@ -510,6 +516,133 @@ def scan_head(+state_h: List<&2, F32>, +q_h: List<&2, F32>,
   head_done_arr(scan_rows_arr(32n, 0n, arr_of(512n, state_h),
     state_h, q_h, k_h, x_h, a, skip, sc, acc_o), acc_s)
 
+# ---- a chunked pass: one 2048-float array across all tokens ----
+
+def dot_arr(+left: Nat, +i: U32, +q: List<&2, F32>, +acc: F32,
+    cur: Array<F32> & F32) -> Array<F32> & F32:
+  match left q:
+    case 0n _:
+      match cur:
+        case Tuple{a, _}:
+          Tuple{a, acc}
+    case 1n+p Con{h, t}:
+      match cur:
+        case Tuple{a, v}:
+          +s = ((acc + (v * h : F32) : F32) : F32)
+          dot_arr(p, U32.add(i, U32.from_nat(1n)), t, s,
+            Array.get(F32, a, U32.add(i, U32.from_nat(1n))))
+    case _ _:
+      match cur:
+        case Tuple{a, _}:
+          Tuple{a, acc}
+
+def scan_rows_st(+left: Nat, +p: Nat, +off: U32,
+    +q_h: List<&2, F32>, +k_h: List<&2, F32>, +x_h: List<&2, F32>,
+    +a: F32, +skip: F32, +sc: F32,
+    +acc_o: List<&2, F32>,
+    cur: Array<F32> & F32) -> SA:
+  match left:
+    case 0n:
+      match cur:
+        case Tuple{arr, _}:
+          SA{arr, acc_o}
+    case 1n+pr:
+      match cur:
+        case Tuple{arr, qs}:
+          +base = U32.add(off, U32.from_nat(Nat.mul(p, 16n)))
+          +xv = nth(p, x_h)
+          +o = ((a * qs : F32) + (skip * xv : F32) : F32)
+          arr2 = row_set(16n, base, a, (sc * xv : F32), k_h,
+            Array.get(F32, arr, base))
+          +nbase = U32.add(off,
+            U32.from_nat(Nat.mul((p + 1n : Nat), 16n)))
+          scan_rows_st(pr, (p + 1n : Nat), off, q_h, k_h, x_h, a,
+            skip, sc, push_row(acc_o, Con{o, Nil{}}),
+            dot_arr(16n, nbase, q_h, 0.0, Array.get(F32, arr2, nbase)))
+
+def scan_head_st(state: Array<F32>, +off: U32, +q_h: List<&2, F32>,
+    +k_h: List<&2, F32>, +x_h: List<&2, F32>, +a: F32, +skip: F32,
+    +sc: F32, +acc_o: List<&2, F32>) -> SA:
+  scan_rows_st(32n, 0n, off, q_h, k_h, x_h, a, skip, sc, acc_o,
+    dot_arr(16n, off, q_h, 0.0, Array.get(F32, state, off)))
+
+def head_next(r: SA, +h: Nat, +q_t: List<&2, F32>,
+    +k_t: List<&2, F32>, +x_t: List<&2, F32>,
+    +qk_t: List<&2, F32>, +scale_t: List<&2, F32>,
+    +ADT_t: List<&2, F32>, +D: List<&2, F32>) -> SA:
+  match r:
+    case SA{arr, out}:
+      scan_head_st(arr, U32.from_nat(Nat.mul(h, 512n)),
+        take_row(q_t, Nat.mul(h, 16n), 16n),
+        take_row(k_t, Nat.mul(h, 16n), 16n),
+        take_row(x_t, Nat.mul(h, 32n), 32n),
+        F32.exp(nth(h, ADT_t)), (nth(h, D) + nth(h, qk_t) : F32),
+        nth(h, scale_t), out)
+
+def scan_all_st(state: Array<F32>, +q_t: List<&2, F32>,
+    +k_t: List<&2, F32>, +x_t: List<&2, F32>,
+    +qk_t: List<&2, F32>, +scale_t: List<&2, F32>,
+    +ADT_t: List<&2, F32>, +D: List<&2, F32>) -> SA:
+  s0 : SA = scan_head_st(state, U32.from_nat(0n),
+    take_row(q_t, 0n, 16n), take_row(k_t, 0n, 16n),
+    take_row(x_t, 0n, 32n), F32.exp(nth(0n, ADT_t)),
+    (nth(0n, D) + nth(0n, qk_t) : F32), nth(0n, scale_t), Nil{})
+  s1 : SA = head_next(s0, 1n, q_t, k_t, x_t, qk_t, scale_t, ADT_t, D)
+  s2 : SA = head_next(s1, 2n, q_t, k_t, x_t, qk_t, scale_t, ADT_t, D)
+  head_next(s2, 3n, q_t, k_t, x_t, qk_t, scale_t, ADT_t, D)
+
+def sc_finish_read(sc: SC, +out: List<&2, F32>,
+    +z_t: List<&2, F32>, +w_out: List<&2, F32>,
+    r: Array<F32> & (List<&2, F32>)) -> STA:
+  match sc:
+    case SC{+states, +out_v, +y_inner, +y0}:
+      match r:
+        case Tuple{arr, +rev}:
+          +state = List.reverse(&2, F32, rev)
+          +yi = mul_lists(out, silu_row(z_t))
+          +y = matvec(w_out, yi, 128n)
+          STA{arr, SC{push_row(states, state), push_row(out_v, out),
+            push_row(y_inner, yi), push_row(y0, y)}}
+
+def sc_finish_st(sc: SC, arr: Array<F32>, +out: List<&2, F32>,
+    +z_t: List<&2, F32>, +w_out: List<&2, F32>) -> STA:
+  sc_finish_read(sc, out, z_t, w_out,
+    arr_read(2048n, U32.from_nat(0n), Nil{}, Array.get(F32, arr, 0)))
+
+def sc_step_done(sc: SC, +z_t: List<&2, F32>,
+    +w_out: List<&2, F32>, r: SA) -> STA:
+  match r:
+    case SA{arr2, out}:
+      sc_finish_st(sc, arr2, out, z_t, w_out)
+
+def sc_step_st(st: STA, +x: List<&2, F32>, +z: List<&2, F32>,
+    +ADT: List<&2, F32>, +q: List<&2, F32>, +k: List<&2, F32>,
+    +qk: List<&2, F32>, +scale: List<&2, F32>, +t: Nat,
+    +D: List<&2, F32>, +w_out: List<&2, F32>) -> STA:
+  match st:
+    case STA{arr, sc}:
+      sc_step_done(sc, take_row(z, Nat.mul(t, 128n), 128n),
+        w_out, scan_all_st(arr, take_row(q, Nat.mul(t, 64n), 64n),
+          take_row(k, Nat.mul(t, 64n), 64n),
+          take_row(x, Nat.mul(t, 128n), 128n),
+          take_row(qk, Nat.mul(t, 4n), 4n),
+          take_row(scale, Nat.mul(t, 4n), 4n),
+          take_row(ADT, Nat.mul(t, 4n), 4n), D))
+
+def sc_go_st(+left: Nat, +t: Nat, +x: List<&2, F32>,
+    +z: List<&2, F32>, +ADT: List<&2, F32>, +q: List<&2, F32>,
+    +k: List<&2, F32>, +qk: List<&2, F32>,
+    +scale: List<&2, F32>, +D: List<&2, F32>,
+    +w_out: List<&2, F32>, st: STA) -> SC:
+  match left:
+    case 0n:
+      match st:
+        case STA{arr, sc}:
+          sc
+    case 1n+p:
+      sc_go_st(p, (t + 1n : Nat), x, z, ADT, q, k, qk, scale, D,
+        w_out, sc_step_st(st, x, z, ADT, q, k, qk, scale, t, D, w_out))
+
 def scan_one(sh: SH, +h: Nat, +state: List<&2, F32>,
     +q_t: List<&2, F32>, +k_t: List<&2, F32>,
     +x_t: List<&2, F32>, +qk_t: List<&2, F32>,
@@ -585,8 +718,9 @@ def pass_c(+x: List<&2, F32>, +z: List<&2, F32>,
     +qk: List<&2, F32>, +scale: List<&2, F32>,
     +D: List<&2, F32>, +w_out: List<&2, F32>, +n: Nat) -> SC:
   +state0 = zline(2048n)
-  sc_go(n, 0n, x, z, ADT, q, k, qk, scale, D, w_out,
-    ST{state0, SC{state0, Nil{}, Nil{}, Nil{}}})
+  arr0 = arr_of(2048n, state0)
+  sc_go_st(n, 0n, x, z, ADT, q, k, qk, scale, D, w_out,
+    STA{arr0, SC{state0, Nil{}, Nil{}, Nil{}}})
 
 # ---------------------------------------------------------------------------
 # the whole forward

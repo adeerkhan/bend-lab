@@ -8,7 +8,7 @@ BEND := $(or $(BEND_BIN),$(HOME)/.bend/bin/bend)
 BEND_VERSION := 2.0.38
 BEND_REF := ../bend-ref
 
-.PHONY: setup check laws sync-bend clean lint env env-check release experiment experiments results report trace dash dashboard session unet-metric peaks bounds bench plumbing flow flow64 doctor figures select plots sweep sweep-agent
+.PHONY: setup check laws sync-bend clean lint env env-check release experiment experiments results report trace dash dashboard session unet-metric mamba3-bench peaks bounds bench plumbing flow flow64 doctor figures select plots sweep sweep-agent
 
 setup:            ## Bend, Lean and the Python venv
 	scripts/setup.sh
@@ -24,6 +24,11 @@ versions:         ## the Bend pin, bend.toml, .bend/env and the imports, side by
 
 mamba3:           ## the Mamba-3 SISO gates: forward, backward, training, generation
 	$(PY) reference/check_mamba3_bend.py
+
+mamba3-bench:     ## twenty forward passes at seqlen 8: the scan benchmark
+	@mkdir -p .scratch
+	$(BEND) -o .scratch/mamba3_fwd.bin examples/language/mamba3/bench_mamba3_fwd_n.bend
+	/usr/bin/time -f "bench mamba3: %e s wall, %U s user" .scratch/mamba3_fwd.bin
 
 unet-metric:      ## the UNet held-out gate: legibility and spectrum, with can-fail arms
 	$(PY) reference/test_unet_flowers_metric.py

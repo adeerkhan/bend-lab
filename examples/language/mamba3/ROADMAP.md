@@ -34,8 +34,10 @@ best way to understand why the kernel is written the way it is.
 `Array<F32>`, updates the 32x16 state in place, and reads it back. Twenty
 forwards at seqlen 8 are `0.37-0.38 s` against `0.71-0.73 s` on the list path,
 and the ten-step train probe is `3.64-3.67 s` against `9.81-10.50 s`; every
-gate passes. The chunked scan over tokens is the next step, not the array
-conversion.
+gate passes. The chunked scan is done too: `pass_c` carries one 2048-float
+array across all four heads and all tokens, and in a same-session A/B twenty
+forwards are `0.37-0.45 s` against `0.49-0.56 s` for the per-head array core
+(medians `0.44 s` against `0.52 s`; train probe equal within noise).
 
 The `q.S^T` product through `TA.Mat.matmul_nt(1, 16, 32, ...)` is **65x** the
 list `take_row` + `dot` version (`bench_qs_list.bend` against
@@ -44,7 +46,7 @@ that product inside `scan_head` was measured on 2026-11-12: it passed every
 gate but made twenty forwards `0.84-1.18 s` against `0.71-0.73 s`, because the
 row extraction is still needed for the state update and the conversions add
 allocation. The product only pays inside a scan that keeps the state in `Mat`;
-the array core is the measured win.
+the chunked array scan is the measured win.
 
 ## 2. A decode step and a real generation loop
 

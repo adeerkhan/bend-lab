@@ -76,6 +76,11 @@ Against the same-lane CPU twin, the Bend forward is **25x** slower and the
 forward+backward is **99x** slower on this run. A second run of the same
 command gave Bend `42.6 ms` and `482 ms` and the CPU twin `2.46 ms` and
 `5.44 ms`; the ratio is about `17-25x` and `89-99x`, not a fixed constant.
+
+The Bend rows above are the **list scan**. With the array core and the chunked
+scan, the same 20-forward benchmark is `0.37-0.45 s` (about `19-22 ms/call`,
+`make mamba3-bench`), so the forward ratio to the twin is about `13-15x`; the
+backward still runs the list path and its numbers are unchanged.
 Against the CUDA twin, the forward is **11x** slower and the forward+backward
 **40x** slower, but that comparison crosses the lane. The public bf16 module is **63x** faster than the Bend
 forward, and it is the least accurate of the four: speed and accuracy move in
@@ -173,9 +178,9 @@ tensor memory. The allocated peak (`17.46 MB`) is the comparable number.
 - The port is numerically right. Every gate is at least two orders of
   magnitude inside its tolerance, and the backward is right to `2.9e-06`
   relative, not merely close on the loss.
-- The port is slow because it is an explicit loop over lists on one CPU core.
-  The 99x forward+backward gap to the CPU twin is the list substrate and the
-  scalar per-element work, not the scan math. The chunked kernel and the
+- The port is slow because it is an explicit loop over arrays and lists on
+  one CPU core. The 99x forward+backward gap to the CPU twin is the list
+  substrate in the backward and the scalar per-element work, not the scan math. The chunked kernel and the
   fused Triton path exist precisely to remove that work.
 - The public module's speed comes with a bf16 lane. At `2.5e-03` relative it
   is still a fine training lane, but it is not the F32 oracle, and a gate
@@ -238,8 +243,18 @@ reads the state back once; the state is no longer rebuilt as 32 new rows per
 token. Twenty forwards at seqlen 8 fell from `0.71-0.73 s` to `0.37-0.38 s`
 (user time `0.37-0.38 s`), and the ten-step train probe from `9.81-10.50 s` to
 `3.64-3.67 s`. The forward, backward, training, generation and full-LM gates
-all pass. A chunked scan over tokens is still open; the array core is the win
-at this sequence length.
+all pass.
+
+The **chunked scan** carried it further. `pass_c` now builds one 2048-float
+`Array<F32>` from the initial state and carries it across all four heads and
+all tokens (`scan_rows_st`, `sc_go_st`), so the state is not copied into a fresh
+array per head per token. In a same-session, interleaved A/B, twenty forwards
+at seqlen 8 took `0.37-0.45 s` against `0.49-0.56 s` for the per-head array
+core, medians `0.44 s` against `0.52 s` (about **15% less**, session
+`mamba3-ab`); the ten-step train probe was equal within noise
+(`5.58-5.97 s` against `5.74-5.78 s`, interleaved runs). The earlier
+`0.37-0.38 s` figure is the array core in a faster machine state: the two
+sessions are not compared as a delta.
 
 ## The BendTorch GPU lane
 

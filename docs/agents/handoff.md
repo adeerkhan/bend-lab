@@ -7,6 +7,25 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-12 — Mamba-3's chunked scan: one array across tokens
+
+`pass_c` now runs `sc_go_st`: one 2048-float `Array<F32>` is built from the
+initial state and carried across all four heads and all tokens; `scan_rows_st`
+updates the 32x16 cells in place, and the state is read back once per token for
+the backward. The list loop (`scan_all`, `sc_go`) stays in the tree as the
+reference implementation. In a same-session, interleaved A/B, twenty forwards
+at seqlen 8 are `0.37-0.45 s` against `0.49-0.56 s` for the per-head array core
+(medians `0.44 s` against `0.52 s`, about 15% less; session `mamba3-ab`); the
+ten-step train probe is equal within noise
+(`5.58-5.97 s` against `5.74-5.78 s`, interleaved runs). `make mamba3` is PASS
+(session `mamba3-chunked`, `24.6 s`) and `make mamba3-bench` prints checksum
+`19.323364` in `0.44 s` (session `mamba3-fwd-chunked`). `make check-fast` is
+`31/31` after the change.
+
+The earlier `0.37-0.38 s` array-core figure is from a faster machine state;
+quote the A/B above, not a delta across sessions. The next Mamba-3 step is
+`T.Layer`/`T.Train`, not another scan rewrite.
+
 ## 2026-11-12 — the GLM 192 evaluation can run a named subset
 
 `gen_a.bend`, `gen_h192.bend` and `reference/glm53_dense_eval.py` now take
@@ -30,10 +49,10 @@ same layout. Twenty forwards at seqlen 8 fell from `0.71-0.73 s` to
 `9.81-10.50 s` to `3.64-3.67 s`; `make mamba3` is `MAMBA3 PASS` in `14.8 s`.
 The forward, backward, training, generation and full-LM gates all pass.
 
-Only the array half is done. A chunked scan over tokens remains (ISSUE-108);
-the array core is the win at seqlen 8. `Mat.matmul_nt` was still slower as a
-one-call substitution; do not retry it without keeping the state in `Mat`
-across tokens. The temporary list baseline and compare probe are removed.
+This was the first measured step; the chunked scan at the top supersedes it
+and is now the live path. `Mat.matmul_nt` was still slower as a one-call
+substitution; do not retry it without keeping the state in `Mat` across
+tokens. The temporary list baseline and compare probe are removed.
 
 ## 2026-11-12 — one lane: BendTorch 2.1.0.0, array 0.1.20.0, GPU 0.1.5.2
 
@@ -69,9 +88,9 @@ ISSUE-066 is closed by `make unet-metric`
 0.034`; the white-noise and data-mean arms both fail. The training loss stays
 report-only.
 
-Next: the chunked scan over tokens (ISSUE-108) and the `Mat` substrate work (ISSUE-110), then the full GLM 192
-(ISSUE-101). The 192 evaluation is still 5.7 h and cannot run under the
-one-hour rule.
+The chunked scan is done (top section); the next Mamba-3 item is the `Mat`
+substrate work (ISSUE-110), then the full GLM 192 (ISSUE-101). The 192
+evaluation is still 5.7 h and cannot run under the one-hour rule.
 
 ## 2026-11-12 — the dashboard is the in-house W&B
 

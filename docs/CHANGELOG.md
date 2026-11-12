@@ -19,8 +19,16 @@ What changed for the people who run the lab. Internal refactors are not listed.
   the 32x16 cells in place and reads it back, instead of rebuilding 32 rows per
   token. Twenty forwards at seqlen 8 are `0.37-0.38 s` against `0.71-0.73 s`;
   the ten-step train probe is `3.64-3.67 s` against `9.81-10.50 s`.
-- `make mamba3` passes forward, backward, training, generation and the full LM
-  in `14.8 s`. A chunked scan over tokens is still open (ISSUE-108).
+- The scan now keeps one 2048-float `Array<F32>` across all four heads and all
+  tokens (`scan_rows_st`, `sc_go_st`). In a same-session, interleaved A/B (not
+  comparable with the per-head figures above, which are from an earlier state),
+  twenty forwards are `0.37-0.45 s` against `0.49-0.56 s` for the per-head
+  array core (medians `0.44 s` against `0.52 s`), and the train probe is equal
+  within noise; `make mamba3` passes
+  forward, backward, training, generation and the full LM.
+- `make mamba3-bench` builds and runs the 20-forward benchmark and prints its
+  checksum and wall time (`19.323364`, `0.44 s` in the recorded session). The
+  list loop stays in the tree as the reference (ISSUE-108).
 
 ### The UNet has a held-out gate
 
