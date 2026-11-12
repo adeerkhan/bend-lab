@@ -15,6 +15,12 @@ What changed for the people who run the lab. Internal refactors are not listed.
 - The sampler walks each run's process tree, so several sessions can be live
   at once and a Python test that spawns Bend is sampled as one run. GPU
   numbers come from `nvidia-smi`; without it the page prints `unavailable`.
+- The sessions table scrolls with a sticky header; `running` is green,
+  `failed` red, `lost` amber. Charts draw a marker and a level for a single
+  point, floor the y axis at zero, label both axes, and the loss has a log
+  toggle. CPU, RAM, GPU utilization and per-process GPU memory are separate
+  charts. A finished run shows its peak sample; a run with no steps or
+  samples hides those cards. `?run=ID` opens a run directly.
 - `./scripts/dashboard.sh start` leaves the server running under
   setsid+nohup (`status` and `stop` too); `make dashboard` stays foreground.
 - `make session TASK=<name> CMD="..."` wraps any test command in the store

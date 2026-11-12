@@ -31,11 +31,29 @@ child PID; `session.py` wraps any command (`make session TASK=... CMD=...`).
 
 Verified with two simultaneous sessions (`live-cpu` and `live-sleep2`, both
 sampled while running), a live one-step GLM trace (run 31: build `58.7 s`,
-run `11.739 s`, 4 samples before the test shell ended, child PID and
-`params 74,144` recorded), and the long GLM run 1 (1,398 steps, no system
-samples because it predates the sampler). The page API returned `200`,
-`/api/overview` reported 27 runs and live CPU/RAM/GPU, and the JavaScript
-parses under `node --check`.
+run `11.739 s`, child PID and `params 74,144` recorded), and the long GLM
+run 1 (1,398 steps, no system samples because it predates the sampler).
+
+The layout was rebuilt after looking at it in a headless browser: the
+sessions table is a scroll box with a sticky header, `running` is green in the
+counter and the row, `failed` red and `lost` amber; a one-point chart draws a
+marker and its level; the y axis floors at zero; axes carry labels; the loss
+has a log toggle; CPU, RAM, GPU utilization and per-process GPU memory are
+four charts instead of mixed units. A finished run shows its peak sample, not
+the empty trace process, and a run with no steps or samples hides those cards.
+`?run=ID` opens a run and the selected row scrolls into view.
+
+More runs through it, all under the one-hour rule:
+
+| run | command | result |
+| --- | --- | --- |
+| 32 | `make trace TASK=glm53-hybrid128 STEPS=30` | 30 steps, loss `5.5635 -> 3.2657`, loop `66.8 s`, 118 samples, `params 74,144` |
+| 33 | `make session TASK=mamba3 CMD="make mamba3"` | `MAMBA3 PASS`, `22.2 s` |
+| 34 | `make experiment TASK=iris-crossval` | PASS, `1m05` task |
+| 35 | `make session TASK=check-fast CMD="make check-fast"` | `31/31`, `23.6 s` |
+
+The store then held 31 runs. The page API returned `200`, `/api/overview`
+reported live CPU/RAM/GPU, and the JavaScript parses under `node --check`.
 
 ## 2026-11-12 — the run store, and the first two local issue fixes
 
