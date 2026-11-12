@@ -1,6 +1,6 @@
 {
   "schema": "mlbend.experiment/3",
-  "created_at": "2026-11-01T17:01:33.114085+00:00",
+  "created_at": "2026-11-12T09:01:28.151993+00:00",
   "task": {
     "name": "vit-first",
     "description": "the ViT's step-0 window in a second: the loss, the target's mean square and the model's, against the twin (the cell for ISSUE-032 and ISSUE-040)",
@@ -32,7 +32,7 @@
     "bend": "2.0.38"
   },
   "git": {
-    "commit": "c97447b",
+    "commit": "e2f8288",
     "branch": "main",
     "dirty": true
   },
@@ -152,66 +152,29 @@
     }
   ],
   "machine": {
-    "platform": "Linux-7.2.13-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "platform": "Linux-7.2.15-300.fc45.x86_64-x86_64-with-glibc2.44",
     "machine": "x86_64",
     "processor": "",
     "cpu_count": 28,
-    "python": "3.14.8",
-    "numpy": "2.5.2"
+    "python": "3.15.0",
+    "numpy": "2.5.4"
   },
   "run": {
-    "build_seconds": 75.542,
-    "seconds_min": 1.01,
+    "build_seconds": 121.388,
+    "seconds_min": 1.275,
     "seconds_all": [
-      1.01
+      1.275
     ],
     "repeat": 1,
     "fetch_seconds": 0.002,
-    "compute_seconds": 1.008,
-    "reference_seconds": 0.02,
-    "speed_ratio": 0.02
+    "compute_seconds": 1.273,
+    "reference_seconds": 0.043,
+    "speed_ratio": 0.034
   },
   "stages": [],
   "stages_source": null,
   "counts": {},
-  "peaks": {
-    "schema": "mlbend.peaks/1",
-    "created_at": "2026-10-31T21:08:08.983977+00:00",
-    "machine": {
-      "platform": "Linux-7.2.13-200.fc44.x86_64-x86_64-with-glibc2.43",
-      "machine": "x86_64",
-      "processor": "",
-      "cpu_count": 28
-    },
-    "bend": "2.0.38",
-    "read_gbs": 3.355,
-    "write_gbs": 8.389,
-    "copy_gbs": 11.185,
-    "flops_gflops": 10.038,
-    "flops_dtype": "f32",
-    "launch_us": null,
-    "source": {
-      "program": "bench/peaks/main.bend",
-      "bytes": 16777216,
-      "repeats": 3,
-      "flops": "results/bench-matmul.json ([128, 128] F32)"
-    },
-    "median_ms": {
-      "copy_head": 1.0,
-      "copy_ms": 3.0,
-      "n": 4194304.0,
-      "read_head": 4194304.0,
-      "read_ms": 5.0,
-      "write_head": 1.0,
-      "write_ms": 2.0
-    },
-    "notes": [
-      "read, write and copy are through Array.get/Array.set, not raw DRAM",
-      "copy counts a read and a write of every byte",
-      "flops is bench/matmul's measured rate at its shape",
-      "launch latency needs a bang: unprobed"
-    ]
-  },
+  "peaks": {},
   "bounds": {},
   "notes": [],
   "seed_runs": [
@@ -219,9 +182,9 @@
       "seed": 0,
       "metrics": {
         "loss_at_0": {
-          "bend": 1.0091865,
-          "reference": 1.0091865062713623,
-          "delta": -6.271362318344131e-09,
+          "bend": 1.0093014,
+          "reference": 1.0093014240264893,
+          "delta": -2.40264892426012e-08,
           "tolerance": 1e-06,
           "mode": "relative",
           "pass": true
@@ -235,23 +198,23 @@
           "pass": true
         },
         "out_sq": {
-          "bend": 0.009290358,
-          "reference": 0.009290358051657677,
-          "delta": -5.1657676400362895e-11,
+          "bend": 0.009314018,
+          "reference": 0.009314018301665783,
+          "delta": -3.0166578263157717e-10,
           "tolerance": 0.0001,
           "mode": "relative",
           "pass": true
         }
       },
-      "run_seconds": 1.01,
-      "reference_seconds": 0.02
+      "run_seconds": 1.275,
+      "reference_seconds": 0.043
     }
   ],
   "metrics": {
     "loss_at_0": {
-      "bend": 1.0091865,
-      "reference": 1.0091865062713623,
-      "delta": -6.271362318344131e-09,
+      "bend": 1.0093014,
+      "reference": 1.0093014240264893,
+      "delta": -2.40264892426012e-08,
       "tolerance": 1e-06,
       "mode": "relative",
       "pass": true,
@@ -273,9 +236,9 @@
       "n_seeds": 1
     },
     "out_sq": {
-      "bend": 0.009290358,
-      "reference": 0.009290358051657677,
-      "delta": -5.1657676400362895e-11,
+      "bend": 0.009314018,
+      "reference": 0.009314018301665783,
+      "delta": -3.0166578263157717e-10,
       "tolerance": 0.0001,
       "mode": "relative",
       "pass": true,

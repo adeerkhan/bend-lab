@@ -1,6 +1,6 @@
 {
   "schema": "mlbend.experiment/3",
-  "created_at": "2026-11-02T19:20:28.805061+00:00",
+  "created_at": "2026-11-12T08:59:19.210525+00:00",
   "task": {
     "name": "flow64-first",
     "description": "the 64x64 flow's forward and sampler in seconds: the parameter count and three mean squares against the twin (the cell for the flow's missing gate)",
@@ -30,7 +30,7 @@
     "bend": "2.0.38"
   },
   "git": {
-    "commit": "49b63a7",
+    "commit": "e2f8288",
     "branch": "main",
     "dirty": true
   },
@@ -150,66 +150,29 @@
     }
   ],
   "machine": {
-    "platform": "Linux-7.2.13-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "platform": "Linux-7.2.15-300.fc45.x86_64-x86_64-with-glibc2.44",
     "machine": "x86_64",
     "processor": "",
     "cpu_count": 28,
-    "python": "3.14.8",
+    "python": "3.15.0",
     "numpy": "2.5.4"
   },
   "run": {
-    "build_seconds": 48.636,
-    "seconds_min": 3.845,
+    "build_seconds": 103.179,
+    "seconds_min": 4.839,
     "seconds_all": [
-      3.845
+      4.839
     ],
     "repeat": 1,
     "fetch_seconds": 0.0,
-    "compute_seconds": 3.845,
-    "reference_seconds": 0.539,
-    "speed_ratio": 0.14
+    "compute_seconds": 4.839,
+    "reference_seconds": 12.408,
+    "speed_ratio": 2.564
   },
   "stages": [],
   "stages_source": null,
   "counts": {},
-  "peaks": {
-    "schema": "mlbend.peaks/1",
-    "created_at": "2026-10-31T21:08:08.983977+00:00",
-    "machine": {
-      "platform": "Linux-7.2.13-200.fc44.x86_64-x86_64-with-glibc2.43",
-      "machine": "x86_64",
-      "processor": "",
-      "cpu_count": 28
-    },
-    "bend": "2.0.38",
-    "read_gbs": 3.355,
-    "write_gbs": 8.389,
-    "copy_gbs": 11.185,
-    "flops_gflops": 10.038,
-    "flops_dtype": "f32",
-    "launch_us": null,
-    "source": {
-      "program": "bench/peaks/main.bend",
-      "bytes": 16777216,
-      "repeats": 3,
-      "flops": "results/bench-matmul.json ([128, 128] F32)"
-    },
-    "median_ms": {
-      "copy_head": 1.0,
-      "copy_ms": 3.0,
-      "n": 4194304.0,
-      "read_head": 4194304.0,
-      "read_ms": 5.0,
-      "write_head": 1.0,
-      "write_ms": 2.0
-    },
-    "notes": [
-      "read, write and copy are through Array.get/Array.set, not raw DRAM",
-      "copy counts a read and a write of every byte",
-      "flops is bench/matmul's measured rate at its shape",
-      "launch latency needs a bang: unprobed"
-    ]
-  },
+  "peaks": {},
   "bounds": {},
   "notes": [],
   "seed_runs": [
@@ -225,32 +188,32 @@
           "pass": true
         },
         "out_sq": {
-          "bend": 0.028880637,
-          "reference": 0.028880655765533447,
-          "delta": -1.8765533446596372e-08,
+          "bend": 0.029074484,
+          "reference": 0.02907450497150421,
+          "delta": -2.0971504210293146e-08,
           "tolerance": 0.0001,
           "mode": "relative",
           "pass": true
         },
         "step_sq": {
-          "bend": 1.0197978,
-          "reference": 1.0197980403900146,
-          "delta": -2.4039001456088727e-07,
+          "bend": 1.019798,
+          "reference": 1.0197999477386475,
+          "delta": -1.9477386474786584e-06,
           "tolerance": 0.0001,
           "mode": "relative",
           "pass": true
         },
         "euler32_sq": {
-          "bend": 1.0434021,
-          "reference": 1.043403148651123,
-          "delta": -1.0486511230478612e-06,
+          "bend": 1.043714,
+          "reference": 1.0437145233154297,
+          "delta": -5.233154296568898e-07,
           "tolerance": 0.0001,
           "mode": "relative",
           "pass": true
         }
       },
-      "run_seconds": 3.845,
-      "reference_seconds": 0.539
+      "run_seconds": 4.839,
+      "reference_seconds": 12.408
     }
   ],
   "metrics": {
@@ -267,9 +230,9 @@
       "n_seeds": 1
     },
     "out_sq": {
-      "bend": 0.028880637,
-      "reference": 0.028880655765533447,
-      "delta": -1.8765533446596372e-08,
+      "bend": 0.029074484,
+      "reference": 0.02907450497150421,
+      "delta": -2.0971504210293146e-08,
       "tolerance": 0.0001,
       "mode": "relative",
       "pass": true,
@@ -279,9 +242,9 @@
       "n_seeds": 1
     },
     "step_sq": {
-      "bend": 1.0197978,
-      "reference": 1.0197980403900146,
-      "delta": -2.4039001456088727e-07,
+      "bend": 1.019798,
+      "reference": 1.0197999477386475,
+      "delta": -1.9477386474786584e-06,
       "tolerance": 0.0001,
       "mode": "relative",
       "pass": true,
@@ -291,9 +254,9 @@
       "n_seeds": 1
     },
     "euler32_sq": {
-      "bend": 1.0434021,
-      "reference": 1.043403148651123,
-      "delta": -1.0486511230478612e-06,
+      "bend": 1.043714,
+      "reference": 1.0437145233154297,
+      "delta": -5.233154296568898e-07,
       "tolerance": 0.0001,
       "mode": "relative",
       "pass": true,

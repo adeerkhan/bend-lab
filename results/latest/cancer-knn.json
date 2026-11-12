@@ -1,10 +1,10 @@
 {
-  "schema": "mlbend.experiment/1",
-  "created_at": "2026-10-24T17:45:48.505174+00:00",
+  "schema": "mlbend.experiment/3",
+  "created_at": "2026-11-12T08:49:21.424354+00:00",
   "task": {
     "name": "cancer-knn",
     "description": "three-nearest-neighbours over breast cancer, four fifths train",
-    "program": "examples/knn/main.bend",
+    "program": "examples/classification/knn/main.bend",
     "dataset": {
       "name": "breast_cancer",
       "rows": 683,
@@ -17,7 +17,7 @@
       "bytes": 14339,
       "sha256": "4c35090cb5bf3e3ec8c528a4a837a33bacefc0b06c3b62fbb1331baf7ca865e8",
       "fetch_seconds": 0.001,
-      "cache": "/home/adeerkhan/github/bend/MLBend/reference/.cache/datasets"
+      "cache": "/home/adeerkhan/github/bend/bend-lab/reference/.cache/datasets"
     },
     "seed": 0
   },
@@ -25,9 +25,15 @@
     0
   ],
   "trainer": "bend",
+  "variant": {
+    "trainer": "bend",
+    "lane": "cpu",
+    "threads": null,
+    "bend": "2.0.38"
+  },
   "git": {
-    "commit": "1ffe18a",
-    "branch": "evidence/pinned-data-seeds",
+    "commit": "86acbfc",
+    "branch": "main",
     "dirty": true
   },
   "bend": {
@@ -55,6 +61,11 @@
       "hash": "0x2bbe4207657ea8b1158567d930651411"
     },
     {
+      "name": "bend-ml-nat-lemmas",
+      "version": "0.1.2.0",
+      "hash": "0x09966385f3a8541fb22fd49450cdf477"
+    },
+    {
       "name": "bend-ml-tensor",
       "version": "0.1.0.0",
       "hash": "0xf9837737d2c3f58ae1d0c5df42255584"
@@ -65,9 +76,29 @@
       "hash": "0x0f6479f09ada7ae614e64e31e8f5a730"
     },
     {
+      "name": "bend-ml-tensor-array",
+      "version": "0.1.18.0",
+      "hash": "0xf4dfe0b415f12cd7b6b3e20aa7cc5aa0"
+    },
+    {
       "name": "bend-ml-tensor-fork",
-      "version": "0.1.2.0",
-      "hash": "0x5734508f2a6198d9a87a28d4c58bfbae"
+      "version": "0.1.5.0",
+      "hash": "0x236efa65086abc5955a9e74563e24668"
+    },
+    {
+      "name": "bend-ml-tensor-gpu",
+      "version": "0.1.2.1",
+      "hash": "0x454d8eb5320624d5b121fdc9d78ee0a6"
+    },
+    {
+      "name": "bend-ml-tensor-gpu",
+      "version": "0.1.5.0",
+      "hash": "0x6538b6a56d11b5a4d65ef7d8b18c1f9f"
+    },
+    {
+      "name": "bendtorch-gpu",
+      "version": "1.1.1.0",
+      "hash": "0x3c22148d676c2988827dae103c18f499"
     },
     {
       "name": "mlbend-cluster",
@@ -77,7 +108,12 @@
     {
       "name": "mlbend-datasets",
       "version": "0.1.6.0",
-      "hash": "0xf3d145d639153c61b826e4f60d3c0dcd"
+      "hash": "0x43f00fa69fc1132fa416c0f389d0a503"
+    },
+    {
+      "name": "mlbend-generative",
+      "version": "0.1.1.0",
+      "hash": "0xd48e7ce018b6fa7dc613b629e4260a23"
     },
     {
       "name": "mlbend-huggingface",
@@ -87,7 +123,7 @@
     {
       "name": "mlbend-metrics",
       "version": "0.1.0.0",
-      "hash": "0x9afaa60ee4d17706cb14d6ec20d1d4ae"
+      "hash": "0xcffef0c9b0e924c8e74e1d965dfb4106"
     },
     {
       "name": "mlbend-pipeline",
@@ -98,6 +134,11 @@
       "name": "mlbend-preprocess",
       "version": "0.1.0.0",
       "hash": "0xa8182854f375cd61135ccd32993993cc"
+    },
+    {
+      "name": "mlbend-report",
+      "version": "0.1.0.0",
+      "hash": "0x97687e0483c49ddb64fe1ee5f5244927"
     },
     {
       "name": "mlbend-select",
@@ -111,26 +152,31 @@
     }
   ],
   "machine": {
-    "platform": "Linux-7.2.9-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "platform": "Linux-7.2.15-300.fc45.x86_64-x86_64-with-glibc2.44",
     "machine": "x86_64",
     "processor": "",
     "cpu_count": 28,
-    "python": "3.14.8",
+    "python": "3.15.0",
     "numpy": "2.5.4"
   },
   "run": {
-    "build_seconds": 55.25,
-    "seconds_min": 0.196,
+    "build_seconds": 59.977,
+    "seconds_min": 0.381,
     "seconds_all": [
-      0.196,
-      0.196
+      0.381
     ],
-    "repeat": 2,
+    "repeat": 1,
     "fetch_seconds": 0.001,
-    "compute_seconds": 0.195,
-    "reference_seconds": 1.617,
-    "speed_ratio": 8.251
+    "compute_seconds": 0.38,
+    "reference_seconds": 1.318,
+    "speed_ratio": 3.458
   },
+  "stages": [],
+  "stages_source": null,
+  "counts": {},
+  "peaks": {},
+  "bounds": {},
+  "notes": [],
   "seed_runs": [
     {
       "seed": 0,
@@ -144,8 +190,8 @@
           "pass": true
         }
       },
-      "run_seconds": 0.196,
-      "reference_seconds": 1.617
+      "run_seconds": 0.381,
+      "reference_seconds": 1.318
     }
   ],
   "metrics": {

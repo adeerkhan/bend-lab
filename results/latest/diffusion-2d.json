@@ -1,10 +1,10 @@
 {
-  "schema": "mlbend.experiment/1",
-  "created_at": "2026-10-27T16:54:02.371429+00:00",
+  "schema": "mlbend.experiment/3",
+  "created_at": "2026-11-12T08:57:11.627631+00:00",
   "task": {
     "name": "diffusion-2d",
     "description": "a DDPM denoiser trained and sampled on two moons, BendTorch against NumPy",
-    "program": "examples/diffusion/main.bend",
+    "program": "examples/diffusion/two_moons/main.bend",
     "dataset": {
       "name": "two-moons",
       "rows": 128,
@@ -15,7 +15,7 @@
       "sha256": "6764e1b1dd5f9102434345b5aab281e8678fa90e64f8ac268d8240558c77af08",
       "expected_sha256": null,
       "fetch_seconds": 0.0,
-      "cache": "/home/adeerkhan/github/bend/MLBend/reference/.cache/datasets"
+      "cache": "/home/adeerkhan/github/bend/bend-lab/reference/.cache/datasets"
     },
     "seed": 0
   },
@@ -23,8 +23,14 @@
     0
   ],
   "trainer": "bend",
+  "variant": {
+    "trainer": "bend",
+    "lane": "cpu",
+    "threads": null,
+    "bend": "2.0.38"
+  },
   "git": {
-    "commit": "0c45702",
+    "commit": "e2f8288",
     "branch": "main",
     "dirty": true
   },
@@ -53,6 +59,11 @@
       "hash": "0x2bbe4207657ea8b1158567d930651411"
     },
     {
+      "name": "bend-ml-nat-lemmas",
+      "version": "0.1.2.0",
+      "hash": "0x09966385f3a8541fb22fd49450cdf477"
+    },
+    {
       "name": "bend-ml-tensor",
       "version": "0.1.0.0",
       "hash": "0xf9837737d2c3f58ae1d0c5df42255584"
@@ -64,13 +75,28 @@
     },
     {
       "name": "bend-ml-tensor-array",
-      "version": "0.1.16.0",
-      "hash": "0x0159e1f0f11cc1d285ac6a993d19ba8a"
+      "version": "0.1.18.0",
+      "hash": "0xf4dfe0b415f12cd7b6b3e20aa7cc5aa0"
     },
     {
       "name": "bend-ml-tensor-fork",
-      "version": "0.1.4.0",
-      "hash": "0xd13098b0f80022977b3ddb83a57e3c50"
+      "version": "0.1.5.0",
+      "hash": "0x236efa65086abc5955a9e74563e24668"
+    },
+    {
+      "name": "bend-ml-tensor-gpu",
+      "version": "0.1.2.1",
+      "hash": "0x454d8eb5320624d5b121fdc9d78ee0a6"
+    },
+    {
+      "name": "bend-ml-tensor-gpu",
+      "version": "0.1.5.0",
+      "hash": "0x6538b6a56d11b5a4d65ef7d8b18c1f9f"
+    },
+    {
+      "name": "bendtorch-gpu",
+      "version": "1.1.1.0",
+      "hash": "0x3c22148d676c2988827dae103c18f499"
     },
     {
       "name": "mlbend-cluster",
@@ -80,7 +106,7 @@
     {
       "name": "mlbend-datasets",
       "version": "0.1.6.0",
-      "hash": "0xf3d145d639153c61b826e4f60d3c0dcd"
+      "hash": "0x43f00fa69fc1132fa416c0f389d0a503"
     },
     {
       "name": "mlbend-generative",
@@ -95,7 +121,7 @@
     {
       "name": "mlbend-metrics",
       "version": "0.1.0.0",
-      "hash": "0x9afaa60ee4d17706cb14d6ec20d1d4ae"
+      "hash": "0xcffef0c9b0e924c8e74e1d965dfb4106"
     },
     {
       "name": "mlbend-pipeline",
@@ -124,25 +150,31 @@
     }
   ],
   "machine": {
-    "platform": "Linux-7.2.9-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "platform": "Linux-7.2.15-300.fc45.x86_64-x86_64-with-glibc2.44",
     "machine": "x86_64",
     "processor": "",
     "cpu_count": 28,
-    "python": "3.14.8",
+    "python": "3.15.0",
     "numpy": "2.5.4"
   },
   "run": {
-    "build_seconds": 4.919,
-    "seconds_min": 31.919,
+    "build_seconds": 8.961,
+    "seconds_min": 103.705,
     "seconds_all": [
-      31.919
+      103.705
     ],
     "repeat": 1,
     "fetch_seconds": 0.0,
-    "compute_seconds": 31.919,
-    "reference_seconds": 36.063,
-    "speed_ratio": 1.13
+    "compute_seconds": 103.705,
+    "reference_seconds": 207.3,
+    "speed_ratio": 1.999
   },
+  "stages": [],
+  "stages_source": null,
+  "counts": {},
+  "peaks": {},
+  "bounds": {},
+  "notes": [],
   "seed_runs": [
     {
       "seed": 0,
@@ -174,8 +206,8 @@
           "note": "different folds; reported, not compared"
         }
       },
-      "run_seconds": 31.919,
-      "reference_seconds": 36.063
+      "run_seconds": 103.705,
+      "reference_seconds": 207.3
     }
   ],
   "metrics": {
