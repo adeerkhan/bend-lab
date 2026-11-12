@@ -457,11 +457,22 @@ def print_or(sp: Bool, +l: F32) -> IO(Unit):
       do IO<Unit>:
         return Unit{}
 
+def print_final(+i: Nat, +l: F32) -> IO(Unit):
+  match i:
+    case 0n:
+      do IO<Unit>:
+        IO.print("final_loss: unavailable (steps 0; the checkpoint carries no loss)")
+        return Unit{}
+    case 1n+p:
+      do IO<Unit>:
+        IO.print(String.append("final_loss: ", F32.show(l)))
+        return Unit{}
+
 def loop(+root: String, left: Nat, +i: Nat, tr: T.Train<ModelP()>) -> IO(T.Train<ModelP()>):
   match left tr:
     case 0n T.Train{p, g, st, c, q1, q2, +l}:
       do IO<T.Train<ModelP()>>:
-        IO.print(String.append("final_loss: ", F32.show(l)))
+        Unit <- print_final(i, l)
         return T.Train{p, g, st, c, q1, q2, l}
     case 1n+rest T.Train{p, g, st, c, q1, q2, +l}:
       do IO<T.Train<ModelP()>>:

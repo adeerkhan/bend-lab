@@ -231,12 +231,23 @@ def do_step(+s: Nat, tr: T.Train<B4P()>, +data: List<&2, F32>) -> T.Train<B4P()>
     TA.Mat.from_list(n(), inw(), input_of(s, x0, data)),
     TA.Mat.from_list(n(), d(), target_of(x0, data)))
 
+def print_final(+i: Nat, +l: F32) -> IO(Unit):
+  match i:
+    case 0n:
+      do IO<Unit>:
+        IO.print("final_loss: unavailable (steps 0; the checkpoint carries no loss)")
+        return Unit{}
+    case 1n+p:
+      do IO<Unit>:
+        IO.print(String.append("final_loss: ", F32.show(l)))
+        return Unit{}
+
 def loop(left: Nat, +i: Nat, tr: T.Train<B4P()>,
   +data: List<&2, F32>) -> IO(T.Train<B4P()>):
   match left tr:
     case 0n T.Train{p, g, st, c, q1, q2, +l}:
       do IO<T.Train<B4P()>>:
-        IO.print(String.append("final_loss: ", F32.show(l)))
+        Unit <- print_final(i, l)
         return T.Train{p, g, st, c, q1, q2, l}
     case 1n+rest T.Train{p, g, st, c, q1, q2, +l}:
       do IO<T.Train<B4P()>>:
@@ -467,7 +478,9 @@ def train_steps(+start: Nat, +steps: Nat, tr0: T.Train<B4P()>,
   +data: List<&2, F32>) -> IO(T.Train<B4P()>):
   match steps:
     case 0n:
-      IO.pure(T.Train<B4P()>, tr0)
+      do IO<T.Train<B4P()>>:
+        Unit <- print_final(0n, 0.0)
+        return tr0
     case 1n+rest:
       loop(rest, (1n + start : Nat), do_step(start, tr0, data), data)
 
