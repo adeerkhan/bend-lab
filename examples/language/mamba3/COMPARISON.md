@@ -230,8 +230,16 @@ against `0.71-0.73 s` for the list path on the same machine (user time
 `0.83-1.11 s` against `0.71-0.73 s`). `scan_head` still needs `take_row` for
 each row of the state update, so most of the isolated benchmark's saving was
 the row extraction, not the 16-element dot; the `Mat` conversions add
-allocation on top. The next step is a chunked scan that keeps the state in
-`Mat` across tokens, not a one-call substitution.
+allocation on top.
+
+The **array state** did carry. `scan_head` now copies the 512-float head state
+into one `Array<F32>`, updates the 32x16 cells in place with `Array.set`, and
+reads the state back once; the state is no longer rebuilt as 32 new rows per
+token. Twenty forwards at seqlen 8 fell from `0.71-0.73 s` to `0.37-0.38 s`
+(user time `0.37-0.38 s`), and the ten-step train probe from `9.81-10.50 s` to
+`3.64-3.67 s`. The forward, backward, training, generation and full-LM gates
+all pass. A chunked scan over tokens is still open; the array core is the win
+at this sequence length.
 
 ## The BendTorch GPU lane
 

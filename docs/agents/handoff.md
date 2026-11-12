@@ -7,6 +7,22 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-12 — Mamba-3 array state: 1.9x, all gates pass
+
+`scan_head` now copies each head's 512-float state into one `Array<F32>` (one
+spare cell so the last row can read the next index), updates the 32x16 cells
+in place with `Array.set`, and reads the state back once. The output rows and
+the accumulated per-head state are appended as before, so `scan_all` sees the
+same layout. Twenty forwards at seqlen 8 fell from `0.71-0.73 s` to
+`0.37-0.38 s` (`bench_mamba3_fwd_n.bend`), and the ten-step train probe from
+`9.81-10.50 s` to `3.64-3.67 s`; `make mamba3` is `MAMBA3 PASS` in `14.8 s`.
+The forward, backward, training, generation and full-LM gates all pass.
+
+Only the array half is done. A chunked scan over tokens remains (ISSUE-108);
+the array core is the win at seqlen 8. `Mat.matmul_nt` was still slower as a
+one-call substitution; do not retry it without keeping the state in `Mat`
+across tokens. The temporary list baseline and compare probe are removed.
+
 ## 2026-11-12 — one lane: BendTorch 2.1.0.0, array 0.1.20.0, GPU 0.1.5.2
 
 The version skew is gone. `reference/versions.py` now prints one version per

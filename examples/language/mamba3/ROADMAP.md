@@ -30,19 +30,21 @@ best way to understand why the kernel is written the way it is.
 8, 16, 64, 65 and 128, including the 64-boundary. The backward matches at
 `1e-4` per tensor. The loop stays in the tree as the oracle.
 
-**Before that.** An array-based core (`Array.get`/`Array.set`, O(1) per cell)
-would remove the list traversal even in the loop. It is a smaller change and
-it makes the chunked version easier to write.
+**Done: the array core.** `scan_head` now copies the head's 512 floats into one
+`Array<F32>`, updates the 32x16 state in place, and reads it back. Twenty
+forwards at seqlen 8 are `0.37-0.38 s` against `0.71-0.73 s` on the list path,
+and the ten-step train probe is `3.64-3.67 s` against `9.81-10.50 s`; every
+gate passes. The chunked scan over tokens is the next step, not the array
+conversion.
 
-A first measured piece: the `q.S^T` product through
-`TA.Mat.matmul_nt(1, 16, 32, ...)` is **65x** the list `take_row` + `dot`
-version (`bench_qs_list.bend` against `bench_qs_mat.bend`: `2.59 s` against
-`0.04 s` for 20,000 products). Putting that product inside `scan_head` was
-measured on 2026-11-12: it passed every gate but made twenty forwards
-`0.84-1.18 s` against `0.71-0.73 s`, because the row extraction is still
-needed for the state update and the conversions add allocation. The product
-only pays inside a scan that keeps the state in `Mat`; do the array-based
-core first, not a one-call substitution.
+The `q.S^T` product through `TA.Mat.matmul_nt(1, 16, 32, ...)` is **65x** the
+list `take_row` + `dot` version (`bench_qs_list.bend` against
+`bench_qs_mat.bend`: `2.59 s` against `0.04 s` for 20,000 products). Putting
+that product inside `scan_head` was measured on 2026-11-12: it passed every
+gate but made twenty forwards `0.84-1.18 s` against `0.71-0.73 s`, because the
+row extraction is still needed for the state update and the conversions add
+allocation. The product only pays inside a scan that keeps the state in `Mat`;
+the array core is the measured win.
 
 ## 2. A decode step and a real generation loop
 

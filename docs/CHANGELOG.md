@@ -4,6 +4,15 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### Mamba-3's scan keeps its state in an array
+
+- `scan_head` copies each head's 512-float state into one `Array<F32>`, updates
+  the 32x16 cells in place and reads it back, instead of rebuilding 32 rows per
+  token. Twenty forwards at seqlen 8 are `0.37-0.38 s` against `0.71-0.73 s`;
+  the ten-step train probe is `3.64-3.67 s` against `9.81-10.50 s`.
+- `make mamba3` passes forward, backward, training, generation and the full LM
+  in `14.8 s`. A chunked scan over tokens is still open (ISSUE-108).
+
 ### The UNet has a held-out gate
 
 - `make unet-metric` runs `reference/test_unet_flowers_metric.py` on the

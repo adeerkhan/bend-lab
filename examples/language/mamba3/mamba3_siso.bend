@@ -425,29 +425,90 @@ type SH is Type:
 type ST is Type:
   ST{state: List<&2, F32>, sc: SC}
 
-def scan_head_go(+left: Nat, +p: Nat, +state_h: List<&2, F32>,
-    +q_h: List<&2, F32>, +k_h: List<&2, F32>, +x_h: List<&2, F32>,
-    +a: F32, +skip: F32, +sc: F32, +acc_s: List<&2, F32>,
-    +acc_o: List<&2, F32>) -> SH:
+# ---- the array state: 32x16 floats, updated in place ----
+
+def fill_arr(+left: Nat, xs: List<&2, F32>, +i: U32, arr: Array<F32>) -> Array<F32>:
+  match left xs:
+    case 0n _:
+      arr
+    case 1n+p Con{h, t}:
+      fill_arr(p, t, U32.add(i, U32.from_nat(1n)), Array.set(F32, arr, i, h))
+    case _ _:
+      arr
+
+def arr_of(+n: Nat, xs: List<&2, F32>) -> Array<F32>:
+  fill_arr(n, xs, U32.from_nat(0n),
+    Array.new(F32, T.depth(Nat.add(n, 1n)), 0.0))
+
+def row_set(+left: Nat, +idx: U32, +a: F32, +add: F32,
+    +k: List<&2, F32>, cur: Array<F32> & F32) -> Array<F32>:
+  match left k:
+    case 0n _:
+      match cur:
+        case Tuple{arr, _}:
+          arr
+    case 1n+p Con{h, t}:
+      match cur:
+        case Tuple{arr, v}:
+          arr2 = Array.set(F32, arr, idx,
+            (((a * v : F32) + (add * h : F32)) : F32))
+          row_set(p, U32.add(idx, U32.from_nat(1n)), a, add, t,
+            Array.get(F32, arr2, U32.add(idx, U32.from_nat(1n))))
+    case _ _:
+      match cur:
+        case Tuple{arr, _}:
+          arr
+
+def arr_read(+left: Nat, +i: U32, +acc: List<&2, F32>,
+    cur: Array<F32> & F32) -> Array<F32> & (List<&2, F32>):
   match left:
     case 0n:
-      SH{acc_s, acc_o}
+      match cur:
+        case Tuple{a, _}:
+          Tuple{a, acc}
+    case 1n+p:
+      match cur:
+        case Tuple{a, v}:
+          arr_read(p, U32.add(i, U32.from_nat(1n)), Con{v, acc},
+            Array.get(F32, a, U32.add(i, U32.from_nat(1n))))
+
+def scan_rows_arr(+left: Nat, +p: Nat, arr: Array<F32>,
+    +state_h: List<&2, F32>, +q_h: List<&2, F32>, +k_h: List<&2, F32>,
+    +x_h: List<&2, F32>, +a: F32, +skip: F32, +sc: F32,
+    +acc_o: List<&2, F32>) -> Array<F32> & (List<&2, F32>):
+  match left:
+    case 0n:
+      Tuple{arr, acc_o}
     case 1n+pr:
+      +base = U32.from_nat(Nat.mul(p, 16n))
       +row = take_row(state_h, Nat.mul(p, 16n), 16n)
       +qs = dot(row, q_h)
       +xv = nth(p, x_h)
       +o = ((a * qs : F32) + (skip * xv : F32) : F32)
-      +row2 = add_lists(scale_list(row, a),
-        scale_list(k_h, (sc * xv : F32)))
-      scan_head_go(pr, (p + 1n : Nat), state_h, q_h, k_h, x_h, a,
-        skip, sc, push_row(acc_s, row2), push_row(acc_o, Con{o, Nil{}}))
+      ar2 = row_set(16n, base, a, (sc * xv : F32), k_h,
+        Array.get(F32, arr, base))
+      scan_rows_arr(pr, (p + 1n : Nat), ar2, state_h, q_h, k_h, x_h,
+        a, skip, sc, push_row(acc_o, Con{o, Nil{}}))
+
+def sh_of_arr(r: Array<F32> & (List<&2, F32>),
+    +acc_s: List<&2, F32>, +out: List<&2, F32>) -> SH:
+  match r:
+    case Tuple{_, rev}:
+      SH{List.append(&2, F32, acc_s, List.reverse(&2, F32, rev)), out}
+
+def head_done_arr(r: Array<F32> & (List<&2, F32>),
+    +acc_s: List<&2, F32>) -> SH:
+  match r:
+    case Tuple{ar, out}:
+      sh_of_arr(arr_read(512n, U32.from_nat(0n), Nil{},
+        Array.get(F32, ar, 0)), acc_s, out)
 
 def scan_head(+state_h: List<&2, F32>, +q_h: List<&2, F32>,
     +k_h: List<&2, F32>, +x_h: List<&2, F32>, +a: F32, +skip: F32,
     +sc: F32, +acc_s: List<&2, F32>,
     +acc_o: List<&2, F32>) -> SH:
-  scan_head_go(32n, 0n, state_h, q_h, k_h, x_h, a, skip, sc,
-    acc_s, acc_o)
+  head_done_arr(scan_rows_arr(32n, 0n, arr_of(512n, state_h),
+    state_h, q_h, k_h, x_h, a, skip, sc, acc_o), acc_s)
 
 def scan_one(sh: SH, +h: Nat, +state: List<&2, F32>,
     +q_t: List<&2, F32>, +k_t: List<&2, F32>,

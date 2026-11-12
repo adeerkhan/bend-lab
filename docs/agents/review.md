@@ -62,7 +62,7 @@ and `bend.toml`/`bend.lock`; the env was purged and synced from the lock
 | diffusion | `make experiment TASK=vit-first` | PASS, task `3.380 s`, build `245.884 s` |
 | GLM | `make experiment TASK=glm53-hybrid128` | PASS, task `3.017 s`, build `91.818 s` |
 | classical | `make experiment TASK=iris-crossval` | PASS, task `0.208 s`, build `119.090 s` |
-| Mamba-3 | `make mamba3` | PASS, `23.35 s` |
+| Mamba-3 | `make mamba3` | PASS, `14.8 s` total; train probe `3.64 s`; 20 forwards `0.37-0.38 s` |
 | UNet science | `make unet-metric` | PASS · held `0.547`, ceiling `0.574`, span `94.9%` · can-fail white noise and mean · `2.4 s` |
 
 ## The matrix
@@ -73,7 +73,7 @@ and `bend.toml`/`bend.lock`; the env was purged and synced from the lock
 | diffusion | `reference/test_*.py`, `make experiment`, `make unet-metric` | `diffusion-2d`, `vit-first`, `cifar-10`, the UNet held-out gate | `Conv2dNB`, `GroupNorm`, `Tile`, `RoPE2d`, GPU lane | adopt the layers that replace local copies; rerun the gates |
 | flow matching | `reference/test_flow64.py`, `make experiment` | `flow64-first`; the 6,000-step `flowers-flow` only when a gate or claim needs it | `Conv2dNB`, `GroupNorm`, GPU lane | check the forward/sampler gate; report legibility as measured, not gated |
 | GLM-5.3 Flash | `make experiment TASK=glm53-hybrid128` | one hybrid step; 192 evaluation only after the list core changes | attention triangle and parallel forward, gradient accumulation, `Mat.reshape`, Mat/Array core | make the list core an array core first; then rerun the 192 lane |
-| Mamba-3 | `make mamba3` | the SISO and full-LM gates; the `q.S^T` product benchmark | `Mat.matmul_nt`, `T.Layer`/`T.Train`, GPU lane | the Mat qS inside `scan_head` passed every gate but was slower (`0.84-1.18 s` against `0.71-0.73 s` for 20 forwards); next is the array core and a chunked scan, then `T.Layer` |
+| Mamba-3 | `make mamba3` | the SISO and full-LM gates; the `q.S^T` product benchmark | `Mat.matmul_nt`, `T.Layer`/`T.Train`, GPU lane | the array-state `scan_head` is 1.9x faster (20 forwards `0.37-0.38 s` against `0.71-0.73 s`; train probe `3.64 s` against `9.81-10.50 s`); a chunked scan over tokens is next, then `T.Layer` |
 
 ## Order
 
@@ -88,7 +88,7 @@ and `bend.toml`/`bend.lock`; the env was purged and synced from the lock
 4. **Adopt one feature per track**, each with a before/after:
    - Diffusion/flow: `Conv2dNB`, `GroupNorm`, `Tile`, `RoPE2d`.
    - GLM: triangle attention, gradient accumulation, then the array core.
-   - Mamba-3: the array core, then a chunked scan, then `T.Layer`/`T.Train`;
+   - Mamba-3: the array core is done; then a chunked scan, then `T.Layer`/`T.Train`;
      the one-call Mat qS was measured slower and is recorded in
      `examples/language/mamba3/COMPARISON.md`.
    - Classical: version bump only; it is the control.

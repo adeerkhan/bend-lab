@@ -120,6 +120,12 @@ The pieces:
 | kernel, F32 + TF32 | the default `tl.dot` | about `1.6e-03` |
 | public module | bf16 Q/K/V/Trap/Angles/Z | `2.5e-03` |
 
+The CPU scan keeps each head's 512-float state in one `Array<F32>` and updates
+the 32x16 cells in place, instead of rebuilding 32 rows per token. Twenty
+forwards at seqlen 8 are `0.37-0.38 s` against `0.71-0.73 s` for the list path,
+and the ten-step train probe is `3.64-3.67 s` against `9.81-10.50 s`; every
+gate still passes. A chunked scan over tokens is the next step.
+
 The public `Mamba3` module is a bf16 lane: `mamba3_siso_combined` casts Q, K,
 V, Trap, Angles and Z before it calls the kernel. The F32 kernel check is not
 the public module path; it calls `mamba3_siso_fwd` directly with float32
