@@ -89,8 +89,9 @@ charts. No CDN, no build step, standard library only.
 
 Every run lives in `results/runs.sqlite3` (`reference/runs.py`): one row per
 run and one per step, plus the run's own trace under
-`results/<task>/runs/`. The page lists all runs in a selector, so a run stays
-clickable after the next one overwrites `results/<task>/trace.jsonl`; the
+`results/<task>/runs/`. The page lists all runs in a selector and a clickable
+table, so a run stays clickable after the next one overwrites
+`results/<task>/trace.jsonl`; the
 database and those traces are observations and are ignored by git. A missing
 run prints `unavailable`, never a zero. `trace.py` writes the database while
 the program runs and marks the run `done` or `aborted` at the end;

@@ -9,8 +9,8 @@ What changed for the people who run the lab. Internal refactors are not listed.
 - `reference/runs.py` keeps every run in `results/runs.sqlite3`: one row per
   run, one per step, with the run's own trace under
   `results/<task>/runs/`. `reference/trace.py` writes it live and the
-  dashboard selects any run by id, so a later run no longer replaces an
-  earlier one in the page. The database and the per-run traces are ignored by
+  dashboard selects any run by id, in a selector and a clickable table, so a
+  later run no longer replaces an earlier one in the page. The database and the per-run traces are ignored by
   git; the latest single-file trace can be imported. A finished
   `reference/experiment.py` report card is stored as a run with its record and
   no steps, and the page marks it `record only`. On an empty database the
