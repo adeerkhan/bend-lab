@@ -349,6 +349,16 @@ def state(run_id, fallback):
                             else path) if path else "",
         }
     records = run["records"]
+    samples = run.get("samples") or []
+    proc = fallback["sampler"].live.get(run["id"])
+    if proc is None and samples:
+        last = samples[-1]
+        top = max(samples, key=lambda x: x["hwm_kb"] or x["rss_kb"] or 0)
+        gpu = max((x["gpu_mem_kb"] or 0) for x in samples)
+        proc = {"cpu": last["cpu"], "rss_kb": top["rss_kb"],
+                "hwm_kb": top["hwm_kb"] or top["rss_kb"],
+                "gpu_proc_mb": gpu / 1024 if gpu else None,
+                "peak": True}
     return {
         "run": {k: run[k] for k in (
             "id", "task", "label", "status", "kind", "params", "pid", "host",
@@ -360,8 +370,8 @@ def state(run_id, fallback):
         "record": run.get("record"),
         "extras": extras_of(records),
         "summary": summary_of(records),
-        "samples": run.get("samples") or [],
-        "proc": fallback["sampler"].live.get(run["id"]),
+        "samples": samples,
+        "proc": proc,
         "budget": fallback["budget"],
         "record_path": run.get("record_path") or "",
     }
@@ -380,7 +390,7 @@ header{display:flex;flex-wrap:wrap;gap:14px;align-items:baseline;padding:14px 20
 border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:3}
 h1{font-size:18px;margin:0;letter-spacing:.02em}h2{font-size:12px;color:var(--muted);
 margin:0 0 8px;text-transform:uppercase;letter-spacing:.08em}
-main{padding:14px 20px 40px}
+main{max-width:1680px;margin:0 auto;padding:14px 20px 40px}
 .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;
 padding:12px 14px;min-width:0}.s2{grid-column:span 2}.s3{grid-column:span 3}
@@ -390,21 +400,40 @@ padding:12px 14px;min-width:0}.s2{grid-column:span 2}.s3{grid-column:span 3}
 .row{display:flex;gap:18px;flex-wrap:wrap}.row>div{min-width:92px}
 canvas{width:100%;height:140px;display:block}.tall canvas{height:180px}
 table{width:100%;border-collapse:collapse;font-size:12px}
-th,td{text-align:left;padding:4px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+th,td{text-align:left;padding:5px 7px;border-bottom:1px solid var(--line);
+vertical-align:middle;white-space:nowrap}
 th{color:var(--muted);font-weight:500}td.num,th.num{text-align:right;
 font-variant-numeric:tabular-nums}
+#runstable{max-height:350px;overflow:auto;border:1px solid var(--line);
+border-radius:8px}
+#runstable table{min-width:1120px}
+#runstable th{position:sticky;top:0;background:var(--panel);z-index:1}
+#config{max-height:360px;overflow:auto}
+#config td{white-space:normal;word-break:break-word}
+#config td:first-child{color:var(--muted);width:84px}
+.chk{float:right;text-transform:none;letter-spacing:0;font-weight:400;
+color:var(--muted);font-size:11px}
 .ok{color:var(--accent)}.bad{color:var(--bad)}.warn{color:var(--warn)}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;
+background:var(--muted);margin-right:6px;vertical-align:middle}
+.dot.live{background:var(--accent);box-shadow:0 0 6px var(--accent)}
+.st-running{color:var(--accent);font-weight:600}
+.st-done{color:var(--muted)}.st-imported{color:var(--accent2)}
+.st-failed{color:var(--bad)}.st-lost{color:var(--warn)}
 tr.run{cursor:pointer}tr.run:hover td{background:var(--line)}
+tr.run.running td{background:rgba(110,231,183,.055)}
 tr.run.sel td{background:#1d2a3a}
+tr.run.sel td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
 .badge{display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;
 border:1px solid var(--line);color:var(--muted)}
 .hint{color:var(--muted);font-size:12px;margin:6px 0 0}
 a{color:var(--accent2)}
-@media(max-width:900px){.s2,.s3,.s4,.s6,.s8{grid-column:span 12}}
+@media(max-width:900px){.s2,.s3,.s4,.s6,.s8{grid-column:span 12}
+ main{padding:10px 10px 30px}}
 </style></head><body>
 <header><h1>MLBend</h1>
 <span class="muted">runs &amp; live sessions</span>
-<span id="status" class="muted">connecting…</span>
+<span id="status" class="muted"><i class="dot"></i>connecting…</span>
 <span id="budget" class="muted"></span>
 <span class="muted">auto-refresh 1 s</span></header>
 <main class="grid">
@@ -426,10 +455,12 @@ a{color:var(--accent2)}
 <div class="card s3" id="crate" style="display:none"><h2>tokens / s</h2><div id="rate" class="big">—</div><div id="median" class="muted"></div></div>
 <div class="card s3" id="cmem" style="display:none"><h2>memory</h2><div id="rss" class="big">—</div><div id="peak" class="muted"></div></div>
 
-<div class="card s8" id="closschart" style="display:none"><h2>loss</h2><canvas id="losschart"></canvas></div>
+<div class="card s8" id="closschart" style="display:none"><h2>loss <label class="chk"><input type="checkbox" id="logloss"> log</label></h2><canvas id="losschart"></canvas></div>
 <div class="card s4" id="cmschart" style="display:none"><h2>step time</h2><canvas id="mschart"></canvas></div>
-<div class="card s8" id="csys" style="display:none"><h2>system · cpu % and ram MB</h2><canvas id="syschart"></canvas></div>
-<div class="card s4" id="cgpu" style="display:none"><h2>gpu · util % and process MB</h2><canvas id="gpuchart"></canvas></div>
+<div class="card s3" id="ccpu" style="display:none"><h2>cpu</h2><canvas id="cpuchart"></canvas></div>
+<div class="card s3" id="cram" style="display:none"><h2>ram</h2><canvas id="ramchart"></canvas></div>
+<div class="card s3" id="cgpu" style="display:none"><h2>gpu</h2><canvas id="gpuutilchart"></canvas></div>
+<div class="card s3" id="cgpuproc" style="display:none"><h2>gpu memory</h2><canvas id="gpuprocchart"></canvas></div>
 <div class="card s8" id="cextra" style="display:none"><h2>extra signals</h2><div id="extras" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div><div id="extrahint" class="hint"></div></div>
 <div class="card s4" id="cconfig" style="display:none"><h2>configuration</h2><div id="config" class="muted"></div></div>
 <div class="card s6" id="ctable" style="display:none"><h2>recent steps</h2><div id="table"></div></div>
@@ -437,42 +468,85 @@ a{color:var(--accent2)}
 <div class="card s12" id="craw" style="display:none"><h2>raw trace</h2><pre id="raw" style="max-height:160px;overflow:auto;color:var(--muted)"></pre></div>
 </main>
 <script>
-let overview=null, selected=null, detail=null, runsList=[], timer=null;
+let overview=null, selected=null, detail=null, runsList=[], timer=null, logLoss=false;
 const $=id=>document.getElementById(id);
+const qs=new URLSearchParams(location.search);
+const wanted=qs.get("run");
+if(wanted)selected=Number(wanted);
+if(qs.get("log")==="1"){logLoss=true;$("logloss").checked=true}
 function esc(x){return String(x??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 function fmt(x,n=4){if(x===null||x===undefined||Number.isNaN(x))return"—";
- if(typeof x!=="number")return String(x); if(Math.abs(x)>=1e4||(Math.abs(x)>0&&Math.abs(x)<1e-3))
+ if(typeof x!=="number")return String(x); if(Math.abs(x)>=1e6||(Math.abs(x)>0&&Math.abs(x)<1e-3))
  return x.toExponential(n); return x.toFixed(n).replace(/0+$/,"").replace(/\.$/,"");}
+function intfmt(x){return x===null||x===undefined?"—":Math.round(x).toLocaleString()}
+function statusCell(s){const cls={running:"st-running",done:"st-done",imported:"st-imported",
+ failed:"st-failed",lost:"st-lost"}[s]||""; return `<span class="${cls}">${s==="running"?"● ":""}${esc(s)}</span>`}
 function show(ids,on){for(const id of ids)$(id).style.display=on?"":"none"}
 function chart(canvas, series, opts={}){
  const dpr=window.devicePixelRatio||1, r=canvas.getBoundingClientRect();
+ if(!r.width||!r.height)return;
  canvas.width=r.width*dpr; canvas.height=r.height*dpr;
  const ctx=canvas.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0);
- const w=r.width,h=r.height,pad=30;
- ctx.clearRect(0,0,w,h); ctx.strokeStyle="#263041"; ctx.lineWidth=1;
- ctx.beginPath(); ctx.moveTo(pad,6); ctx.lineTo(pad,h-18); ctx.lineTo(w-6,h-18); ctx.stroke();
- const pts=series.flatMap(s=>s.points||[]).filter(p=>Number.isFinite(p[1]));
- if(!pts.length){ctx.fillStyle="#8b98ad";ctx.font="11px ui-monospace";ctx.fillText("unavailable",pad+4,h/2);return}
- let lo=Math.min(...pts.map(p=>p[1])), hi=Math.max(...pts.map(p=>p[1]));
- if(hi===lo){hi=lo+1;lo-=1}
+ const w=r.width,h=r.height,left=46,right=8,top=18,bottom=22;
+ ctx.clearRect(0,0,w,h);
+ const pts=series.flatMap(s=>(s.points||[]).filter(p=>Number.isFinite(p[1])));
+ if(!pts.length){ctx.fillStyle="#8b98ad";ctx.font="11px ui-monospace";
+  ctx.fillText("unavailable",left+4,h/2);return}
+ const ymin=Math.min(...pts.map(p=>p[1])), ymax=Math.max(...pts.map(p=>p[1]));
+ const useLog=opts.log&&ymin>0;
+ const V=useLog?(v=>Math.log10(v)):(v=>v);
+ let lo=V(ymin), hi=V(ymax);
+ if(hi-lo<1e-12){const d=Math.abs(hi)*0.03||1;lo-=d;hi+=d}
+ const padY=(hi-lo)*0.08; lo-=padY; hi+=padY;
+ if(opts.zero&&!useLog)lo=Math.max(0,lo);
  const xs=pts.map(p=>p[0]), x0=Math.min(...xs), x1=Math.max(...xs);
- for(const s of series){
-  if(!s.points||!s.points.length)continue;
-  ctx.strokeStyle=s.color||"#6ee7b7"; ctx.lineWidth=s.width||1.6; ctx.beginPath();
-  s.points.forEach((p,i)=>{const x=pad+(p[0]-x0)/((x1-x0)||1)*(w-pad-8);
-   const y=h-18-(p[1]-lo)/(hi-lo)*(h-28); i?ctx.lineTo(x,y):ctx.moveTo(x,y)});
-  ctx.stroke();
+ const xlo=x0===x1?x0-1:x0, xhi=x0===x1?x1+1:x1;
+ const X=v=>left+(v-xlo)/(xhi-xlo)*(w-left-right);
+ const Y=v=>top+(hi-V(v))/(hi-lo)*(h-top-bottom);
+ ctx.font="10px ui-monospace";
+ for(let k=0;k<3;k++){
+  const val=hi-(hi-lo)*k/2, y=top+(h-top-bottom)*k/2;
+  ctx.strokeStyle="#1c2633";ctx.lineWidth=1;ctx.beginPath();
+  ctx.moveTo(left,y);ctx.lineTo(w-right,y);ctx.stroke();
+  ctx.fillStyle="#8b98ad";ctx.textAlign="right";
+  const raw=useLog?Math.pow(10,val):val;
+  const label=useLog?fmt(raw,3):(opts.int?(hi-lo<10?fmt(raw,2):intfmt(raw)):fmt(raw,3));
+  ctx.fillText(label,left-4,y+3);
  }
- ctx.fillStyle="#8b98ad";ctx.font="10px ui-monospace";
- ctx.fillText(fmt(hi,3),2,12); ctx.fillText(fmt(lo,3),2,h-5);
- let lx=w-70; for(const s of series){if(!s.points||!s.points.length)continue;
-  ctx.fillStyle=s.color||"#6ee7b7";ctx.fillText(s.name||"",lx,12);lx-=70;}
+ const xlab=opts.xfmt||(v=>fmt(v,0));
+ ctx.fillStyle="#8b98ad";ctx.textAlign="left";ctx.fillText(xlab(x0),left,h-5);
+ ctx.textAlign="right";ctx.fillText(xlab(x1),w-right,h-5);
+ for(const s of series){
+  const sp=(s.points||[]).filter(p=>Number.isFinite(p[1]));
+  if(!sp.length)continue;
+  const color=s.color||"#6ee7b7";
+  ctx.strokeStyle=color;ctx.lineWidth=s.width||1.6;ctx.beginPath();
+  sp.forEach((p,i)=>{const x=X(p[0]),y=Y(p[1]);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});
+  if(sp.length>1)ctx.stroke();
+  if(sp.length===1){const x=X(sp[0][0]),y=Y(sp[0][1]);
+   ctx.setLineDash([2,4]);ctx.strokeStyle=color;ctx.globalAlpha=.45;ctx.beginPath();
+   ctx.moveTo(left,y);ctx.lineTo(w-right,y);ctx.stroke();ctx.globalAlpha=1;ctx.setLineDash([]);
+   ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,3.5,0,6.284);ctx.fill();
+   ctx.textAlign="left";ctx.fillText(fmt(sp[0][1],4),Math.min(x+7,w-right-40),y-6);
+  } else if(sp.length<=40){
+   ctx.fillStyle=color;
+   for(const p of sp){ctx.beginPath();ctx.arc(X(p[0]),Y(p[1]),2,0,6.284);ctx.fill()}
+  }
+ }
+ ctx.textAlign="right";let lx=w-right;
+ for(const s of series){if(!s.points||!s.points.length)continue;
+  const color=s.color||"#6ee7b7";
+  ctx.fillStyle="#8b98ad";ctx.fillText(s.name||"",lx,10);
+  const tw=ctx.measureText(s.name||"").width;
+  ctx.fillStyle=color;ctx.beginPath();ctx.arc(lx-tw-9,6,3,0,6.284);ctx.fill();
+  lx-=tw+26;
+ }
 }
-function num(x,unit=""){return x===null||x===undefined?"—":fmt(x,1)+unit}
 function renderOverview(){
  if(!overview)return; const sys=overview.system||{}, runs=overview.runs||[];
  const running=runs.filter(r=>r.status==="running").length;
- $("nrun").textContent=running; $("nrunsub").textContent=running?`${runs.length} total`:"no live session";
+ $("nrun").textContent=running; $("nrun").className=running?"big ok":"big muted";
+ $("nrunsub").textContent=running?`${running} live · ${runs.length} total`:"no live session";
  $("ntotal").textContent=runs.length;
  $("cpu").textContent=sys.cpu==null?"—":sys.cpu.toFixed(0)+"%";
  const mem=sys.memory;
@@ -487,36 +561,52 @@ function renderOverview(){
  let rows='<table><tr><th class="num">run</th><th>task</th><th>kind</th><th>status</th><th class="num">pid</th><th class="num">steps</th><th class="num">loss</th><th class="num">params</th><th class="num">cpu</th><th class="num">ram</th><th class="num">gpu</th><th class="num">loop s</th></tr>';
  for(const r of runs){
   const p=r.proc||{};
-  rows+=`<tr class="run ${r.id===selected?"sel":""}" data-id="${r.id}"><td class="num">#${r.id}</td><td>${esc(r.task)}</td><td>${esc(r.kind||"run")}</td><td>${esc(r.status)}</td><td class="num">${r.pid??"—"}</td><td class="num">${r.steps}</td><td class="num">${fmt(r.last_loss)}</td><td class="num">${r.params==null?"—":fmt(r.params,0)}</td><td class="num">${p.cpu==null?"—":p.cpu.toFixed(0)+"%"}</td><td class="num">${p.rss_kb?((p.rss_kb/1024).toFixed(0)+" MB"):"—"}</td><td class="num">${p.gpu_proc_mb?(p.gpu_proc_mb.toFixed(0)+" MB"):"—"}</td><td class="num">${Number(r.loop_s||0).toFixed(1)}</td></tr>`;
+  rows+=`<tr class="run ${r.status} ${r.id===selected?"sel":""}" data-id="${r.id}"><td class="num">#${r.id}</td><td>${esc(r.task)}</td><td>${esc(r.kind||"run")}</td><td>${statusCell(r.status)}</td><td class="num">${r.pid??"—"}</td><td class="num">${r.steps}</td><td class="num">${fmt(r.last_loss)}</td><td class="num">${r.params==null?"—":intfmt(r.params)}</td><td class="num">${p.cpu==null?"—":p.cpu.toFixed(0)+"%"}</td><td class="num">${p.rss_kb?((p.rss_kb/1024).toFixed(0)+" MB"):"—"}</td><td class="num">${p.gpu_proc_mb?(p.gpu_proc_mb.toFixed(0)+" MB"):"—"}</td><td class="num">${Number(r.loop_s||0).toFixed(1)}</td></tr>`;
  }
  $("runstable").innerHTML=rows+"</table>";
+ const box=$("runstable"), selRow=box.querySelector("tr.sel");
+ if(selRow){
+  const rb=box.getBoundingClientRect(), sr=selRow.getBoundingClientRect();
+  const top=box.scrollTop+(sr.top-rb.top);
+  if(top<box.scrollTop||top+sr.height>box.scrollTop+box.clientHeight)
+   box.scrollTop=Math.max(0,top-box.clientHeight+sr.height+8);
+ }
 }
 function renderDetail(){
  if(!detail||!detail.run){show(["detail"],false);return}
- show(["detail","cstep","closs","crate","cmem","closschart","cmschart","csys","cgpu","cextra","cconfig","ctable","crecord","craw"],true);
- const r=detail.run, s=detail.summary, recs=detail.records||[], samples=detail.samples||[], p=detail.proc||{};
- $("dtitle").textContent=`#${r.id} · ${r.task} · ${r.kind}`;
+ const r=detail.run, s=detail.summary, recs=detail.records||[], samples=detail.samples||[],
+  p=detail.proc||{}, extras=detail.extras||[];
+ const hasSteps=recs.length>0, hasSamples=samples.length>0;
+ show(["detail","cconfig"],true);
+ show(["cstep","closs","crate","cmem","closschart","cmschart","ctable","craw"],hasSteps);
+ show(["ccpu","cram","cgpu","cgpuproc"],hasSamples);
+ show(["cextra"],hasSteps&&extras.length>0);
+ show(["crecord"],!!detail.record);
+ $("dtitle").innerHTML=`#${r.id} · ${esc(r.task)} · ${esc(r.kind)} ${statusCell(r.status)}`;
  $("dmeta").innerHTML=[["status",r.status],["pid",r.pid??"—"],["host",r.host??"—"],
   ["command",r.command??"—"],["started",r.started?new Date(r.started*1000).toLocaleString():"—"],
   ["finished",r.finished?new Date(r.finished*1000).toLocaleString():"—"],
-  ["exit",r.exit_code??"—"],["error",r.error??"—"]].map(([k,v])=>`<div><div class="muted">${k}</div><div>${esc(v)}</div></div>`).join("");
+  ["exit",r.exit_code??"—"],["error",r.error??"—"]].map(([k,v])=>
+   `<div><div class="muted">${k}</div><div>${k==="status"?statusCell(v):esc(v)}</div></div>`).join("");
  $("step").textContent=recs.length?recs[recs.length-1].step:"—";
  $("steps").textContent=recs.length?`${s.loop_s.toFixed(1)} s in the loop`:"no steps";
  $("loss").textContent=s.last==null?"—":fmt(s.last);
  $("lossrange").textContent=s.last==null?"":`best ${fmt(s.best)} · worst ${fmt(s.worst)}`;
  $("rate").textContent=s.tokens_s?fmt(s.tokens_s,1):"—";
- $("median").textContent=s.median_ms?`${fmt(s.median_ms,0)} ms median`:"";
+ const med=s.median_ms;
+ $("median").textContent=med?(med>=2000?`${(med/1000).toFixed(1)} s median`:`${intfmt(med)} ms median`):"";
  $("rss").textContent=p.rss_kb?(p.rss_kb/1024).toFixed(0)+" MB":"—";
- $("peak").textContent=p.hwm_kb?`${(p.hwm_kb/1024).toFixed(0)} MB peak`+(p.cpu!=null?` · ${p.cpu.toFixed(0)}% cpu`:""):"";
- chart($("losschart"),[{name:"loss",color:"#6ee7b7",points:recs.map(x=>[x.step,x.loss])}]);
- chart($("mschart"),[{name:"ms",color:"#93c5fd",points:recs.map(x=>[x.step,x.ms])}]);
- chart($("syschart"),[
-  {name:"cpu %",color:"#fbbf24",points:samples.map(x=>[x.t,x.cpu])},
-  {name:"ram MB",color:"#93c5fd",points:samples.map(x=>[x.t,x.rss_kb==null?null:x.rss_kb/1024])}]);
- chart($("gpuchart"),[
-  {name:"gpu %",color:"#f472b6",points:samples.map(x=>[x.t,x.gpu_util])},
-  {name:"proc MB",color:"#a7f3d0",points:samples.map(x=>[x.t,x.gpu_mem_kb==null?null:x.gpu_mem_kb/1024])}]);
- const extras=detail.extras||[], box=$("extras");
+ $("peak").textContent=p.hwm_kb?`${(p.hwm_kb/1024).toFixed(0)} MB peak`+
+  (p.cpu!=null?` · ${p.cpu.toFixed(0)}% cpu`:"")+
+  (r.status==="running"?" · live":(p.peak?" · peak sample":" · last sample")):"";
+ chart($("losschart"),[{name:"loss",color:"#6ee7b7",points:recs.map(x=>[x.step,x.loss])}],{xfmt:v=>"step "+v,log:logLoss,zero:true});
+ chart($("mschart"),[{name:"ms",color:"#93c5fd",points:recs.map(x=>[x.step,x.ms])}],{xfmt:v=>"step "+v,int:true,zero:true});
+ const tfmt=v=>new Date(v*1000).toLocaleTimeString();
+ chart($("cpuchart"),[{name:"cpu %",color:"#fbbf24",points:samples.map(x=>[x.t,x.cpu])}],{xfmt:tfmt,int:true,zero:true});
+ chart($("ramchart"),[{name:"ram MB",color:"#93c5fd",points:samples.map(x=>[x.t,x.rss_kb==null?null:x.rss_kb/1024])}],{xfmt:tfmt,int:true,zero:true});
+ chart($("gpuutilchart"),[{name:"gpu %",color:"#f472b6",points:samples.map(x=>[x.t,x.gpu_util])}],{xfmt:tfmt,int:true,zero:true});
+ chart($("gpuprocchart"),[{name:"proc MB",color:"#a7f3d0",points:samples.map(x=>[x.t,x.gpu_mem_kb==null?null:x.gpu_mem_kb/1024])}],{xfmt:tfmt,int:true,zero:true});
+ const box=$("extras");
  if(extras.length){box.innerHTML=""; extras.slice(0,4).forEach((key,i)=>{
    const wrap=document.createElement("div"), lab=document.createElement("div");
    lab.className="muted"; lab.textContent=key; const c=document.createElement("canvas");
@@ -527,7 +617,8 @@ function renderDetail(){
  const cfg=r.config||{};
  let c='<table>';
  const add=(k,v)=>{if(v!==undefined&&v!==null&&v!=="")c+=`<tr><td>${esc(k)}</td><td>${esc(typeof v==="object"?JSON.stringify(v):v)}</td></tr>`};
- add("task",r.task); add("kind",r.kind); add("params",r.params); add("pid",r.pid); add("host",r.host);
+ add("task",r.task); add("kind",r.kind);
+ add("params",r.params==null?null:intfmt(r.params)); add("pid",r.pid); add("host",r.host);
  add("command",r.command); add("git",r.git_commit); add("versions",r.versions);
  for(const k of Object.keys(cfg))add(k,cfg[k]);
  c+="</table>"; $("config").innerHTML=c;
@@ -544,6 +635,7 @@ function renderDetail(){
 async function poll(){
  try{
   const r=await fetch("/api/overview"); overview=await r.json(); runsList=overview.runs||[];
+  $("status").innerHTML=`<i class="dot live"></i>live · ${new Date().toLocaleTimeString()}`;
   renderOverview();
   if(!selected && runsList.length){
    const live=runsList.find(x=>x.status==="running")||runsList[0]; selected=live.id;
@@ -552,12 +644,14 @@ async function poll(){
    const s=await fetch(`/api/state?run=${selected}`); detail=await s.json();
    if(detail.run){selected=detail.run.id; renderDetail();}
   }
- }catch(e){$("status").textContent="server unavailable"}
+ }catch(e){$("status").innerHTML='<i class="dot"></i>server unavailable'}
  timer=setTimeout(poll,1000);
 }
+$("logloss").addEventListener("change",e=>{logLoss=e.target.checked;if(detail)renderDetail()});
 $("runstable").addEventListener("click",e=>{
  const tr=e.target.closest("tr[data-id]"); if(!tr)return;
- selected=Number(tr.dataset.id); detail=null; poll();
+ selected=Number(tr.dataset.id); detail=null;
+ history.replaceState(null,"",`?run=${selected}`); poll();
 });
 document.addEventListener("keydown",e=>{if(e.key===" "){e.preventDefault();if(timer)clearTimeout(timer);timer=setTimeout(poll,1000)}});
 addEventListener("resize",()=>{if(detail)renderDetail()});
