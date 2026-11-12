@@ -7,6 +7,21 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-12 — the five-track review starts with the lane
+
+`docs/agents/review.md` is the review matrix for classical ML, diffusion, flow
+matching, GLM-5.3-Flash and Mamba-3. The first finding is a version skew:
+`bend.toml` says BendTorch 1.1.1.0 and tensor-array 0.1.14.0, `.bend/env` and
+the examples say 2.0.0.0 and 0.1.18.0, and upstream is 2.1.0 and 0.1.21.0. The
+Bend pin is 2.0.38, the new features are on 2.0.40. `make check-fast` is
+31/31 on the current env, but it is not testing the new imports.
+
+The order is: one review lane, `make versions`, `make check-fast`, the full
+gate, then the short per-track tests, then one feature per track with a
+before/after. Do not rerun the 6,000-step flow or GLM 192 just for a green
+number. Mamba-3 comes after the lane: Mat qS into the scan, chunked scan,
+`T.Layer`/`T.Train`.
+
 ## 2026-11-11 — Mamba-3 SISO: forward and backward gated, training and generation run
 
 **Landed** in `bf28ddf`. `examples/language/mamba3/` carries one SISO layer from the

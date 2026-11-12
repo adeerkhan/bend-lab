@@ -19,6 +19,9 @@ check:            ## the proofs, the kernel (--verdict), the rejected programs, 
 check-fast:       ## the proofs and the frozen references only: the cheap gate, under a minute
 	$(PY) reference/check_all.py --fast
 
+versions:         ## the Bend pin, bend.toml, .bend/env and the imports, side by side
+	$(PY) reference/versions.py
+
 mamba3:           ## the Mamba-3 SISO gates: forward, backward, training, generation
 	$(PY) reference/check_mamba3_bend.py
 

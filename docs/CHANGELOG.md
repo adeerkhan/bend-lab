@@ -4,6 +4,20 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The five-track review starts with the version lane
+
+- `docs/agents/review.md` records the matrix for classical ML, diffusion,
+  flow matching, GLM-5.3-Flash and Mamba-3, with a short gate and a short test
+  for each.
+- The first finding is version skew: `bend.toml` pins BendTorch `1.1.1.0` and
+  tensor-array `0.1.14.0`, `.bend/env` and the examples use `2.0.0.0` and
+  `0.1.18.0`, and upstream is `2.1.0` and `0.1.21.0`; Bend is `2.0.38` against
+  `2.0.40`. The new features are therefore not the versions the gate imports.
+- `make check-fast` is `31/31` on the current env; the review starts by
+  agreeing the lane, adding `make versions`, and re-running the short tests.
+  The 6,000-step flow and the 5.6-hour GLM 192 run are not part of the first
+  pass.
+
 ### Mamba-3 SISO: the reference block, forward and backward, in Bend
 
 - **Vendored** `state-spaces/mamba` at `e9594ce1c732d97440f0332fdc43170a2294dbfa`

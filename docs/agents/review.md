@@ -1,0 +1,70 @@
+# Track review, 2026-11-12
+
+The lab now has five model tracks. This is the review matrix and the order to
+re-run them on one lane. It is not a new benchmark; every cell names the
+command that produced its last number.
+
+## Current baseline
+
+| check | command | last result |
+| --- | --- | --- |
+| proofs, frozen references | `make check-fast` | `31/31`, 2026-11-12 |
+| full gate | `make check` | `139/139`, 2026-11-11 |
+| Mamba-3 SISO and full LM | `make mamba3` | `MAMBA3 PASS`, 2026-11-11 |
+
+## The lane is not one lane
+
+Before any feature test, the versions have to agree. Right now:
+
+| piece | `bend.toml` | `.bend/env` and examples | latest upstream |
+| --- | --- | --- | --- |
+| Bend | `2.0.38` | `2.0.38` | `2.0.40` |
+| BendTorch | `1.1.1.0` | `2.0.0.0` | `2.1.0` |
+| tensor-array | `0.1.14.0` | `0.1.18.0` | `0.1.21.0` |
+| tensor-gpu | `0.1.5.0` | `0.1.5.0` | `0.1.5.3` |
+
+A `make check` on this tree tests the old imports, not the new features. The
+first refix is a **single review lane**: Bend 2.0.40, BendTorch 2.1.0,
+tensor-array 0.1.21.0, tensor-gpu 0.1.5.3, tensor-fork 0.1.7.2, with every
+`import` and `bend.toml` entry saying the same thing. Add a `make versions`
+that prints the pin, the env, the imports and the hub hash; a manifest already
+records them per run.
+
+## The matrix
+
+| track | gate | short test | new feature to try | review action |
+| --- | --- | --- | --- | --- |
+| classical ML | `make experiment TASK=...` | `iris-crossval`, `wine-pca`, `transformer-periodic` | none; `Mat.reshape` only if a preprocess needs it | align the lane, rerun the report cards, compare to frozen references |
+| diffusion | `reference/test_*.py`, `make experiment` | `diffusion-2d`, `vit-first`, `cifar-10` | `Conv2dNB`, `GroupNorm`, `Tile`, `RoPE2d`, GPU lane | adopt the layers that replace local copies; rerun the gates |
+| flow matching | `reference/test_flow64.py`, `make experiment` | `flow64-first`; the 6,000-step `flowers-flow` only when a gate or claim needs it | `Conv2dNB`, `GroupNorm`, GPU lane | check the forward/sampler gate; report legibility as measured, not gated |
+| GLM-5.3 Flash | `make experiment TASK=glm53-hybrid128` | one hybrid step; 192 evaluation only after the list core changes | attention triangle and parallel forward, gradient accumulation, `Mat.reshape`, Mat/Array core | make the list core an array core first; then rerun the 192 lane |
+| Mamba-3 | `make mamba3` | the SISO and full-LM gates; the `q.S^T` product benchmark | `Mat.matmul_nt`, `T.Layer`/`T.Train`, GPU lane | put the Mat product into the scan, then a chunked scan, then `T.Layer` |
+
+## Order
+
+1. **Align the lane** and add `make versions`. Run `make check-fast`; then the
+   full `make check`. A version bump is its own commit with a `NOTES.md`
+   entry; no feature work rides on it.
+2. **Baseline the five tracks** with the short tests above, using the frozen
+   references. Write the date, version, command and result into the table.
+3. **Refix what the baseline finds**: stale import versions, a gate that no
+   longer runs, a report card that drifted, a doc claim that no longer holds.
+4. **Adopt one feature per track**, each with a before/after:
+   - Diffusion/flow: `Conv2dNB`, `GroupNorm`, `Tile`, `RoPE2d`.
+   - GLM: triangle attention, gradient accumulation, then the array core.
+   - Mamba-3: Mat qS, chunked scan, `T.Layer`/`T.Train`.
+   - Classical: version bump only; it is the control.
+5. **Upstream**: review #42 (`MaxPool2d`); finish the #26 `Mat` round-trip
+   corollary. Add `Rewire` or attention backward blocks only when a second
+   user or a measurement asks for them.
+
+## What not to do
+
+- Do not rerun the 6,000-step flow or the 5.6-hour GLM 192 evaluation just to
+  see a green number; run the gate that covers the claim.
+- Do not claim a new feature is tested when it is only available in a version
+  the tree does not import.
+- Do not put only the dense layers on the Bend GPU lane around a CPU scan;
+  the transfer and launch cost can be larger than the win.
+- Do not add `Rewire` or a batched attention backward without a measured
+  shape that needs it.
