@@ -61,8 +61,13 @@ def main():
     os.makedirs(os.path.dirname(run_trace), exist_ok=True)
     record_path = os.path.join(ROOT, "results", "latest", args.task + ".json")
     try:
-        run_id = runs.start(args.task, run_trace, record_path,
-                            f"{stamp} · pid {os.getpid()}")
+        run_id = runs.start(
+            args.task, run_trace, None, f"{stamp} · pid {os.getpid()}",
+            pid=os.getpid(), command=" ".join(sys.argv),
+            config={"program": cfg["program"], "args": extra, "seed": 0,
+                    "steps": args.steps, "variant": cfg.get("variant"),
+                    "threads": args.threads},
+            params=cfg.get("params"), kind="trace")
     except Exception as exc:
         print(f"trace: run store unavailable: {exc}")
         run_id = None
@@ -72,6 +77,11 @@ def main():
     proc = subprocess.Popen([binary, "0"] + extra + experiment.rts(args.threads),
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                             text=True, env=experiment.ENV, cwd=ROOT)
+    if run_id is not None:
+        try:
+            runs.set_pid(run_id, proc.pid)
+        except Exception:
+            pass
     records = []
     aborted = []
     timer = None
@@ -105,7 +115,9 @@ def main():
     seconds = time.perf_counter() - start
     if run_id is not None:
         try:
-            runs.finish(run_id, "aborted" if aborted else "done", record_path)
+            # the trace program writes no record of its own; the latest
+            # record belongs to another run and is imported as that run
+            runs.finish(run_id, "aborted" if aborted else "done", None)
         except Exception as exc:
             print(f"trace: run store finish unavailable: {exc}")
     if aborted:

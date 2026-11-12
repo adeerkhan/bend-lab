@@ -677,6 +677,7 @@ TASKS = {
     "diffusion-vit": {
         "description": "a ViT denoiser (2x2 patches, causal attention) over the first 1024 optdigits digits",
         "program": "examples/diffusion/vit/main.bend",
+        "params": 100736,
         "dataset": {"name": "optdigits", "rows": 1024, "features": 64,
                     "source": "https://huggingface.co/datasets/mstz/optdigits",
                     "files": ["https://huggingface.co/datasets/mstz/optdigits/resolve/4f20cc827b763fb69e2a80e18e892e4e11498aec/optdigits.data"], "expected_sha256": "e1b683cc211604fe8fd8c4417e6a69f31380e0c61d4af22e93cc21e9257ffedd"},
@@ -710,6 +711,7 @@ TASKS = {
     "glm53-hybrid128": {
         "description": "one training step of the 4-block GLM-5.3-Flash hybrid (three linear and one sparse block, width 32, four heads, 128 positions, 74,144 parameters) on the reference's synthetic corpus",
         "program": "examples/language/glm53_flash/train_h128.bend",
+        "params": 74144,
         "dataset": {"name": "glm53-corpus128", "rows": 128, "features": 1,
                     "source": "generated: reference/glm53_dense_data.py, the reference's synthetic Python corpus, byte-tokenised"},
         "seed": 0,
@@ -1289,6 +1291,20 @@ def main():
     failed = False
     for name in names:
         cfg = TASKS[name]
+        run_id = None
+        if not args.no_latest:
+            try:
+                run_id = runs.start(
+                    name, "", None, f"{name} · {args.lane} · live",
+                    pid=os.getpid(), command=" ".join(sys.argv),
+                    config={"program": cfg["program"], "args": cfg.get("args"),
+                            "seed": cfg.get("seed"), "variant": cfg.get("variant"),
+                            "trainer": args.trainer, "lane": args.lane,
+                            "threads": args.threads},
+                    kind="experiment")
+                print(f"run: {run_id} started in {os.path.relpath(runs.DB, ROOT)}")
+            except Exception as exc:
+                print(f"run: store unavailable: {exc}")
         probe = dataset_probe(cfg)
         seeds = cfg.get("seeds") or [cfg.get("seed", 0)]
         if args.seeds:
@@ -1317,10 +1333,9 @@ def main():
                                 reference_mode=args.references,
                                 variant_extra=cfg.get("variant"))
         path = write_report(manifest, args.out, latest=not args.no_latest)
-        if not args.no_latest:
+        if run_id is not None:
             try:
-                run_id = runs.record(name, path, f"{name} · {args.lane} · bend "
-                                     f"{manifest['bend']['version']}")
+                runs.finish(run_id, "done", path)
                 print(f"run: {run_id} in {os.path.relpath(runs.DB, ROOT)}")
             except Exception as exc:
                 print(f"run: store unavailable: {exc}")
