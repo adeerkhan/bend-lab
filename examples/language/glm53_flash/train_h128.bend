@@ -217,6 +217,10 @@ def run_go(args: List<String>, r: Run) -> Run:
           match r:
             case Run{steps, lrppm, data, out, weights, val, trace, save, se}:
               run_go(rest, Run{steps, lrppm, data, out, weights, val, True{}, save, se})
+        case "--save":
+          match r:
+            case Run{steps, lrppm, data, out, weights, val, trace, save, se}:
+              run_go(rest, Run{steps, lrppm, data, out, weights, val, trace, True{}, se})
         case "--no-save":
           match r:
             case Run{steps, lrppm, data, out, weights, val, trace, save, se}:

@@ -59,3 +59,4 @@ results/*/runs/
 # the background dashboard pid and log
 results/dashboard.pid
 results/dashboard.log
+results/*/weights/

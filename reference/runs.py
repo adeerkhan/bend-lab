@@ -26,11 +26,13 @@ import time
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB = os.environ.get("MLBEND_RUNS_DB") or os.path.join(ROOT, "results", "runs.sqlite3")
 KNOWN = ("step", "tokens", "loss", "ms")
+RESERVED = set(KNOWN) | {"train_loss", "eval_loss", "val_loss", "validation_loss"}
 META = (
     ("pid", "INTEGER"), ("command", "TEXT"), ("config", "TEXT"),
     ("params", "REAL"), ("kind", "TEXT DEFAULT 'run'"), ("host", "TEXT"),
     ("started", "REAL"), ("finished", "REAL"), ("exit_code", "INTEGER"),
     ("error", "TEXT"), ("git_commit", "TEXT"), ("versions", "TEXT"),
+    ("eval_loss", "REAL"),
 )
 
 
@@ -119,6 +121,21 @@ def _record_info(rec):
     return params, config
 
 
+def _eval_of(rec):
+    if not isinstance(rec, dict):
+        return None
+    for key in ("eval_loss", "val_loss", "validation_loss"):
+        value = rec.get(key)
+        metrics = rec.get("metrics") or {}
+        if value is None:
+            value = metrics.get(key)
+        if isinstance(value, dict):
+            value = value.get("bend")
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return float(value)
+    return None
+
+
 def start(task, trace, record=None, label=None, pid=None, command=None,
           config=None, params=None, kind="run", status="running",
           git_commit=None, versions=None):
@@ -151,7 +168,7 @@ def add_step(run_id, record):
     con = connect()
     step = int(record["step"])
     extra = {k: v for k, v in record.items()
-             if k not in KNOWN and isinstance(v, (int, float))
+             if k not in RESERVED and isinstance(v, (int, float))
              and not isinstance(v, bool)}
     con.execute(
         "INSERT OR REPLACE INTO steps(run_id,step,tokens,loss,ms,extra) "
@@ -197,18 +214,19 @@ def record(task, record_path, label=None, status="done", command=None):
     params, config = _record_info(rec)
     cur = con.execute(
         "INSERT INTO runs(task,label,trace,record,created,updated,status,kind,"
-        "pid,command,config,params,host,started,finished,record_json) "
-        "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        "pid,command,config,params,host,started,finished,record_json,eval_loss) "
+        "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (task, label, "", rel, now, now, status, "experiment", None, command,
          json.dumps(config) if config else None, params, socket.gethostname(),
-         now, now, json.dumps(rec) if rec is not None else None))
+         now, now, json.dumps(rec) if rec is not None else None, _eval_of(rec)))
     run_id = cur.lastrowid
     con.commit()
     con.close()
     return run_id
 
 
-def finish(run_id, status="done", record_path=None, exit_code=None, error=None):
+def finish(run_id, status="done", record_path=None, exit_code=None, error=None,
+           eval_loss=None):
     con = connect()
     now = time.time()
     row = con.execute("SELECT config, record FROM runs WHERE id=?", (run_id,)).fetchone()
@@ -226,13 +244,14 @@ def finish(run_id, status="done", record_path=None, exit_code=None, error=None):
             rec = None
     params, found = _record_info(rec)
     config.update(found)
+    ev = eval_loss if eval_loss is not None else _eval_of(rec)
     con.execute(
         "UPDATE runs SET status=?, updated=?, finished=?, record=COALESCE(?, record), "
         "record_json=COALESCE(?, record_json), config=?, params=COALESCE(?, params), "
-        "exit_code=?, error=? WHERE id=?",
+        "eval_loss=COALESCE(?, eval_loss), exit_code=?, error=? WHERE id=?",
         (status, now, now, _rel(record_path) or None,
          json.dumps(rec) if rec is not None else None,
-         json.dumps(config) if config else None, params, exit_code, error, run_id))
+         json.dumps(config) if config else None, params, ev, exit_code, error, run_id))
     con.commit()
     con.close()
 
@@ -247,6 +266,19 @@ def sample(run_id, cpu=None, rss_kb=None, hwm_kb=None, gpu_util=None,
          gpu_proc_kb))
     con.commit()
     con.close()
+
+
+def peak_sample(run_id):
+    """The largest CPU, RSS, HWM and GPU memory one run reached."""
+    con = connect()
+    row = con.execute(
+        "SELECT MAX(cpu), MAX(rss_kb), MAX(hwm_kb), MAX(gpu_mem_kb) "
+        "FROM samples WHERE run_id=?", (run_id,)).fetchone()
+    con.close()
+    if not row or all(value is None for value in row):
+        return None
+    keys = ("cpu", "rss_kb", "hwm_kb", "gpu_mem_kb")
+    return dict(zip(keys, row))
 
 
 def samples(run_id, limit=7200):
@@ -304,7 +336,7 @@ def list_runs(task=None, status=None, limit=200):
     con = connect()
     q = ("SELECT id,task,label,trace,record,created,updated,status,steps,tokens,"
          "loop_s,first_loss,last_loss,best_loss,extras,pid,command,config,params,"
-         "kind,host,started,finished,exit_code,error,git_commit,versions FROM runs")
+         "kind,host,started,finished,exit_code,error,git_commit,versions,eval_loss FROM runs")
     where, args = [], []
     if task:
         where.append("task=?")
@@ -322,7 +354,7 @@ def list_runs(task=None, status=None, limit=200):
             "status", "steps", "tokens", "loop_s", "first_loss", "last_loss",
             "best_loss", "extras", "pid", "command", "config", "params", "kind",
             "host", "started", "finished", "exit_code", "error", "git_commit",
-            "versions")
+            "versions", "eval_loss")
     out = []
     for row in rows:
         run = dict(zip(keys, row))
@@ -341,7 +373,7 @@ def get_run(run_id):
         "SELECT id,task,label,trace,record,created,updated,status,steps,tokens,"
         "loop_s,first_loss,last_loss,best_loss,extras,record_json,pid,command,"
         "config,params,kind,host,started,finished,exit_code,error,git_commit,"
-        "versions FROM runs WHERE id=?", (run_id,)).fetchone()
+        "versions,eval_loss FROM runs WHERE id=?", (run_id,)).fetchone()
     if not row:
         con.close()
         return None
@@ -349,7 +381,7 @@ def get_run(run_id):
             "status", "steps", "tokens", "loop_s", "first_loss", "last_loss",
             "best_loss", "extras", "record_x", "pid", "command", "config",
             "params", "kind", "host", "started", "finished", "exit_code",
-            "error", "git_commit", "versions")
+            "error", "git_commit", "versions", "eval_loss")
     run = dict(zip(keys, row))
     run["record_path"] = run.pop("record")
     run["record"] = json.loads(run.pop("record_x")) if run.get("record_x") else None

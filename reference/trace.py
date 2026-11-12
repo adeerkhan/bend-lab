@@ -52,6 +52,10 @@ def main():
     extra = list(cfg.get("args") or [])
     if args.steps is not None:
         extra += ["--steps", str(args.steps)]
+    extra += list(cfg.get("trace_args") or [])
+    if cfg.get("trace_out"):
+        os.makedirs(os.path.join(ROOT, cfg["trace_out"]), exist_ok=True)
+        extra += ["--out", cfg["trace_out"]]
     extra.append("--trace")
 
     out = args.out or os.path.join(ROOT, "results", args.task, "trace.jsonl")
@@ -83,6 +87,7 @@ def main():
         except Exception:
             pass
     records = []
+    eval_loss = None
     aborted = []
     timer = None
     if args.max_seconds and args.max_seconds > 0:
@@ -96,7 +101,14 @@ def main():
             for number, line in enumerate(proc.stdout, 1):
                 if not line.strip():
                     continue
-                record = record_of(line.strip(), number)
+                text = line.strip()
+                if text.startswith("val_loss:"):
+                    try:
+                        eval_loss = float(text.split(":", 1)[1].strip())
+                    except ValueError:
+                        raise SystemExit(f"trace: line {number} is not a val_loss: {text!r}")
+                    continue
+                record = record_of(text, number)
                 records.append(record)
                 line_out = json.dumps(record) + "\n"
                 rf.write(line_out); rf.flush()
@@ -117,7 +129,8 @@ def main():
         try:
             # the trace program writes no record of its own; the latest
             # record belongs to another run and is imported as that run
-            runs.finish(run_id, "aborted" if aborted else "done", None)
+            runs.finish(run_id, "aborted" if aborted else "done", None,
+                        eval_loss=eval_loss)
         except Exception as exc:
             print(f"trace: run store finish unavailable: {exc}")
     if aborted:
@@ -135,6 +148,8 @@ def main():
     print(f"trace: build {build_seconds:.1f} s · run {seconds:.3f} s"
           f" · {os.path.relpath(run_trace, ROOT)}")
     print(f"trace: run {run_id} · latest {os.path.relpath(out, ROOT)}")
+    if eval_loss is not None:
+        print(f"trace: eval_loss {eval_loss}")
     return 0
 
 
