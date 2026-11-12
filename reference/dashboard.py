@@ -172,6 +172,7 @@ table{width:100%;border-collapse:collapse;font-size:12px}th,td{text-align:left;
 padding:4px 6px;border-bottom:1px solid var(--line);vertical-align:top}
 th{color:var(--muted);font-weight:500}td.num,th.num{text-align:right;
 font-variant-numeric:tabular-nums}.ok{color:var(--accent)}.bad{color:var(--bad)}
+#runstable tr:hover td{background:var(--line)}#runstable tr.sel td{background:var(--line)}
 .bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden}
 .bar>i{display:block;height:100%;background:var(--accent)}
 .hint{color:var(--muted);font-size:12px;margin:6px 0 0}
@@ -194,11 +195,12 @@ font-variant-numeric:tabular-nums}.ok{color:var(--accent)}.bad{color:var(--bad)}
 <div class="card span4"><h2>stage split</h2><div id="stages" class="muted">unavailable</div></div>
 <div class="card span6"><h2>recent steps</h2><div id="table"></div></div>
 <div class="card span6"><h2>record</h2><div id="record" class="muted">unavailable</div></div>
+<div class="card span12"><h2>runs</h2><div id="runstable" class="muted">loading…</div></div>
 <div class="card span12"><h2>raw trace</h2><pre id="raw" style="max-height:180px;overflow:auto;color:var(--muted)"></pre></div>
 </main>
 <script>
 const defaultTask = "__TASK__";
-let paused=false, timer=null, state=null, currentRun=null, runCount=0, ticks=0;
+let paused=false, timer=null, state=null, currentRun=null, runCount=0, ticks=0, runsList=[];
 const $=id=>document.getElementById(id);
 async function loadRuns(){
  try{const r=await fetch("/api/runs"); const list=await r.json();
@@ -212,8 +214,22 @@ async function loadRuns(){
    else if(old)sel.value=old;
   }
   if(!currentRun && list.length){currentRun=list[0].id;sel.value=String(currentRun)}
- }catch(e){}
+  runsList=list;
+  let rows='<table><tr><th class="num">run</th><th>task</th><th>status</th><th class="num">steps</th><th class="num">last loss</th><th class="num">loop s</th></tr>';
+  for(const x of list){
+   rows+=`<tr data-id="${x.id}" style="cursor:pointer" ${x.id===currentRun?'class="sel"':''}><td class="num">#${x.id}</td><td>${x.task}</td><td>${x.status}</td><td class="num">${x.steps}</td><td class="num">${x.last_loss===null?"—":fmt(x.last_loss)}</td><td class="num">${Number(x.loop_s).toFixed(1)}</td></tr>`;
+  }
+  $("runstable").innerHTML=rows+"</table>";
+ }catch(e){$("runstable").textContent="run store unavailable"}
 }
+$("runstable").addEventListener("click",e=>{
+ const tr=e.target.closest("tr[data-id]");
+ if(!tr)return;
+ currentRun=Number(tr.dataset.id); $("runsel").value=String(currentRun);
+ document.querySelectorAll("#runstable tr").forEach(r=>r.classList.remove("sel"));
+ tr.classList.add("sel");
+ paused=false; tick();
+});
 $("runsel").addEventListener("change",e=>{currentRun=Number(e.target.value);paused=false;tick()});
 function fmt(x,n=4){if(x===null||x===undefined||Number.isNaN(x))return"—";
  if(typeof x!=="number")return String(x); if(Math.abs(x)>=1e4||(Math.abs(x)>0&&Math.abs(x)<1e-3))
