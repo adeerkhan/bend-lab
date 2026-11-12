@@ -4,6 +4,23 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The run store, and ISSUE-058 / ISSUE-072
+
+- `reference/runs.py` keeps every run in `results/runs.sqlite3`: one row per
+  run, one per step, with the run's own trace under
+  `results/<task>/runs/`. `reference/trace.py` writes it live and the
+  dashboard selects any run by id, so a later run no longer replaces an
+  earlier one in the page. The database and the per-run traces are ignored by
+  git; the latest single-file trace can be imported.
+- `trace.py` now keeps every numeric field in a line, not only `step`,
+  `tokens`, `loss` and `ms`, so `lr`, `grad_norm`, `state_norm` and
+  `gate_mean` reach the extra-signal charts.
+- The ViT example takes `--steps`, `--start`, `--save`, `--resume` and
+  `--no-samples` (ISSUE-058). A 2-step checkpoint restores for one more step
+  to the fresh 3-step loss, `0.96344185`.
+- The flow examples print `final_loss: unavailable` on a `--steps 0` resume
+  instead of a zero (ISSUE-072): the checkpoint does not carry the loss.
+
 ### A browser dashboard, and a one-hour training budget
 
 - `reference/dashboard.py` serves a training trace and record as HTML on a

@@ -68,6 +68,14 @@ extra numeric fields in a trace line. Extras are the hook for model internals:
 write `lr`, `grad_norm`, `state_norm` or `gate_mean` and they become small
 charts. No CDN, no build step, standard library only.
 
+Every run lives in `results/runs.sqlite3` (`reference/runs.py`): one row per
+run and one per step, plus the run's own trace under
+`results/<task>/runs/`. The page lists all runs in a selector, so a run stays
+clickable after the next one overwrites `results/<task>/trace.jsonl`; the
+database and those traces are observations and are ignored by git. A missing
+run prints `unavailable`, never a zero. `trace.py` writes the database while
+the program runs and marks the run `done` or `aborted` at the end.
+
 `make trace` now stops a run after one hour by default
 (`reference/trace.py --max-seconds 3600`; `MAX_SECONDS=0` disables it). The
 page shows the loop time against the same budget in red when over. The

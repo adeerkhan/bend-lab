@@ -7,6 +7,33 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-12 — the run store, and the first two local issue fixes
+
+`reference/runs.py` is the run store: `results/runs.sqlite3`, one row per run
+and one per step. `reference/trace.py` creates a run, writes each line to
+`results/<task>/runs/<stamp>-<pid>.jsonl`, appends the step to the database and
+marks the run `done` or `aborted`; the dashboard's header selector lists every
+run and reads it back by id, so a later run no longer overwrites the view of an
+earlier one. Extra numeric fields now survive `trace.py` (it used to keep only
+`step`, `tokens`, `loss`, `ms`). The database and the per-run traces are
+ignored by git; the legacy `results/glm53-hybrid128/trace.jsonl` imported as
+run 1 (1,398 steps, `3733.97 s`, last loss `0.39527008`). A live
+`make trace TASK=glm53-hybrid128 STEPS=2` created run 2 in `49.8 s` of build
+and `2.98 s` of run, and `/api/state?run=2` returned its two steps.
+
+ISSUE-072 is fixed in the two flow examples: a `--steps 0` resume prints
+`final_loss: unavailable (steps 0; the checkpoint carries no loss)`. The
+checkpoint layout is `3*count + 2` floats: parameters, both AdamW moments and
+`1 - b1^t`, `1 - b2^t`; the loss is not in it, so 0.0 was never recoverable.
+Verified with `flow_matching --steps 2 --save` then `--steps 0 --resume`.
+
+ISSUE-058 is fixed: the ViT example has `--steps`, `--start`, `--save`,
+`--resume` and `--no-samples`. A 2-step checkpoint is 1,208,840 bytes
+(`3*100736 + 2` floats); resuming it for one step at `--start 2` gave
+`final_loss: 0.96344185`, exactly the fresh 3-step run's value, so parameters,
+moments and both bias corrections restore. `scripts/vit.sh m1` now passes
+`--steps` at run time instead of rewriting the source.
+
 ## 2026-11-12 — the browser dashboard and the one-hour guard
 
 `reference/dashboard.py` serves the terminal dashboard's trace and record as
