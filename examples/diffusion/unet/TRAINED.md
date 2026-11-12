@@ -34,6 +34,14 @@ scored against. Last recorded 2026-11-08.
 | spectrum, radius 1-4 / 5-10 / 11-20 / 21-32 | 0.002 / 0.001 / 0.000 / 0.034 |
 | the data's spectrum, same bands | 0.005 / 0.009 / 0.029 / 0.137 |
 
+`make unet-metric` is the gate (`reference/test_unet_flowers_metric.py`, 2.4 s):
+it passes only if the held-out legibility is at least `0.40`, reaches at least
+60% of the floor-to-ceiling span, stays within `0.02` of the ceiling, and the
+low and high spectrum bands are not white. The can-fail arms are white noise
+(held `0.041`, high band `1.002`) and the data mean (`0.000`, span `-11.3%`):
+both must fail. The training loss is report-only; this is the number that can
+fail.
+
 ![loss](../../../results/diffusion-unet/trained/loss.svg)
 
 ![64 draws](../../../results/diffusion-unet/trained/samples.svg)

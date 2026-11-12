@@ -35,9 +35,15 @@ Short tests on the lane: `flow64-first` PASS (task `3.951 s`, build `53.784 s`),
 `91.818 s`), `iris-crossval` PASS (`0.208 s`, `119.090 s`), `mamba3` PASS
 (`23.35 s`). The old-lane numbers are historical.
 
-Next: ISSUE-066 (UNet held-out metric), then the array/Mat core and chunked
-scan (ISSUE-108/110), then GLM 192 (ISSUE-101). The 192 evaluation is still
-5.7 h and cannot run under the one-hour rule.
+ISSUE-066 is closed by `make unet-metric`
+(`reference/test_unet_flowers_metric.py`, 2.4 s): held-out `0.547`, floor
+`0.058`, ceiling `0.574`, span `94.9%`, spectrum `0.002 / 0.001 / 0.000 /
+0.034`; the white-noise and data-mean arms both fail. The training loss stays
+report-only.
+
+Next: the array/Mat core and chunked scan (ISSUE-108/110), then GLM 192
+(ISSUE-101). The 192 evaluation is still 5.7 h and cannot run under the
+one-hour rule.
 
 ## 2026-11-12 — the dashboard is the in-house W&B
 

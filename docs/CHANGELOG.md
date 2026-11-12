@@ -4,6 +4,17 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The UNet has a held-out gate
+
+- `make unet-metric` runs `reference/test_unet_flowers_metric.py` on the
+  recorded 64-draw run: held-out legibility `0.547`, floor `0.058`, ceiling
+  `0.574`, span `94.9%`, spectrum `0.002 / 0.001 / 0.000 / 0.034`.
+- The gate fails if held-out legibility is below `0.40`, below 60% of the
+  span, above the ceiling by more than `0.02`, or the low/high spectrum bands
+  are white. White noise (`0.041`, high band `1.002`) and the data mean
+  (`0.000`, span `-11.3%`) are the can-fail arms; both fail. The training loss
+  stays report-only (ISSUE-066).
+
 ### One version lane
 
 - The tree now imports BendTorch `2.1.0.0`, BendTorch GPU `2.1.0.0`,
