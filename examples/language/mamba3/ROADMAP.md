@@ -37,9 +37,12 @@ it makes the chunked version easier to write.
 A first measured piece: the `q.S^T` product through
 `TA.Mat.matmul_nt(1, 16, 32, ...)` is **65x** the list `take_row` + `dot`
 version (`bench_qs_list.bend` against `bench_qs_mat.bend`: `2.59 s` against
-`0.04 s` for 20,000 products). Put that product inside `scan_head` next, then
-gate the full block; the end-to-end gain will be smaller because the state
-update and allocations remain.
+`0.04 s` for 20,000 products). Putting that product inside `scan_head` was
+measured on 2026-11-12: it passed every gate but made twenty forwards
+`0.84-1.18 s` against `0.71-0.73 s`, because the row extraction is still
+needed for the state update and the conversions add allocation. The product
+only pays inside a scan that keeps the state in `Mat`; do the array-based
+core first, not a one-call substitution.
 
 ## 2. A decode step and a real generation loop
 

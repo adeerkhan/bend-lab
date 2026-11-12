@@ -223,9 +223,15 @@ to the last one or two decimal digits. This is the substrate lever: one qS
 product is a small part of the full scan, but the full scan has one per head
 per token, and the state update and output have the same list overhead.
 
-The next step is to put this product inside `scan_head` and gate the full
-block again; the measured 65x will not carry over whole, because the
-elementwise state update and allocations remain.
+Putting the product inside `scan_head` did **not** carry the 65x over. The
+substitution kept the checksum and passed every gate (forward, backward,
+training, generation), but twenty full forwards at seqlen 8 took `0.84-1.18 s`
+against `0.71-0.73 s` for the list path on the same machine (user time
+`0.83-1.11 s` against `0.71-0.73 s`). `scan_head` still needs `take_row` for
+each row of the state update, so most of the isolated benchmark's saving was
+the row extraction, not the 16-element dot; the `Mat` conversions add
+allocation on top. The next step is a chunked scan that keeps the state in
+`Mat` across tokens, not a one-call substitution.
 
 ## The BendTorch GPU lane
 

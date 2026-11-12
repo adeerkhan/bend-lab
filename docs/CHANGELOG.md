@@ -23,6 +23,15 @@ What changed for the people who run the lab. Internal refactors are not listed.
 - The flow examples print `final_loss: unavailable` on a `--steps 0` resume
   instead of a zero (ISSUE-072): the checkpoint does not carry the loss.
 
+### The Mat `q·S^T` product does not transfer to the scan
+
+- Replacing the 32 list `dot` calls in Mamba-3's `scan_head` with one
+  `TA.Mat.matmul_nt(1, 16, 32, ...)` kept the checksum and passed every gate,
+  but twenty forwards took `0.84-1.18 s` against `0.71-0.73 s` for the list
+  path. The row extraction is still needed for the state update, so the
+  isolated 65x is not the scan's cost. The change was reverted; the record is
+  in `examples/language/mamba3/COMPARISON.md` and `ROADMAP.md`.
+
 ### A browser dashboard, and a one-hour training budget
 
 - `reference/dashboard.py` serves a training trace and record as HTML on a

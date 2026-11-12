@@ -37,10 +37,17 @@ ISSUE-058 is fixed: the ViT example has `--steps`, `--start`, `--save`,
 moments and both bias corrections restore. `scripts/vit.sh m1` now passes
 `--steps` at run time instead of rewriting the source.
 
+A first attempt at the Mat `q·S^T` inside `scan_head` was correct (same
+checksum, every gate passed) but slower: twenty forwards `0.84-1.18 s`
+against `0.71-0.73 s` for the list path. The row extraction is still needed
+for the state update, so the isolated 65x does not transfer; the change was
+reverted and the numbers are in `COMPARISON.md` and `ROADMAP.md`. The next
+performance step is the array-based core and a chunked scan, not the one-call
+substitution.
+
 Next: align the version lane (`make versions`, then `make check`), run the
-short tests of the five tracks, then put Mat `q·S^T` into Mamba-3's
-`scan_head`. The science item is the UNet held-out metric (ISSUE-066), before
-any further UNet claim.
+full gate, then the array-based Mamba-3 core. The science item is the UNet
+held-out metric (ISSUE-066), before any further UNet claim.
 
 ## 2026-11-12 — the browser dashboard and the one-hour guard
 
