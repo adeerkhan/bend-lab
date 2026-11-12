@@ -23,13 +23,15 @@ What changed for the people who run the lab. Internal refactors are not listed.
   no steps or samples hides those cards. `?run=ID` opens a run directly, and
   the sessions table has a filter for task, kind or status.
 - CPU is a run's **share of the host** with its core count (`27% · 7.4c`), not
-  a sum of per-core percentages; the GPU axis is capped at 100. The page uses
-  the Bend cream/charcoal/purple theme and the README embeds
+  a sum of per-core percentages; RAM is PSS over the process tree, not summed
+  RSS; the GPU axis is capped at 100. The page uses the Bend
+  cream/charcoal/purple theme and the README embeds
   `docs/assets/dashboard.png`.
 - The GLM trace writes a final held-out `val_loss`; `trace.py` stores it as
   `runs.eval_loss` and the loss chart shows it at the last step beside train.
   `make trace TASK=glm53-hybrid128 STEPS=10` measured train `4.5521`, eval
-  `4.4326`; the 30-step repeat measured train `3.2657`, eval `3.2838`.
+  `4.4326`; the 30-step repeats measured train `3.2657`, eval `3.2838`, with
+  PSS max `1507 MB` after the sampler change.
 - `./scripts/dashboard.sh start` leaves the server running under
   setsid+nohup (`status` and `stop` too); `make dashboard` stays foreground.
 - `make session TASK=<name> CMD="..."` wraps any test command in the store

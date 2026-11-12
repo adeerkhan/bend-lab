@@ -46,9 +46,10 @@ a run and the selected row scrolls into view; the sessions table has a filter
 for task, kind or status.
 
 CPU is now a run's **share of the host** over the cores it may use
-(`sched_getaffinity`), with the core count beside it (`27% · 7.4c`); the GPU
-axis is capped at 100 and the GPU `108%` label is gone. The broken readings are
-ISSUE-112 and the peak-sample confusion is ISSUE-116 in the ledger. The page
+(`sched_getaffinity`), with the core count beside it (`27% · 7.4c`); RAM is
+PSS from `smaps_rollup`, not summed RSS; the GPU axis is capped at 100 and the
+GPU `108%` label is gone. The broken readings are ISSUE-112, ISSUE-116 and
+ISSUE-117 in the ledger. The page
 uses the Bend cream/charcoal/purple theme, and `docs/assets/dashboard.png` is
 committed and embedded in `README.md`.
 
@@ -56,8 +57,9 @@ The GLM trainer now ends a trace with `val_loss` (the final held-out batch,
 after saving weights) and `trace.py` stores it as `runs.eval_loss`.
 `make trace TASK=glm53-hybrid128 STEPS=10` measured train `4.5521`, eval
 `4.4326`, 20.4 s loop, run 38. The 30-step repeat, run 39, measured train
-`3.2657`, eval `3.2838`, loop `72.9 s`, build `53.8 s`; that is the page in
-`docs/assets/dashboard.png`. The loss panel shows the eval point at the last
+`3.2657`, eval `3.2838`, loop `72.9 s`, build `53.8 s`. Run 41 repeats it after
+the PSS sampler: train `3.2657`, eval `3.2838`, loop `110.7 s` under load,
+PSS max `1507 MB`; that is the page in `docs/assets/dashboard.png`. The loss panel shows the eval point at the last
 step and the recent-steps table has an `eval` column. Per-step eval is not
 possible with the linear `Train` (a `Train` is `Type`, so it cannot be used
 for a validation forward and the next step); the final held-out loss is what
@@ -75,8 +77,9 @@ More runs through it, all under the one-hour rule:
 | 37 | `make session TASK=gpu-probe CMD="reference/.venv-rf/bin/python reference/gpu_probe.py"` | `50.1 s`, 48 samples, GPU `52-100%`, process GPU memory up to `326 MB` |
 | 39 | `make trace TASK=glm53-hybrid128 STEPS=30` | train `5.5635 -> 3.2657`, eval `3.2838`, loop `72.9 s` |
 | 40 | `make experiment TASK=glm53-hybrid128` | PASS, `5m55` (mostly build), one step |
+| 41 | `make trace TASK=glm53-hybrid128 STEPS=30` (PSS sampler) | train `3.2657`, eval `3.2838`, loop `110.7 s`, PSS max `1507 MB` |
 
-The store then held 36 runs. The page API returned `200`, `/api/overview`
+The store then held 37 runs. The page API returned `200`, `/api/overview`
 reported live CPU/RAM/GPU, and the JavaScript parses under `node --check`. Run
 36 is the long-run proof: the sampler recorded 2,811 rows over `49.58 min`,
 with CPU spikes to `3,159%` (parallel builds across cores), RAM to `6,088 MB`

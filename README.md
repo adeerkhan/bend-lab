@@ -157,8 +157,9 @@ server) serves the in-house W&B view at `http://127.0.0.1:8787/`: every run in
 memory, each run's parameter count and configuration, and the selected run's
 train and eval loss, step time, extra signals, system samples, steps and
 record. A run's CPU is its **share of the host** with the core count beside
-it; GPU usage comes from `nvidia-smi`. The loss panel has `train`, `eval` and
-`log` toggles; `?run=ID` opens a run directly.
+it; RAM is **PSS** over the process tree, so shared libraries are counted
+once; GPU usage comes from `nvidia-smi`. The loss panel has `train`, `eval`
+and `log` toggles; `?run=ID` opens a run directly.
 
 Training runs register through `make trace` (the GLM trace now also records the
 final held-out `val_loss`), tests through `make session TASK=... CMD="..."`,

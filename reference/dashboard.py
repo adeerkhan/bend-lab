@@ -5,7 +5,8 @@
 
 One page for every run in `results/runs.sqlite3` (`reference/runs.py`), not one
 task at a time. The overview lists running and finished runs with their CPU (host share and
-cores), resident memory, GPU memory and parameter count; selecting a run shows its loss
+cores), resident memory (PSS over the process tree), GPU memory and parameter
+count; selecting a run shows its loss
 and step time, its extra signals, its system samples, its steps, and the record
 its program wrote. Several sessions can be live at once because the sampler
 walks each run's process tree, so a Python test that spawns Bend is sampled as
@@ -112,15 +113,24 @@ def _stat(pid):
 
 
 def _status(pid):
+    values = {}
     try:
-        values = {}
         for line in open(f"/proc/{pid}/status"):
             if line.startswith(("VmRSS:", "VmHWM:")):
                 key, value = line.split(":", 1)
                 values[key] = int(value.split()[0])
-        return values
     except (OSError, ValueError):
-        return {}
+        pass
+    # PSS divides a shared page among its users, so a tree sum is not inflated
+    # by the same library mapped in every compiler or worker process.
+    try:
+        for line in open(f"/proc/{pid}/smaps_rollup"):
+            if line.startswith("Pss:"):
+                values["Pss"] = int(line.split()[1])
+                break
+    except (OSError, ValueError):
+        pass
+    return values
 
 
 def process_tree(pid):
@@ -197,9 +207,10 @@ class Sampler(threading.Thread):
             if stat is None:
                 continue
             ticks += stat[1]
-            rss += stat[2] * (os.sysconf("SC_PAGE_SIZE") // 1024)
             status = _status(one)
-            hwm += status.get("VmHWM", 0)
+            rss += status.get("Pss", status.get(
+                "VmRSS", stat[2] * (os.sysconf("SC_PAGE_SIZE") // 1024)))
+            hwm = max(hwm, status.get("VmHWM", 0))
             prev = self._prev_proc.get(one)
             if prev is not None:
                 dt = now - prev[1]
@@ -354,6 +365,7 @@ def read_json(path):
 
 
 def state(run_id, fallback):
+    """The selected run's record, steps, samples and live process stats."""
     run = runs.get_run(run_id) if run_id else None
     if run is None and run_id is None:
         latest = runs.list_runs(limit=1)
@@ -377,6 +389,7 @@ def state(run_id, fallback):
         cpu = max((x["cpu"] or 0) for x in all_samples)
         rss = max((x["rss_kb"] or 0) for x in all_samples)
         hwm = max((x["hwm_kb"] or 0) for x in all_samples)
+        hwm = max(hwm, rss)
         gpu = max((x["gpu_mem_kb"] or 0) for x in all_samples)
         proc = {"cpu": cpu, "rss_kb": rss, "hwm_kb": hwm or rss,
                 "cores": cpu * fallback["sampler"].ncpu / 100.0,
@@ -491,7 +504,7 @@ a{color:var(--accent2)}
 </h2><canvas id="losschart"></canvas></div>
 <div class="card s4" id="cmschart" style="display:none"><h2>step time</h2><canvas id="mschart"></canvas></div>
 <div class="card s3" id="ccpu" style="display:none"><h2>cpu</h2><canvas id="cpuchart"></canvas></div>
-<div class="card s3" id="cram" style="display:none"><h2>ram</h2><canvas id="ramchart"></canvas></div>
+<div class="card s3" id="cram" style="display:none"><h2>ram (pss)</h2><canvas id="ramchart"></canvas></div>
 <div class="card s3" id="cgpu" style="display:none"><h2>gpu</h2><canvas id="gpuutilchart"></canvas></div>
 <div class="card s3" id="cgpuproc" style="display:none"><h2>gpu memory</h2><canvas id="gpuprocchart"></canvas></div>
 <div class="card s8" id="cextra" style="display:none"><h2>extra signals</h2><div id="extras" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div><div id="extrahint" class="hint"></div></div>
@@ -599,7 +612,7 @@ function renderOverview(){
  $("gpumemsub").textContent=gpu?`of ${(gpu.total_mb/1024).toFixed(1)} GB`:"unavailable";
  $("budget").innerHTML=`· budget ${overview.budget} s`;
  const shown=runs.filter(r=>!filter||(r.task+" "+r.kind+" "+r.status).toLowerCase().includes(filter));
- let rows='<table><tr><th class="num">run</th><th>task</th><th>kind</th><th>status</th><th class="num">pid</th><th class="num">steps</th><th class="num">loss</th><th class="num">params</th><th class="num">cpu</th><th class="num">ram</th><th class="num">gpu</th><th class="num">loop s</th></tr>';
+ let rows='<table><tr><th class="num">run</th><th>task</th><th>kind</th><th>status</th><th class="num">pid</th><th class="num">steps</th><th class="num">loss</th><th class="num">params</th><th class="num">cpu</th><th class="num" title="PSS over the process tree">ram</th><th class="num">gpu</th><th class="num">loop s</th></tr>';
  for(const r of shown){
   const p=r.proc||{};
   rows+=`<tr class="run ${r.status} ${r.id===selected?"sel":""}" data-id="${r.id}"><td class="num">#${r.id}</td><td>${esc(r.task)}</td><td>${esc(r.kind||"run")}</td><td>${statusCell(r.status)}</td><td class="num">${r.pid??"—"}</td><td class="num">${r.steps}</td><td class="num">${fmt(r.last_loss)}</td><td class="num">${r.params==null?"—":intfmt(r.params)}</td><td class="num">${p.cpu==null?"—":p.cpu.toFixed(0)+"%"+(p.cores!=null?` · ${p.cores.toFixed(1)}c`:"")}</td><td class="num">${p.rss_kb?((p.rss_kb/1024).toFixed(0)+" MB"):"—"}</td><td class="num">${p.gpu_proc_mb?(p.gpu_proc_mb.toFixed(0)+" MB"):"—"}</td><td class="num">${Number(r.loop_s||0).toFixed(1)}</td></tr>`;
