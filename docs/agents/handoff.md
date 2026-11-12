@@ -57,6 +57,15 @@ version: `0.04 s` against `2.59 s` for 20,000 products, same output to about
 substrate lever; it is a component, not the full scan. Integrate it into
 `scan_head` and gate the block next.
 
+**Upstream, 2026-11-12.** #40 (`Conv2dNB`) merged into devel `c62e1e9`;
+#36 (`Mat.reshape`) merged into devel `6b6b343`; #39's `MaxPool2d` is now
+PR #42, rebased stand-alone on devel `58f346f`, 46 laws, `--verdict` clean.
+nuxyel proved the three Array value laws on devel `f882c77`; the
+`Mat.to_list ∘ Mat.of_list` corollary is ours, with a 64x64 NumPy test.
+#19, #28 and #35 are closed; the only follow-ups are Rewire/backward
+attention blocks if measured, and the row-order proof waiting on the
+corollary.
+
 **The GPU lane.** BendTorch does have one: `gpu.bend` over
 `bend-ml-tensor-gpu`, built with NVRTC. Fetched `bendtorch` devel `65c8038`
 and `bend-ml` main `8af6052`; a `LinearNBF(8,64,304)` forward+backward gives

@@ -10,9 +10,9 @@ target** (`bendtorch@2.0.0.0`, tensor-array `0.1.18.0`).
 
 | Artifact | What it asks |
 |---|---|
-| [BendTorch#39](https://github.com/nuxyel/BendTorch/issues/39) | `MaxPool2d` with the arg-max backward, and a no-bias `Conv2d`: the image reference's two layer gaps. The no-bias half is #40. `MaxPool2d` is implemented on `feat/maxpool2d` (rebased on devel bf02f19, still stacked on the Conv2dNB commit, no PR until #40 is reviewed): `(n,c,h,w,k,s)`, the arg-max recomputed from the input, ties first-in-window, overlap adds; y and dX are 0.000e+00 against `F.max_pool2d(..., return_indices=True)`. Its two laws are in (`mp_count`, `mp_scatter`), 44 in all, `--verdict` ALL PROOFS CHECK; the PR body is written and waits for #40. |
-| [BendTorch#40](https://github.com/nuxyel/BendTorch/pull/40) | `Conv2dNB`: `Conv2d` without the bias, open PR. y, dX and dW are 0.000e+00 against `F.conv2d(..., bias=None)` on the three shapes the Conv2d check uses. |
-| [BendTorch#36](https://github.com/nuxyel/BendTorch/issues/36) | Gradient accumulation over k micro-batches, so a typed batch of 2 can reach an effective 8-16; the k=4 arm is still blocked on a Bend syntax error. |
+| [BendTorch#39](https://github.com/nuxyel/BendTorch/issues/39) | `MaxPool2d` with the arg-max backward, and a no-bias `Conv2d`: the image reference's two layer gaps. The no-bias half is merged as #40. `MaxPool2d` is PR [#42](https://github.com/nuxyel/BendTorch/pull/42), rebased stand-alone on devel `58f346f`: `(n,c,h,w,k,s)`, the arg-max recomputed from the input, ties first-in-window, overlap adds; y and dX are 0.000e+00 against `F.max_pool2d(..., return_indices=True)`. Its two laws (`mp_count`, `mp_scatter`) make 46 in all; `--verdict` ALL PROOFS CHECK. |
+| [BendTorch#40](https://github.com/nuxyel/BendTorch/pull/40) | Merged into devel `c62e1e9`: `Conv2dNB`, with the GPU twin and six mutants. |
+| [BendTorch#36](https://github.com/nuxyel/BendTorch/issues/36) | Closed by gradient accumulation on devel `65c8038`; no local branch kept. |
 | [BendTorch#29](https://github.com/nuxyel/BendTorch/issues/29) | `Conv2d`: the adjoint law is still tested rather than stated. |
 | [BendTorch#28](https://github.com/nuxyel/BendTorch/issues/28) | The attention **block** is 3.2x its arithmetic at the ViT's shapes. **Answered:** masked full attention is **9.55 ms** a pass against causal's **10.65 ms**, so the mask is not the cost — the core is 64 tiny 16x16 products instead of one large one, and the lever is fewer, larger calls. |
 | [BendTorch#26](https://github.com/nuxyel/BendTorch/issues/26) | A step's kernel launches cannot be counted from a program, only under `nsys`: the report's `launches` and `unclaimed` lines are permanently `unavailable`, so "fewer launches" cannot be a measured lever. Asks for one count per `Train.step`. |
@@ -22,8 +22,8 @@ target** (`bendtorch@2.0.0.0`, tensor-array `0.1.18.0`).
 | [bendlang/bend#1998](https://github.com/bendlang/bend/issues/1998) | A match binder that shadows a parameter prints the name twice and no scope. |
 | [bendlang/bend#1980](https://github.com/bendlang/bend/issues/1980) | `Array<T>` accepts a mixed-depth `ANode` the compiled runtime cannot represent. |
 | [bend-ml#35](https://github.com/nuxyel/bend-ml/issues/35) | `Mat` reshape and row/column slicing, and an `ML` accessor, so pixel-unshuffle and max-pool stop going through `Mat.to_list` and linked-list `nth` (O(n²)). The reshape is #36; row/column slicing stays, as the matcher plus `Array.get` may cover it. |
-| [bend-ml#36](https://github.com/nuxyel/bend-ml/pull/36) | `Mat.reshape`, the same array under a new shape with `r1*c1 == r2*c2` erased, and the law `reshape_len`; open PR. |
-| [bend-ml#26](https://github.com/nuxyel/bend-ml/issues/26) | The value law (get after set) as a Base question; the round-trip corollary waits on two Base lemmas. Our last word is on the record. |
+| [bend-ml#36](https://github.com/nuxyel/bend-ml/pull/36) | Merged into devel `6b6b343`: `Mat.reshape`, the same array under a new shape with `r1*c1 == r2*c2`, and the law `reshape_len`. |
+| [bend-ml#26](https://github.com/nuxyel/bend-ml/issues/26) | The value law for `Array.set`/`Array.get`. nuxyel proved `size_set`, `get_after_set`, `get_other_set` and `ASet.Apart` in tensor-array devel `f882c77`; the remaining `Mat.to_list (Mat.of_list rs cs xs) == xs` corollary is ours, with a 64x64 NumPy round-trip test. Open until that PR lands. |
 
 ## Closed
 
