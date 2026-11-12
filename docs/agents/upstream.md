@@ -34,17 +34,22 @@ tensor-array `0.1.20.0`, tensor-gpu `0.1.5.2`).
 | [BendTorch#22](https://github.com/nuxyel/BendTorch/pull/22) | Merged 2026-11-03 as part of 2.0.0: `Conv2d` in both lanes, `im2col`/`col2im`, two laws, the PyTorch checks. Rebased onto #27 and merged with its three review notes. |
 | [BendTorch#24](https://github.com/nuxyel/BendTorch/issues/24) | Closed by 2.0.0. It was worse than the learning rate: a kind mismatch left the loss unchanged with no error, and `OptCfg.ok` ran only in `Train.new`. |
 | [BendTorch#23](https://github.com/nuxyel/BendTorch/pull/23) | Closed 2026-11-03 as agreed: v1.3.0 wired the demo and `test_fullattn.py` into `make check` differently; nothing in ours to keep. |
-| [BendTorch#19](https://github.com/nuxyel/BendTorch/issues/19) | Closed: `Tile` (#33) broadcasts a per-image row; adaLN is a composition of `Tile` and a per-image vector. |
-| [BendTorch#18](https://github.com/nuxyel/BendTorch/issues/18) | Closed by `RoPE2d` (#34), with `rope2_partition` and the `tw = 1` laws. |
+| [BendTorch#19](https://github.com/nuxyel/BendTorch/issues/19) | Closed: `Tile` (#34) broadcasts a per-image row; adaLN is a composition of `Tile` and a per-image vector. |
+| [BendTorch#18](https://github.com/nuxyel/BendTorch/issues/18) | Closed by `RoPE2d` (#33), with `rope2_partition` and the `tw = 1` laws. |
 | [BendTorch#17](https://github.com/nuxyel/BendTorch/issues/17) | Closed by `FullAttention` in v1.3.0. |
 | [BendTorch#15](https://github.com/nuxyel/BendTorch/issues/15) | Closed 2026-11-03: with `Conv2d`, `GroupNorm` and `FullAttention` in, an unconditional UNet is expressible. A follow-up (#29) carries the general `k = s` round trip and the adjoint law. |
 
-## Not filed, or kept as local repros
+## Repros and their upstream state
 
-| Item | State |
-|---|---|
-| ISSUE-064 `Nat.mul` in a type argument overflows the checker stack | local repro; compiler limit, not patched here |
-| ISSUE-069 `--check-only` exits 1 on any `bendtorch-gpu` import | BendTorch, measured; recheck after #41 |
-| ISSUE-102 the published before-RL 0/24 does not reproduce | reference discrepancy; recorded, not tuned |
-| ISSUE-104, 105, 107, 109 | language design limits; design around them, do not patch the compiler |
-| ISSUE-063 / bend-ml#26 | U32 facts landed; the `Mat.to_list ∘ Mat.of_list` corollary remains upstream |
+| Item | Repro | State |
+|---|---|---|
+| ISSUE-026 the TEM port's missing layers | `papers/TEM/README.md` | BendTorch #33 (`RoPE2d`), #34 (`Tile`) and #42 (`MaxPool2d`); two merged, `MaxPool2d` in review |
+| ISSUE-028 RoPE is one rotation over the flat row | `rope2d_check.py` in BendTorch PR #33 | BendTorch #18, closed by `RoPE2d` (#33) |
+| ISSUE-029 no per-image vector broadcast | `papers/TEM/README.md`, the adaLN section | BendTorch #19, closed by `Tile` (#34) plus a composition |
+| ISSUE-030 a forward reference is an unfilled law | the minimal polymorphic def in bendlang/bend #1632 | bendlang/bend #1632, proposed; local repro kept |
+| ISSUE-031 a shadowing match binder loses its scope | the minimal match in bendlang/bend #1998 | bendlang/bend #1998, filed |
+| ISSUE-064 `Nat.mul` in a type argument overflows the checker stack | bendlang/bend #1632, item 9 | local repro; compiler limit, not patched here |
+| ISSUE-069 `--check-only` exits 1 on any `bendtorch-gpu` import | `examples/language/mamba3/probe_bendtorch_gpu.bend` | BendTorch, measured; recheck after #41 |
+| ISSUE-102 the published before-RL 0/24 does not reproduce | `results/glm53-dense/eval-dev.json` | reference discrepancy; recorded, not tuned |
+| ISSUE-104, 105, 107, 109 | — | language design limits; design around them, do not patch the compiler |
+| ISSUE-063 / bend-ml#26 | the U32 facts and the round-trip laws in bend-ml#26 | U32 facts landed; the `Mat.to_list ∘ Mat.of_list` corollary remains upstream |
