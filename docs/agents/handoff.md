@@ -41,7 +41,8 @@ marker and its level; the y axis floors at zero; axes carry labels; the loss
 has a log toggle; CPU, RAM, GPU utilization and per-process GPU memory are
 four charts instead of mixed units. A finished run shows its peak sample, not
 the empty trace process, and a run with no steps or samples hides those cards.
-`?run=ID` opens a run and the selected row scrolls into view.
+`?run=ID` opens a run and the selected row scrolls into view; the sessions
+table has a filter for task, kind or status.
 
 More runs through it, all under the one-hour rule:
 

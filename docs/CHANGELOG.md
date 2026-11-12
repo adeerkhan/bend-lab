@@ -20,7 +20,8 @@ What changed for the people who run the lab. Internal refactors are not listed.
   point, floor the y axis at zero, label both axes, and the loss has a log
   toggle. CPU, RAM, GPU utilization and per-process GPU memory are separate
   charts. A finished run shows its peak sample; a run with no steps or
-  samples hides those cards. `?run=ID` opens a run directly.
+  samples hides those cards. `?run=ID` opens a run directly, and the sessions
+  table has a filter for task, kind or status.
 - `./scripts/dashboard.sh start` leaves the server running under
   setsid+nohup (`status` and `stop` too); `make dashboard` stays foreground.
 - `make session TASK=<name> CMD="..."` wraps any test command in the store
