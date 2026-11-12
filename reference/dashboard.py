@@ -103,6 +103,7 @@ def state(task, trace, record_path, sampler, budget, run_id=None):
         records = run["records"]
         record = run.get("record") or read_json(record_path)
         task = run["task"]
+        record_path = run.get("record_path") or record_path
     else:
         records = read_trace(trace)
         record = read_json(record_path)
@@ -130,7 +131,8 @@ def state(task, trace, record_path, sampler, budget, run_id=None):
     return {
         "task": task,
         "trace": os.path.relpath(trace, ROOT),
-        "record_path": os.path.relpath(record_path, ROOT),
+        "record_path": (os.path.relpath(record_path, ROOT)
+                        if os.path.isabs(record_path) else record_path),
         "record": record,
         "records": records,
         "extras": sorted(extras),

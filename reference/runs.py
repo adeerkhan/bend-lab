@@ -228,6 +228,7 @@ def get_run(run_id):
             "status", "steps", "tokens", "loop_s", "first_loss", "last_loss",
             "best_loss", "extras")
     run = dict(zip(keys, row[:-1]))
+    run["record_path"] = run["record"]
     run["record"] = json.loads(row[-1]) if row[-1] else None
     run["extras"] = json.loads(run["extras"])
     steps = []
