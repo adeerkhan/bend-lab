@@ -291,6 +291,17 @@ def summary_of(records):
     return summary
 
 
+def downsample(rows, limit=600):
+    """Keep a sample series readable: an even stride plus the last point."""
+    if len(rows) <= limit:
+        return rows
+    step = max(1, len(rows) // limit)
+    out = rows[::step]
+    if out[-1] is not rows[-1]:
+        out.append(rows[-1])
+    return out
+
+
 def extras_of(records):
     keys = []
     for record in records:
@@ -349,12 +360,13 @@ def state(run_id, fallback):
                             else path) if path else "",
         }
     records = run["records"]
-    samples = run.get("samples") or []
+    all_samples = run.get("samples") or []
+    samples = downsample(all_samples)
     proc = fallback["sampler"].live.get(run["id"])
-    if proc is None and samples:
-        last = samples[-1]
-        top = max(samples, key=lambda x: x["hwm_kb"] or x["rss_kb"] or 0)
-        gpu = max((x["gpu_mem_kb"] or 0) for x in samples)
+    if proc is None and all_samples:
+        last = all_samples[-1]
+        top = max(all_samples, key=lambda x: x["hwm_kb"] or x["rss_kb"] or 0)
+        gpu = max((x["gpu_mem_kb"] or 0) for x in all_samples)
         proc = {"cpu": last["cpu"], "rss_kb": top["rss_kb"],
                 "hwm_kb": top["hwm_kb"] or top["rss_kb"],
                 "gpu_proc_mb": gpu / 1024 if gpu else None,
