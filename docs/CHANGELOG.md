@@ -13,7 +13,10 @@ What changed for the people who run the lab. Internal refactors are not listed.
   earlier one in the page. The database and the per-run traces are ignored by
   git; the latest single-file trace can be imported. A finished
   `reference/experiment.py` report card is stored as a run with its record and
-  no steps, and the page marks it `record only`.
+  no steps, and the page marks it `record only`. On an empty database the
+  dashboard imports every latest record and the task's trace;
+  `reference/runs.py --import-latest` imports the records by hand, and
+  `MLBEND_RUNS_DB` selects another database for a test.
 - `trace.py` now keeps every numeric field in a line, not only `step`,
   `tokens`, `loss` and `ms`, so `lr`, `grad_norm`, `state_norm` and
   `gate_mean` reach the extra-signal charts.

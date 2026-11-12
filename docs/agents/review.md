@@ -76,7 +76,10 @@ database and those traces are observations and are ignored by git. A missing
 run prints `unavailable`, never a zero. `trace.py` writes the database while
 the program runs and marks the run `done` or `aborted` at the end;
 `experiment.py` records a finished report card as a run with its record but no
-per-step trace, and the page labels it `record only`.
+per-step trace, and the page labels it `record only`. On an empty database the
+dashboard imports every `results/latest/<task>.json` and the task's latest
+trace; `reference/runs.py --import-latest` does the records by hand, and
+`MLBEND_RUNS_DB` points the store at another file for tests.
 
 `make trace` now stops a run after one hour by default
 (`reference/trace.py --max-seconds 3600`; `MAX_SECONDS=0` disables it). The

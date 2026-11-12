@@ -22,7 +22,11 @@ run 1 (1,398 steps, `3733.97 s`, last loss `0.39527008`). A live
 and `2.98 s` of run, and `/api/state?run=2` returned its two steps. A
 `make experiment TASK=cancer-knn` created run 3 with the report card but no
 steps (`0.381 s` task, `59.977 s` build, accuracy `0.978102`), which the page
-labels `record only`; `/api/state?run=3` returned the manifest.
+labels `record only`; `/api/state?run=3` returned the manifest. The short
+track tests then added runs 4-6: `diffusion-2d` (`103.705 s`, PASS),
+`flow64-first` (`4.839 s`, PASS) and `vit-first` (`1.275 s`, PASS). On an
+empty `MLBEND_RUNS_DB` the dashboard imports 19 latest records and the task's
+trace, 20 runs, and `/api/state?run=20` returns the trace's steps.
 
 ISSUE-072 is fixed in the two flow examples: a `--steps 0` resume prints
 `final_loss: unavailable (steps 0; the checkpoint carries no loss)`. The

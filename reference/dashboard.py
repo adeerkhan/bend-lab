@@ -379,7 +379,9 @@ def main():
     httpd.sampler = Sampler(args.pid)
     httpd.budget = args.max_seconds
     try:
-        if not runs.list_runs(args.task) and os.path.exists(trace):
+        if not runs.list_runs():
+            runs.import_latest()
+        if not any(r["steps"] for r in runs.list_runs(args.task)) and os.path.exists(trace):
             runs.import_file(args.task, trace, record)
     except Exception as exc:
         print(f"dashboard: run store unavailable: {exc}")

@@ -20,7 +20,7 @@ import sqlite3
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DB = os.path.join(ROOT, "results", "runs.sqlite3")
+DB = os.environ.get("MLBEND_RUNS_DB") or os.path.join(ROOT, "results", "runs.sqlite3")
 KNOWN = ("step", "tokens", "loss", "ms")
 
 
@@ -123,11 +123,17 @@ def record(task, record_path, label=None, status="done"):
         pass
     now = time.time()
     label = label or time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now))
+    rel = os.path.relpath(record_path, ROOT)
     con = connect()
+    old = con.execute("SELECT id FROM runs WHERE task=? AND record=? ORDER BY id DESC LIMIT 1",
+                      (task, rel)).fetchone()
+    if old:
+        con.close()
+        return old[0]
     cur = con.execute(
         "INSERT INTO runs(task,label,trace,record,created,updated,status,"
         "record_json) VALUES(?,?,?,?,?,?,?,?)",
-        (task, label, "", os.path.relpath(record_path, ROOT), now, now, status,
+        (task, label, "", rel, now, now, status,
          json.dumps(rec) if rec is not None else None))
     run_id = cur.lastrowid
     con.commit()
@@ -236,14 +242,37 @@ def get_run(run_id):
     return run
 
 
+def import_latest():
+    """Store every `results/latest/<task>.json` as a record-only run."""
+    latest = os.path.join(ROOT, "results", "latest")
+    ids = []
+    for name in sorted(os.listdir(latest)):
+        if not name.endswith(".json") or name.endswith("-numpy.json"):
+            continue
+        path = os.path.join(latest, name)
+        try:
+            rec = json.load(open(path))
+        except (OSError, ValueError):
+            continue
+        task = (rec.get("task") or {}).get("name") or name[:-5]
+        ids.append(record(task, path, f"{task} · imported record"))
+    return ids
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--list", action="store_true")
+    ap.add_argument("--import-latest", action="store_true",
+                    help="store every results/latest/<task>.json as a run")
     ap.add_argument("--sync", metavar="TASK")
     ap.add_argument("--trace")
     ap.add_argument("--record")
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args()
+    if args.import_latest:
+        ids = import_latest()
+        print(f"imported {len(ids)} record-only runs")
+        return 0
     if args.sync:
         trace = args.trace or os.path.join(ROOT, "results", args.sync, "trace.jsonl")
         record = args.record or os.path.join(ROOT, "results", "latest", args.sync + ".json")
