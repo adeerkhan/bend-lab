@@ -168,8 +168,9 @@ font-variant-numeric:tabular-nums}.ok{color:var(--accent)}.bad{color:var(--bad)}
 <div class="card span3"><h2>memory</h2><div id="rss" class="big">—</div><div id="peak" class="muted"></div></div>
 <div class="card span8"><h2>loss</h2><canvas id="losschart"></canvas></div>
 <div class="card span4"><h2>step time</h2><canvas id="mschart"></canvas></div>
-<div class="card span8"><h2>extra signals</h2><canvas id="extrachart"></canvas>
-<div id="extras" class="hint">Add lr, grad_norm, state_norm or gate_mean to a trace line.</div></div>
+<div class="card span8"><h2>extra signals</h2>
+<div id="extras" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
+<div id="extrahint" class="hint">Add lr, grad_norm, state_norm or gate_mean to a trace line.</div></div>
 <div class="card span4"><h2>stage split</h2><div id="stages" class="muted">unavailable</div></div>
 <div class="card span6"><h2>recent steps</h2><div id="table"></div></div>
 <div class="card span6"><h2>record</h2><div id="record" class="muted">unavailable</div></div>
@@ -220,10 +221,20 @@ function draw(){
  $("budget").innerHTML = `loop ${s.loop_s.toFixed(1)} / ${b} s <span class="${over?'bad':'ok'}">${over?'over budget':'inside budget'}</span>`;
  line($("losschart"), recs.map(r=>[r.step,r.loss]), {color:"#6ee7b7"});
  line($("mschart"), recs.map(r=>[r.step,r.ms]), {color:"#93c5fd"});
- const extras=state.extras;
- if(extras.length){const key=extras[0]; line($("extrachart"), recs.map(r=>[r.step,r[key]]), {color:"#fbbf24",label:key});
-   $("extras").textContent = "signals: "+extras.join(", ");}
- else { line($("extrachart"), []); $("extras").textContent="Add lr, grad_norm, state_norm or gate_mean to a trace line."; }
+ const extras=state.extras, box=$("extras");
+ if(extras.length){
+   box.innerHTML="";
+   extras.slice(0,4).forEach((key,i)=>{
+     const wrap=document.createElement("div");
+     const lab=document.createElement("div"); lab.className="muted"; lab.textContent=key;
+     const c=document.createElement("canvas"); c.style.height="90px";
+     wrap.appendChild(lab); wrap.appendChild(c); box.appendChild(wrap);
+     line(c, recs.map(r=>[r.step,r[key]]), {color:["#fbbf24","#93c5fd","#f472b6","#a7f3d0"][i%4],label:key});
+   });
+   $("extrahint").textContent = "signals: "+extras.join(", ")+" · first "+Math.min(4,extras.length)+" shown";
+ } else {
+   box.innerHTML=""; $("extrahint").textContent="Add lr, grad_norm, state_norm or gate_mean to a trace line.";
+ }
  const rec=state.record;
  if(rec&&rec.stages&&rec.stages.length){
    const root=rec.stages[0].ms||1;
