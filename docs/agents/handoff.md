@@ -73,8 +73,10 @@ More runs through it, all under the one-hour rule:
 | 35 | `make session TASK=check-fast CMD="make check-fast"` | `31/31`, `23.6 s` |
 | 36 | `make session TASK=check CMD="make check"` | `140/140`, `49m35 s`, 2,811 samples, peak RSS `5.6 GB` |
 | 37 | `make session TASK=gpu-probe CMD="reference/.venv-rf/bin/python reference/gpu_probe.py"` | `50.1 s`, 48 samples, GPU `52-100%`, process GPU memory up to `326 MB` |
+| 39 | `make trace TASK=glm53-hybrid128 STEPS=30` | train `5.5635 -> 3.2657`, eval `3.2838`, loop `72.9 s` |
+| 40 | `make experiment TASK=glm53-hybrid128` | PASS, `5m55` (mostly build), one step |
 
-The store then held 33 runs. The page API returned `200`, `/api/overview`
+The store then held 36 runs. The page API returned `200`, `/api/overview`
 reported live CPU/RAM/GPU, and the JavaScript parses under `node --check`. Run
 36 is the long-run proof: the sampler recorded 2,811 rows over `49.58 min`,
 with CPU spikes to `3,159%` (parallel builds across cores), RAM to `6,088 MB`

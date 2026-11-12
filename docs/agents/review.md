@@ -22,7 +22,8 @@ Short tests run on 2026-11-12, all on the current `2.0.0.0` lane:
 | flow | `make experiment TASK=flow64-first` | PASS, task `4.839 s`, build `103.179 s` |
 | GLM | `reference/trace.py --task glm53-hybrid128 --steps 2` | 2 lines, median `1476 ms`, run `2.979 s`, build `49.8 s` |
 | Mamba-3 | `make mamba3` | PASS, `46.5 s` total; train probe `9.81 s` (the probe is noisy: `5.25-10.50 s` over three runs) |
-| GLM | `make trace TASK=glm53-hybrid128 STEPS=30` | 30 steps, loss `5.5635 -> 3.2657`, loop `66.8 s`, 118 system samples |
+| GLM | `make trace TASK=glm53-hybrid128 STEPS=30` | 30 steps, loss `5.5635 -> 3.2657`, eval `3.2838`, loop `72.9 s`, 118 system samples |
+| GLM | `make experiment TASK=glm53-hybrid128` | PASS, one step, `5m55` |
 | Mamba-3 | `make session TASK=mamba3 CMD="make mamba3"` | PASS, `22.2 s` |
 | classical | `make experiment TASK=iris-crossval` | PASS, `1m05` |
 | gate | `make session TASK=check-fast CMD="make check-fast"` | `31/31`, `23.6 s` |
