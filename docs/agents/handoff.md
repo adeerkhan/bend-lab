@@ -35,7 +35,10 @@ ISSUE-058 is fixed: the ViT example has `--steps`, `--start`, `--save`,
 (`3*100736 + 2` floats); resuming it for one step at `--start 2` gave
 `final_loss: 0.96344185`, exactly the fresh 3-step run's value, so parameters,
 moments and both bias corrections restore. `scripts/vit.sh m1` now passes
-`--steps` at run time instead of rewriting the source.
+`--steps` at run time instead of rewriting the source, and
+`reference/test_vit_checkpoint.py` repeats the gate (2m10s including the
+build): resumed loss, the 1,208,840-byte size and the zero-step
+`unavailable` line all pass.
 
 A first attempt at the Mat `q·S^T` inside `scan_head` was correct (same
 checksum, every gate passed) but slower: twenty forwards `0.84-1.18 s`

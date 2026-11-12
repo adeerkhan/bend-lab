@@ -19,7 +19,8 @@ What changed for the people who run the lab. Internal refactors are not listed.
   `gate_mean` reach the extra-signal charts.
 - The ViT example takes `--steps`, `--start`, `--save`, `--resume` and
   `--no-samples` (ISSUE-058). A 2-step checkpoint restores for one more step
-  to the fresh 3-step loss, `0.96344185`.
+  to the fresh 3-step loss, `0.96344185`; `reference/test_vit_checkpoint.py`
+  runs that gate and the zero-step draw in about two minutes.
 - The flow examples print `final_loss: unavailable` on a `--steps 0` resume
   instead of a zero (ISSUE-072): the checkpoint does not carry the loss.
 

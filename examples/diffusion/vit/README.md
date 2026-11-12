@@ -17,6 +17,10 @@ and `--no-samples` skips the two walks. A checkpoint carries the parameters,
 AdamW's moments and `1 - b1^t` / `1 - b2^t`; it does not carry the loss, so a
 `--steps 0` draw prints `final_loss: unavailable` rather than a zero.
 
+`reference/.venv/bin/python reference/test_vit_checkpoint.py` is the gate: three
+steps once, two steps plus a resume, and a zero-step draw, in about two minutes
+including the build.
+
 ## The model
 
 | | |
