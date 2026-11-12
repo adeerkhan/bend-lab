@@ -18,9 +18,8 @@
 # $LOG/<stage>.log with `stdbuf -oL` so progress is visible immediately, and
 # drops $LOG/<stage>.done with its exit code so nothing has to be guessed.
 #
-# STEPS is compiled into the example (Bend has no environment), so the stage
-# writes a copy BESIDE the example — its relative imports must still resolve —
-# and builds that. The copy is removed when the stage finishes.
+# STEPS is the example's `--steps` flag, so one binary serves every length:
+# the stage builds `main.bend` once and starts it with `--steps $STEPS`.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -60,12 +59,9 @@ finish() {          # finish <stage> -> its exit code, or 1 while it runs
 
 case "${1:-}" in
 m1)
-  src="$ROOT/examples/diffusion/vit/.run-$STEPS.bend"
-  sed "s/run(x0, [0-9]*n)/run(x0, ${STEPS}n)/" "$ROOT/examples/diffusion/vit/main.bend" > "$src"
-  "$BEND" "$src" -o "$LOG/vit-m1$STAGE.bin" > "$LOG/m1$STAGE.build.log" 2>&1
-  rm -f "$src"
+  "$BEND" "$ROOT/examples/diffusion/vit/main.bend" -o "$LOG/vit-m1$STAGE.bin" > "$LOG/m1$STAGE.build.log" 2>&1
   echo "built $LOG/vit-m1$STAGE.bin ($STEPS steps)"
-  start "m1$STAGE" "'$LOG/vit-m1$STAGE.bin'"
+  start "m1$STAGE" "'$LOG/vit-m1$STAGE.bin' --steps $STEPS"
   ;;
 m1-results)
   finish "m1$STAGE" || exit 1

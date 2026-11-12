@@ -6,8 +6,16 @@ DDIM with the clamped start), but the denoiser is a transformer instead of a
 dense MLP.
 
     bendenv run -- bend examples/diffusion/vit/main.bend
+    bendenv run -- bend examples/diffusion/vit/main.bend --steps 50 --save /tmp/vit.bend
+    bendenv run -- bend examples/diffusion/vit/main.bend --steps 0 --resume /tmp/vit.bend
     ./scripts/vit.sh m1            # build + train in its own session, with a log
     ./scripts/vit.sh m1-results    # -> results/diffusion-vit/
+
+`--steps N` trains N steps (default 3000), `--start N` numbers the first step,
+`--save PATH` writes the training state and `--resume PATH` continues from it,
+and `--no-samples` skips the two walks. A checkpoint carries the parameters,
+AdamW's moments and `1 - b1^t` / `1 - b2^t`; it does not carry the loss, so a
+`--steps 0` draw prints `final_loss: unavailable` rather than a zero.
 
 ## The model
 

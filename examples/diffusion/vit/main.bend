@@ -598,21 +598,32 @@ def print_or(sp: Bool, +l: F32) -> IO(Unit):
       do IO<Unit>:
         return Unit{}
 
+def print_final(+i: Nat, +l: F32) -> IO(Unit):
+  match i:
+    case 0n:
+      do IO<Unit>:
+        IO.print("final_loss: unavailable (steps 0; the checkpoint carries no loss)")
+        return Unit{}
+    case 1n+p:
+      do IO<Unit>:
+        IO.print(String.append("final_loss: ", F32.show(l)))
+        return Unit{}
+
 def train_go(left: Nat, +i: Nat, +x0: List<&2, F32>,
-  tr: T.Train<ModelP()>) -> IO(ModelP()):
+  tr: T.Train<ModelP()>) -> IO(T.Train<ModelP()>):
   match left tr:
     case 0n T.Train{p, g, st, c, p1, p2, +l}:
-      do IO<ModelP()>:
-        IO.print(String.append("final_loss: ", F32.show(l)))
-        return p
+      do IO<T.Train<ModelP()>>:
+        Unit <- print_final(i, l)
+        return T.Train{p, g, st, c, p1, p2, l}
     case 1n+rest T.Train{p, g, st, c, p1, p2, +l}:
-      do IO<ModelP()>:
+      do IO<T.Train<ModelP()>>:
         Unit <- print_or(should_print(i), l)
         train_go(rest, (1n + i : Nat), x0,
           do_step(i, T.Train{p, g, st, c, p1, p2, l}, x0))
     case _ T.Train{p, g, st, c, p1, p2, l}:
-      do IO<ModelP()>:
-        return p
+      do IO<T.Train<ModelP()>>:
+        return T.Train{p, g, st, c, p1, p2, l}
 
 
 # ---- the starting weights: random, loaded through the layer's own loader ----
@@ -651,6 +662,54 @@ def init_params() -> ModelP():
   arr = fill_go(nn, scale_go(G.noise_of(1n, nn), Nil{}), U32.from_nat(0n), Array.new(F32, T.depth(nn), 0.0))
   load_p(T.Layer.zeros(ModelP(), TA.Mat<RW(), FE()>, TA.Mat<RW(), PX()>(), ModelS(),
     Model()), arr)
+
+# ---- a checkpoint: the state Train.save writes, and Train.restore reads ----
+
+def floats_at(+path: String) -> IO(List<&2, F32>):
+  do IO<List<&2, F32>>:
+    bs : List<&2, U32> <- T.read_all(path)
+    return T.f32s(bs)
+
+# parameters, AdamW's first and second moments, then 1 - b1^t and 1 - b2^t
+def floats_count() -> Nat:
+  Nat.add(Nat.mul(3n, U32.to_nat(T.Layer.count(ModelP(), TA.Mat<RW(), FE()>,
+    TA.Mat<RW(), PX()>(), ModelS(), Model()))), 2n)
+
+def new_train() -> T.Train<ModelP()>:
+  T.Train.new(~ModelP(), ~TA.Mat<RW(), FE()>(), ~TA.Mat<RW(), PX()>(), ~ModelS(),
+    ~Model(), cfg(), init_params())
+
+def restore_arr(xs: List<&2, F32>) -> T.Train<ModelP()>:
+  T.Train.restore(~ModelP(), ~TA.Mat<RW(), FE()>(), ~TA.Mat<RW(), PX()>(), ~ModelS(),
+    ~Model(), new_train(),
+    fill_go(floats_count(), xs, U32.from_nat(0n),
+      Array.new(F32, T.depth(floats_count()), 0.0)))
+
+def resumed(+path: String) -> IO(T.Train<ModelP()>):
+  do IO<T.Train<ModelP()>>:
+    xs : List<&2, F32> <- floats_at(path)
+    return restore_arr(xs)
+
+def save_tr(+path: String, tr: T.Train<ModelP()>) -> IO(T.Train<ModelP()>):
+  do IO<T.Train<ModelP()>>:
+    kept : T.Train<ModelP()> <- T.Train.save(~ModelP(), ~TA.Mat<RW(), FE()>(),
+      ~TA.Mat<RW(), PX()>(), ~ModelS(), ~Model(), path, tr)
+    Unit <- IO.print(String.append("saved: ", path))
+    return kept
+
+def save_if(save: String, tr: T.Train<ModelP()>) -> IO(T.Train<ModelP()>):
+  match save:
+    case SNil{}:
+      IO.pure(T.Train<ModelP()>, tr)
+    case SCon{h, t}:
+      save_tr(SCon{h, t}, tr)
+
+def start_tr(resume: String) -> IO(T.Train<ModelP()>):
+  match resume:
+    case SNil{}:
+      IO.pure(T.Train<ModelP()>, new_train())
+    case SCon{h, t}:
+      resumed(SCon{h, t})
 
 
 # ---- the sampler: the same token-ordered cloud, the clamped start ----
@@ -833,23 +892,123 @@ def print_cloud(st: VS, tag: String) -> IO(ModelP()):
 # Both walks from the one trained model, on the one starting cloud: the
 # 16-step DDIM cloud and the 64-step ancestral one, so a comparison holds
 # the model and the noise fixed and varies only the sampler.
-def run(+x0: List<&2, F32>, +n: Nat) -> IO(Unit):
+def print_both(p: ModelP()) -> IO(Unit):
   do IO<Unit>:
-    p : ModelP() <- train_go(n, 0n, x0,
-      T.Train.new(~ModelP(), ~TA.Mat<RW(), FE()>(), ~TA.Mat<RW(), PX()>(), ~ModelS(),
-        ~Model(), cfg(), init_params()))
-    Unit <- IO.print(String.append("data_mean: ", F32.show(D.mean_of(x0, 65536n))))
     p1 : ModelP() <- print_cloud(ddim_sample(p), "samples:")
     p2 : ModelP() <- print_cloud(sample(p1), "samples_ddpm:")
     return Unit{}
+
+def params_of(tr: T.Train<ModelP()>) -> ModelP():
+  match tr:
+    case T.Train{p, g, st, c, p1, p2, l}:
+      p
+
+def finish(save: String, sample: Bool, tr: T.Train<ModelP()>,
+  +x0: List<&2, F32>) -> IO(Unit):
+  do IO<Unit>:
+    tr1 : T.Train<ModelP()> <- save_if(save, tr)
+    p : ModelP() <- IO.pure(ModelP(), params_of(tr1))
+    Unit <- IO.print(String.append("data_mean: ", F32.show(D.mean_of(x0, 65536n))))
+    Bool.pick(IO(Unit), sample, print_both(p), IO.pure(Unit, Unit{}))
+
+# ---- the flags: --steps N, --start N, --save PATH, --resume PATH, --no-samples ----
+
+type Run is Data:
+  Run{start: Nat, steps: Nat, save: String, resume: String, sample: Bool}
+
+def run_default() -> Run:
+  Run{0n, 3000n, "", "", True{}}
+
+def nat_or(m: Maybe<&2, Nat>, d: Nat) -> Nat:
+  match m:
+    case Some{x}:
+      x
+    case None{}:
+      d
+
+def run_go(args: List<String>, r: Run) -> Run:
+  match args:
+    case Nil{}:
+      r
+    case Con{a, rest}:
+      match a:
+        case "--no-samples":
+          match r:
+            case Run{start, +steps, save, resume, sample}:
+              run_go(rest, Run{start, steps, save, resume, False{}})
+        case "--save":
+          match rest:
+            case Nil{}:
+              r
+            case Con{b, more}:
+              match r:
+                case Run{start, +steps, save, resume, sample}:
+                  run_go(more, Run{start, steps, b, resume, sample})
+        case "--resume":
+          match rest:
+            case Nil{}:
+              r
+            case Con{b, more}:
+              match r:
+                case Run{start, +steps, save, resume, sample}:
+                  run_go(more, Run{start, steps, save, b, sample})
+        case "--start":
+          match rest:
+            case Nil{}:
+              r
+            case Con{b, more}:
+              match r:
+                case Run{start, +steps, save, resume, sample}:
+                  run_go(more, Run{nat_or(Nat.read(b), start), steps, save, resume, sample})
+        case "--steps":
+          match rest:
+            case Nil{}:
+              r
+            case Con{b, more}:
+              match r:
+                case Run{start, +steps, save, resume, sample}:
+                  run_go(more, Run{start, nat_or(Nat.read(b), steps), save, resume, sample})
+        case _:
+          run_go(rest, r)
+
+def run_of(args: List<String>) -> Run:
+  match args:
+    case Nil{}:
+      run_default()
+    case Con{program, rest}:
+      run_go(rest, run_default())
+
+# ---- the run ----
+
+def train_steps(+start: Nat, +steps: Nat, tr0: T.Train<ModelP()>,
+  +x0: List<&2, F32>) -> IO(T.Train<ModelP()>):
+  match steps:
+    case 0n:
+      do IO<T.Train<ModelP()>>:
+        Unit <- print_final(0n, 0.0)
+        return tr0
+    case 1n+rest:
+      +total = (1n + rest : Nat)
+      train_go(total, start, x0, tr0)
+
+def run_with(+x0: List<&2, F32>, r: Run) -> IO(Unit):
+  match r:
+    case Run{+start, +steps, save, resume, sample}:
+      do IO<Unit>:
+        Unit <- IO.print(String.append("steps: ", Nat.show(steps)))
+        Unit <- IO.print(String.append("start: ", Nat.show(start)))
+        T.OptCfg.check(cfg())
+        tr0 : T.Train<ModelP()> <- start_tr(resume)
+        tr2 : T.Train<ModelP()> <- train_steps(start, steps, tr0, x0)
+        finish(save, sample, tr2, x0)
 
 def Body() -> IO(Unit):
   do IO<Unit>:
     t : Result<&1, &1, Hf.Err, Datasets.Table> <- Datasets.csv_of(
       "mstz/optdigits", "4f20cc827b763fb69e2a80e18e892e4e11498aec", "optdigits.data", False{}, 0n)
     x0 : List<&2, F32> <- D.digits_of(t)
-    Unit <- run(x0, 3000n)
-    return Unit{}
+    args : List<String> <- IO.args()
+    run_with(x0, run_of(args))
 
 def main() -> IO(Unit):
   Body()
