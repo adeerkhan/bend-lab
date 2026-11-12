@@ -31,6 +31,8 @@ What changed for the people who run the lab. Internal refactors are not listed.
   `started`, `finished`, `exit_code`, `error`, `git_commit`, `versions` and a
   `samples` table. `runs.reconcile()` marks a run whose process is gone as
   `lost`; `runs.backfill()` fills params/config on older rows.
+- The full gate (`make check`) passed `140/140` in `49m35 s` through a
+  dashboard session, with `2,811` system samples and a `5.6 GB` peak RSS.
 
 ### The run store, and ISSUE-058 / ISSUE-072
 

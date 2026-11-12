@@ -51,9 +51,13 @@ More runs through it, all under the one-hour rule:
 | 33 | `make session TASK=mamba3 CMD="make mamba3"` | `MAMBA3 PASS`, `22.2 s` |
 | 34 | `make experiment TASK=iris-crossval` | PASS, `1m05` task |
 | 35 | `make session TASK=check-fast CMD="make check-fast"` | `31/31`, `23.6 s` |
+| 36 | `make session TASK=check CMD="make check"` | `140/140`, `49m35 s`, 2,811 samples, peak RSS `5.6 GB` |
 
-The store then held 31 runs. The page API returned `200`, `/api/overview`
-reported live CPU/RAM/GPU, and the JavaScript parses under `node --check`.
+The store then held 32 runs. The page API returned `200`, `/api/overview`
+reported live CPU/RAM/GPU, and the JavaScript parses under `node --check`. Run
+36 is the long-run proof: the sampler recorded 2,811 rows over `49.58 min`,
+with CPU spikes to `3,159%` (parallel builds across cores), RAM to `6,088 MB`
+and GPU utilization between `0` and `100%`.
 
 ## 2026-11-12 — the run store, and the first two local issue fixes
 

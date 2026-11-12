@@ -9,7 +9,7 @@ command that produced its last number.
 | check | command | last result |
 | --- | --- | --- |
 | proofs, frozen references | `make check-fast` | `31/31`, 2026-11-12 |
-| full gate | `make check` | `139/139`, 2026-11-11 |
+| full gate | `make check` | `140/140`, 2026-11-12, `49m35 s` (run 36 in the dashboard) |
 | Mamba-3 SISO and full LM | `make mamba3` | `MAMBA3 PASS`, 2026-11-12 |
 
 Short tests run on 2026-11-12, all on the current `2.0.0.0` lane:
