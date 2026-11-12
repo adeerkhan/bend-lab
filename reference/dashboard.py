@@ -416,13 +416,28 @@ def state(run_id, fallback):
 PAGE = r"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>MLBend · runs</title>
+<title>Bend-Lab · runs</title>
+<script>(function(){try{
+ var q=new URLSearchParams(location.search).get("theme");
+ var saved=localStorage.getItem("bendlab-theme");
+ var dark=window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches;
+ document.documentElement.dataset.theme=q||saved||(dark?"dark":"light");
+}catch(e){document.documentElement.dataset.theme="light"}})();</script>
 <style>
 :root{--bg:#f0eee6;--panel:#faf8f2;--line:#dad5c8;--fg:#2e2d2a;--muted:#6f6a60;
 --accent:#7d70b3;--accent2:#4f8f86;--warn:#a9772c;--bad:#b3564f;--pink:#a879a8;
---ok:#2f7f5f}
+--ok:#2f7f5f;--hover:#ece7da;--sel:#e6dfcf;--runbg:#eef4ee;
+--grid:#e4dfd2;--axis:#6f6a60;--loss:#7d70b3;--eval:#4f8f86;--step:#4f8f86;
+--cpu:#b07a2a;--ram:#5a86a8;--gpu:#a879a8;--gpumem:#6f9b7c;color-scheme:light}
+html[data-theme="dark"]{--bg:#1b1a17;--panel:#23221e;--line:#3a372f;
+--fg:#eee9dc;--muted:#a8a294;--accent:#b3a5e0;--accent2:#7fbfb2;
+--warn:#d6a45a;--bad:#d97b73;--pink:#c79ac7;--ok:#6fbf95;--hover:#33302a;
+--sel:#3b352b;--runbg:#243129;--grid:#3a362e;--axis:#a8a294;--loss:#b3a5e0;
+--eval:#7fbfb2;--step:#7fbfb2;--cpu:#d6a45a;--ram:#7fa8cf;--gpu:#c79ac7;
+--gpumem:#91bfa0;color-scheme:dark}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);
-font:14px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace}
+font:14px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;
+transition:background-color .15s,color .15s}
 header{display:flex;flex-wrap:wrap;gap:14px;align-items:baseline;padding:14px 20px;
 border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:3}
 h1{font-size:18px;margin:0;letter-spacing:.02em}.mark{display:inline-block;
@@ -455,6 +470,13 @@ color:var(--muted);font-size:11px}
 .filter{float:right;background:var(--bg);border:1px solid var(--line);
 color:var(--fg);border-radius:6px;padding:2px 8px;font:11px ui-monospace;
 text-transform:none;letter-spacing:0;width:190px}
+.iconbtn{background:transparent;border:1px solid var(--line);border-radius:7px;
+width:30px;height:27px;display:inline-flex;align-items:center;justify-content:center;
+color:var(--muted);cursor:pointer;padding:0}
+.iconbtn:hover{color:var(--fg);border-color:var(--accent)}
+.iconbtn svg{width:15px;height:15px;display:block}
+html[data-theme="light"] .moon{display:none}
+html[data-theme="dark"] .sun{display:none}
 .ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}
 .dot{display:inline-block;width:7px;height:7px;border-radius:50%;
 background:var(--muted);margin-right:6px;vertical-align:middle}
@@ -462,9 +484,9 @@ background:var(--muted);margin-right:6px;vertical-align:middle}
 .st-running{color:var(--ok);font-weight:600}
 .st-done{color:var(--muted)}.st-imported{color:var(--accent2)}
 .st-failed{color:var(--bad)}.st-lost{color:var(--warn)}
-tr.run{cursor:pointer}tr.run:hover td{background:#ece7da}
-tr.run.running td{background:#eef4ee}
-tr.run.sel td{background:#e6dfcf}
+tr.run{cursor:pointer}tr.run:hover td{background:var(--hover)}
+tr.run.running td{background:var(--runbg)}
+tr.run.sel td{background:var(--sel)}
 tr.run.sel td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
 .badge{display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;
 border:1px solid var(--line);color:var(--muted)}
@@ -473,11 +495,19 @@ a{color:var(--accent2)}
 @media(max-width:900px){.s2,.s3,.s4,.s6,.s8{grid-column:span 12}
  main{padding:10px 10px 30px}}
 </style></head><body>
-<header><h1>MLBend<span class="mark"></span></h1>
+<header><h1>Bend-Lab<span class="mark"></span></h1>
 <span class="muted">runs &amp; live sessions</span>
 <span id="status" class="muted"><i class="dot"></i>connecting…</span>
 <span id="budget" class="muted"></span>
-<span class="muted">auto-refresh 1 s</span></header>
+<span class="muted">auto-refresh 1 s</span>
+<button id="themeswitch" class="iconbtn" type="button" aria-label="Switch to dark mode"
+ title="Switch to dark mode">
+<svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+ stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="4"/>
+<path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+<svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+ stroke-width="1.6" stroke-linecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"/></svg>
+</button></header>
 <main class="grid">
 <div class="card s2"><h2>running</h2><div id="nrun" class="big">—</div><div id="nrunsub" class="muted"></div></div>
 <div class="card s2"><h2>runs</h2><div id="ntotal" class="big">—</div><div class="muted">in the store</div></div>
@@ -517,6 +547,14 @@ a{color:var(--accent2)}
 let overview=null, selected=null, detail=null, runsList=[], timer=null,
  logLoss=false, showTrain=true, showEval=false, lossRun=null, filter="";
 const $=id=>document.getElementById(id);
+window.addEventListener("error",e=>{const s=$("status");
+ if(s)s.textContent="JS error: "+(e.message||"resource")+" @ "+(e.filename||"?")+":"+(e.lineno||0)});
+function themeName(){return document.documentElement.dataset.theme==="dark"?"dark":"light"}
+function themeLabel(){const dark=themeName()==="dark";
+ const text=dark?"Switch to light mode":"Switch to dark mode";
+ $("themeswitch").title=text; $("themeswitch").setAttribute("aria-label",text)}
+function C(name){return getComputedStyle(document.documentElement)
+ .getPropertyValue(name).trim()||"#7d70b3"}
 const qs=new URLSearchParams(location.search);
 const wanted=qs.get("run");
 if(wanted)selected=Number(wanted);
@@ -538,7 +576,7 @@ function chart(canvas, series, opts={}){
  const w=r.width,h=r.height,left=46,right=8,top=18,bottom=22;
  ctx.clearRect(0,0,w,h);
  const pts=series.flatMap(s=>(s.points||[]).filter(p=>Number.isFinite(p[1])));
- if(!pts.length){ctx.fillStyle="#6f6a60";ctx.font="11px ui-monospace";
+ if(!pts.length){ctx.fillStyle=C("--axis");ctx.font="11px ui-monospace";
   ctx.fillText("unavailable",left+4,h/2);return}
  const ymin=Math.min(...pts.map(p=>p[1])), ymax=Math.max(...pts.map(p=>p[1]));
  const useLog=opts.log&&ymin>0;
@@ -557,20 +595,20 @@ function chart(canvas, series, opts={}){
  ctx.font="10px ui-monospace";
  for(let k=0;k<3;k++){
   const val=hi-(hi-lo)*k/2, y=top+(h-top-bottom)*k/2;
-  ctx.strokeStyle="#e4dfd2";ctx.lineWidth=1;ctx.beginPath();
+  ctx.strokeStyle=C("--grid");ctx.lineWidth=1;ctx.beginPath();
   ctx.moveTo(left,y);ctx.lineTo(w-right,y);ctx.stroke();
-  ctx.fillStyle="#6f6a60";ctx.textAlign="right";
+  ctx.fillStyle=C("--axis");ctx.textAlign="right";
   const raw=useLog?Math.pow(10,val):val;
   const label=useLog?fmt(raw,3):(opts.int?(hi-lo<10?fmt(raw,2):intfmt(raw)):fmt(raw,3));
   ctx.fillText(label,left-4,y+3);
  }
  const xlab=opts.xfmt||(v=>fmt(v,0));
- ctx.fillStyle="#6f6a60";ctx.textAlign="left";ctx.fillText(xlab(x0),left,h-5);
+ ctx.fillStyle=C("--axis");ctx.textAlign="left";ctx.fillText(xlab(x0),left,h-5);
  ctx.textAlign="right";ctx.fillText(xlab(x1),w-right,h-5);
  for(const s of series){
   const sp=(s.points||[]).filter(p=>Number.isFinite(p[1]));
   if(!sp.length)continue;
-  const color=s.color||"#7d70b3";
+  const color=s.color||C("--loss");
   ctx.strokeStyle=color;ctx.lineWidth=s.width||1.6;ctx.beginPath();
   sp.forEach((p,i)=>{const x=X(p[0]),y=Y(p[1]);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});
   if(sp.length>1)ctx.stroke();
@@ -587,8 +625,8 @@ function chart(canvas, series, opts={}){
  }
  ctx.textAlign="right";let lx=w-right;
  for(const s of series){if(!s.points||!s.points.length)continue;
-  const color=s.color||"#7d70b3";
-  ctx.fillStyle="#6f6a60";ctx.fillText(s.name||"",lx,10);
+  const color=s.color||C("--loss");
+  ctx.fillStyle=C("--axis");ctx.fillText(s.name||"",lx,10);
   const tw=ctx.measureText(s.name||"").width;
   ctx.fillStyle=color;ctx.beginPath();ctx.arc(lx-tw-9,6,3,0,6.284);ctx.fill();
   lx-=tw+26;
@@ -640,8 +678,8 @@ function lossData(){
 function renderLoss(){
  if(!detail||!detail.run)return;
  const {train,ev}=lossData(), series=[];
- if(showTrain&&train.length)series.push({name:"train",color:"#7d70b3",points:train});
- if(showEval&&ev.length)series.push({name:"eval",color:"#4f8f86",points:ev});
+ if(showTrain&&train.length)series.push({name:"train",color:C("--loss"),points:train});
+ if(showEval&&ev.length)series.push({name:"eval",color:C("--eval"),points:ev});
  chart($("losschart"),series,{xfmt:v=>"step "+v,log:logLoss,zero:true});
  $("showeval").disabled=!ev.length;
  $("showeval").title=!ev.length?"no eval loss in this run"
@@ -684,18 +722,18 @@ function renderDetail(){
   showEval=ev.length>0; $("showeval").checked=showEval;
  }
  renderLoss();
- chart($("mschart"),[{name:"ms",color:"#4f8f86",points:recs.map(x=>[x.step,x.ms])}],{xfmt:v=>"step "+v,int:true,zero:true});
+ chart($("mschart"),[{name:"ms",color:C("--step"),points:recs.map(x=>[x.step,x.ms])}],{xfmt:v=>"step "+v,int:true,zero:true});
  const tfmt=v=>new Date(v*1000).toLocaleTimeString();
- chart($("cpuchart"),[{name:"host %",color:"#b07a2a",points:samples.map(x=>[x.t,x.cpu])}],{xfmt:tfmt,int:true,zero:true,min:0,max:100});
- chart($("ramchart"),[{name:"ram MB",color:"#5a86a8",points:samples.map(x=>[x.t,x.rss_kb==null?null:x.rss_kb/1024])}],{xfmt:tfmt,int:true,zero:true});
- chart($("gpuutilchart"),[{name:"gpu %",color:"#a879a8",points:samples.map(x=>[x.t,x.gpu_util])}],{xfmt:tfmt,int:true,zero:true,min:0,max:100});
- chart($("gpuprocchart"),[{name:"proc MB",color:"#6f9b7c",points:samples.map(x=>[x.t,x.gpu_mem_kb==null?null:x.gpu_mem_kb/1024])}],{xfmt:tfmt,int:true,zero:true});
+ chart($("cpuchart"),[{name:"host %",color:C("--cpu"),points:samples.map(x=>[x.t,x.cpu])}],{xfmt:tfmt,int:true,zero:true,min:0,max:100});
+ chart($("ramchart"),[{name:"ram MB",color:C("--ram"),points:samples.map(x=>[x.t,x.rss_kb==null?null:x.rss_kb/1024])}],{xfmt:tfmt,int:true,zero:true});
+ chart($("gpuutilchart"),[{name:"gpu %",color:C("--gpu"),points:samples.map(x=>[x.t,x.gpu_util])}],{xfmt:tfmt,int:true,zero:true,min:0,max:100});
+ chart($("gpuprocchart"),[{name:"proc MB",color:C("--gpumem"),points:samples.map(x=>[x.t,x.gpu_mem_kb==null?null:x.gpu_mem_kb/1024])}],{xfmt:tfmt,int:true,zero:true});
  const box=$("extras");
  if(extras.length){box.innerHTML=""; extras.slice(0,4).forEach((key,i)=>{
    const wrap=document.createElement("div"), lab=document.createElement("div");
    lab.className="muted"; lab.textContent=key; const c=document.createElement("canvas");
    c.style.height="90px"; wrap.appendChild(lab); wrap.appendChild(c); box.appendChild(wrap);
-   chart(c,[{name:key,color:["#fbbf24","#4f8f86","#f472b6","#6f9b7c"][i%4],points:recs.map(x=>[x.step,x[key]])}]);
+   chart(c,[{name:key,color:[C("--cpu"),C("--eval"),C("--gpu"),C("--gpumem")][i%4],points:recs.map(x=>[x.step,x[key]])}]);
  }); $("extrahint").textContent="signals: "+extras.join(", ")+" · first "+Math.min(4,extras.length)+" shown";}
  else {box.innerHTML="";$("extrahint").textContent="no extra numeric field in the trace";}
  const cfg=r.config||{};
@@ -743,7 +781,17 @@ $("runstable").addEventListener("click",e=>{
  history.replaceState(null,"",`?run=${selected}`); poll();
 });
 document.addEventListener("keydown",e=>{if(e.key===" "){e.preventDefault();if(timer)clearTimeout(timer);timer=setTimeout(poll,1000)}});
+$("themeswitch").addEventListener("click",()=>{
+ const next=themeName()==="dark"?"light":"dark";
+ document.documentElement.dataset.theme=next;
+ try{localStorage.setItem("bendlab-theme",next)}catch(e){}
+ const u=new URL(location); u.searchParams.delete("theme");
+ history.replaceState(null,"",u.pathname+u.search);
+ themeLabel();
+ if(detail)renderDetail();
+});
 addEventListener("resize",()=>{if(detail)renderDetail()});
+themeLabel();
 poll();
 </script></body></html>"""
 
@@ -752,7 +800,7 @@ poll();
 # the server
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "MLBendDashboard/2.0"
+    server_version = "BendLabDashboard/3.0"
 
     def _send(self, body, content_type="application/json"):
         if isinstance(body, str):

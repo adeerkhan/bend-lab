@@ -161,6 +161,10 @@ it; RAM is **PSS** over the process tree, so shared libraries are counted
 once; GPU usage comes from `nvidia-smi`. The loss panel has `train`, `eval`
 and `log` toggles; `?run=ID` opens a run directly.
 
+The page follows the Bend cream, charcoal and purple identity. The sun/moon
+button in the header switches between light and dark; the choice is saved in
+the browser. `?theme=dark` (or `?theme=light`) is a shareable override.
+
 Training runs register through `make trace` (the GLM trace now also records the
 final held-out `val_loss`), tests through `make session TASK=... CMD="..."`,
 and `make experiment` registers itself. A run that is not in the store is not

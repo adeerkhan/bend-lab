@@ -49,9 +49,10 @@ CPU is now a run's **share of the host** over the cores it may use
 (`sched_getaffinity`), with the core count beside it (`27% · 7.4c`); RAM is
 PSS from `smaps_rollup`, not summed RSS; the GPU axis is capped at 100 and the
 GPU `108%` label is gone. The broken readings are ISSUE-112, ISSUE-116 and
-ISSUE-117 in the ledger. The page
-uses the Bend cream/charcoal/purple theme, and `docs/assets/dashboard.png` is
-committed and embedded in `README.md`.
+ISSUE-117 in the ledger. The page is named **Bend-Lab**, uses the Bend
+cream/charcoal/purple theme, and its sun/moon header button switches between
+light and dark (saved in the browser; `?theme=dark` is a shareable override).
+`docs/assets/dashboard.png` is committed and embedded in `README.md`.
 
 The GLM trainer now ends a trace with `val_loss` (the final held-out batch,
 after saving weights) and `trace.py` stores it as `runs.eval_loss`.
