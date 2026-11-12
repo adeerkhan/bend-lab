@@ -8,7 +8,7 @@ BEND := $(or $(BEND_BIN),$(HOME)/.bend/bin/bend)
 BEND_VERSION := 2.0.38
 BEND_REF := ../bend-ref
 
-.PHONY: setup check laws sync-bend clean lint env env-check release experiment experiments results report trace dash peaks bounds bench plumbing flow flow64 doctor figures select plots sweep sweep-agent
+.PHONY: setup check laws sync-bend clean lint env env-check release experiment experiments results report trace dash dashboard peaks bounds bench plumbing flow flow64 doctor figures select plots sweep sweep-agent
 
 setup:            ## Bend, Lean and the Python venv
 	scripts/setup.sh
@@ -54,8 +54,12 @@ report:           ## the page of a task's latest record; AGAINST=<record> compar
 	$(PY) reference/report_run.py --task $(TASK) $(if $(AGAINST),--against $(AGAINST),)
 
 trace:            ## one task's program with --trace: one JSON line per step, written as it arrives
-	@test -n "$(TASK)" || (echo "usage: make trace TASK=<task> [STEPS=<n>]" && false)
-	$(PY) reference/trace.py --task $(TASK) $(if $(STEPS),--steps $(STEPS),)
+	@test -n "$(TASK)" || (echo "usage: make trace TASK=<task> [STEPS=<n>] [MAX_SECONDS=3600]" && false)
+	$(PY) reference/trace.py --task $(TASK) $(if $(STEPS),--steps $(STEPS),) $(if $(MAX_SECONDS),--max-seconds $(MAX_SECONDS),)
+
+dashboard:        ## the browser page of a task's trace (PORT=8787, PID=<pid> for memory)
+	@test -n "$(TASK)" || (echo "usage: make dashboard TASK=<task> [PORT=8787] [PID=<pid>]" && false)
+	$(PY) reference/dashboard.py --task $(TASK) --port $(or $(PORT),8787) $(if $(PID),--pid $(PID),) $(if $(OPEN),--open,)
 
 dash:             ## the live page of a task's trace (WATCH=1, PID=<pid> for memory)
 	@test -n "$(TASK)" || (echo "usage: make dash TASK=<task> [WATCH=1] [PID=<pid>]" && false)

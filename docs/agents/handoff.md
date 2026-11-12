@@ -7,6 +7,20 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-12 — the browser dashboard and the one-hour guard
+
+`reference/dashboard.py` serves the terminal dashboard's trace and record as
+HTML on `--port` (default 8787): `make dashboard TASK=glm53-hybrid128
+PORT=8787 [PID=<pid>]`. It shows loss, step time, tokens/s, RSS/peak/CPU, the
+stage split, recent steps, and any extra numeric fields in a trace line
+(`lr`, `grad_norm`, `state_norm`, `gate_mean`) as small charts. Standard
+library only, polling `/api/state` once a second.
+
+`reference/trace.py` now stops a run after one hour by default; set
+`MAX_SECONDS` on `make trace`, or 0 to disable. The existing GLM trace is
+`3733.97 s` (62 min) and the page flags it over budget. The rule is wall
+time: split, resume from a checkpoint, or do not start.
+
 ## 2026-11-12 — the five-track review starts with the lane
 
 `docs/agents/review.md` is the review matrix for classical ML, diffusion, flow

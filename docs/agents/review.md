@@ -58,6 +58,25 @@ records them per run.
    corollary. Add `Rewire` or attention backward blocks only when a second
    user or a measurement asks for them.
 
+## The browser page, and the one-hour budget
+
+`make dashboard TASK=<task> PORT=8787 [PID=<pid>]` serves
+`reference/dashboard.py`: the same trace and record as the terminal
+`reference/dash.py`, as HTML on a local port. It shows the loss, step time,
+tokens/s, resident and peak memory, the stage split, the recent steps and any
+extra numeric fields in a trace line. Extras are the hook for model internals:
+write `lr`, `grad_norm`, `state_norm` or `gate_mean` and they become small
+charts. No CDN, no build step, standard library only.
+
+`make trace` now stops a run after one hour by default
+(`reference/trace.py --max-seconds 3600`; `MAX_SECONDS=0` disables it). The
+page shows the loop time against the same budget in red when over. The
+existing `glm53-hybrid128` trace is **3,733.97 s, 62 min**, over the budget;
+that is the reason the guard exists.
+
+The one-hour rule is about wall time, not a target: a run that needs longer
+is split, resumed from a checkpoint, or not run.
+
 ## What not to do
 
 - Do not rerun the 6,000-step flow or the 5.6-hour GLM 192 evaluation just to

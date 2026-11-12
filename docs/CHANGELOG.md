@@ -4,6 +4,20 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### A browser dashboard, and a one-hour training budget
+
+- `reference/dashboard.py` serves a training trace and record as HTML on a
+  local port (`make dashboard TASK=... PORT=8787`): loss, step time, tokens/s,
+  resident and peak memory, the stage split, recent steps, and any extra
+  numeric fields in a trace line as small charts. The terminal
+  `reference/dash.py` remains; this is the page an agent run can leave open.
+- `reference/trace.py` stops a run after one hour by default
+  (`--max-seconds 3600`; `MAX_SECONDS=0` disables it). The existing
+  `glm53-hybrid128` trace is `3733.97 s` (62 min), over the budget; the page
+  shows it in red.
+- `make dashboard` joins `make trace` and `make dash`; the server is standard
+  library only and polls `/api/state`.
+
 ### The five-track review starts with the version lane
 
 - `docs/agents/review.md` records the matrix for classical ML, diffusion,

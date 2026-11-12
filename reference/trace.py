@@ -16,6 +16,7 @@ import os
 import statistics
 import subprocess
 import sys
+import threading
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -42,6 +43,8 @@ def main():
     parser.add_argument("--steps", type=int, help="override the task's --steps")
     parser.add_argument("--out", help="the trace path; default results/<task>/trace.jsonl")
     parser.add_argument("--threads", type=int, help="the runtime's thread count")
+    parser.add_argument("--max-seconds", type=float, default=3600.0,
+                        help="stop the run after this wall time (default one hour; 0 disables)")
     args = parser.parse_args()
 
     cfg = experiment.TASKS[args.task]
@@ -59,17 +62,33 @@ def main():
                             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                             text=True, env=experiment.ENV, cwd=ROOT)
     records = []
-    with open(out, "w") as f:
-        for number, line in enumerate(proc.stdout, 1):
-            if not line.strip():
-                continue
-            record = record_of(line.strip(), number)
-            records.append(record)
-            f.write(json.dumps(record) + "\n")
-            f.flush()
+    aborted = []
+    timer = None
+    if args.max_seconds and args.max_seconds > 0:
+        def stop():
+            aborted.append(True)
+            proc.terminate()
+        timer = threading.Timer(args.max_seconds, stop)
+        timer.start()
+    try:
+        with open(out, "w") as f:
+            for number, line in enumerate(proc.stdout, 1):
+                if not line.strip():
+                    continue
+                record = record_of(line.strip(), number)
+                records.append(record)
+                f.write(json.dumps(record) + "\n")
+                f.flush()
+    finally:
+        if timer is not None:
+            timer.cancel()
     stderr = proc.stderr.read()
     code = proc.wait()
     seconds = time.perf_counter() - start
+    if aborted:
+        print(f"trace: budget {args.max_seconds:.0f} s exceeded after {len(records)} lines"
+              f" and {seconds:.1f} s; the run was stopped")
+        return 124
     if code != 0:
         raise SystemExit(f"trace: the program exited {code}:\n{stderr}")
     if not records:
