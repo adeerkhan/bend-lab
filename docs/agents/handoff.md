@@ -37,12 +37,29 @@ run 1 (1,398 steps, no system samples because it predates the sampler).
 The layout was rebuilt after looking at it in a headless browser: the
 sessions table is a scroll box with a sticky header, `running` is green in the
 counter and the row, `failed` red and `lost` amber; a one-point chart draws a
-marker and its level; the y axis floors at zero; axes carry labels; the loss
-has a log toggle; CPU, RAM, GPU utilization and per-process GPU memory are
-four charts instead of mixed units. A finished run shows its peak sample, not
-the empty trace process, and a run with no steps or samples hides those cards.
-`?run=ID` opens a run and the selected row scrolls into view; the sessions
-table has a filter for task, kind or status.
+marker and its level (only when it is the only series); the y axis floors at
+zero; axes carry labels; the loss has `train`, `eval` and `log` toggles; CPU,
+RAM, GPU utilization and per-process GPU memory are four charts instead of
+mixed units. A finished run shows independent peaks, not the empty trace
+process, and a run with no steps or samples hides those cards. `?run=ID` opens
+a run and the selected row scrolls into view; the sessions table has a filter
+for task, kind or status.
+
+CPU is now a run's **share of the host** over the cores it may use
+(`sched_getaffinity`), with the core count beside it (`27% · 7.4c`); the GPU
+axis is capped at 100 and the GPU `108%` label is gone. The broken readings are
+ISSUE-112 and the peak-sample confusion is ISSUE-116 in the ledger. The page
+uses the Bend cream/charcoal/purple theme, and `docs/assets/dashboard.png` is
+committed and embedded in `README.md`.
+
+The GLM trainer now ends a trace with `val_loss` (the final held-out batch,
+after saving weights) and `trace.py` stores it as `runs.eval_loss`.
+`make trace TASK=glm53-hybrid128 STEPS=10` measured train `4.5521`, eval
+`4.4326`, 20.4 s loop, run 38; the loss panel shows the eval point at the last
+step and the recent-steps table has an `eval` column. Per-step eval is not
+possible with the linear `Train` (a `Train` is `Type`, so it cannot be used
+for a validation forward and the next step); the final held-out loss is what
+the trace can carry today.
 
 More runs through it, all under the one-hour rule:
 

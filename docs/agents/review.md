@@ -90,7 +90,8 @@ and the workspace dependencies, so it is its own change with a full gate.
 a time. The overview
 shows the number of live sessions, host CPU, RAM, GPU utilization and GPU
 memory, and a table of runs with task, kind, status, PID, steps, loss,
-parameter count, per-run CPU, RAM, GPU memory and loop time. Selecting a run
+parameter count, per-run CPU as host share plus cores, RAM, GPU memory and
+loop time. Selecting a run
 opens its loss and step time, up to four extra signals, CPU/RAM/GPU samples,
 its configuration (program, arguments, lane, threads, seed, git, versions),
 recent steps and the record it wrote. Several sessions can be live at once:
