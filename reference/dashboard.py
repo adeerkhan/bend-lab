@@ -4,8 +4,8 @@
   reference/dashboard.py --task glm53-hybrid128 --port 8787 --open
 
 One page for every run in `results/runs.sqlite3` (`reference/runs.py`), not one
-task at a time. The overview lists running and finished runs with their CPU,
-resident memory, GPU memory and parameter count; selecting a run shows its loss
+task at a time. The overview lists running and finished runs with their CPU (host share and
+cores), resident memory, GPU memory and parameter count; selecting a run shows its loss
 and step time, its extra signals, its system samples, its steps, and the record
 its program wrote. Several sessions can be live at once because the sampler
 walks each run's process tree, so a Python test that spawns Bend is sampled as
@@ -36,7 +36,8 @@ sys.path.insert(0, os.path.join(ROOT, "reference"))
 import runs  # noqa: E402
 
 KEYS = ("step", "tokens", "loss", "ms")
-KNOWN = set(KEYS) | {"time", "timestamp", "wall_ms", "elapsed"}
+KNOWN = set(KEYS) | {"time", "timestamp", "wall_ms", "elapsed",
+                     "train_loss", "eval_loss", "val_loss", "validation_loss"}
 
 
 # ---------------------------------------------------------------------------
@@ -80,8 +81,8 @@ def gpu_stats():
         if out.returncode != 0 or not out.stdout.strip():
             return None, {}
         parts = [p.strip() for p in out.stdout.splitlines()[0].split(",")]
-        overall = {"util": float(parts[0]), "used_mb": float(parts[1]),
-                   "total_mb": float(parts[2])}
+        overall = {"util": min(100.0, max(0.0, float(parts[0]))),
+                   "used_mb": float(parts[1]), "total_mb": float(parts[2])}
     except (OSError, ValueError, IndexError, subprocess.SubprocessError):
         return None, {}
     procs = {}
@@ -149,6 +150,10 @@ class Sampler(threading.Thread):
     def __init__(self, interval=1.0):
         super().__init__(daemon=True)
         self.interval = interval
+        try:
+            self.ncpu = len(os.sched_getaffinity(0))
+        except AttributeError:
+            self.ncpu = os.cpu_count() or 1
         self.live = {}
         self.system = {}
         self._prev_cpu = None
@@ -204,7 +209,11 @@ class Sampler(threading.Thread):
             self._prev_proc[one] = (stat[1], now)
         if not ticks and not rss:
             return None
-        return {"pid": int(pid), "pids": len(pids), "cpu": cpu,
+        # `cpu` is the sum over the tree in percent of one core; the host
+        # share is that divided by the cores this process may run on.
+        return {"pid": int(pid), "pids": len(pids),
+                "cpu": min(100.0, cpu / self.ncpu),
+                "cores": min(float(self.ncpu), cpu / 100.0),
                 "rss_kb": rss, "hwm_kb": hwm or None}
 
     def tick(self):
@@ -254,6 +263,7 @@ class Sampler(threading.Thread):
             self.live = live
             self.system = {
                 "cpu": system["cpu"],
+                "ncpu": self.ncpu,
                 "memory": system["memory"],
                 "gpu": system["gpu"],
                 "at": now,
@@ -364,11 +374,12 @@ def state(run_id, fallback):
     samples = downsample(all_samples)
     proc = fallback["sampler"].live.get(run["id"])
     if proc is None and all_samples:
-        last = all_samples[-1]
-        top = max(all_samples, key=lambda x: x["hwm_kb"] or x["rss_kb"] or 0)
+        cpu = max((x["cpu"] or 0) for x in all_samples)
+        rss = max((x["rss_kb"] or 0) for x in all_samples)
+        hwm = max((x["hwm_kb"] or 0) for x in all_samples)
         gpu = max((x["gpu_mem_kb"] or 0) for x in all_samples)
-        proc = {"cpu": last["cpu"], "rss_kb": top["rss_kb"],
-                "hwm_kb": top["hwm_kb"] or top["rss_kb"],
+        proc = {"cpu": cpu, "rss_kb": rss, "hwm_kb": hwm or rss,
+                "cores": cpu * fallback["sampler"].ncpu / 100.0,
                 "gpu_proc_mb": gpu / 1024 if gpu else None,
                 "peak": True}
     return {
@@ -377,7 +388,7 @@ def state(run_id, fallback):
             "command", "created", "updated", "started", "finished", "steps",
             "tokens", "loop_s", "first_loss", "last_loss", "best_loss",
             "exit_code", "error", "config", "versions", "git_commit",
-            "record_path")},
+            "eval_loss", "record_path")},
         "records": records,
         "record": run.get("record"),
         "extras": extras_of(records),
@@ -394,18 +405,21 @@ PAGE = r"""<!doctype html>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>MLBend · runs</title>
 <style>
-:root{--bg:#0e1116;--panel:#161b24;--line:#263041;--fg:#e6edf7;--muted:#8b98ad;
---accent:#6ee7b7;--accent2:#93c5fd;--warn:#fbbf24;--bad:#f87171;--pink:#f472b6}
+:root{--bg:#f0eee6;--panel:#faf8f2;--line:#dad5c8;--fg:#2e2d2a;--muted:#6f6a60;
+--accent:#7d70b3;--accent2:#4f8f86;--warn:#a9772c;--bad:#b3564f;--pink:#a879a8;
+--ok:#2f7f5f}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);
 font:14px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace}
 header{display:flex;flex-wrap:wrap;gap:14px;align-items:baseline;padding:14px 20px;
 border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:3}
-h1{font-size:18px;margin:0;letter-spacing:.02em}h2{font-size:12px;color:var(--muted);
+h1{font-size:18px;margin:0;letter-spacing:.02em}.mark{display:inline-block;
+width:10px;height:18px;background:var(--accent);margin-left:4px;vertical-align:-3px}
+h2{font-size:12px;color:var(--muted);
 margin:0 0 8px;text-transform:uppercase;letter-spacing:.08em}
 main{max-width:1680px;margin:0 auto;padding:14px 20px 40px}
 .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;
-padding:12px 14px;min-width:0}.s2{grid-column:span 2}.s3{grid-column:span 3}
+padding:12px 14px;min-width:0;box-shadow:0 1px 0 rgba(45,42,35,.035)}.s2{grid-column:span 2}.s3{grid-column:span 3}
 .s4{grid-column:span 4}.s6{grid-column:span 6}.s8{grid-column:span 8}
 .s12{grid-column:span 12}
 .big{font-size:22px;font-variant-numeric:tabular-nums}.muted{color:var(--muted)}
@@ -428,16 +442,16 @@ color:var(--muted);font-size:11px}
 .filter{float:right;background:var(--bg);border:1px solid var(--line);
 color:var(--fg);border-radius:6px;padding:2px 8px;font:11px ui-monospace;
 text-transform:none;letter-spacing:0;width:190px}
-.ok{color:var(--accent)}.bad{color:var(--bad)}.warn{color:var(--warn)}
+.ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}
 .dot{display:inline-block;width:7px;height:7px;border-radius:50%;
 background:var(--muted);margin-right:6px;vertical-align:middle}
-.dot.live{background:var(--accent);box-shadow:0 0 6px var(--accent)}
-.st-running{color:var(--accent);font-weight:600}
+.dot.live{background:var(--ok);box-shadow:0 0 0 3px rgba(47,127,95,.14)}
+.st-running{color:var(--ok);font-weight:600}
 .st-done{color:var(--muted)}.st-imported{color:var(--accent2)}
 .st-failed{color:var(--bad)}.st-lost{color:var(--warn)}
-tr.run{cursor:pointer}tr.run:hover td{background:var(--line)}
-tr.run.running td{background:rgba(110,231,183,.055)}
-tr.run.sel td{background:#1d2a3a}
+tr.run{cursor:pointer}tr.run:hover td{background:#ece7da}
+tr.run.running td{background:#eef4ee}
+tr.run.sel td{background:#e6dfcf}
 tr.run.sel td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
 .badge{display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;
 border:1px solid var(--line);color:var(--muted)}
@@ -446,7 +460,7 @@ a{color:var(--accent2)}
 @media(max-width:900px){.s2,.s3,.s4,.s6,.s8{grid-column:span 12}
  main{padding:10px 10px 30px}}
 </style></head><body>
-<header><h1>MLBend</h1>
+<header><h1>MLBend<span class="mark"></span></h1>
 <span class="muted">runs &amp; live sessions</span>
 <span id="status" class="muted"><i class="dot"></i>connecting…</span>
 <span id="budget" class="muted"></span>
@@ -454,7 +468,7 @@ a{color:var(--accent2)}
 <main class="grid">
 <div class="card s2"><h2>running</h2><div id="nrun" class="big">—</div><div id="nrunsub" class="muted"></div></div>
 <div class="card s2"><h2>runs</h2><div id="ntotal" class="big">—</div><div class="muted">in the store</div></div>
-<div class="card s2"><h2>cpu</h2><div id="cpu" class="big">—</div><div class="muted">host, all cores</div></div>
+<div class="card s2"><h2>cpu</h2><div id="cpu" class="big">—</div><div id="cpusub" class="muted">host, all cores</div></div>
 <div class="card s2"><h2>ram</h2><div id="ram" class="big">—</div><div id="ramsub" class="muted"></div></div>
 <div class="card s2"><h2>gpu</h2><div id="gpu" class="big">—</div><div id="gpusub" class="muted"></div></div>
 <div class="card s2"><h2>gpu mem</h2><div id="gpumem" class="big">—</div><div id="gpumemsub" class="muted"></div></div>
@@ -470,7 +484,11 @@ a{color:var(--accent2)}
 <div class="card s3" id="crate" style="display:none"><h2>tokens / s</h2><div id="rate" class="big">—</div><div id="median" class="muted"></div></div>
 <div class="card s3" id="cmem" style="display:none"><h2>memory</h2><div id="rss" class="big">—</div><div id="peak" class="muted"></div></div>
 
-<div class="card s8" id="closschart" style="display:none"><h2>loss <label class="chk"><input type="checkbox" id="logloss"> log</label></h2><canvas id="losschart"></canvas></div>
+<div class="card s8" id="closschart" style="display:none"><h2>loss
+<label class="chk"><input type="checkbox" id="logloss"> log</label>
+<label class="chk"><input type="checkbox" id="showeval"> eval</label>
+<label class="chk"><input type="checkbox" id="showtrain" checked> train</label>
+</h2><canvas id="losschart"></canvas></div>
 <div class="card s4" id="cmschart" style="display:none"><h2>step time</h2><canvas id="mschart"></canvas></div>
 <div class="card s3" id="ccpu" style="display:none"><h2>cpu</h2><canvas id="cpuchart"></canvas></div>
 <div class="card s3" id="cram" style="display:none"><h2>ram</h2><canvas id="ramchart"></canvas></div>
@@ -483,7 +501,8 @@ a{color:var(--accent2)}
 <div class="card s12" id="craw" style="display:none"><h2>raw trace</h2><pre id="raw" style="max-height:160px;overflow:auto;color:var(--muted)"></pre></div>
 </main>
 <script>
-let overview=null, selected=null, detail=null, runsList=[], timer=null, logLoss=false, filter="";
+let overview=null, selected=null, detail=null, runsList=[], timer=null,
+ logLoss=false, showTrain=true, showEval=false, lossRun=null, filter="";
 const $=id=>document.getElementById(id);
 const qs=new URLSearchParams(location.search);
 const wanted=qs.get("run");
@@ -494,6 +513,7 @@ function fmt(x,n=4){if(x===null||x===undefined||Number.isNaN(x))return"—";
  if(typeof x!=="number")return String(x); if(Math.abs(x)>=1e6||(Math.abs(x)>0&&Math.abs(x)<1e-3))
  return x.toExponential(n); return x.toFixed(n).replace(/0+$/,"").replace(/\.$/,"");}
 function intfmt(x){return x===null||x===undefined?"—":Math.round(x).toLocaleString()}
+function evalOf(r){return r.eval_loss??r.val_loss??r.validation_loss??null}
 function statusCell(s){const cls={running:"st-running",done:"st-done",imported:"st-imported",
  failed:"st-failed",lost:"st-lost"}[s]||""; return `<span class="${cls}">${s==="running"?"● ":""}${esc(s)}</span>`}
 function show(ids,on){for(const id of ids)$(id).style.display=on?"":"none"}
@@ -505,7 +525,7 @@ function chart(canvas, series, opts={}){
  const w=r.width,h=r.height,left=46,right=8,top=18,bottom=22;
  ctx.clearRect(0,0,w,h);
  const pts=series.flatMap(s=>(s.points||[]).filter(p=>Number.isFinite(p[1])));
- if(!pts.length){ctx.fillStyle="#8b98ad";ctx.font="11px ui-monospace";
+ if(!pts.length){ctx.fillStyle="#6f6a60";ctx.font="11px ui-monospace";
   ctx.fillText("unavailable",left+4,h/2);return}
  const ymin=Math.min(...pts.map(p=>p[1])), ymax=Math.max(...pts.map(p=>p[1]));
  const useLog=opts.log&&ymin>0;
@@ -514,6 +534,9 @@ function chart(canvas, series, opts={}){
  if(hi-lo<1e-12){const d=Math.abs(hi)*0.03||1;lo-=d;hi+=d}
  const padY=(hi-lo)*0.08; lo-=padY; hi+=padY;
  if(opts.zero&&!useLog)lo=Math.max(0,lo);
+ if(opts.min!=null)lo=Math.max(opts.min,lo);
+ if(opts.max!=null)hi=Math.min(opts.max,hi);
+ if(hi<=lo)hi=lo+1;
  const xs=pts.map(p=>p[0]), x0=Math.min(...xs), x1=Math.max(...xs);
  const xlo=x0===x1?x0-1:x0, xhi=x0===x1?x1+1:x1;
  const X=v=>left+(v-xlo)/(xhi-xlo)*(w-left-right);
@@ -521,26 +544,27 @@ function chart(canvas, series, opts={}){
  ctx.font="10px ui-monospace";
  for(let k=0;k<3;k++){
   const val=hi-(hi-lo)*k/2, y=top+(h-top-bottom)*k/2;
-  ctx.strokeStyle="#1c2633";ctx.lineWidth=1;ctx.beginPath();
+  ctx.strokeStyle="#e4dfd2";ctx.lineWidth=1;ctx.beginPath();
   ctx.moveTo(left,y);ctx.lineTo(w-right,y);ctx.stroke();
-  ctx.fillStyle="#8b98ad";ctx.textAlign="right";
+  ctx.fillStyle="#6f6a60";ctx.textAlign="right";
   const raw=useLog?Math.pow(10,val):val;
   const label=useLog?fmt(raw,3):(opts.int?(hi-lo<10?fmt(raw,2):intfmt(raw)):fmt(raw,3));
   ctx.fillText(label,left-4,y+3);
  }
  const xlab=opts.xfmt||(v=>fmt(v,0));
- ctx.fillStyle="#8b98ad";ctx.textAlign="left";ctx.fillText(xlab(x0),left,h-5);
+ ctx.fillStyle="#6f6a60";ctx.textAlign="left";ctx.fillText(xlab(x0),left,h-5);
  ctx.textAlign="right";ctx.fillText(xlab(x1),w-right,h-5);
  for(const s of series){
   const sp=(s.points||[]).filter(p=>Number.isFinite(p[1]));
   if(!sp.length)continue;
-  const color=s.color||"#6ee7b7";
+  const color=s.color||"#7d70b3";
   ctx.strokeStyle=color;ctx.lineWidth=s.width||1.6;ctx.beginPath();
   sp.forEach((p,i)=>{const x=X(p[0]),y=Y(p[1]);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});
   if(sp.length>1)ctx.stroke();
   if(sp.length===1){const x=X(sp[0][0]),y=Y(sp[0][1]);
-   ctx.setLineDash([2,4]);ctx.strokeStyle=color;ctx.globalAlpha=.45;ctx.beginPath();
-   ctx.moveTo(left,y);ctx.lineTo(w-right,y);ctx.stroke();ctx.globalAlpha=1;ctx.setLineDash([]);
+   if(series.length===1){ctx.setLineDash([2,4]);ctx.strokeStyle=color;ctx.globalAlpha=.45;
+    ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(w-right,y);ctx.stroke();
+    ctx.globalAlpha=1;ctx.setLineDash([]);}
    ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,3.5,0,6.284);ctx.fill();
    ctx.textAlign="left";ctx.fillText(fmt(sp[0][1],4),Math.min(x+7,w-right-40),y-6);
   } else if(sp.length<=40){
@@ -550,8 +574,8 @@ function chart(canvas, series, opts={}){
  }
  ctx.textAlign="right";let lx=w-right;
  for(const s of series){if(!s.points||!s.points.length)continue;
-  const color=s.color||"#6ee7b7";
-  ctx.fillStyle="#8b98ad";ctx.fillText(s.name||"",lx,10);
+  const color=s.color||"#7d70b3";
+  ctx.fillStyle="#6f6a60";ctx.fillText(s.name||"",lx,10);
   const tw=ctx.measureText(s.name||"").width;
   ctx.fillStyle=color;ctx.beginPath();ctx.arc(lx-tw-9,6,3,0,6.284);ctx.fill();
   lx-=tw+26;
@@ -564,6 +588,7 @@ function renderOverview(){
  $("nrunsub").textContent=running?`${running} live · ${runs.length} total`:"no live session";
  $("ntotal").textContent=runs.length;
  $("cpu").textContent=sys.cpu==null?"—":sys.cpu.toFixed(0)+"%";
+ $("cpusub").textContent=sys.ncpu?`of ${sys.ncpu} cores`:"host, all cores";
  const mem=sys.memory;
  $("ram").textContent=mem?(mem.used_kb/1048576).toFixed(1)+" GB":"—";
  $("ramsub").textContent=mem?`of ${(mem.total_kb/1048576).toFixed(1)} GB`:"unavailable";
@@ -577,7 +602,7 @@ function renderOverview(){
  let rows='<table><tr><th class="num">run</th><th>task</th><th>kind</th><th>status</th><th class="num">pid</th><th class="num">steps</th><th class="num">loss</th><th class="num">params</th><th class="num">cpu</th><th class="num">ram</th><th class="num">gpu</th><th class="num">loop s</th></tr>';
  for(const r of shown){
   const p=r.proc||{};
-  rows+=`<tr class="run ${r.status} ${r.id===selected?"sel":""}" data-id="${r.id}"><td class="num">#${r.id}</td><td>${esc(r.task)}</td><td>${esc(r.kind||"run")}</td><td>${statusCell(r.status)}</td><td class="num">${r.pid??"—"}</td><td class="num">${r.steps}</td><td class="num">${fmt(r.last_loss)}</td><td class="num">${r.params==null?"—":intfmt(r.params)}</td><td class="num">${p.cpu==null?"—":p.cpu.toFixed(0)+"%"}</td><td class="num">${p.rss_kb?((p.rss_kb/1024).toFixed(0)+" MB"):"—"}</td><td class="num">${p.gpu_proc_mb?(p.gpu_proc_mb.toFixed(0)+" MB"):"—"}</td><td class="num">${Number(r.loop_s||0).toFixed(1)}</td></tr>`;
+  rows+=`<tr class="run ${r.status} ${r.id===selected?"sel":""}" data-id="${r.id}"><td class="num">#${r.id}</td><td>${esc(r.task)}</td><td>${esc(r.kind||"run")}</td><td>${statusCell(r.status)}</td><td class="num">${r.pid??"—"}</td><td class="num">${r.steps}</td><td class="num">${fmt(r.last_loss)}</td><td class="num">${r.params==null?"—":intfmt(r.params)}</td><td class="num">${p.cpu==null?"—":p.cpu.toFixed(0)+"%"+(p.cores!=null?` · ${p.cores.toFixed(1)}c`:"")}</td><td class="num">${p.rss_kb?((p.rss_kb/1024).toFixed(0)+" MB"):"—"}</td><td class="num">${p.gpu_proc_mb?(p.gpu_proc_mb.toFixed(0)+" MB"):"—"}</td><td class="num">${Number(r.loop_s||0).toFixed(1)}</td></tr>`;
  }
  $("runstable").innerHTML=rows+"</table>";
  const box=$("runstable"), selRow=box.querySelector("tr.sel");
@@ -588,13 +613,37 @@ function renderOverview(){
    box.scrollTop=Math.max(0,top-box.clientHeight+sr.height+8);
  }
 }
+function lossData(){
+ const recs=(detail&&detail.records)||[];
+ const train=recs.map(x=>[x.step,x.train_loss??x.loss])
+  .filter(p=>p[1]!=null&&Number.isFinite(p[1]));
+ const ev=recs.map(x=>[x.step,evalOf(x)])
+  .filter(p=>p[1]!=null&&Number.isFinite(p[1]));
+ const last=detail&&detail.run?detail.run.eval_loss:null;
+ if(ev.length===0&&last!=null&&recs.length)
+  ev.push([recs[recs.length-1].step,last]);
+ return {train,ev};
+}
+function renderLoss(){
+ if(!detail||!detail.run)return;
+ const {train,ev}=lossData(), series=[];
+ if(showTrain&&train.length)series.push({name:"train",color:"#7d70b3",points:train});
+ if(showEval&&ev.length)series.push({name:"eval",color:"#4f8f86",points:ev});
+ chart($("losschart"),series,{xfmt:v=>"step "+v,log:logLoss,zero:true});
+ $("showeval").disabled=!ev.length;
+ $("showeval").title=ev.length?"":"no eval loss in this run";
+ const lastEval=ev.length?ev[ev.length-1][1]:null;
+ $("lossrange").textContent=detail.summary.last==null?"":
+  `train ${fmt(detail.summary.last)}`+(lastEval==null?"":` · eval ${fmt(lastEval)}`);
+}
 function renderDetail(){
  if(!detail||!detail.run){show(["detail"],false);return}
  const r=detail.run, s=detail.summary, recs=detail.records||[], samples=detail.samples||[],
   p=detail.proc||{}, extras=detail.extras||[];
  const hasSteps=recs.length>0, hasSamples=samples.length>0;
  show(["detail","cconfig"],true);
- show(["cstep","closs","crate","cmem","closschart","cmschart","ctable","craw"],hasSteps);
+ show(["cstep","closs","crate","closschart","cmschart","ctable","craw"],hasSteps);
+ show(["cmem"],hasSteps||hasSamples);
  show(["ccpu","cram","cgpu","cgpuproc"],hasSamples);
  show(["cextra"],hasSteps&&extras.length>0);
  show(["crecord"],!!detail.record);
@@ -613,21 +662,26 @@ function renderDetail(){
  $("median").textContent=med?(med>=2000?`${(med/1000).toFixed(1)} s median`:`${intfmt(med)} ms median`):"";
  $("rss").textContent=p.rss_kb?(p.rss_kb/1024).toFixed(0)+" MB":"—";
  $("peak").textContent=p.hwm_kb?`${(p.hwm_kb/1024).toFixed(0)} MB peak`+
-  (p.cpu!=null?` · ${p.cpu.toFixed(0)}% cpu`:"")+
+  (p.cores!=null?` · ${p.cores.toFixed(1)} cores`:"")+
   (r.status==="running"?" · live":(p.peak?" · peak sample":" · last sample")):"";
- chart($("losschart"),[{name:"loss",color:"#6ee7b7",points:recs.map(x=>[x.step,x.loss])}],{xfmt:v=>"step "+v,log:logLoss,zero:true});
- chart($("mschart"),[{name:"ms",color:"#93c5fd",points:recs.map(x=>[x.step,x.ms])}],{xfmt:v=>"step "+v,int:true,zero:true});
+ if(lossRun!==r.id){
+  const {ev}=lossData();
+  lossRun=r.id; showTrain=true; $("showtrain").checked=true;
+  showEval=ev.length>0; $("showeval").checked=showEval;
+ }
+ renderLoss();
+ chart($("mschart"),[{name:"ms",color:"#4f8f86",points:recs.map(x=>[x.step,x.ms])}],{xfmt:v=>"step "+v,int:true,zero:true});
  const tfmt=v=>new Date(v*1000).toLocaleTimeString();
- chart($("cpuchart"),[{name:"cpu %",color:"#fbbf24",points:samples.map(x=>[x.t,x.cpu])}],{xfmt:tfmt,int:true,zero:true});
- chart($("ramchart"),[{name:"ram MB",color:"#93c5fd",points:samples.map(x=>[x.t,x.rss_kb==null?null:x.rss_kb/1024])}],{xfmt:tfmt,int:true,zero:true});
- chart($("gpuutilchart"),[{name:"gpu %",color:"#f472b6",points:samples.map(x=>[x.t,x.gpu_util])}],{xfmt:tfmt,int:true,zero:true});
- chart($("gpuprocchart"),[{name:"proc MB",color:"#a7f3d0",points:samples.map(x=>[x.t,x.gpu_mem_kb==null?null:x.gpu_mem_kb/1024])}],{xfmt:tfmt,int:true,zero:true});
+ chart($("cpuchart"),[{name:"host %",color:"#b07a2a",points:samples.map(x=>[x.t,x.cpu])}],{xfmt:tfmt,int:true,zero:true,min:0,max:100});
+ chart($("ramchart"),[{name:"ram MB",color:"#5a86a8",points:samples.map(x=>[x.t,x.rss_kb==null?null:x.rss_kb/1024])}],{xfmt:tfmt,int:true,zero:true});
+ chart($("gpuutilchart"),[{name:"gpu %",color:"#a879a8",points:samples.map(x=>[x.t,x.gpu_util])}],{xfmt:tfmt,int:true,zero:true,min:0,max:100});
+ chart($("gpuprocchart"),[{name:"proc MB",color:"#6f9b7c",points:samples.map(x=>[x.t,x.gpu_mem_kb==null?null:x.gpu_mem_kb/1024])}],{xfmt:tfmt,int:true,zero:true});
  const box=$("extras");
  if(extras.length){box.innerHTML=""; extras.slice(0,4).forEach((key,i)=>{
    const wrap=document.createElement("div"), lab=document.createElement("div");
    lab.className="muted"; lab.textContent=key; const c=document.createElement("canvas");
    c.style.height="90px"; wrap.appendChild(lab); wrap.appendChild(c); box.appendChild(wrap);
-   chart(c,[{name:key,color:["#fbbf24","#93c5fd","#f472b6","#a7f3d0"][i%4],points:recs.map(x=>[x.step,x[key]])}]);
+   chart(c,[{name:key,color:["#fbbf24","#4f8f86","#f472b6","#6f9b7c"][i%4],points:recs.map(x=>[x.step,x[key]])}]);
  }); $("extrahint").textContent="signals: "+extras.join(", ")+" · first "+Math.min(4,extras.length)+" shown";}
  else {box.innerHTML="";$("extrahint").textContent="no extra numeric field in the trace";}
  const cfg=r.config||{};
@@ -638,8 +692,9 @@ function renderDetail(){
  add("command",r.command); add("git",r.git_commit); add("versions",r.versions);
  for(const k of Object.keys(cfg))add(k,cfg[k]);
  c+="</table>"; $("config").innerHTML=c;
- let rows='<table><tr><th class="num">step</th><th class="num">loss</th><th class="num">ms</th><th class="num">tokens</th></tr>';
- for(const x of recs.slice(-10).reverse())rows+=`<tr><td class="num">${x.step}</td><td class="num">${fmt(x.loss)}</td><td class="num">${fmt(x.ms,0)}</td><td class="num">${x.tokens??"—"}</td></tr>`;
+ const hasEval=recs.some(x=>evalOf(x)!=null);
+ let rows=`<table><tr><th class="num">step</th><th class="num">train</th>${hasEval?'<th class="num">eval</th>':""}<th class="num">ms</th><th class="num">tokens</th></tr>`;
+ for(const x of recs.slice(-10).reverse())rows+=`<tr><td class="num">${x.step}</td><td class="num">${fmt(x.train_loss??x.loss)}</td>${hasEval?`<td class="num">${fmt(evalOf(x))}</td>`:""}<td class="num">${fmt(x.ms,0)}</td><td class="num">${x.tokens??"—"}</td></tr>`;
  $("table").innerHTML=rows+"</table>";
  const rec=detail.record;
  if(rec){const keys=Object.keys(rec).filter(k=>["passed","trainer","variant","stages_source"].includes(k));
@@ -664,7 +719,9 @@ async function poll(){
  }catch(e){$("status").innerHTML='<i class="dot"></i>server unavailable'}
  timer=setTimeout(poll,1000);
 }
-$("logloss").addEventListener("change",e=>{logLoss=e.target.checked;if(detail)renderDetail()});
+$("logloss").addEventListener("change",e=>{logLoss=e.target.checked;renderLoss()});
+$("showtrain").addEventListener("change",e=>{showTrain=e.target.checked;renderLoss()});
+$("showeval").addEventListener("change",e=>{showEval=e.target.checked;renderLoss()});
 $("filter").addEventListener("input",e=>{filter=e.target.value.toLowerCase();renderOverview()});
 $("runstable").addEventListener("click",e=>{
  const tr=e.target.closest("tr[data-id]"); if(!tr)return;
@@ -702,8 +759,20 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 rows = []
             live = self.server.sampler.live
+            ncpu = self.server.sampler.ncpu
             for row in rows:
                 row["proc"] = live.get(row["id"])
+                if row["proc"] is None:
+                    one = runs.peak_sample(row["id"])
+                    if one:
+                        row["proc"] = {
+                            "cpu": one["cpu"],
+                            "cores": (one["cpu"] or 0) * ncpu / 100.0,
+                            "rss_kb": one["rss_kb"], "hwm_kb": one["hwm_kb"],
+                            "gpu_proc_mb": (one["gpu_mem_kb"] / 1024
+                                            if one["gpu_mem_kb"] else None),
+                            "peak": True,
+                        }
             body = {
                 "now": time.time(),
                 "system": self.server.sampler.system,
