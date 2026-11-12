@@ -36,8 +36,9 @@ forwards at seqlen 8 are `0.37-0.38 s` against `0.71-0.73 s` on the list path,
 and the ten-step train probe is `3.64-3.67 s` against `9.81-10.50 s`; every
 gate passes. The chunked scan is done too: `pass_c` carries one 2048-float
 array across all four heads and all tokens, and in a same-session A/B twenty
-forwards are `0.37-0.45 s` against `0.49-0.56 s` for the per-head array core
-(medians `0.44 s` against `0.52 s`; train probe equal within noise).
+forwards are `0.41-0.42 s` against `0.53-0.55 s` for the per-head array core
+(medians `0.41 s` against `0.54 s`; a second session gave `0.37-0.45` against
+`0.49-0.56`; train probe equal within noise).
 
 The `q.S^T` product through `TA.Mat.matmul_nt(1, 16, 32, ...)` is **65x** the
 list `take_row` + `dot` version (`bench_qs_list.bend` against

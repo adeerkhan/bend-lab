@@ -14,12 +14,13 @@ initial state and carried across all four heads and all tokens; `scan_rows_st`
 updates the 32x16 cells in place, and the state is read back once per token for
 the backward. The list loop (`scan_all`, `sc_go`) stays in the tree as the
 reference implementation. In a same-session, interleaved A/B, twenty forwards
-at seqlen 8 are `0.37-0.45 s` against `0.49-0.56 s` for the per-head array core
-(medians `0.44 s` against `0.52 s`, about 15% less; session `mamba3-ab`); the
+at seqlen 8 are `0.41-0.42 s` against `0.53-0.55 s` for the per-head array core
+(medians `0.41 s` against `0.54 s`, about 24% less; a second session gave
+`0.37-0.45` against `0.49-0.56`); the
 ten-step train probe is equal within noise
 (`5.58-5.97 s` against `5.74-5.78 s`, interleaved runs). `make mamba3` is PASS
-(session `mamba3-chunked`, `24.6 s`) and `make mamba3-bench` prints checksum
-`19.323364` in `0.44 s` (session `mamba3-fwd-chunked`). `make check-fast` is
+(`23.0 s`) and `make mamba3-bench` prints checksum `19.323364` in
+`0.43-0.44 s` (session `mamba3-fwd-chunked`). `make check-fast` is
 `31/31` after the change, and the full gate is `141/141` in `38m10s` (session
 `check-final-chunked`, 2026-11-12).
 

@@ -63,7 +63,7 @@ and `bend.toml`/`bend.lock`; the env was purged and synced from the lock
 | diffusion | `make experiment TASK=vit-first` | PASS, task `3.380 s`, build `245.884 s` |
 | GLM | `make experiment TASK=glm53-hybrid128` | PASS, task `3.017 s`, build `91.818 s` |
 | classical | `make experiment TASK=iris-crossval` | PASS, task `0.208 s`, build `119.090 s` |
-| Mamba-3 | `make mamba3` | PASS, `24.6 s` total; train probe `5.97 s`; 20 forwards `0.44 s` (same-session A/B `0.37-0.45 s` against `0.49-0.56 s`, medians `0.44` against `0.52`, for the per-head array core) |
+| Mamba-3 | `make mamba3` | PASS, `23.0 s` total; train probe `5.77 s`; 20 forwards `0.43 s` (same-session A/B `0.41-0.42 s` against `0.53-0.55 s`, medians `0.41` against `0.54`, for the per-head array core) |
 | UNet science | `make unet-metric` | PASS · held `0.547`, ceiling `0.574`, span `94.9%` · can-fail white noise and mean · `2.4 s` |
 
 ## The matrix
@@ -74,7 +74,7 @@ and `bend.toml`/`bend.lock`; the env was purged and synced from the lock
 | diffusion | `reference/test_*.py`, `make experiment`, `make unet-metric` | `diffusion-2d`, `vit-first`, `cifar-10`, the UNet held-out gate | `Conv2dNB`, `GroupNorm`, `Tile`, `RoPE2d`, GPU lane | adopt the layers that replace local copies; rerun the gates |
 | flow matching | `reference/test_flow64.py`, `make experiment` | `flow64-first`; the 6,000-step `flowers-flow` only when a gate or claim needs it | `Conv2dNB`, `GroupNorm`, GPU lane | check the forward/sampler gate; report legibility as measured, not gated |
 | GLM-5.3 Flash | `make experiment TASK=glm53-hybrid128` | one hybrid step; 192 evaluation only after the list core changes | attention triangle and parallel forward, gradient accumulation, `Mat.reshape`, Mat/Array core | make the list core an array core first; then rerun the 192 lane |
-| Mamba-3 | `make mamba3`, `make mamba3-bench`, `scripts/mamba3_ab.sh` | the SISO and full-LM gates; the 20-forward benchmark | `Mat.matmul_nt`, `T.Layer`/`T.Train`, GPU lane | the chunked array scan is about 15% faster on forward at the medians (same-session `0.37-0.45 s` against `0.49-0.56 s`); the train probe is equal within noise; next is `T.Layer`/`T.Train` |
+| Mamba-3 | `make mamba3`, `make mamba3-bench`, `scripts/mamba3_ab.sh` | the SISO and full-LM gates; the 20-forward benchmark | `Mat.matmul_nt`, `T.Layer`/`T.Train`, GPU lane | the chunked array scan is about 24% faster on forward at the medians (same-session `0.41-0.42 s` against `0.53-0.55 s`; a second session gave 15%); the train probe is equal within noise; next is `T.Layer`/`T.Train` |
 
 ## Order
 

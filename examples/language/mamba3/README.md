@@ -127,9 +127,9 @@ forwards at seqlen 8 are `0.37-0.38 s` against `0.71-0.73 s` for the list path,
 and the ten-step train probe is `3.64-3.67 s` against `9.81-10.50 s`; every
 gate still passes. The chunked scan then carries one 2048-float array across
 all four heads and all tokens: in a same-session A/B (`scripts/mamba3_ab.sh`),
-twenty forwards are `0.37-0.45 s` against `0.49-0.56 s` for the per-head array
-core (medians `0.44 s` against `0.52 s`), with the train probe equal within
-noise.
+twenty forwards are `0.41-0.42 s` against `0.53-0.55 s` for the per-head array
+core (medians `0.41 s` against `0.54 s`; a second session gave `0.37-0.45` and
+`0.49-0.56`), with the train probe equal within noise.
 
 The public `Mamba3` module is a bf16 lane: `mamba3_siso_combined` casts Q, K,
 V, Trap, Angles and Z before it calls the kernel. The F32 kernel check is not

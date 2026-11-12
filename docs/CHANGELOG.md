@@ -22,9 +22,9 @@ What changed for the people who run the lab. Internal refactors are not listed.
 - The scan now keeps one 2048-float `Array<F32>` across all four heads and all
   tokens (`scan_rows_st`, `sc_go_st`). In a same-session, interleaved A/B (not
   comparable with the per-head figures above, which are from an earlier state),
-  twenty forwards are `0.37-0.45 s` against `0.49-0.56 s` for the per-head
-  array core (medians `0.44 s` against `0.52 s`), and the train probe is equal
-  within noise; `make mamba3` passes
+  twenty forwards are `0.41-0.42 s` against `0.53-0.55 s` for the per-head
+  array core (medians `0.41 s` against `0.54 s`; a second session gave
+  `0.37-0.45` against `0.49-0.56`), and the train probe is equal within noise; `make mamba3` passes
   forward, backward, training, generation and the full LM.
 - `make mamba3-bench` builds and runs the 20-forward benchmark and prints its
   checksum and wall time (`19.323364`, `0.44 s` in the recorded session). The

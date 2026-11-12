@@ -78,7 +78,7 @@ command gave Bend `42.6 ms` and `482 ms` and the CPU twin `2.46 ms` and
 `5.44 ms`; the ratio is about `17-25x` and `89-99x`, not a fixed constant.
 
 The Bend rows above are the **list scan**. With the array core and the chunked
-scan, the same 20-forward benchmark is `0.37-0.45 s` (about `19-22 ms/call`,
+scan, the same 20-forward benchmark is `0.41-0.42 s` (about `20-21 ms/call`,
 `make mamba3-bench`), so the forward ratio to the twin is about `13-15x`; the
 backward still runs the list path and its numbers are unchanged.
 Against the CUDA twin, the forward is **11x** slower and the forward+backward
@@ -249,9 +249,10 @@ The **chunked scan** carried it further. `pass_c` now builds one 2048-float
 `Array<F32>` from the initial state and carries it across all four heads and
 all tokens (`scan_rows_st`, `sc_go_st`), so the state is not copied into a fresh
 array per head per token. In a same-session, interleaved A/B, twenty forwards
-at seqlen 8 took `0.37-0.45 s` against `0.49-0.56 s` for the per-head array
-core, medians `0.44 s` against `0.52 s` (about **15% less**, session
-`mamba3-ab`); the ten-step train probe was equal within noise
+at seqlen 8 took `0.41-0.42 s` against `0.53-0.55 s` for the per-head array
+core, medians `0.41 s` against `0.54 s` (about **24% less**); a second session
+gave `0.37-0.45 s` against `0.49-0.56 s`, about 15%. The ten-step train probe
+was equal within noise
 (`5.58-5.97 s` against `5.74-5.78 s`, interleaved runs). The earlier
 `0.37-0.38 s` figure is the array core in a faster machine state: the two
 sessions are not compared as a delta.
