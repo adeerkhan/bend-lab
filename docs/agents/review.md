@@ -10,7 +10,18 @@ command that produced its last number.
 | --- | --- | --- |
 | proofs, frozen references | `make check-fast` | `31/31`, 2026-11-12 |
 | full gate | `make check` | `139/139`, 2026-11-11 |
-| Mamba-3 SISO and full LM | `make mamba3` | `MAMBA3 PASS`, 2026-11-11 |
+| Mamba-3 SISO and full LM | `make mamba3` | `MAMBA3 PASS`, 2026-11-12 |
+
+Short tests run on 2026-11-12, all on the current `2.0.0.0` lane:
+
+| track | command | result |
+| --- | --- | --- |
+| classical | `make experiment TASK=cancer-knn` | PASS, accuracy `0.978102`, task `0.381 s`, build `59.977 s` |
+| diffusion | `make experiment TASK=diffusion-2d` | PASS, task `103.705 s`, build `8.961 s` |
+| diffusion | `make experiment TASK=vit-first` | PASS, task `1.275 s`, build `121.388 s` |
+| flow | `make experiment TASK=flow64-first` | PASS, task `4.839 s`, build `103.179 s` |
+| GLM | `reference/trace.py --task glm53-hybrid128 --steps 2` | 2 lines, median `1476 ms`, run `2.979 s`, build `49.8 s` |
+| Mamba-3 | `make mamba3` | PASS, `46.5 s` total; train probe `9.81 s` (the probe is noisy: `5.25-10.50 s` over three runs) |
 
 ## The lane is not one lane
 
@@ -38,7 +49,7 @@ records them per run.
 | diffusion | `reference/test_*.py`, `make experiment` | `diffusion-2d`, `vit-first`, `cifar-10` | `Conv2dNB`, `GroupNorm`, `Tile`, `RoPE2d`, GPU lane | adopt the layers that replace local copies; rerun the gates |
 | flow matching | `reference/test_flow64.py`, `make experiment` | `flow64-first`; the 6,000-step `flowers-flow` only when a gate or claim needs it | `Conv2dNB`, `GroupNorm`, GPU lane | check the forward/sampler gate; report legibility as measured, not gated |
 | GLM-5.3 Flash | `make experiment TASK=glm53-hybrid128` | one hybrid step; 192 evaluation only after the list core changes | attention triangle and parallel forward, gradient accumulation, `Mat.reshape`, Mat/Array core | make the list core an array core first; then rerun the 192 lane |
-| Mamba-3 | `make mamba3` | the SISO and full-LM gates; the `q.S^T` product benchmark | `Mat.matmul_nt`, `T.Layer`/`T.Train`, GPU lane | put the Mat product into the scan, then a chunked scan, then `T.Layer` |
+| Mamba-3 | `make mamba3` | the SISO and full-LM gates; the `q.S^T` product benchmark | `Mat.matmul_nt`, `T.Layer`/`T.Train`, GPU lane | the Mat qS inside `scan_head` passed every gate but was slower (`0.84-1.18 s` against `0.71-0.73 s` for 20 forwards); next is the array core and a chunked scan, then `T.Layer` |
 
 ## Order
 
@@ -52,7 +63,9 @@ records them per run.
 4. **Adopt one feature per track**, each with a before/after:
    - Diffusion/flow: `Conv2dNB`, `GroupNorm`, `Tile`, `RoPE2d`.
    - GLM: triangle attention, gradient accumulation, then the array core.
-   - Mamba-3: Mat qS, chunked scan, `T.Layer`/`T.Train`.
+   - Mamba-3: the array core, then a chunked scan, then `T.Layer`/`T.Train`;
+     the one-call Mat qS was measured slower and is recorded in
+     `examples/language/mamba3/COMPARISON.md`.
    - Classical: version bump only; it is the control.
 5. **Upstream**: review #42 (`MaxPool2d`); finish the #26 `Mat` round-trip
    corollary. Add `Rewire` or attention backward blocks only when a second
