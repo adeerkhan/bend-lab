@@ -52,6 +52,12 @@ reverted and the numbers are in `COMPARISON.md` and `ROADMAP.md`. The next
 performance step is the array-based core and a chunked scan, not the one-call
 substitution.
 
+The target lane imports resolve: a probe with `bendtorch@2.1.0.0`,
+`bendtorch-gpu@2.1.0.0`, `bend-ml-tensor-array@0.1.21.0` and
+`bend-ml-tensor-gpu@0.1.5.3` built and printed `ok` (2026-11-12). The
+migration touches 366 `import` lines and the workspace dependencies, so it
+is its own change with a full gate. `make versions` still reports the skew.
+
 Next: align the version lane (`make versions`, then `make check`), run the
 full gate, then the array-based Mamba-3 core. The science item is the UNet
 held-out metric (ISSUE-066), before any further UNet claim.

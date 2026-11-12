@@ -41,6 +41,12 @@ tensor-array 0.1.21.0, tensor-gpu 0.1.5.3, tensor-fork 0.1.7.2, with every
 that prints the pin, the env, the imports and the hub hash; a manifest already
 records them per run.
 
+The target imports resolve and build: a probe importing
+`bendtorch@2.1.0.0`, `bendtorch-gpu@2.1.0.0`,
+`bend-ml-tensor-array@0.1.21.0` and `bend-ml-tensor-gpu@0.1.5.3` built and
+printed `ok` on 2026-11-12. The migration itself touches 366 `import` lines
+and the workspace dependencies, so it is its own change with a full gate.
+
 ## The matrix
 
 | track | gate | short test | new feature to try | review action |
