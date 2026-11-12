@@ -22,6 +22,7 @@ import time
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "reference"))
 import experiment  # noqa: E402
+import runs  # noqa: E402
 
 KEYS = ("step", "tokens", "loss", "ms")
 
@@ -34,7 +35,7 @@ def record_of(line, number):
     missing = [key for key in KEYS if key not in record]
     if missing:
         raise SystemExit(f"trace: line {number} misses {', '.join(missing)}: {line!r}")
-    return {key: record[key] for key in KEYS}
+    return record
 
 
 def main():
@@ -55,6 +56,16 @@ def main():
 
     out = args.out or os.path.join(ROOT, "results", args.task, "trace.jsonl")
     os.makedirs(os.path.dirname(out), exist_ok=True)
+    stamp = time.strftime("%Y%m%d-%H%M%S", time.localtime())
+    run_trace = os.path.join(ROOT, "results", args.task, "runs", f"{stamp}-{os.getpid()}.jsonl")
+    os.makedirs(os.path.dirname(run_trace), exist_ok=True)
+    record_path = os.path.join(ROOT, "results", "latest", args.task + ".json")
+    try:
+        run_id = runs.start(args.task, run_trace, record_path,
+                            f"{stamp} · pid {os.getpid()}")
+    except Exception as exc:
+        print(f"trace: run store unavailable: {exc}")
+        run_id = None
     binary, build_seconds = experiment.build_bend(args.task, cfg)
 
     start = time.perf_counter()
@@ -71,20 +82,32 @@ def main():
         timer = threading.Timer(args.max_seconds, stop)
         timer.start()
     try:
-        with open(out, "w") as f:
+        with open(run_trace, "w") as rf, open(out, "w") as f:
             for number, line in enumerate(proc.stdout, 1):
                 if not line.strip():
                     continue
                 record = record_of(line.strip(), number)
                 records.append(record)
-                f.write(json.dumps(record) + "\n")
-                f.flush()
+                line_out = json.dumps(record) + "\n"
+                rf.write(line_out); rf.flush()
+                f.write(line_out); f.flush()
+                if run_id is not None:
+                    try:
+                        runs.add_step(run_id, record)
+                    except Exception as exc:
+                        print(f"trace: run store append unavailable: {exc}")
+                        run_id = None
     finally:
         if timer is not None:
             timer.cancel()
     stderr = proc.stderr.read()
     code = proc.wait()
     seconds = time.perf_counter() - start
+    if run_id is not None:
+        try:
+            runs.finish(run_id, "aborted" if aborted else "done", record_path)
+        except Exception as exc:
+            print(f"trace: run store finish unavailable: {exc}")
     if aborted:
         print(f"trace: budget {args.max_seconds:.0f} s exceeded after {len(records)} lines"
               f" and {seconds:.1f} s; the run was stopped")
@@ -98,7 +121,8 @@ def main():
     print(f"trace: {len(records)} lines, {records[0]['step']}..{records[-1]['step']}"
           f" · median {statistics.median(ms):.0f} ms")
     print(f"trace: build {build_seconds:.1f} s · run {seconds:.3f} s"
-          f" · {os.path.relpath(out, ROOT)}")
+          f" · {os.path.relpath(run_trace, ROOT)}")
+    print(f"trace: run {run_id} · latest {os.path.relpath(out, ROOT)}")
     return 0
 
 

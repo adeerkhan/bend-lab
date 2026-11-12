@@ -49,3 +49,9 @@ examples/language/glm53_flash/data/
 
 # the live trace is an observation, not a record
 results/*/trace.jsonl
+
+# the run store and its per-run traces: rebuilt by importing the latest trace
+results/runs.sqlite3
+results/runs.sqlite3-wal
+results/runs.sqlite3-shm
+results/*/runs/

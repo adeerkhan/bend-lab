@@ -28,6 +28,8 @@ import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
+import runs
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 KEYS = ("step", "tokens", "loss", "ms")
 KNOWN = set(KEYS) | {"time", "timestamp", "wall_ms", "elapsed"}
@@ -92,9 +94,18 @@ class Sampler:
         return vals
 
 
-def state(task, trace, record_path, sampler, budget):
-    records = read_trace(trace)
-    record = read_json(record_path)
+def state(task, trace, record_path, sampler, budget, run_id=None):
+    run = runs.get_run(run_id) if run_id else None
+    if run is None:
+        latest = runs.list_runs(task)
+        run = runs.get_run(latest[0]["id"]) if latest else None
+    if run is not None:
+        records = run["records"]
+        record = run.get("record") or read_json(record_path)
+        task = run["task"]
+    else:
+        records = read_trace(trace)
+        record = read_json(record_path)
     summary = {"steps": len(records), "tokens": 0, "loop_s": 0.0,
                "median_ms": None, "tokens_s": None}
     extras = []
@@ -127,6 +138,11 @@ def state(task, trace, record_path, sampler, budget):
         "proc": proc,
         "budget": budget,
         "now": time.time(),
+        "run": None if run is None else {
+            k: run[k] for k in ("id", "task", "label", "status", "created",
+                                "updated", "steps", "tokens", "loop_s",
+                                "first_loss", "last_loss", "best_loss")
+        },
     }
 
 
@@ -159,7 +175,9 @@ font-variant-numeric:tabular-nums}.ok{color:var(--accent)}.bad{color:var(--bad)}
 .hint{color:var(--muted);font-size:12px;margin:6px 0 0}
 @media(max-width:900px){.span3,.span4,.span6,.span8{grid-column:span 12}}
 </style></head><body>
-<header><h1>__TASK__</h1><span id="status" class="muted">connecting…</span>
+<header><h1 id="title">__TASK__</h1>
+<select id="runsel" style="background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:4px 6px"></select>
+<span id="status" class="muted">connecting…</span>
 <span id="budget" class="muted"></span><span class="muted">auto-refresh 1 s</span></header>
 <main>
 <div class="card span3"><h2>step</h2><div id="step" class="big">—</div><div id="steps" class="muted"></div></div>
@@ -177,9 +195,24 @@ font-variant-numeric:tabular-nums}.ok{color:var(--accent)}.bad{color:var(--bad)}
 <div class="card span12"><h2>raw trace</h2><pre id="raw" style="max-height:180px;overflow:auto;color:var(--muted)"></pre></div>
 </main>
 <script>
-const task = "__TASK__";
-let paused=false, timer=null, state=null;
+const defaultTask = "__TASK__";
+let paused=false, timer=null, state=null, currentRun=null, runCount=0, ticks=0;
 const $=id=>document.getElementById(id);
+async function loadRuns(){
+ try{const r=await fetch("/api/runs"); const list=await r.json();
+  const sel=$("runsel");
+  if(list.length!==runCount || sel.options.length!==list.length){
+   runCount=list.length;
+   const old=sel.value;
+   sel.innerHTML=list.map(x=>`<option value="${x.id}">#${x.id} · ${x.task} · ${x.steps} steps · ${x.last_loss===null?"—":Number(x.last_loss).toFixed(4)}</option>`).join("");
+   if(currentRun)sel.value=String(currentRun);
+   else if(list.length){currentRun=list[0].id;sel.value=String(currentRun)}
+   else if(old)sel.value=old;
+  }
+  if(!currentRun && list.length){currentRun=list[0].id;sel.value=String(currentRun)}
+ }catch(e){}
+}
+$("runsel").addEventListener("change",e=>{currentRun=Number(e.target.value);paused=false;tick()});
 function fmt(x,n=4){if(x===null||x===undefined||Number.isNaN(x))return"—";
  if(typeof x!=="number")return String(x); if(Math.abs(x)>=1e4||(Math.abs(x)>0&&Math.abs(x)<1e-3))
  return x.toExponential(n); return x.toFixed(n).replace(/0+$/,"").replace(/\.$/,"");}
@@ -251,8 +284,16 @@ function draw(){
  $("table").innerHTML=rows+"</table>";
  $("raw").textContent=JSON.stringify(recs.slice(-3),null,1);
 }
-async function tick(){try{const r=await fetch(`/api/state?task=${encodeURIComponent(task)}`);
- state=await r.json();draw();}catch(e){$("status").textContent="server unavailable"}
+async function tick(){try{
+ ticks++;
+ if(!runCount || !state || ticks%10===1) await loadRuns();
+ const q=currentRun?`run=${currentRun}`:`task=${encodeURIComponent(defaultTask)}`;
+ const r=await fetch(`/api/state?${q}`);
+ state=await r.json();
+ if(state.run){currentRun=state.run.id;$("runsel").value=String(currentRun);
+  $("title").textContent=`${state.run.task} · run ${state.run.id}`}
+ draw();
+}catch(e){$("status").textContent="server unavailable"}
  if(!paused)setTimeout(tick,1000)}
 document.addEventListener("keydown",e=>{if(e.key===" "){paused=!paused;e.preventDefault();if(!paused)tick()}});
 addEventListener("resize",draw);tick();
@@ -270,9 +311,29 @@ class Handler(BaseHTTPRequestHandler):
             if task != self.server.task:
                 self.send_error(404, "unknown task")
                 return
+            run_id = None
+            if qs.get("run"):
+                try:
+                    run_id = int(qs["run"][0])
+                except ValueError:
+                    self.send_error(400, "bad run")
+                    return
             body = json.dumps(state(self.server.task, self.server.trace,
                                     self.server.record, self.server.sampler,
-                                    self.server.budget)).encode()
+                                    self.server.budget, run_id)).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        if parsed.path == "/api/runs":
+            try:
+                items = runs.list_runs()
+            except Exception:
+                items = []
+            body = json.dumps(items).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Cache-Control", "no-store")
@@ -316,6 +377,11 @@ def main():
     httpd.record = record
     httpd.sampler = Sampler(args.pid)
     httpd.budget = args.max_seconds
+    try:
+        if not runs.list_runs(args.task) and os.path.exists(trace):
+            runs.import_file(args.task, trace, record)
+    except Exception as exc:
+        print(f"dashboard: run store unavailable: {exc}")
     url = f"http://{args.host}:{args.port}/"
     print(f"dashboard: {url}  task {args.task}")
     print(f"trace: {os.path.relpath(trace, ROOT)}  record: {os.path.relpath(record, ROOT)}")
