@@ -60,3 +60,7 @@ results/*/runs/
 results/dashboard.pid
 results/dashboard.log
 results/*/weights/
+
+# named evaluation subsets (the flat weights are derived)
+results/glm53-dense-ep*/
+results/glm53-hybrid192-ep*/

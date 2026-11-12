@@ -129,10 +129,17 @@ def episodes(+left: Nat, +ep: Nat, +path: String, +lengths: List<&2, Nat>, p: E.
 # ---- arguments ----
 
 type Run is Type:
-  Run{split: String, data: String, weights: String}
+  Run{split: String, data: String, weights: String, count: Nat}
+
+def nat_or(m: Maybe<&2, Nat>, d: Nat) -> Nat:
+  match m:
+    case Some{x}:
+      x
+    case None{}:
+      d
 
 def run_default() -> Run:
-  Run{"dev", "examples/language/glm53_flash/data", "results/glm53-dense/model-400"}
+  Run{"dev", "examples/language/glm53_flash/data", "results/glm53-dense/model-400", 64n}
 
 def run_go(args: List<String>, r: Run) -> Run:
   match args:
@@ -146,24 +153,33 @@ def run_go(args: List<String>, r: Run) -> Run:
               r
             case Con{b, more}:
               match r:
-                case Run{split, data, weights}:
-                  run_go(more, Run{b, data, weights})
+                case Run{split, data, weights, count}:
+                  run_go(more, Run{b, data, weights, count})
         case "--data":
           match rest:
             case Nil{}:
               r
             case Con{b, more}:
               match r:
-                case Run{split, data, weights}:
-                  run_go(more, Run{split, b, weights})
+                case Run{split, data, weights, count}:
+                  run_go(more, Run{split, b, weights, count})
         case "--weights":
           match rest:
             case Nil{}:
               r
             case Con{b, more}:
               match r:
-                case Run{split, data, weights}:
-                  run_go(more, Run{split, data, b})
+                case Run{split, data, weights, count}:
+                  run_go(more, Run{split, data, b, count})
+        case "--episodes":
+          match rest:
+            case Nil{}:
+              r
+            case Con{b, more}:
+              match r:
+                case Run{split, data, weights, count}:
+                  run_go(more, Run{split, data, weights,
+                    nat_or(Nat.read(b), count)})
         case _:
           run_go(rest, r)
 
@@ -176,12 +192,13 @@ def run_of(args: List<String>) -> Run:
 
 def run_io(r: Run) -> IO(Unit):
   match r:
-    case Run{+split, +data, weights}:
+    case Run{+split, +data, weights, +count}:
       do IO<Unit>:
         p : E.P() <- W.load_params(weights)
         lengths : List<&2, U32> <- T.read_at(
-          String.append(data, String.append("/eval-", String.append(split, "-len.bin"))), 0, 64)
-        episodes(64n, 0n,
+          String.append(data, String.append("/eval-", String.append(split, "-len.bin"))),
+          0, U32.from_nat(count))
+        episodes(count, 0n,
           String.append(data, String.append("/eval-", String.append(split, ".bin"))),
           nats(lengths), p)
 

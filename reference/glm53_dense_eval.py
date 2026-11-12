@@ -69,8 +69,9 @@ def binary(source):
     return out
 
 
-def generate(model_dir, data_dir, split, exe):
-    out = subprocess.run([exe, "--split", split, "--weights", model_dir, "--data", data_dir],
+def generate(model_dir, data_dir, split, exe, episodes=64):
+    out = subprocess.run([exe, "--split", split, "--weights", model_dir, "--data", data_dir,
+                          "--episodes", str(episodes)],
                          capture_output=True, text=True, env=ENV, cwd=ROOT)
     if out.returncode != 0:
         raise SystemExit(f"gen_a {split} did not run:\n{out.stdout}{out.stderr}")
@@ -185,6 +186,10 @@ def main():
     ap.add_argument("--per-family", type=int, default=8)
     ap.add_argument("--max-new-tokens", type=int, default=48)
     ap.add_argument("--splits", default="dev,confirm")
+    ap.add_argument("--episodes", type=int, default=64,
+                    help="first N of the 64 episodes; a subset, not the 192 evaluation")
+    ap.add_argument("--suffix", default="",
+                    help="output suffix, e.g. -ep8; a subset never writes the frozen golden")
     ap.add_argument("--binary", default="")
     ap.add_argument("--golden", default="reference/glm53_dense_eval_golden.json")
     ap.add_argument("--model-name", default="model-400")
@@ -199,6 +204,10 @@ def main():
         raise SystemExit("the generator emits 48 tokens")
     if args.per_family != 8:
         raise SystemExit("the generator emits 64 episodes (8 per family); per_family is fixed at 8")
+    if not 1 <= args.episodes <= 64:
+        raise SystemExit("--episodes must be 1..64")
+    if args.episodes < 64 and not args.suffix:
+        args.suffix = f"-ep{args.episodes}"
     D.prepare(str(args.data), args.per_family, args.positions)
     flat = Path(args.weights)
     if not flat.exists():
@@ -217,30 +226,33 @@ def main():
     golden = {"schema_version": "1.0", "splits": {}}
     for split in [s.strip() for s in args.splits.split(",") if s.strip()]:
         tasks, rows, _ = D.eval_prompts(split, args.per_family)
+        tasks, rows = tasks[:args.episodes], rows[:args.episodes]
         started = time.perf_counter()
-        completions = generate(str(model_dir), str(args.data), split, exe)
+        completions = generate(str(model_dir), str(args.data), split, exe, args.episodes)
         if len(completions) != len(tasks):
             raise SystemExit(f"{split}: {len(completions)} episodes, not {len(tasks)}")
         args.split = split
         payload = evaluate_split(args, tokenizer, tasks, rows, completions, exe, weights_sha)
         payload["elapsed_seconds"] = round(time.perf_counter() - started, 3)
-        path = args.out / f"eval-{split}.json"
+        path = args.out / f"eval-{split}{args.suffix}.json"
         path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
-        golden["splits"][split] = compact(payload)
+        if args.episodes == 64:
+            golden["splits"][split] = compact(payload)
         s = payload["summary"]
-        print(f"{split}: solved {s['tasks_solved']}/{s['tasks_total']}, "
+        subset = "" if args.episodes == 64 else f" [subset {args.episodes}/64]"
+        print(f"{split}{subset}: solved {s['tasks_solved']}/{s['tasks_total']}, "
               f"tests {s['tests_passed']}/{s['tests_total']}, "
               f"valid {s['valid_programs']}, caps {s['token_cap_hits']}, "
               f"{payload['elapsed_seconds']} s")
         for family, row in payload["by_family"].items():
             print(f"  {family}: {row['solved']}/{row['tasks']} solved, {row['tests_passed']}/{row['tests_total']} tests")
-    if args.golden:
+    if args.golden and args.episodes == 64:
         golden_path = Path(args.golden)
         golden_path.parent.mkdir(parents=True, exist_ok=True)
         golden_path.write_text(json.dumps(golden, indent=2, sort_keys=True) + "\n")
         print(f"wrote {args.out}/eval-*.json and {golden_path}")
     else:
-        print(f"wrote {args.out}/eval-*.json")
+        print(f"wrote {args.out}/eval-*{args.suffix}.json")
 
 
 if __name__ == "__main__":

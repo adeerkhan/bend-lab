@@ -274,6 +274,15 @@ the final held-out batch prints `val_loss:`; `reference/trace.py` stores that as
 `out/step_<i>.bin` every N steps, in the same flat layout as `final_weights.bin`; `step_4.bin` and
 `final_weights.bin` are byte-identical after a four-step run.
 
+`reference/glm53_dense_eval.py --episodes N` and the `--episodes N` flag on
+`gen_a.bend`/`gen_h192.bend` run the **first N of 64 episodes** and write
+`eval-<split>-epN.json`; the frozen golden is not touched. A four-episode dev
+subset of the hybrid took **1749.7 s (29.2 min)**, solved **0/4**, passed
+**0/12 tests**, and hit the token cap on all four. This is an explicitly named
+subset, **not the 192 evaluation**: the full 64 episodes extrapolate to about
+**7.8 h**, over the one-hour rule, so the full result still waits for the fast
+core.
+
 ## The reference on this machine
 
 The vendored 25.7M model pretrained for 400 steps (1,381,760 tokens) in **78.758 s** at **2.143

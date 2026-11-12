@@ -4,6 +4,15 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The GLM evaluation can run a named subset
+
+- `gen_a.bend`, `gen_h192.bend` and `reference/glm53_dense_eval.py` take
+  `--episodes N`; the output is `eval-<split>-epN.json` and the frozen golden
+  is untouched. The first four hybrid dev episodes took `1749.7 s (29.2 min)`,
+  solved `0/4`, passed `0/12` tests and hit the token cap on all four.
+- This is a named subset, not the 192 evaluation; the full 64 episodes
+  extrapolate to about `7.8 h`, over the one-hour rule.
+
 ### Mamba-3's scan keeps its state in an array
 
 - `scan_head` copies each head's 512-float state into one `Array<F32>`, updates

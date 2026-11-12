@@ -7,6 +7,18 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-12 — the GLM 192 evaluation can run a named subset
+
+`gen_a.bend`, `gen_h192.bend` and `reference/glm53_dense_eval.py` now take
+`--episodes N` and write `eval-<split>-epN.json`; the frozen golden is not
+touched. The first **four hybrid dev episodes** took `1749.7 s (29.2 min)`,
+solved `0/4`, passed `0/12` tests and hit the token cap on all four. The
+episodes are the increment family, not a representative split. This is an
+explicitly named subset, **not the 192 result**: the full 64 episodes
+extrapolate to about `7.8 h`, over the one-hour rule, so the full evaluation
+still waits for the fast core (ISSUE-101). The dense Stage A generator also
+takes the flag; one dev episode is `0.568 s` there.
+
 ## 2026-11-12 — Mamba-3 array state: 1.9x, all gates pass
 
 `scan_head` now copies each head's 512-float state into one `Array<F32>` (one

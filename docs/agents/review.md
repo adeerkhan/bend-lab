@@ -24,6 +24,7 @@ Short tests run on 2026-11-12, all on the current `2.0.0.0` lane:
 | Mamba-3 | `make mamba3` | PASS, `46.5 s` total; train probe `9.81 s` (the probe is noisy: `5.25-10.50 s` over three runs) |
 | GLM | `make trace TASK=glm53-hybrid128 STEPS=30` | 30 steps, loss `5.5635 -> 3.2657`, eval `3.2838`, loop `72.9 s`, 118 system samples |
 | GLM | `make experiment TASK=glm53-hybrid128` | PASS, one step, `5m55` |
+| GLM | `reference/glm53_dense_eval.py --episodes 4 --layout hybrid --splits dev` | subset `4/64`, `0/4` solved, `0/12` tests, `29.2 min`; not the 192 result |
 | Mamba-3 | `make session TASK=mamba3 CMD="make mamba3"` | PASS, `22.2 s` |
 | classical | `make experiment TASK=iris-crossval` | PASS, `1m05` |
 | gate | `make session TASK=check-fast CMD="make check-fast"` | `31/31`, `23.6 s` |
