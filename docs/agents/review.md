@@ -79,13 +79,23 @@ and the workspace dependencies, so it is its own change with a full gate.
 
 ## The browser page, and the one-hour budget
 
-`make dashboard TASK=<task> PORT=8787 [PID=<pid>]` serves
-`reference/dashboard.py`: the same trace and record as the terminal
-`reference/dash.py`, as HTML on a local port. It shows the loss, step time,
-tokens/s, resident and peak memory, the stage split, the recent steps and any
-extra numeric fields in a trace line. Extras are the hook for model internals:
-write `lr`, `grad_norm`, `state_norm` or `gate_mean` and they become small
-charts. No CDN, no build step, standard library only.
+`make dashboard TASK=<task> PORT=8787` serves `reference/dashboard.py`: one
+page for **every** run in the store, not one task at a time. The overview
+shows the number of live sessions, host CPU, RAM, GPU utilization and GPU
+memory, and a table of runs with task, kind, status, PID, steps, loss,
+parameter count, per-run CPU, RAM, GPU memory and loop time. Selecting a run
+opens its loss and step time, up to four extra signals, CPU/RAM/GPU samples,
+its configuration (program, arguments, lane, threads, seed, git, versions),
+recent steps and the record it wrote. Several sessions can be live at once:
+the sampler walks each run's process tree, so a Python test that spawns Bend is
+sampled as one run.
+
+`make session TASK=<name> CMD="make check-fast"` wraps any test command in the
+same store (`reference/session.py`), with its log under
+`results/<task>/runs/`. A training run that writes steps uses `make trace`
+instead, so one run does not become two rows. `nvidia-smi` supplies the GPU
+numbers; without it the page prints `unavailable`. No CDN, no build step,
+standard library only.
 
 Every run lives in `results/runs.sqlite3` (`reference/runs.py`): one row per
 run and one per step, plus the run's own trace under

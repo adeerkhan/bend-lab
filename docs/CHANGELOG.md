@@ -4,6 +4,26 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The dashboard is the in-house W&B
+
+- `reference/dashboard.py` serves one page for every run in the store. The
+  overview shows live sessions, host CPU, RAM, GPU utilization and GPU memory,
+  and a table with task, kind, status, PID, steps, loss, parameter count,
+  per-run CPU/RAM/GPU and loop time. A selected run opens loss, step time,
+  extra signals, CPU/RAM/GPU samples, configuration, recent steps and its
+  record.
+- The sampler walks each run's process tree, so several sessions can be live
+  at once and a Python test that spawns Bend is sampled as one run. GPU
+  numbers come from `nvidia-smi`; without it the page prints `unavailable`.
+- `make session TASK=<name> CMD="..."` wraps any test command in the store
+  (`reference/session.py`), with its log under `results/<task>/runs/`.
+  `experiment.py` registers a run before the build and finishes it after;
+  `trace.py` registers the trace process and swaps to the child PID.
+- The store has `pid`, `command`, `config`, `params`, `kind`, `host`,
+  `started`, `finished`, `exit_code`, `error`, `git_commit`, `versions` and a
+  `samples` table. `runs.reconcile()` marks a run whose process is gone as
+  `lost`; `runs.backfill()` fills params/config on older rows.
+
 ### The run store, and ISSUE-058 / ISSUE-072
 
 - `reference/runs.py` keeps every run in `results/runs.sqlite3`: one row per

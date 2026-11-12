@@ -140,9 +140,18 @@ make setup                                               # toolchain, lock, envi
 bendenv run -- bend examples/diffusion/vit/main.bend     # train and sample the ViT
 make check                                               # the gate: proofs, kernels, twins, comparisons
 make trace TASK=glm53-hybrid128 STEPS=20                 # one JSON line per step, written as it runs
-make dash TASK=glm53-hybrid128                           # loss, step time, tokens/s, the stage split
+make dash TASK=glm53-hybrid128                           # terminal: loss, step time, tokens/s, the stage split
 make dash TASK=glm53-hybrid128 WATCH=1                   # follow a run while it writes
+make dashboard TASK=glm53-hybrid128 PORT=8787            # every run, CPU/RAM/GPU, live sessions
+make session TASK=check-fast CMD="make check-fast"        # any test as a dashboard session
 ```
+
+`make dashboard` serves the in-house W&B view on
+`http://127.0.0.1:8787/`: every run in `results/runs.sqlite3`, the live
+sessions, host CPU, RAM, GPU utilization and GPU memory, each run's parameter
+count and configuration, and the selected run's loss, step time, extra
+signals, system samples, steps and record. Training runs register through
+`make trace`; tests through `make session`; `make experiment` registers itself.
 
 `make check` is the gate. It checks the proofs and the kernel with Lean, runs
 the programs that must be refused, and compares every measured number with a

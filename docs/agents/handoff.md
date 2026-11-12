@@ -7,6 +7,34 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-12 — the dashboard is the in-house W&B
+
+`reference/dashboard.py` now serves one page for every run in
+`results/runs.sqlite3`, on `PORT=8787`. It is running locally at
+`http://127.0.0.1:8787/` (log `/tmp/opencode/dashboard-8787.log`). The
+overview has live session count, host CPU, RAM, GPU utilization and GPU
+memory, a table of runs with task, kind, status, PID, steps, loss, parameter
+count, per-run CPU/RAM/GPU and loop time, and a detail panel for the selected
+run: loss, step time, extra signals, CPU/RAM and GPU samples, configuration,
+steps and record. Several runs can be live because the sampler walks each
+run's process tree.
+
+The store grew columns for `pid`, `command`, `config`, `params`, `kind`,
+`host`, `started`, `finished`, `exit_code`, `error`, `git_commit` and
+`versions`, plus a `samples` table. `runs.reconcile()` marks a run whose
+process is gone as `lost`; `runs.backfill()` fills params/config on older
+record-only rows. `experiment.py` registers a run before the build and finishes
+it after the report; `trace.py` registers the trace process and swaps to the
+child PID; `session.py` wraps any command (`make session TASK=... CMD=...`).
+
+Verified with two simultaneous sessions (`live-cpu` and `live-sleep2`, both
+sampled while running), a live one-step GLM trace (run 31: build `58.7 s`,
+run `11.739 s`, 4 samples before the test shell ended, child PID and
+`params 74,144` recorded), and the long GLM run 1 (1,398 steps, no system
+samples because it predates the sampler). The page API returned `200`,
+`/api/overview` reported 27 runs and live CPU/RAM/GPU, and the JavaScript
+parses under `node --check`.
+
 ## 2026-11-12 — the run store, and the first two local issue fixes
 
 `reference/runs.py` is the run store: `results/runs.sqlite3`, one row per run
