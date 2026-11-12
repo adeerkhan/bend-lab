@@ -55,7 +55,9 @@ committed and embedded in `README.md`.
 The GLM trainer now ends a trace with `val_loss` (the final held-out batch,
 after saving weights) and `trace.py` stores it as `runs.eval_loss`.
 `make trace TASK=glm53-hybrid128 STEPS=10` measured train `4.5521`, eval
-`4.4326`, 20.4 s loop, run 38; the loss panel shows the eval point at the last
+`4.4326`, 20.4 s loop, run 38. The 30-step repeat, run 39, measured train
+`3.2657`, eval `3.2838`, loop `72.9 s`, build `53.8 s`; that is the page in
+`docs/assets/dashboard.png`. The loss panel shows the eval point at the last
 step and the recent-steps table has an `eval` column. Per-step eval is not
 possible with the linear `Train` (a `Train` is `Type`, so it cannot be used
 for a validation forward and the next step); the final held-out loss is what
