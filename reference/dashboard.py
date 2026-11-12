@@ -295,6 +295,8 @@ def extras_of(records):
 
 def read_trace(path, limit=20000):
     records = []
+    if not path:
+        return records
     try:
         with open(path) as fh:
             for line in fh:
@@ -313,6 +315,8 @@ def read_trace(path, limit=20000):
 
 
 def read_json(path):
+    if not path:
+        return None
     try:
         with open(path) as fh:
             return json.load(fh)
@@ -328,12 +332,13 @@ def state(run_id, fallback):
     if run is None:
         records = read_trace(fallback["trace"])
         record = read_json(fallback["record"])
+        path = fallback["record"]
         return {
             "run": None, "records": records, "record": record,
             "extras": extras_of(records), "summary": summary_of(records),
             "samples": [], "proc": None, "budget": fallback["budget"],
-            "record_path": os.path.relpath(fallback["record"], ROOT)
-            if os.path.isabs(fallback["record"]) else fallback["record"],
+            "record_path": (os.path.relpath(path, ROOT) if os.path.isabs(path)
+                            else path) if path else "",
         }
     records = run["records"]
     return {
@@ -613,8 +618,8 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--task", required=True,
-                    help="the task whose trace is the fallback when no run is selected")
+    ap.add_argument("--task",
+                    help="the fallback task when the store has no run selected")
     ap.add_argument("--trace", help="default results/<task>/trace.jsonl")
     ap.add_argument("--record", help="default results/latest/<task>.json")
     ap.add_argument("--port", type=int, default=8787)
@@ -624,14 +629,17 @@ def main():
     ap.add_argument("--open", action="store_true")
     args = ap.parse_args()
 
-    trace = args.trace or os.path.join(ROOT, "results", args.task, "trace.jsonl")
-    record = args.record or os.path.join(ROOT, "results", "latest", args.task + ".json")
+    trace = args.trace or (os.path.join(ROOT, "results", args.task, "trace.jsonl")
+                           if args.task else None)
+    record = args.record or (os.path.join(ROOT, "results", "latest", args.task + ".json")
+                             if args.task else None)
     try:
         runs.reconcile()
         runs.backfill()
         if not runs.list_runs(limit=1):
             runs.import_latest()
-        if not any(r["steps"] for r in runs.list_runs(args.task)) and os.path.exists(trace):
+        if args.task and not any(r["steps"] for r in runs.list_runs(args.task)) \
+                and trace and os.path.exists(trace):
             runs.import_file(args.task, trace, record)
     except Exception as exc:
         print(f"dashboard: run store unavailable: {exc}")
@@ -646,7 +654,8 @@ def main():
     httpd.budget = args.max_seconds
     url = f"http://{args.host}:{args.port}/"
     print(f"dashboard: {url}  runs: {len(runs.list_runs(limit=200))}")
-    print(f"trace: {os.path.relpath(trace, ROOT)}  record: {os.path.relpath(record, ROOT)}")
+    if trace:
+        print(f"trace: {os.path.relpath(trace, ROOT)}  record: {os.path.relpath(record, ROOT)}")
     print(f"budget: {args.max_seconds:.0f} s  gpu: "
           f"{'nvidia-smi' if sampler.system.get('gpu') else 'unavailable'}")
     if args.open:

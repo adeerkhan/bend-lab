@@ -57,9 +57,8 @@ trace:            ## one task's program with --trace: one JSON line per step, wr
 	@test -n "$(TASK)" || (echo "usage: make trace TASK=<task> [STEPS=<n>] [MAX_SECONDS=3600]" && false)
 	$(PY) reference/trace.py --task $(TASK) $(if $(STEPS),--steps $(STEPS),) $(if $(MAX_SECONDS),--max-seconds $(MAX_SECONDS),)
 
-dashboard:        ## the browser dashboard on a port (TASK=<task>, PORT=8787, OPEN=1)
-	@test -n "$(TASK)" || (echo "usage: make dashboard TASK=<task> [PORT=8787] [OPEN=1]" && false)
-	$(PY) reference/dashboard.py --task $(TASK) --port $(or $(PORT),8787) $(if $(OPEN),--open,)
+dashboard:        ## the browser dashboard (PORT=8787, TASK=<fallback>, OPEN=1)
+	$(PY) reference/dashboard.py --port $(or $(PORT),8787) $(if $(TASK),--task $(TASK),) $(if $(OPEN),--open,)
 
 session:          ## run any command as a dashboard session (TASK=<name> CMD="...")
 	@test -n "$(TASK)" -a -n "$(CMD)" || (echo 'usage: make session TASK=<name> CMD="make check-fast"' && false)
