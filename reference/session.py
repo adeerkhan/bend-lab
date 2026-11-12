@@ -54,8 +54,16 @@ def main():
         run_id = None
 
     start = time.time()
-    proc = subprocess.Popen(command, stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT, text=True, cwd=os.getcwd())
+    try:
+        proc = subprocess.Popen(command, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, text=True, cwd=os.getcwd())
+    except Exception as exc:
+        if run_id is not None:
+            try:
+                runs.finish(run_id, "failed", error=str(exc))
+            except Exception:
+                pass
+        raise
     if run_id is not None:
         try:
             runs.set_pid(run_id, proc.pid)
