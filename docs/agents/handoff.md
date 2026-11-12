@@ -22,7 +22,11 @@ ten-step train probe is equal within noise
 (`23.0 s`) and `make mamba3-bench` prints checksum `19.323364` in
 `0.43-0.44 s` (session `mamba3-fwd-chunked`). `make check-fast` is
 `31/31` after the change, and the full gate is `141/141` in `38m10s` (session
-`check-final-chunked`, 2026-11-12).
+`check-final-chunked`, 2026-11-12). The first runs of these commands were
+recorded before the dashboard sampler was restarted; the 23:08 reruns
+(`mamba3-fwd-chunked`, `mamba3-ab`, `mamba3-chunked`, `check-fast-chunked`)
+carry the system samples, and the full gate has samples from 22:33 (it started
+at 22:28).
 
 The earlier `0.37-0.38 s` array-core figure is from a faster machine state;
 quote the A/B above, not a delta across sessions. The next Mamba-3 step is
