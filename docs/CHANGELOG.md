@@ -83,7 +83,7 @@ What changed for the people who run the lab. Internal refactors are not listed.
 ### A browser dashboard, and a one-hour training budget
 
 - `reference/dashboard.py` serves a training trace and record as HTML on a
-  local port (`make dashboard TASK=... PORT=8787`): loss, step time, tokens/s,
+  local port (`make dashboard PORT=8787`): loss, step time, tokens/s,
   resident and peak memory, the stage split, recent steps, and any extra
   numeric fields in a trace line as small charts. The terminal
   `reference/dash.py` remains; this is the page an agent run can leave open.

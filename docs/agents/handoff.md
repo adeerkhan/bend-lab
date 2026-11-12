@@ -146,8 +146,7 @@ held-out metric (ISSUE-066), before any further UNet claim.
 ## 2026-11-12 — the browser dashboard and the one-hour guard
 
 `reference/dashboard.py` serves the terminal dashboard's trace and record as
-HTML on `--port` (default 8787): `make dashboard TASK=glm53-hybrid128
-PORT=8787 [PID=<pid>]`. It shows loss, step time, tokens/s, RSS/peak/CPU, the
+HTML on `--port` (default 8787): `make dashboard PORT=8787`. It shows loss, step time, tokens/s, RSS/peak/CPU, the
 stage split, recent steps, and any extra numeric fields in a trace line
 (`lr`, `grad_norm`, `state_norm`, `gate_mean`) as small charts. Standard
 library only, polling `/api/state` once a second.

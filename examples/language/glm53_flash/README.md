@@ -268,9 +268,11 @@ positions and **6.48 s** at 192, so a 64-episode split is **5.6 h**, and the fro
 not fit 128. A 1,398-step run reaches loss **0.38** in 178,944 tokens and is stopped there
 (`results/glm53-hybrid128/training-partial.json`); the run and its 192 evaluation wait for the
 fast core. `make trace TASK=glm53-hybrid128 STEPS=20` writes the live
-JSONL and `make dash` renders it. `--save-every N` writes `out/step_<i>.bin` every N steps, in the
-same flat layout as `final_weights.bin`; `step_4.bin` and `final_weights.bin` are byte-identical
-after a four-step run.
+JSONL and `make dash` renders it. With `--save` (the trace runner adds it) and a validating run,
+the final held-out batch prints `val_loss:`; `reference/trace.py` stores that as the run's
+`eval_loss`, so the dashboard shows it beside the train curve. `--save-every N` writes
+`out/step_<i>.bin` every N steps, in the same flat layout as `final_weights.bin`; `step_4.bin` and
+`final_weights.bin` are byte-identical after a four-step run.
 
 ## The reference on this machine
 
