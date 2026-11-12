@@ -220,6 +220,14 @@ class Sampler(threading.Thread):
             pid = run.get("pid")
             if not pid:
                 continue
+            try:
+                os.kill(int(pid), 0)
+            except OSError:
+                try:
+                    runs.finish(run["id"], "lost", error="process gone")
+                except Exception:
+                    pass
+                continue
             stats = self._tree_stats(pid, now)
             if stats is None:
                 continue
