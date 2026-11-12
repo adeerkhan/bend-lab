@@ -9,9 +9,9 @@
 # Fixed t = 32, lr 1e-3, 600 steps. `bench/cifar_learning`'s CPU run reads
 # 0.8405294 at step 50 and 0.5286835 at 600.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bendtorch-gpu@2.0.0.0/main.bend as G
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bendtorch-gpu@2.1.0.0/main.bend as G
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import mlbend-datasets@0.1.6.0/main.bend as Datasets
 import mlbend-huggingface@0.1.1.0/main.bend as Hf
 import ../../examples/cifar/main.bend as M

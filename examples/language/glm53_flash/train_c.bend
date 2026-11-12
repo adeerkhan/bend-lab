@@ -3,8 +3,8 @@
 # a SwiGLU hidden 32 MLP, a final RMSNorm and the tied head.  Twenty AdamW
 # steps against the PyTorch twin are the integration gate.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import ./model_c.bend as M
 import ./weights_c.bend as W
 import ./loss_masked.bend as L

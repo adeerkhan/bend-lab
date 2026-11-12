@@ -4,8 +4,8 @@
 # `reference/test_glm53_layers.py` and `reference/glm53_dense_data.py` write;
 # the q/k files are already in BendTorch's half-split RoPE order.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import ./model_a.bend as M
 
 def P() -> Type:

@@ -13,8 +13,8 @@
 # At the toy scale: 2 images x 16 x 16 x 8 channels -> 2 x 8 x 8 x 32 channels.
 # The channel order is the reference's: c major, then p1, then p2.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import ./config.bend as C
 
 def IN() -> Type:

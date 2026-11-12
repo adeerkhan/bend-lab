@@ -7,8 +7,8 @@
 # logits, and the gradient is `(p - onehot) / valid_rows`.  A masked row keeps
 # a zero gradient row and contributes nothing to the mean.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 
 def valid_rows(labels: List<&2, Nat>, +ignore: Nat, +acc: Nat) -> Nat:
   match labels:

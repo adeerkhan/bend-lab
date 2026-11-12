@@ -1,6 +1,6 @@
 {
   "schema": "mlbend.experiment/3",
-  "created_at": "2026-11-12T10:25:30.075313+00:00",
+  "created_at": "2026-11-12T13:26:18.738385+00:00",
   "task": {
     "name": "iris-crossval",
     "description": "logistic regression over iris, five stratified folds, scaler fitted on the training rows only",
@@ -36,7 +36,7 @@
     "bend": "2.0.38"
   },
   "git": {
-    "commit": "64b66ba",
+    "commit": "f1c95b2",
     "branch": "main",
     "dirty": true
   },
@@ -76,33 +76,28 @@
     },
     {
       "name": "bend-ml-tensor-array",
-      "version": "0.1.14.0",
-      "hash": "0x0f6479f09ada7ae614e64e31e8f5a730"
+      "version": "0.1.20.0",
+      "hash": "0x5c5507d77be847e1e454ec33ab54e087"
     },
     {
       "name": "bend-ml-tensor-array",
-      "version": "0.1.18.0",
-      "hash": "0xf4dfe0b415f12cd7b6b3e20aa7cc5aa0"
+      "version": "0.1.21.0",
+      "hash": "0x3c0fc6320fc1872747ae0856911080c7"
     },
     {
       "name": "bend-ml-tensor-fork",
-      "version": "0.1.5.0",
-      "hash": "0x236efa65086abc5955a9e74563e24668"
+      "version": "0.1.7.2",
+      "hash": "0xdfb90ca84b7ce7e315474b48852d7ec7"
     },
     {
       "name": "bend-ml-tensor-gpu",
-      "version": "0.1.2.1",
-      "hash": "0x454d8eb5320624d5b121fdc9d78ee0a6"
-    },
-    {
-      "name": "bend-ml-tensor-gpu",
-      "version": "0.1.5.0",
-      "hash": "0x6538b6a56d11b5a4d65ef7d8b18c1f9f"
+      "version": "0.1.5.2",
+      "hash": "0x14e5af4fd3ad6b86b8b16959a9f5960b"
     },
     {
       "name": "bendtorch-gpu",
-      "version": "1.1.1.0",
-      "hash": "0x3c22148d676c2988827dae103c18f499"
+      "version": "2.1.0.0",
+      "hash": "0xc222e83b37d53779b42f2125d79e6c55"
     },
     {
       "name": "mlbend-cluster",
@@ -164,20 +159,20 @@
     "numpy": "2.5.4"
   },
   "run": {
-    "build_seconds": 59.229,
-    "seconds_min": 0.1,
+    "build_seconds": 119.09,
+    "seconds_min": 0.208,
     "seconds_all": [
-      0.104,
-      0.114,
-      0.11,
-      0.1,
-      0.103
+      0.214,
+      0.212,
+      0.215,
+      0.208,
+      0.218
     ],
     "repeat": 1,
     "fetch_seconds": 0.001,
-    "compute_seconds": 0.099,
-    "reference_seconds": 2.042,
-    "speed_ratio": 20.464
+    "compute_seconds": 0.207,
+    "reference_seconds": 2.537,
+    "speed_ratio": 12.201
   },
   "stages": [],
   "stages_source": null,
@@ -214,8 +209,8 @@
           "pass": true
         }
       },
-      "run_seconds": 0.104,
-      "reference_seconds": 2.042
+      "run_seconds": 0.214,
+      "reference_seconds": 2.537
     },
     {
       "seed": 43,
@@ -245,8 +240,8 @@
           "pass": true
         }
       },
-      "run_seconds": 0.114,
-      "reference_seconds": 0.882
+      "run_seconds": 0.212,
+      "reference_seconds": 0.988
     },
     {
       "seed": 44,
@@ -276,8 +271,8 @@
           "pass": true
         }
       },
-      "run_seconds": 0.11,
-      "reference_seconds": 0.691
+      "run_seconds": 0.215,
+      "reference_seconds": 0.787
     },
     {
       "seed": 45,
@@ -307,8 +302,8 @@
           "pass": true
         }
       },
-      "run_seconds": 0.1,
-      "reference_seconds": 0.823
+      "run_seconds": 0.208,
+      "reference_seconds": 1.104
     },
     {
       "seed": 46,
@@ -338,8 +333,8 @@
           "pass": true
         }
       },
-      "run_seconds": 0.103,
-      "reference_seconds": 0.883
+      "run_seconds": 0.218,
+      "reference_seconds": 0.932
     }
   ],
   "metrics": {

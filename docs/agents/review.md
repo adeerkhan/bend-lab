@@ -9,7 +9,7 @@ command that produced its last number.
 | check | command | last result |
 | --- | --- | --- |
 | proofs, frozen references | `make check-fast` | `31/31`, 2026-11-12 |
-| full gate | `make check` | `140/140`, 2026-11-12, `49m35 s` (run 36 in the dashboard) |
+| full gate | `make check` | `140/140`, 2026-11-12, `54m39 s`, on the migrated lane |
 | Mamba-3 SISO and full LM | `make mamba3` | `MAMBA3 PASS`, 2026-11-12 |
 
 Short tests run on 2026-11-12, all on the current `2.0.0.0` lane:
@@ -29,29 +29,40 @@ Short tests run on 2026-11-12, all on the current `2.0.0.0` lane:
 | gate | `make session TASK=check-fast CMD="make check-fast"` | `31/31`, `23.6 s` |
 | GPU | `make session TASK=gpu-probe CMD="reference/.venv-rf/bin/python reference/gpu_probe.py"` | `50.1 s`, GPU `52-100%`, process `326 MB` |
 
-## The lane is not one lane
+## One lane
 
-Before any feature test, the versions have to agree. Right now:
+The versions now agree (`reference/versions.py` prints one version per
+package):
 
-| piece | `bend.toml` | `.bend/env` and examples | latest upstream |
+| piece | `bend.toml` | `.bend/env` | imports |
 | --- | --- | --- | --- |
-| Bend | `2.0.38` | `2.0.38` | `2.0.40` |
-| BendTorch | `1.1.1.0` | `2.0.0.0` | `2.1.0` |
-| tensor-array | `0.1.14.0` | `0.1.18.0` | `0.1.21.0` |
-| tensor-gpu | `0.1.5.0` | `0.1.5.0` | `0.1.5.3` |
+| Bend | `2.0.38` | `2.0.38` | n/a |
+| BendTorch | `2.1.0.0` | `2.1.0.0` | `2.1.0.0` |
+| BendTorch GPU | `2.1.0.0` | `2.1.0.0` | `2.1.0.0` |
+| tensor-array | `0.1.20.0` | `0.1.20.0` | `0.1.20.0` |
+| tensor-gpu | `0.1.5.2` | `0.1.5.2` | `0.1.5.2` |
 
-A `make check` on this tree tests the old imports, not the new features. The
-first refix is a **single review lane**: Bend 2.0.40, BendTorch 2.1.0,
-tensor-array 0.1.21.0, tensor-gpu 0.1.5.3, tensor-fork 0.1.7.2, with every
-`import` and `bend.toml` entry saying the same thing. Add a `make versions`
-that prints the pin, the env, the imports and the hub hash; a manifest already
-records them per run.
+The latest tensor-array `0.1.21.0` and tensor-gpu `0.1.5.3` are **not** a lane
+with BendTorch 2.1.0.0: the trainer imports `0.1.20.0` and `0.1.5.2`, and the
+two `Mat` types are nominally different even with the same shape
+(ISSUE-118). The compatible lane is BendTorch's own closure; the unused
+tensor-fork wildcard was removed because its latest pulls `0.1.21.0`.
 
-The target imports resolve and build: a probe importing
-`bendtorch@2.1.0.0`, `bendtorch-gpu@2.1.0.0`,
-`bend-ml-tensor-array@0.1.21.0` and `bend-ml-tensor-gpu@0.1.5.3` built and
-printed `ok` on 2026-11-12. The migration itself touches 366 `import` lines
-and the workspace dependencies, so it is its own change with a full gate.
+The Bend pin remains 2.0.38: it is the installed binary and the Makefile pin.
+2.0.40 needs its own toolchain change.
+
+On this lane: `make check-fast` `31/31`, full `make check` `140/140` in
+`54m39 s`, and `make mamba3` PASS. The migration touched 107 `.bend` files
+and `bend.toml`/`bend.lock`; the env was purged and synced from the lock
+(ISSUE-119).
+
+| track | command | result |
+| --- | --- | --- |
+| flow | `make experiment TASK=flow64-first` | PASS, task `3.951 s`, build `53.784 s` |
+| diffusion | `make experiment TASK=vit-first` | PASS, task `3.380 s`, build `245.884 s` |
+| GLM | `make experiment TASK=glm53-hybrid128` | PASS, task `3.017 s`, build `91.818 s` |
+| classical | `make experiment TASK=iris-crossval` | PASS, task `0.208 s`, build `119.090 s` |
+| Mamba-3 | `make mamba3` | PASS, `23.35 s` |
 
 ## The matrix
 
@@ -65,9 +76,10 @@ and the workspace dependencies, so it is its own change with a full gate.
 
 ## Order
 
-1. **Align the lane** and add `make versions`. Run `make check-fast`; then the
-   full `make check`. A version bump is its own commit with a `NOTES.md`
-   entry; no feature work rides on it.
+1. **The lane is aligned** (2026-11-12): BendTorch 2.1.0.0, tensor-array
+   0.1.20.0, tensor-gpu 0.1.5.2, Bend 2.0.38. `make check-fast` `31/31` and
+   full `make check` `140/140` in `54m39 s`. Keep new feature work off the
+   lane change; the next item is the science/performance batch.
 2. **Baseline the five tracks** with the short tests above, using the frozen
    references. Write the date, version, command and result into the table.
 3. **Refix what the baseline finds**: stale import versions, a gate that no

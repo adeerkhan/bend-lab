@@ -229,7 +229,9 @@ README figures are generated from those result files with `make figures`.
 
 ## The GPU lane
 
-`bend.toml` pins `bendtorch@1.1.1.0` and `bendtorch-gpu@1.1.1.0`. The ViT builds
+`bend.toml` pins `bendtorch@2.1.0.0`, `bendtorch-gpu@2.1.0.0`,
+`bend-ml-tensor-array@0.1.20.0` and `bend-ml-tensor-gpu@0.1.5.2` (the array
+and GPU versions BendTorch 2.1.0.0 itself imports). The ViT builds
 with eight `LinearNBF` and one `F.Attention`, links `libnvrtc`, and executes on
 an RTX 5060. `nvidia-smi` shows the process with 104 MiB on the card, and the
 frozen values are bit-identical to the CPU lane.

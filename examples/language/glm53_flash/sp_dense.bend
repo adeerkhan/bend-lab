@@ -6,8 +6,8 @@
 # `valid(t, s)` is the reference's `_indices`: s <= t, and either an anchor
 # (s % 16 == 0) or inside the local window (t - s < 16).
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 
 # ---- result projections: a match must scrutinize a parameter, not a call ----
 

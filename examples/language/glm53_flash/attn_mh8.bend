@@ -1,8 +1,8 @@
 # Four-head causal attention at 8 positions, for a forward check: the linear and sparse cores
 # wrapped per head, with a single qkv projection and RoPE per head.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import ./lin_bwd.bend as L
 import ./lin_fast.bend as LF
 import ./attn_c.bend as AC

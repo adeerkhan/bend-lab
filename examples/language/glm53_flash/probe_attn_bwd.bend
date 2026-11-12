@@ -3,8 +3,8 @@
 # The inputs are `reference/glm53_attn_bwd_data.py`'s; the golden is
 # `reference/glm53_attn_bwd.py`'s PyTorch autograd.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import ./attn_mh8.bend as A
 
 def ml8(ml: TA.ML<8n, 32n>) -> List<&2, F32>:

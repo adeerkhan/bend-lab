@@ -766,62 +766,8 @@ path = "main.bend"
 
 [[package]]
 name = "bend-ml-tensor-array"
-version = "0.1.14.0"
-hash = "0x0f6479f09ada7ae614e64e31e8f5a730"
-source = "hub"
-dependencies = []
-constructors = [
-    "AL",
-    "BL",
-    "BLeaf",
-    "BNode",
-    "BRow",
-    "BV",
-    "CB",
-    "CR",
-    "G",
-    "L2",
-    "MBias",
-    "MCE",
-    "MColSum",
-    "MHits",
-    "ML",
-    "MM2",
-    "MMul",
-    "MMulNT",
-    "MMulTN",
-    "MPair",
-    "MRow",
-    "Mat",
-    "P2",
-    "PK",
-    "PKK",
-    "PKT",
-    "PLeaf",
-    "PNode",
-    "R",
-    "RW",
-    "S3",
-    "SL",
-    "T8",
-    "TD",
-    "TG",
-    "TL",
-    "TR",
-]
-
-[[package.files]]
-sha = "6ef84dd63aeee1961133c6d77bf2ce28a2a766a0d67e31eb7cf299bd020122a8"
-path = "LICENSE"
-
-[[package.files]]
-sha = "cb48e87c2b13837b125d72ac8e0291eaf8df814e5ea2345fe2789d11244a9864"
-path = "main.bend"
-
-[[package]]
-name = "bend-ml-tensor-array"
-version = "0.1.18.0"
-hash = "0xf4dfe0b415f12cd7b6b3e20aa7cc5aa0"
+version = "0.1.20.0"
+hash = "0x5c5507d77be847e1e454ec33ab54e087"
 source = "hub"
 dependencies = []
 constructors = [
@@ -834,6 +780,7 @@ constructors = [
     "BV",
     "CB",
     "CR",
+    "D4",
     "G",
     "L2",
     "MBias",
@@ -863,6 +810,8 @@ constructors = [
     "TG",
     "TL",
     "TR",
+    "WAL",
+    "WBL",
 ]
 
 [[package.files]]
@@ -870,64 +819,19 @@ sha = "6ef84dd63aeee1961133c6d77bf2ce28a2a766a0d67e31eb7cf299bd020122a8"
 path = "LICENSE"
 
 [[package.files]]
-sha = "e11747d9a7eb3834260e196eafd3912c6643a0744c5454f9149ade57cf4eed66"
-path = "main.bend"
-
-[[package]]
-name = "bend-ml-tensor-fork"
-version = "0.1.5.0"
-hash = "0x236efa65086abc5955a9e74563e24668"
-source = "hub"
-dependencies = ["bend-ml-tensor-array@0.1.18.0"]
-constructors = [
-    "B2",
-    "B3",
-    "B4",
-    "PE",
-]
+sha = "c7ebe52104e8090fa4f4f0375c97265d094848b36ec9caf904be2623145ae329"
+path = "README.md"
 
 [[package.files]]
-sha = "6ef84dd63aeee1961133c6d77bf2ce28a2a766a0d67e31eb7cf299bd020122a8"
-path = "LICENSE"
-
-[[package.files]]
-sha = "7bc3c0c511b75a3f5b4b8b0d75afca62540691de42c3d835bba83b668124943d"
+sha = "4680d64b03cbf20f7dd1a19cbbaa9d7825258e2959e8de72dde46cf98c33b644"
 path = "main.bend"
 
 [[package]]
 name = "bend-ml-tensor-gpu"
-version = "0.1.2.1"
-hash = "0x454d8eb5320624d5b121fdc9d78ee0a6"
+version = "0.1.5.2"
+hash = "0x14e5af4fd3ad6b86b8b16959a9f5960b"
 source = "hub"
-dependencies = ["bend-ml-tensor-array@0.1.14.0"]
-constructors = [
-    "ABC",
-    "E",
-    "GR",
-    "O2",
-    "O3",
-    "O4",
-    "R1",
-    "R2",
-    "R3",
-    "R4",
-    "T",
-]
-
-[[package.files]]
-sha = "6ef84dd63aeee1961133c6d77bf2ce28a2a766a0d67e31eb7cf299bd020122a8"
-path = "LICENSE"
-
-[[package.files]]
-sha = "a66c3f82e0c3cd770a0c407b4b825d678af77d7bd26a0b54317d06dfd722451e"
-path = "main.bend"
-
-[[package]]
-name = "bend-ml-tensor-gpu"
-version = "0.1.5.0"
-hash = "0x6538b6a56d11b5a4d65ef7d8b18c1f9f"
-source = "hub"
-dependencies = ["bend-ml-tensor-array@0.1.18.0"]
+dependencies = ["bend-ml-tensor-array@0.1.20.0"]
 constructors = [
     "ABC",
     "E",
@@ -949,28 +853,29 @@ sha = "6ef84dd63aeee1961133c6d77bf2ce28a2a766a0d67e31eb7cf299bd020122a8"
 path = "LICENSE"
 
 [[package.files]]
-sha = "9e87cef8a3967011e9b69e9cf1fb422ea982430c95af381b1a89d526f3e235a0"
+sha = "17b2aec67c6c18e46003799eb522f35c16a8af81072eacc8be71ecb76eea7982"
+path = "README.md"
+
+[[package.files]]
+sha = "d629d2bae7a52ff257afb5d939917af38f244036a914d2032f4e24e41855ec12"
 path = "main.bend"
 
 [[package]]
 name = "bendtorch"
-version = "1.1.1.0"
-hash = "0xe1214263ebd97956a02f4f3ea7544c84"
+version = "2.1.0.0"
+hash = "0x82db62d229f00333d556466609c8ab27"
 source = "hub"
 dependencies = [
     "bend-ml-nat-lemmas@0.1.2.0",
-    "bend-ml-tensor-array@0.1.14.0",
+    "bend-ml-tensor-array@0.1.20.0",
 ]
 constructors = [
     "A2",
-    "AF",
-    "AF2",
     "AS",
     "ASM",
     "Adam",
     "AttnDims",
     "AttnS",
-    "Ax",
     "BG",
     "BL",
     "BS",
@@ -978,59 +883,46 @@ constructors = [
     "CAdam",
     "CAdamW",
     "CAdamWBF16",
-    "CGR",
     "CMomentum",
     "CS",
     "CSGD",
     "CSM",
-    "CatG",
     "D2",
     "D3",
     "D3S",
     "DB",
     "DR",
-    "DW",
     "Dm",
-    "Dot",
-    "Drop",
     "DropP",
     "FL",
     "FS",
     "Fwd",
-    "G2",
-    "GAR",
+    "GL",
     "GN",
     "GR",
     "GW",
-    "Geo",
+    "Guarded",
     "HC",
-    "HMat",
-    "HW",
     "Halves",
     "KLeaf",
     "KLeafV",
     "KNew",
     "KNode",
-    "L1R",
     "LN",
     "Layer",
     "Lin",
     "LossOut",
-    "MAR",
-    "MR",
     "MatStep",
     "Momentum",
     "NS",
     "NoMom",
     "OneMom",
-    "P2",
-    "P3",
-    "P4",
     "PA",
     "PC",
     "PL",
     "PLeaf",
     "PLeafV",
+    "PN",
     "PNew",
     "PNode",
     "PO",
@@ -1043,13 +935,7 @@ constructors = [
     "Packed",
     "Q3",
     "Q4",
-    "Q8",
-    "Q8Mul",
-    "QD",
     "QK",
-    "QL",
-    "QR",
-    "QS",
     "R3",
     "R3S",
     "R3SS",
@@ -1057,14 +943,9 @@ constructors = [
     "R4B",
     "R5",
     "RS3",
-    "SAdd",
-    "SCell",
     "SGD",
     "Step",
-    "Strided",
-    "T3",
-    "TP",
-    "Tensor",
+    "TSet",
     "Three",
     "Train",
     "TrainPL",
@@ -1072,56 +953,30 @@ constructors = [
     "TwoMom",
     "UA",
     "UD",
-    "UF",
-    "UL",
     "UO",
-    "Unit",
 ]
-
-[[package.files]]
-sha = "0204b24e2ead8a865fbe3db2fca3477d155b522b5de7d08772606a794a516b34"
-path = "LAWS.bend"
 
 [[package.files]]
 sha = "7b28854c86d77ef5953513f14c020ff5932fdbb1059eab7ba75bbe7fa24ef048"
 path = "LICENSE"
 
 [[package.files]]
-sha = "e98da9c6d28ea2a6deeb76ddbe8945489e1fa99d8f428805b641e1b7517fc316"
-path = "PROOF.bend"
-
-[[package.files]]
-sha = "e2f8fbcfca139d251a6007ba29a3d7ccb98af05aa83fa42968dfaae5f1b2c5a8"
-path = "dtype.bend"
-
-[[package.files]]
-sha = "91f00f494d581bf24834d346c0e0b0ae1bb7cec9b187838b9daff05a4a683eae"
+sha = "9c74f2ddbbb3c6853d5ae0440413c0fe27c284b49ba334a4d5524de55d0d212f"
 path = "main.bend"
-
-[[package.files]]
-sha = "f5cd3e2634294ddcc85c63c84c16a1a6bd6c82edfbb495d187fc28fd6b986f44"
-path = "package.bend"
-
-[[package.files]]
-sha = "90ae4b439eee28368a03da64fdba37a90f2f2864342f0979f95ed19987d42375"
-path = "spec.bend"
-
-[[package.files]]
-sha = "d54328f315426468a04e2178847b6bc684dac8b5e5044038cc32ea947a6b5451"
-path = "tensor.bend"
 
 [[package]]
 name = "bendtorch-gpu"
-version = "1.1.1.0"
-hash = "0x3c22148d676c2988827dae103c18f499"
+version = "2.1.0.0"
+hash = "0xc222e83b37d53779b42f2125d79e6c55"
 source = "hub"
 dependencies = [
-    "bend-ml-tensor-array@0.1.14.0",
-    "bend-ml-tensor-gpu@0.1.2.1",
-    "bendtorch@1.1.1.0",
+    "bend-ml-tensor-array@0.1.20.0",
+    "bend-ml-tensor-gpu@0.1.5.2",
+    "bendtorch@2.1.0.0",
 ]
 constructors = [
     "C3S",
+    "CIC",
     "EAC",
     "EADAM",
     "EC1",
@@ -1130,17 +985,26 @@ constructors = [
     "EC4",
     "EDG",
     "EEM",
+    "EGN",
+    "EGW",
+    "EIC",
     "EMOM",
     "EMS",
     "EN",
+    "ER2",
     "ERF",
     "ERO",
     "ES3",
     "ESGD",
+    "ETI",
+    "GB",
+    "GIS",
+    "GS",
     "IA",
     "IJ",
     "LS",
     "MS",
+    "RS5",
     "S3",
     "S4",
     "S6",
@@ -1153,7 +1017,7 @@ sha = "7b28854c86d77ef5953513f14c020ff5932fdbb1059eab7ba75bbe7fa24ef048"
 path = "LICENSE"
 
 [[package.files]]
-sha = "fa002249e139860f7312fed059516e587915be5aa4991a04f0a26a0cb6ab8986"
+sha = "400d595e8c9374a8788f3458cc94c67393264aa277ddd95d91bbfd7bdce03e27"
 path = "main.bend"
 
 [[package]]

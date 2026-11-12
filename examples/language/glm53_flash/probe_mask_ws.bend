@@ -1,7 +1,7 @@
 # The sparse mask at 64 positions: 16/16, 32/32 and the 8/8 can-fail.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import ./sp_dense.bend as SD
 
 def ml(ml: TA.ML<64n, 64n>) -> List<&2, F32>:

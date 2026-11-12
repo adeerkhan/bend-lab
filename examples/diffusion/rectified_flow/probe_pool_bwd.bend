@@ -2,8 +2,8 @@
 # saved arg-max of cell c is c itself. The first 8 cells of the first block are
 # the input positions 136..143, so the probe prints 0 1 2 3 4 5 6 7.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import ./model.bend as M
 
 def mk(+n: Nat, +i: Nat, +acc: List<&2, F32>) -> List<&2, F32>:

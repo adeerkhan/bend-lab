@@ -19,8 +19,8 @@
 # Every measured value is printed after its timer, so the compiler cannot drop
 # the work as unused: a pure phase that returns Unit is erased and times as 0.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import mlbend-generative@0.1.1.0/main.bend as G
 import ../../examples/diffusion/vit/main.bend as M
 

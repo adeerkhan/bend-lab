@@ -3,8 +3,8 @@
 # the three gradients for each core; `reference/glm53_attn_c.py` is the
 # PyTorch-autograd golden.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import ./attn_c.bend as A
 import ./lin_bwd.bend as L
 

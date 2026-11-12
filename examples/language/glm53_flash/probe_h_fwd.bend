@@ -1,7 +1,7 @@
 # The four-block hybrid forward at N=8, against the NumPy twin.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import ./model_h8.bend as H
 import ./model_h.bend as HM
 import ./weights_h.bend as W

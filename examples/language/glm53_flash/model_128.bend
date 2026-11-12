@@ -7,8 +7,8 @@
 # `model_a.bend` (whose parameter types it imports), and loads the same files.
 # Only RoPE's maximum position and the attention length change.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import ./model_a.bend as A
 
 def M(r: Nat, c: Nat) -> Type:

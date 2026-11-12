@@ -5,7 +5,7 @@
 #
 # The clash: `examples/cifar` builds its noise with
 # `TA.Mat.from_list(n(), d(), G.noise_of(s))` — 786,432 `G.gauss_at` calls and
-# a list — on tensor-array@0.1.14.0, while `bend-ml-tensor-gpu@0.1.5.0` (the
+# a list — on tensor-array@0.1.14.0, while `bend-ml-tensor-gpu@0.1.5.2` (the
 # package carrying bend-ml#23's fills) imports tensor-array@0.1.18.0. A Mat is
 # the package's own type, so a Mat of 0.1.18 cannot be passed where 0.1.14 is
 # expected. What CAN cross is `fill_gauss`'s return: a Base `Array<F32>`, which
@@ -18,8 +18,8 @@
 # bits on every lane); `gauss_at` calls the host's F32.log/cos/sin, so the two
 # agree to a few ulp, not bit for bit. The task's gate is 1.3e-6.
 import Base
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
-import bend-ml-tensor-gpu@0.1.5.0/main.bend as TG
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
+import bend-ml-tensor-gpu@0.1.5.2/main.bend as TG
 import mlbend-generative@0.1.1.0/main.bend as G
 
 def cells() -> Nat:

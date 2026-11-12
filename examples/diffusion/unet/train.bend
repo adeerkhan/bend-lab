@@ -33,8 +33,8 @@
 #   --no-sample     skip the Euler draws
 #   --probe         print the flat weights and one whole forward output
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import mlbend-generative@0.1.1.0/main.bend as G
 import ./config.bend as C
 import ./model.bend as M

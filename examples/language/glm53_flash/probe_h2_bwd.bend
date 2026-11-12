@@ -1,8 +1,8 @@
 # Two 128-token sequences: the parameter gradient from sequence 1 alone must
 # equal the 128-token model's gradient on sequence 1.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import ./model_h.bend as M
 import ./model_h2.bend as M2
 import ./weights_h.bend as W

@@ -9,9 +9,9 @@
 # bendtorch-devel worktree at 65c8038 has the same lane over tensor-gpu
 # 0.1.5.2, which is not in the cache.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bendtorch-gpu@2.0.0.0/main.bend as G
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bendtorch-gpu@2.1.0.0/main.bend as G
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 
 def val(+i: U32, +seed: U32) -> F32:
   +h = U32.mod(((i * 2654435761 : U32) + (seed * 40503 : U32) : U32), 1000)

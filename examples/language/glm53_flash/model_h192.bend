@@ -1,8 +1,8 @@
 # The four-block hybrid at 192 positions: three linear blocks and one sparse
 # (window 16, stride 16), each with a SwiGLU 128, final RMSNorm, tied head.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import ./attn_mh192.bend as A
 
 def ROWS() -> Nat:

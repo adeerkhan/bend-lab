@@ -17,8 +17,8 @@
 #   S_{t+1} = exp(ADT_t)*S_t + x_t (x) (scale_t*k_t)
 #   y = (o * silu(z)) @ out_proj^T
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 
 # ---------------------------------------------------------------------------
 # list helpers, flat row-major

@@ -2,8 +2,8 @@
 # Reads the four deterministic inputs `reference/glm53_linear_bwd.py` writes
 # and prints y, dq, dk and dv for the whole 64 x 8 tensor.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import ./lin_bwd.bend as L
 
 def flat(ml: TA.ML<64n, 8n>) -> List<&2, F32>:

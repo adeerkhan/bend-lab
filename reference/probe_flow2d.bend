@@ -10,8 +10,8 @@
 #   euler16  the state after 16 steps
 #   euler32  the state after 32 steps, the preset's sampler
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import mlbend-generative@0.1.1.0/main.bend as G
 import ../examples/diffusion/flow_matching/main.bend as M
 

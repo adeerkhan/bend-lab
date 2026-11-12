@@ -22,9 +22,9 @@
 # thread through the sampling loop (Layer.fwd returns them), and every
 # "random" number is a counter.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
-import bend-ml-tensor-gpu@0.1.5.0/main.bend as TG
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
+import bend-ml-tensor-gpu@0.1.5.2/main.bend as TG
 import mlbend-generative@0.1.1.0/main.bend as G
 import mlbend-datasets@0.1.6.0/main.bend as Datasets
 import mlbend-huggingface@0.1.1.0/main.bend as Hf
@@ -172,7 +172,7 @@ def coef_b(+t: Nat) -> F32:
 # `G.noise_of` asked for 786,432 values one at a time and built a list: 29 ms
 # for the target's noise, then 3 ms more to hand the list to a Mat, on every
 # step (ISSUE-018's plumbing). bend-ml#23's `fill_gauss`
-# (bend-ml-tensor-gpu@0.1.5.0) makes the same counter's numbers in one bang.
+# (bend-ml-tensor-gpu@0.1.5.2) makes the same counter's numbers in one bang.
 # Its uniforms are the same arithmetic; its Gaussian is a polynomial
 # Box-Muller rather than the host's log/cos/sin, so the values agree to a few
 # ulp and not bit for bit (bench/fill_cross: 2.09e-7 on the first eight; the

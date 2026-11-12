@@ -25,8 +25,8 @@
 # argument to a polymorphic def overflows the checker's stack. The layer types
 # say LOW() -> MID() and IN() -> IN(), so a B other than 2 fails to compile.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import ./config.bend as C
 
 def B() -> Nat:

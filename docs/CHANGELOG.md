@@ -4,6 +4,21 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### One version lane
+
+- The tree now imports BendTorch `2.1.0.0`, BendTorch GPU `2.1.0.0`,
+  tensor-array `0.1.20.0` and tensor-gpu `0.1.5.2`; `bend.toml`, `bend.lock`,
+  `.bend/env` and every `.bend` import agree. Bend stays at the installed
+  `2.0.38` pin.
+- The latest tensor-array `0.1.21.0` and tensor-gpu `0.1.5.3` are **not**
+  compatible with BendTorch 2.1.0.0: the `Mat` types are nominally different
+  even at the same shape. The compatible lane is BendTorch's own closure; the
+  unused tensor-fork wildcard was removed.
+- The full gate passes `140/140` in `54m39 s` and `make check-fast` `31/31`;
+  `make mamba3`, `flow64-first`, `vit-first`, `glm53-hybrid128` and
+  `iris-crossval` pass on the lane. `bendenv sync` was purged first because it
+  keeps old package directories (ISSUE-119).
+
 ### The dashboard is the in-house W&B
 
 - `reference/dashboard.py` serves one page for every run in the store. The

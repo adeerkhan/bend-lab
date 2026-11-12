@@ -2,8 +2,8 @@
 # Row 0 has label 0; row 1 is ignored (label 5, the mask).  Prints the masked
 # loss and the whole gradient matrix.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import ./loss_masked.bend as L
 
 def M() -> Type:

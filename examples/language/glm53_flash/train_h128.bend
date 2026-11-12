@@ -7,8 +7,8 @@
 # a parameter: the 20-step parity gate at 3e-4 is a correctness gate, not a
 # learning benchmark.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import ./model_h.bend as M
 import ./weights_h.bend as W
 import ./loss_masked.bend as L

@@ -7,6 +7,38 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-12 — one lane: BendTorch 2.1.0.0, array 0.1.20.0, GPU 0.1.5.2
+
+The version skew is gone. `reference/versions.py` now prints one version per
+package and the full gate is `140/140` in `54m39 s` on the migrated lane:
+Bend `2.0.38` (the installed binary and Makefile pin), BendTorch `2.1.0.0`,
+BendTorch GPU `2.1.0.0`, tensor-array `0.1.20.0`, tensor-gpu `0.1.5.2`.
+`make check-fast` is `31/31`.
+
+The first attempt used the latest tensor-array `0.1.21.0` and tensor-gpu
+`0.1.5.3`; it does not compile. BendTorch 2.1.0.0 imports array `0.1.20.0`
+and GPU `0.1.5.2`, and `Mat` from two array versions are nominally different
+types even with the same shape, so `T.Mat.load` fails with
+`expected TA.Mat<8n, 64n> observed 0x5c55.../main.Mat<8n, 64n>`. The
+compatible lane is BendTorch's own closure (ISSUE-118). The unused
+`bend-ml-tensor-fork` wildcard was removed because its latest pulls array
+`0.1.21.0`; `bend.toml`, `bend.lock`, `.bend/env` and the `107` migrated
+`.bend` files agree.
+
+`bendenv sync` does not prune old package directories, so the lane report kept
+showing `2.0.0.0` beside `2.1.0.0` until `.bend/env` was removed and synced
+from the regenerated lock (ISSUE-119). A lane check that sees old names should
+purge and sync, not trust the cache.
+
+Short tests on the lane: `flow64-first` PASS (task `3.951 s`, build `53.784 s`),
+`vit-first` PASS (`3.380 s`, `245.884 s`), `glm53-hybrid128` PASS (`3.017 s`,
+`91.818 s`), `iris-crossval` PASS (`0.208 s`, `119.090 s`), `mamba3` PASS
+(`23.35 s`). The old-lane numbers are historical.
+
+Next: ISSUE-066 (UNet held-out metric), then the array/Mat core and chunked
+scan (ISSUE-108/110), then GLM 192 (ISSUE-101). The 192 evaluation is still
+5.7 h and cannot run under the one-hour rule.
+
 ## 2026-11-12 — the dashboard is the in-house W&B
 
 `reference/dashboard.py` now serves one page for every run in

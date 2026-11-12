@@ -20,8 +20,8 @@
 #
 #   bendenv run -- bend bench/plumbing_glm53/main.bend
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import ../../examples/language/glm53_flash/model_h.bend as M
 import ../../examples/language/glm53_flash/weights_h.bend as W
 import ../../examples/language/glm53_flash/loss_masked.bend as L

@@ -3,8 +3,8 @@
 # num = S V, y = num / clamp(den, 1e-6).  The per-position prefix in
 # `lin_fast`/`lin_bwd` stays as the oracle.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import ./lin_bwd.bend as L
 import ./sp_dense.bend as SD
 

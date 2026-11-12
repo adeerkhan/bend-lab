@@ -9,8 +9,8 @@
 # an assumption. Every value is printed after its timer, so the compiler cannot
 # erase the work as unused.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import mlbend-generative@0.1.1.0/main.bend as G
 import ../../examples/diffusion/two_moons/main.bend as D2
 import ../../examples/diffusion/flow_matching/main.bend as M

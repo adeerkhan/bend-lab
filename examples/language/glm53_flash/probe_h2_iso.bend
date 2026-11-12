@@ -1,8 +1,8 @@
 # Two 128-token sequences in one 256-row model: changing sequence 0 must not
 # move sequence 1's logits.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import ./model_h2.bend as M
 import ./weights_h2.bend as W
 

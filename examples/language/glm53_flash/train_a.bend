@@ -18,8 +18,8 @@
 # pretrain; it writes `final_weights.bin` and `final_grads.bin` in the same
 # file layout as the weights it loaded.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import ./model_a.bend as M
 import ./weights_a.bend as W
 import ./loss_masked.bend as L

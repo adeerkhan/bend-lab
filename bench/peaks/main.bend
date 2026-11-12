@@ -19,7 +19,7 @@
 # Every phase prints its value after the timer, so the compiler cannot erase
 # the work as unused.
 import Base
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 
 def n() -> Nat:
   4194304n

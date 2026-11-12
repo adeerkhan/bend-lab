@@ -15,8 +15,8 @@
 # number with its own twin. Each tag gets a fresh input: a `Mat` is a value and
 # is consumed by its use.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import ../examples/diffusion/rectified_flow/model.bend as M
 
 def show_go(xs: List<&2, F32>) -> String:

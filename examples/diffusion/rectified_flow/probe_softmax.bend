@@ -1,8 +1,8 @@
 # Softmax(2,2) on [[0,0],[2,0]]: row-wise gives 0.5 0.5 0.88 0.12;
 # column-wise gives 0.12 0.5 0.88 0.5. The probe prints which one BendTorch does.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import ./model.bend as M
 
 def show4(+n: Nat, +xs: List<&2, F32>, +acc: String) -> String:

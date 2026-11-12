@@ -1,7 +1,7 @@
 # The 4096-row block mask: build it, materialise it, and print its length.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import ./sp_dense.bend as SD
 
 def ml(x: TA.ML<4096n, 4096n>) -> List<&2, F32>:

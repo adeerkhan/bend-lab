@@ -1,7 +1,7 @@
 # Load the Stage C parameter tree from the twin's per-tensor files.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import ./model_c.bend as M
 
 def P() -> Type:

@@ -1,8 +1,8 @@
 # Four-head causal attention at 2 x 128 positions: block-diagonal, for isolation
 # wrapped per head, with a single qkv projection and RoPE per head.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import ./lin_bwd.bend as L
 import ./lin_dense.bend as LD
 import ./sp_dense.bend as SD

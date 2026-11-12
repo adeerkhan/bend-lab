@@ -15,10 +15,10 @@
 # 8.4 MFLOP / the measured GFLOP/s says whether the kernel reaches its floor.
 # Every phase prints its value after the timer, so nothing is erased.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bendtorch-gpu@2.0.0.0/main.bend as F
+import bendtorch@2.1.0.0/main.bend as T
+import bendtorch-gpu@2.1.0.0/main.bend as F
 import ../../examples/diffusion/vit/main.bend as M
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 
 def N() -> Nat:
   20n

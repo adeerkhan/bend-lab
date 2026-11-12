@@ -3,8 +3,8 @@
 # hidden 32 MLP, a final RMSNorm and the tied head.  The MoE and the
 # HyperConnection are not part of this stage.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import ./attn_c.bend as C
 
 def ROWS() -> Nat:

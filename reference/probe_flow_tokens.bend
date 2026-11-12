@@ -1,8 +1,8 @@
 # The flow's token order (ISSUE-044): prints `sample_input(0.5, synthetic)` as raw words, so the row reset can be read
 # at rows 64..127 instead of inferred from a forward difference.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import mlbend-generative@0.1.1.0/main.bend as G
 import ../examples/diffusion/flowers_flow/main.bend as M
 

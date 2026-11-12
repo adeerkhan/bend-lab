@@ -8,8 +8,8 @@
 #     s <= t  and  (s % 16 == 0  or  t - s < 16).
 # It has no ELU feature map.  Both cores are parameterless.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import ./lin_bwd.bend as L
 import ./lin_fast.bend as LF
 

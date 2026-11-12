@@ -2,8 +2,8 @@
 # compared row by row with the twin's instead of inferred from a loss. Synthetic pixels: (i mod 251) / 255, so every
 # value is distinct and a swapped pair or a permuted image shows up immediately.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import mlbend-generative@0.1.1.0/main.bend as G
 import ../examples/diffusion/vit/main.bend as V
 

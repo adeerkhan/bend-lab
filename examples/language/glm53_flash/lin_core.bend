@@ -1,8 +1,8 @@
 # Linear attention core of the reference, list form. q,k,v are 128 x 32
 # (2 sequences of 64 positions, 4 heads of 8). The core is parameterless.
 import Base
-import bendtorch@2.0.0.0/main.bend as T
-import bend-ml-tensor-array@0.1.18.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 
 def M() -> Type:
   TA.Mat<128n, 32n>
