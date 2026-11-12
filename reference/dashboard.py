@@ -654,7 +654,8 @@ async function poll(){
   $("status").innerHTML=`<i class="dot live"></i>live · ${new Date().toLocaleTimeString()}`;
   renderOverview();
   if(!selected && runsList.length){
-   const live=runsList.find(x=>x.status==="running")||runsList[0]; selected=live.id;
+   const live=runsList.find(x=>x.status==="running")||runsList.find(x=>x.steps>0)||runsList[0];
+   selected=live.id;
   }
   if(selected){
    const s=await fetch(`/api/state?run=${selected}`); detail=await s.json();
