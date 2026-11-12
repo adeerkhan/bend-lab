@@ -20,7 +20,8 @@ ten-step train probe is equal within noise
 (`5.58-5.97 s` against `5.74-5.78 s`, interleaved runs). `make mamba3` is PASS
 (session `mamba3-chunked`, `24.6 s`) and `make mamba3-bench` prints checksum
 `19.323364` in `0.44 s` (session `mamba3-fwd-chunked`). `make check-fast` is
-`31/31` after the change.
+`31/31` after the change, and the full gate is `141/141` in `38m10s` (session
+`check-final-chunked`, 2026-11-12).
 
 The earlier `0.37-0.38 s` array-core figure is from a faster machine state;
 quote the A/B above, not a delta across sessions. The next Mamba-3 step is
@@ -60,7 +61,7 @@ The version skew is gone. `reference/versions.py` now prints one version per
 package and the full gate is `141/141` in `38m41 s` on the migrated lane:
 Bend `2.0.38` (the installed binary and Makefile pin), BendTorch `2.1.0.0`,
 BendTorch GPU `2.1.0.0`, tensor-array `0.1.20.0`, tensor-gpu `0.1.5.2`.
-`make check-fast` is `31/31`; the final full gate is `141/141` in `38m41 s` (`check-final`, 2026-11-12).
+`make check-fast` is `31/31`; that lane's full gate was `141/141` in `38m41 s` (`check-final`, 2026-11-12), and the current gate is in the top section.
 
 The first attempt used the latest tensor-array `0.1.21.0` and tensor-gpu
 `0.1.5.3`; it does not compile. BendTorch 2.1.0.0 imports array `0.1.20.0`
