@@ -69,7 +69,7 @@ ISSUE-066 is closed by `make unet-metric`
 0.034`; the white-noise and data-mean arms both fail. The training loss stays
 report-only.
 
-Next: the array/Mat core and chunked scan (ISSUE-108/110), then GLM 192
+Next: the chunked scan over tokens (ISSUE-108) and the `Mat` substrate work (ISSUE-110), then the full GLM 192
 (ISSUE-101). The 192 evaluation is still 5.7 h and cannot run under the
 one-hour rule.
 
