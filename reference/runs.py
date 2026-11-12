@@ -114,6 +114,27 @@ def add_step(run_id, record):
     con.close()
 
 
+def record(task, record_path, label=None, status="done"):
+    """Store a finished run that has a record but no per-step trace."""
+    rec = None
+    try:
+        rec = json.load(open(record_path))
+    except (OSError, ValueError):
+        pass
+    now = time.time()
+    label = label or time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now))
+    con = connect()
+    cur = con.execute(
+        "INSERT INTO runs(task,label,trace,record,created,updated,status,"
+        "record_json) VALUES(?,?,?,?,?,?,?,?)",
+        (task, label, "", os.path.relpath(record_path, ROOT), now, now, status,
+         json.dumps(rec) if rec is not None else None))
+    run_id = cur.lastrowid
+    con.commit()
+    con.close()
+    return run_id
+
+
 def finish(run_id, status="done", record_path=None):
     con = connect()
     rec = None

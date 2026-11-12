@@ -241,7 +241,8 @@ function line(canvas, series, opts={}){
 }
 function draw(){
  if(!state)return; const s=state.summary, recs=state.records;
- $("status").textContent = recs.length ? `${s.steps} steps · ${s.tokens.toLocaleString()} tokens` : "waiting for trace";
+ $("status").textContent = recs.length ? `${s.steps} steps · ${s.tokens.toLocaleString()} tokens`
+   : (state.run ? `${state.run.status} · record only · no per-step trace` : "waiting for trace");
  $("step").textContent = recs.length ? recs[recs.length-1].step : "—";
  $("steps").textContent = recs.length ? `${s.loop_s.toFixed(1)} s in the loop` : "";
  $("loss").textContent = recs.length ? fmt(s.last) : "—";

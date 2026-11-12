@@ -74,7 +74,9 @@ run and one per step, plus the run's own trace under
 clickable after the next one overwrites `results/<task>/trace.jsonl`; the
 database and those traces are observations and are ignored by git. A missing
 run prints `unavailable`, never a zero. `trace.py` writes the database while
-the program runs and marks the run `done` or `aborted` at the end.
+the program runs and marks the run `done` or `aborted` at the end;
+`experiment.py` records a finished report card as a run with its record but no
+per-step trace, and the page labels it `record only`.
 
 `make trace` now stops a run after one hour by default
 (`reference/trace.py --max-seconds 3600`; `MAX_SECONDS=0` disables it). The

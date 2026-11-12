@@ -37,6 +37,7 @@ except ImportError:  # the frozen-reference gate runs on a machine without NumPy
 import bounds as floors
 import references as frozen_refs
 import report_run
+import runs
 import stages
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -1316,6 +1317,13 @@ def main():
                                 reference_mode=args.references,
                                 variant_extra=cfg.get("variant"))
         path = write_report(manifest, args.out, latest=not args.no_latest)
+        if not args.no_latest:
+            try:
+                run_id = runs.record(name, path, f"{name} · {args.lane} · bend "
+                                     f"{manifest['bend']['version']}")
+                print(f"run: {run_id} in {os.path.relpath(runs.DB, ROOT)}")
+            except Exception as exc:
+                print(f"run: store unavailable: {exc}")
         if args.freeze_references:
             target = frozen_refs.path(name)
             if os.path.isfile(target) and not args.refresh_references:

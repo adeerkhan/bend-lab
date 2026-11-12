@@ -19,7 +19,10 @@ earlier one. Extra numeric fields now survive `trace.py` (it used to keep only
 ignored by git; the legacy `results/glm53-hybrid128/trace.jsonl` imported as
 run 1 (1,398 steps, `3733.97 s`, last loss `0.39527008`). A live
 `make trace TASK=glm53-hybrid128 STEPS=2` created run 2 in `49.8 s` of build
-and `2.98 s` of run, and `/api/state?run=2` returned its two steps.
+and `2.98 s` of run, and `/api/state?run=2` returned its two steps. A
+`make experiment TASK=cancer-knn` created run 3 with the report card but no
+steps (`0.381 s` task, `59.977 s` build, accuracy `0.978102`), which the page
+labels `record only`; `/api/state?run=3` returned the manifest.
 
 ISSUE-072 is fixed in the two flow examples: a `--steps 0` resume prints
 `final_loss: unavailable (steps 0; the checkpoint carries no loss)`. The
@@ -33,6 +36,11 @@ ISSUE-058 is fixed: the ViT example has `--steps`, `--start`, `--save`,
 `final_loss: 0.96344185`, exactly the fresh 3-step run's value, so parameters,
 moments and both bias corrections restore. `scripts/vit.sh m1` now passes
 `--steps` at run time instead of rewriting the source.
+
+Next: align the version lane (`make versions`, then `make check`), run the
+short tests of the five tracks, then put Mat `q·S^T` into Mamba-3's
+`scan_head`. The science item is the UNet held-out metric (ISSUE-066), before
+any further UNet claim.
 
 ## 2026-11-12 — the browser dashboard and the one-hour guard
 

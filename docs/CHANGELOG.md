@@ -11,7 +11,9 @@ What changed for the people who run the lab. Internal refactors are not listed.
   `results/<task>/runs/`. `reference/trace.py` writes it live and the
   dashboard selects any run by id, so a later run no longer replaces an
   earlier one in the page. The database and the per-run traces are ignored by
-  git; the latest single-file trace can be imported.
+  git; the latest single-file trace can be imported. A finished
+  `reference/experiment.py` report card is stored as a run with its record and
+  no steps, and the page marks it `record only`.
 - `trace.py` now keeps every numeric field in a line, not only `step`,
   `tokens`, `loss` and `ms`, so `lr`, `grad_norm`, `state_norm` and
   `gate_mean` reach the extra-signal charts.
