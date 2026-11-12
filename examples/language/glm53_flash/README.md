@@ -264,7 +264,8 @@ step (an extrapolation, not a run), not 67.4 hours.
 summing to **1243 ms against the 1135 ms step (+9.5%)** and the difference printed as
 `unaccounted in step`. The split is a twin program, not the run, and the record says so. The next
 step is the vectorized attention, not the corpus run: a hybrid forward is **1.22 s** at 128
-positions and **6.48 s** at 192, so a 64-episode split is **5.6 h**, and the frozen prompts do
+positions and **6.48 s** at 192, so a 64-episode split is **5.6 h** by that estimate; the 2026-11-12
+four-episode subset measured **29.2 min**, extrapolating to **7.8 h**, and the frozen prompts do
 not fit 128. A 1,398-step run reaches loss **0.38** in 178,944 tokens and is stopped there
 (`results/glm53-hybrid128/training-partial.json`); the run and its 192 evaluation wait for the
 fast core. `make trace TASK=glm53-hybrid128 STEPS=20` writes the live

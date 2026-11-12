@@ -38,10 +38,10 @@ across tokens. The temporary list baseline and compare probe are removed.
 ## 2026-11-12 — one lane: BendTorch 2.1.0.0, array 0.1.20.0, GPU 0.1.5.2
 
 The version skew is gone. `reference/versions.py` now prints one version per
-package and the full gate is `140/140` in `54m39 s` on the migrated lane:
+package and the full gate is `141/141` in `38m41 s` on the migrated lane:
 Bend `2.0.38` (the installed binary and Makefile pin), BendTorch `2.1.0.0`,
 BendTorch GPU `2.1.0.0`, tensor-array `0.1.20.0`, tensor-gpu `0.1.5.2`.
-`make check-fast` is `31/31`.
+`make check-fast` is `31/31`; the final full gate is `141/141` in `38m41 s` (`check-final`, 2026-11-12).
 
 The first attempt used the latest tensor-array `0.1.21.0` and tensor-gpu
 `0.1.5.3`; it does not compile. BendTorch 2.1.0.0 imports array `0.1.20.0`
