@@ -33,6 +33,8 @@ What changed for the people who run the lab. Internal refactors are not listed.
   `lost`; `runs.backfill()` fills params/config on older rows.
 - The full gate (`make check`) passed `140/140` in `49m35 s` through a
   dashboard session, with `2,811` system samples and a `5.6 GB` peak RSS.
+  `reference/gpu_probe.py` is the CUDA probe: a 15 s loop shows `52-100%` GPU
+  utilization and a `326 MB` per-process GPU memory line.
 
 ### The run store, and ISSUE-058 / ISSUE-072
 

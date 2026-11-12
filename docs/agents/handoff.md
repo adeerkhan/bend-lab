@@ -52,12 +52,15 @@ More runs through it, all under the one-hour rule:
 | 34 | `make experiment TASK=iris-crossval` | PASS, `1m05` task |
 | 35 | `make session TASK=check-fast CMD="make check-fast"` | `31/31`, `23.6 s` |
 | 36 | `make session TASK=check CMD="make check"` | `140/140`, `49m35 s`, 2,811 samples, peak RSS `5.6 GB` |
+| 37 | `make session TASK=gpu-probe CMD="reference/.venv-rf/bin/python reference/gpu_probe.py"` | `50.1 s`, 48 samples, GPU `52-100%`, process GPU memory up to `326 MB` |
 
-The store then held 32 runs. The page API returned `200`, `/api/overview`
+The store then held 33 runs. The page API returned `200`, `/api/overview`
 reported live CPU/RAM/GPU, and the JavaScript parses under `node --check`. Run
 36 is the long-run proof: the sampler recorded 2,811 rows over `49.58 min`,
 with CPU spikes to `3,159%` (parallel builds across cores), RAM to `6,088 MB`
-and GPU utilization between `0` and `100%`.
+and GPU utilization between `0` and `100%`. Run 37 is the GPU proof: a 15 s
+PyTorch CUDA loop shows `52-100%` GPU utilization and a per-process `326 MB`
+line in the GPU memory chart.
 
 ## 2026-11-12 — the run store, and the first two local issue fixes
 

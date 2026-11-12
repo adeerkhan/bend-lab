@@ -26,6 +26,7 @@ Short tests run on 2026-11-12, all on the current `2.0.0.0` lane:
 | Mamba-3 | `make session TASK=mamba3 CMD="make mamba3"` | PASS, `22.2 s` |
 | classical | `make experiment TASK=iris-crossval` | PASS, `1m05` |
 | gate | `make session TASK=check-fast CMD="make check-fast"` | `31/31`, `23.6 s` |
+| GPU | `make session TASK=gpu-probe CMD="reference/.venv-rf/bin/python reference/gpu_probe.py"` | `50.1 s`, GPU `52-100%`, process `326 MB` |
 
 ## The lane is not one lane
 
