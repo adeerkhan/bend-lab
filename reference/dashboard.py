@@ -644,7 +644,8 @@ function renderLoss(){
  if(showEval&&ev.length)series.push({name:"eval",color:"#4f8f86",points:ev});
  chart($("losschart"),series,{xfmt:v=>"step "+v,log:logLoss,zero:true});
  $("showeval").disabled=!ev.length;
- $("showeval").title=ev.length?"":"no eval loss in this run";
+ $("showeval").title=!ev.length?"no eval loss in this run"
+  :(ev.length===1?"one final held-out eval point":"eval loss");
  const lastEval=ev.length?ev[ev.length-1][1]:null;
  $("lossrange").textContent=detail.summary.last==null?"":
   `train ${fmt(detail.summary.last)}`+(lastEval==null?"":` · eval ${fmt(lastEval)}`);
