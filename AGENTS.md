@@ -111,8 +111,8 @@ publishes to BendHub and tags the released commit `<name>-v<version>`.
 ## Every run goes in the dashboard
 
 The run store (`results/runs.sqlite3`, `reference/runs.py`) is the log, and
-`make dashboard PORT=8787` is the view. Do not run a training or test command
-outside it:
+`./scripts/dashboard.sh start` (or `make dashboard PORT=8787`) is the view at
+`http://127.0.0.1:8787/`. Do not run a training or test command outside it:
 
 - **training that writes steps**: `make trace TASK=<task> [STEPS=<n>]`;
 - **any command or test**: `make session TASK=<name> CMD="make check-fast"`;

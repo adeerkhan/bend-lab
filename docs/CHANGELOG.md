@@ -15,6 +15,8 @@ What changed for the people who run the lab. Internal refactors are not listed.
 - The sampler walks each run's process tree, so several sessions can be live
   at once and a Python test that spawns Bend is sampled as one run. GPU
   numbers come from `nvidia-smi`; without it the page prints `unavailable`.
+- `./scripts/dashboard.sh start` leaves the server running under
+  setsid+nohup (`status` and `stop` too); `make dashboard` stays foreground.
 - `make session TASK=<name> CMD="..."` wraps any test command in the store
   (`reference/session.py`), with its log under `results/<task>/runs/`.
   `experiment.py` registers a run before the build and finishes it after;

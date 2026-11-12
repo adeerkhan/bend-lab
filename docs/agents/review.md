@@ -79,8 +79,10 @@ and the workspace dependencies, so it is its own change with a full gate.
 
 ## The browser page, and the one-hour budget
 
-`make dashboard TASK=<task> PORT=8787` serves `reference/dashboard.py`: one
-page for **every** run in the store, not one task at a time. The overview
+`make dashboard PORT=8787` serves `reference/dashboard.py`, and
+`./scripts/dashboard.sh start` leaves it running under setsid+nohup (with
+`status` and `stop`): one page for **every** run in the store, not one task at
+a time. The overview
 shows the number of live sessions, host CPU, RAM, GPU utilization and GPU
 memory, and a table of runs with task, kind, status, PID, steps, loss,
 parameter count, per-run CPU, RAM, GPU memory and loop time. Selecting a run

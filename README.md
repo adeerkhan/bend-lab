@@ -142,7 +142,8 @@ make check                                               # the gate: proofs, ker
 make trace TASK=glm53-hybrid128 STEPS=20                 # one JSON line per step, written as it runs
 make dash TASK=glm53-hybrid128                           # terminal: loss, step time, tokens/s, the stage split
 make dash TASK=glm53-hybrid128 WATCH=1                   # follow a run while it writes
-make dashboard TASK=glm53-hybrid128 PORT=8787            # every run, CPU/RAM/GPU, live sessions
+make dashboard PORT=8787                                 # every run, CPU/RAM/GPU, live sessions
+./scripts/dashboard.sh start                             # the same page in the background
 make session TASK=check-fast CMD="make check-fast"        # any test as a dashboard session
 ```
 

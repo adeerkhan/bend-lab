@@ -55,3 +55,7 @@ results/runs.sqlite3
 results/runs.sqlite3-wal
 results/runs.sqlite3-shm
 results/*/runs/
+
+# the background dashboard pid and log
+results/dashboard.pid
+results/dashboard.log

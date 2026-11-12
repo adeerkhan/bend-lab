@@ -11,7 +11,9 @@ leaves the next one blind.
 
 `reference/dashboard.py` now serves one page for every run in
 `results/runs.sqlite3`, on `PORT=8787`. It is running locally at
-`http://127.0.0.1:8787/` (log `/tmp/opencode/dashboard-8787.log`). The
+`http://127.0.0.1:8787/` under `scripts/dashboard.sh start` (pid file
+`results/dashboard.pid`, log `results/dashboard.log`; `stop` and `status` are
+the other actions). The
 overview has live session count, host CPU, RAM, GPU utilization and GPU
 memory, a table of runs with task, kind, status, PID, steps, loss, parameter
 count, per-run CPU/RAM/GPU and loop time, and a detail panel for the selected
