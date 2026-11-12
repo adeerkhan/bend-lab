@@ -425,6 +425,9 @@ border-radius:8px}
 #config td:first-child{color:var(--muted);width:84px}
 .chk{float:right;text-transform:none;letter-spacing:0;font-weight:400;
 color:var(--muted);font-size:11px}
+.filter{float:right;background:var(--bg);border:1px solid var(--line);
+color:var(--fg);border-radius:6px;padding:2px 8px;font:11px ui-monospace;
+text-transform:none;letter-spacing:0;width:190px}
 .ok{color:var(--accent)}.bad{color:var(--bad)}.warn{color:var(--warn)}
 .dot{display:inline-block;width:7px;height:7px;border-radius:50%;
 background:var(--muted);margin-right:6px;vertical-align:middle}
@@ -456,7 +459,7 @@ a{color:var(--accent2)}
 <div class="card s2"><h2>gpu</h2><div id="gpu" class="big">—</div><div id="gpusub" class="muted"></div></div>
 <div class="card s2"><h2>gpu mem</h2><div id="gpumem" class="big">—</div><div id="gpumemsub" class="muted"></div></div>
 
-<div class="card s12"><h2>sessions</h2><div id="runstable" class="muted">loading…</div>
+<div class="card s12"><h2>sessions <input id="filter" class="filter" placeholder="filter task / status"></h2><div id="runstable" class="muted">loading…</div>
 <div class="hint">click a row for its charts, configuration, steps and record</div></div>
 
 <div class="card s12" id="detail" style="display:none"><h2 id="dtitle">run</h2>
@@ -480,7 +483,7 @@ a{color:var(--accent2)}
 <div class="card s12" id="craw" style="display:none"><h2>raw trace</h2><pre id="raw" style="max-height:160px;overflow:auto;color:var(--muted)"></pre></div>
 </main>
 <script>
-let overview=null, selected=null, detail=null, runsList=[], timer=null, logLoss=false;
+let overview=null, selected=null, detail=null, runsList=[], timer=null, logLoss=false, filter="";
 const $=id=>document.getElementById(id);
 const qs=new URLSearchParams(location.search);
 const wanted=qs.get("run");
@@ -570,8 +573,9 @@ function renderOverview(){
  $("gpumem").textContent=gpu?(gpu.used_mb/1024).toFixed(1)+" GB":"—";
  $("gpumemsub").textContent=gpu?`of ${(gpu.total_mb/1024).toFixed(1)} GB`:"unavailable";
  $("budget").innerHTML=`· budget ${overview.budget} s`;
+ const shown=runs.filter(r=>!filter||(r.task+" "+r.kind+" "+r.status).toLowerCase().includes(filter));
  let rows='<table><tr><th class="num">run</th><th>task</th><th>kind</th><th>status</th><th class="num">pid</th><th class="num">steps</th><th class="num">loss</th><th class="num">params</th><th class="num">cpu</th><th class="num">ram</th><th class="num">gpu</th><th class="num">loop s</th></tr>';
- for(const r of runs){
+ for(const r of shown){
   const p=r.proc||{};
   rows+=`<tr class="run ${r.status} ${r.id===selected?"sel":""}" data-id="${r.id}"><td class="num">#${r.id}</td><td>${esc(r.task)}</td><td>${esc(r.kind||"run")}</td><td>${statusCell(r.status)}</td><td class="num">${r.pid??"—"}</td><td class="num">${r.steps}</td><td class="num">${fmt(r.last_loss)}</td><td class="num">${r.params==null?"—":intfmt(r.params)}</td><td class="num">${p.cpu==null?"—":p.cpu.toFixed(0)+"%"}</td><td class="num">${p.rss_kb?((p.rss_kb/1024).toFixed(0)+" MB"):"—"}</td><td class="num">${p.gpu_proc_mb?(p.gpu_proc_mb.toFixed(0)+" MB"):"—"}</td><td class="num">${Number(r.loop_s||0).toFixed(1)}</td></tr>`;
  }
@@ -660,6 +664,7 @@ async function poll(){
  timer=setTimeout(poll,1000);
 }
 $("logloss").addEventListener("change",e=>{logLoss=e.target.checked;if(detail)renderDetail()});
+$("filter").addEventListener("input",e=>{filter=e.target.value.toLowerCase();renderOverview()});
 $("runstable").addEventListener("click",e=>{
  const tr=e.target.closest("tr[data-id]"); if(!tr)return;
  selected=Number(tr.dataset.id); detail=null;
