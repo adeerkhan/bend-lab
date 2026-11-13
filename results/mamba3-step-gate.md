@@ -46,18 +46,51 @@ order as the reference's `row_set`, so the state is the same F32 computation,
 not an approximation. The angle has no future dependency and threads
 directly.
 
-Parity status beyond 16 tokens — **unavailable on this lane**:
+Parity at 64 and 256 tokens — **both exact** (checked this session, after
+the 16-token gate cleared):
 
 ```text
-$ bend .scratch/probe_mamba3_gen64.bend        (full-prefix, 60 steps)
-bend: memory fault (machine stack overflow?)   (~2 s, deterministic, ulimit -s unlimited no help)
+$ sed -e 's/12n), 16n)/60n), 64n)/' examples/language/mamba3/probe_mamba3_gen.bend > .scratch/probe_mamba3_gen64.bend
+$ sed -e 's/}, 16n), 16n)/}, 64n), 64n)/' -e 's/    case 15n:/    case 63n:/' \
+    examples/language/mamba3/step_mamba3.bend > .scratch/step_mamba3_64.bend
+$ sed -i 's#import ./mamba3_siso.bend as M#import ../examples/language/mamba3/mamba3_siso.bend as M#' \
+    .scratch/probe_mamba3_gen64.bend .scratch/step_mamba3_64.bend
+$ BEND_MEM=12G scripts/bend-guard.sh $HOME/.bend/bin/bend -o .scratch/probe64.bin .scratch/probe_mamba3_gen64.bend
+$ time ./.scratch/probe64.bin
+gen_tokens: 0 1 2 3 1 ... 0 1 4 7 0 1   # 64 tokens, run 17.7 s
+$ time $HOME/.bend/bin/bend .scratch/step_mamba3_64.bend
+step_tokens: 0 1 2 3 1 ... 0 1 4 7 0 1   # 64 tokens, run 0.45 s; equal to full-prefix, exactly
 ```
 
-The full-prefix reference dies at seq len ≥ 64 on this lane (the same class
-of limit as ISSUE-007), so 64- and 256-token parity cannot be checked here.
-The step itself runs in 0.08 s at 16 tokens; the 64-token step binary ran in
-0.45 s but has nothing honest to be compared against on this lane. No number
-is quoted for 64/256. The golden, the probe and the step all agree at 16.
+256 tokens:
+
+```text
+$ sed -e 's/12n), 16n)/252n), 256n)/' examples/language/mamba3/probe_mamba3_gen.bend > .scratch/probe_mamba3_gen256.bend
+$ sed -e 's/}, 16n), 16n)/}, 256n), 256n)/' -e 's/    case 15n:/    case 255n:/' \
+    examples/language/mamba3/step_mamba3.bend > .scratch/step_mamba3_256.bend
+$ sed -i 's#import ./mamba3_siso.bend as M#import ../examples/language/mamba3/mamba3_siso.bend as M#' \
+    .scratch/probe_mamba3_gen256.bend .scratch/step_mamba3_256.bend
+$ BEND_MEM=12G scripts/bend-guard.sh $HOME/.bend/bin/bend -o .scratch/probe256.bin .scratch/probe_mamba3_gen256.bend
+$ time ./.scratch/probe256.bin
+gen_tokens: 0 1 2 3 1 ... 6 6 6        # 256 tokens, run 29 m 17 s
+$ python3  # compare step256_out.txt vs gen256_out.txt
+step len 256 gen len 256 equal 256: True
+```
+
+Note on the failure mode: `bend file.bend` (the interpreted path) dies with
+`bend: memory fault (machine stack overflow?)` at seq len >= 64; the
+compiled path (`bend -o` then running the binary) works at 64 and 256.
+`ulimit -s unlimited` does not help the interpreter. This is the same class
+of limit as ISSUE-007 (the Bend VM stack), not a step-decoder problem.
+
+The step's wall time is 0.08 s at 16 tokens, 0.45 s at 64, 1.2 s at 256 —
+linear in the token count, as an online decoder should be; the full-prefix
+reference is quadratic (1 s / 17.7 s / 29 m 17 s).
+
+`make check` was re-run this session after the step landed: **143/143
+checks passed** (37 m 48 s, user 92 m 54 s), and the full gate includes
+`reference/test_mamba3_step.py: the numbers match (2s)`. Dashboard: the
+16-token gate is run 114 (`make session TASK=mamba3-step CMD="make mamba3-step"`).
 
 ## ISSUE-126 — `T.Train` cannot report the per-step loss
 
@@ -70,8 +103,13 @@ training loop, by design of `T.Train`:
   inside the loop; only `loss: F32` survives on the `Train` record);
 - weight heads (`w_in`, `E`, `Wh`, `w_out`) ≤ `1.3e-05` relative.
 
-`reference/mamba3_train_curve` does not exist: there is no curve to record —
-`Train.loss` is one scalar updated in the loop, and no accessor is exposed.
+The recorded artifact now exists: `make mamba3-train-curve`
+(`reference/test_mamba3_train_curve.py`) records the custom curve and the
+final-step comparison into `results/mamba3-train-curve.md` — custom ten losses
+`2.1568611 … 2.1401443`, layer final `2.1404066`, rel `1.23e-04` (gate 1e-3),
+tokens equal, heads ≤ `8.9e-07`. No curve from the layer path exists: there is
+no curve to record — `Train.loss` is one scalar updated in the loop, and no
+accessor is exposed.
 Per the goal, the upstream question was asked, not patched:
 
 - `aaaxn/bendtorch#86` (linked): *Question: is keeping only the last-step

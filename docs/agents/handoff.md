@@ -7,7 +7,7 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
-## 2026-11-13 — the decode step exists and PASSes at 16 tokens; 64/256 unverified
+## 2026-11-13 — the decode step exists and is verified at 16, 64 and 256 tokens
 
 `examples/language/mamba3/step_mamba3.bend` is a real online decode step for
 the Mamba-3 SISO LM (two weight-tied layers): one row processed per token,
@@ -19,38 +19,43 @@ the last row of a pass (`shift` from the next row's `DT` is `Nil`); an online
 decoder therefore also folds every row with `scale = 0` and, when the next
 row's `DT`/`trap` arrive, applies an additive rank-one correction
 `S[v, q] += (scale * x_v) * k_q` in the same float op order as the reference's
-`row_set`. `make mamba3-step` prints `MAMBA3 STEP PASS` (run 0.08 s, build
-2.2 s): the sixteen greedy tokens equal the golden
-`[0, 1, 2, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]` exactly.
+`row_set`.
 
-Not verified on this lane: 64- and 256-token parity — the full-prefix
-reference dies with a Bend memory fault at seq len >= 64 (`bend: memory
-fault`), the same class as ISSUE-007. The step at 64 tokens itself runs in
-0.45 s. Do not quote 64/256 numbers from this session.
+- 16 tokens: `make mamba3-step` PASS — tokens equal the golden
+  `[0, 1, 2, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]` exactly (build 2.2 s,
+  run 0.08 s; dashboard run 114; the test is inside `make check`).
+- 64 tokens: exact match vs full-prefix (step 0.45 s; reference binary 17.7 s).
+- 256 tokens: exact match vs full-prefix (step 1.2 s; reference binary
+  29 m 17 s). The full-prefix reference dies via `bend file.bend` (the
+  interpreter) at seq len >= 64 with `bend: memory fault`; the compiled
+  binary works at both lengths. `ulimit -s unlimited` does not help.
 
-ISSUE-126: `T.Train` carries one `loss: F32` (final step only); the layer gate
-compares only tokens, final-step loss and weight heads, and says so. The
-upstream question is filed as `aaaxn/bendtorch#86`. No per-step curve gate
-exists because none can.
+`make check` was re-run after the step landed: **143/143 checks passed**
+(37 m 48 s, user 92 m 54 s), and the gate includes
+`reference/test_mamba3_step.py: the numbers match (2s)`.
+
+ISSUE-126: `T.Train` carries one `loss: F32` (final step only). The layer
+gate compares tokens, final-step loss and weight heads only and says so.
+The record is `results/mamba3-train-curve.md` (written by
+`make mamba3-train-curve`): custom ten losses `2.1568611 → 2.1401443`,
+layer final `2.1404066`, rel `1.23e-04` (gate 1e-3), tokens equal, heads
+≤ `8.9e-07`; no per-step layer losses are readable. The upstream question is
+filed as `aaaxn/bendtorch#86`.
 
 Also this session: `docs/bend-2.0.38-pitfalls.md` (the ISSUE-120..128 "given a
 goal like X, here is what rusts" reference) and `docs/agents/oss-needs.md`
 (what Base does and does not ship for ML work; no scan anywhere; the
-softmax/CE/argmax live in tensor-array and bendtorch, not Base). Two Bend
+softmax/CE/argmax live in tensor-array and bendtorch, not Base). Three Bend
 language asks were filed as diagnostics-only issues, no code pushed:
 `bendlang/bend#2146` (records), `bendlang/bend#2147` (forward references /
 mutual recursion), `bendlang/bend#2150` (encoding for evolving state across
-an online loop) —
-diagnostics and repros, no code pushed. `docs/agents/handoff.md` previously
-recorded the step as "not implemented"; that line is now closed. ISSUE-102
-was not re-run (the 25.7M checkpoint is not in this tree); our recorded
-numbers stand and the third-party published README was not edited.
+an online loop). ISSUE-102 was not re-run (the 25.7M checkpoint is not in
+this tree); our recorded numbers stand and the third-party published README
+was not edited. `make issues` re-rendered (134 entries, 16 open).
 
 Remaining open rows after this: mamba3-varlen, -gqa, -outnorm, -deep (all
-blocked behind nothing now — they may reuse `step_mamba3.bend`), MIMO (design
-question for the maintainer), tiny-lm. `make check-fast` and `make mamba3`
-were re-run this session and pass; the full gate (`make check`) was not
-re-run. See `results/mamba3-step-gate.md` for commands.
+unblocked — they may reuse `step_mamba3.bend`), MIMO (design question for
+the maintainer), tiny-lm. See `results/mamba3-step-gate.md` for commands.
 
 ## 2026-11-13 — the SISO block is a BendTorch layer: MAMBA3 LAYER PASS
 

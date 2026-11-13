@@ -25,6 +25,11 @@ What changed for the people who run the lab. Internal refactors are not listed.
   as PASS) is superseded by this; the placeholder was deleted and the row
   had been recorded as not run. See `results/mamba3-step-gate.md` and the
   ISSUE-127 entry in the local ledger.
+- `make mamba3-train-curve` (ISSUE-126 record): `reference/test_mamba3_train_curve.py`
+  writes `results/mamba3-train-curve.md` — the custom trainer's ten losses
+  (`2.1568611 → 2.1401443`), the layer's final loss (`2.1404066`, rel `1.23e-04`,
+  gate `1e-3`), tokens equal, heads ≤ `8.9e-07`; the per-step layer losses remain
+  unreadable (`bendtorch#86`).
 - `docs/bend-2.0.38-pitfalls.md` records the ISSUE-120..128 frictions hit
   on this port; `docs/agents/oss-needs.md` records what Base does and does
   not ship (no scan/cumsum anywhere; softmax/CE/argmax live in
