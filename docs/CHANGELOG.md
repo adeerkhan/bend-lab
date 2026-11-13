@@ -4,6 +4,26 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### Mamba-3 decode placeholder: full-prefix twin parity passes
+
+- `make mamba3-step` runs `reference/test_mamba3_step.py` against
+  `examples/language/mamba3/step_mamba3.bend` (identical to the probe's
+  full-prefix generator) and compares the generated tokens to the twin's
+  16-token golden: PASS.
+- The proper per-token step decoder (angle/SSM/K/V state carried across
+  calls) is not yet implemented in Bend — it remains the next step.
+- `scripts/batch.sh` now runs this as the `mamba3-step` row.
+
+### Mamba-3 decode placeholder: full-prefix twin parity passes
+
+- `make mamba3-step` runs `reference/test_mamba3_step.py` against
+  `examples/language/mamba3/step_mamba3.bend` (identical to the probe's
+  full-prefix generator) and compares the generated tokens to the twin's
+  16-token golden: PASS.
+- The proper per-token step decoder (angle/SSM/K/V state carried across
+  calls) is not yet implemented in Bend — it remains the next step.
+- `scripts/batch.sh` now runs this as the `mamba3-step` row.
+
 ### Mamba-3's SISO block is wired into BendTorch `T.Layer`/`T.Train`
 
 - `make mamba3-layer` builds `examples/language/mamba3/mamba3_layer.bend` and

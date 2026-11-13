@@ -8,7 +8,7 @@ BEND := $(or $(BEND_BIN),$(HOME)/.bend/bin/bend)
 BEND_VERSION := 2.0.38
 BEND_REF := ../bend-ref
 
-.PHONY: setup check laws sync-bend clean lint env env-check release experiment experiments results report trace dash dashboard session unet-metric mamba3-bench mamba3-layer glm-step glm-block-step glm-lin-block glm-decode glm-h192-step batch peaks bounds bench plumbing flow flow64 doctor figures select plots sweep sweep-agent
+.PHONY: setup check laws sync-bend clean lint env env-check release experiment experiments results report trace dash dashboard session unet-metric mamba3-bench mamba3-layer mamba3-step glm-step glm-block-step glm-lin-block glm-decode glm-h192-step batch peaks bounds bench plumbing flow flow64 doctor figures select plots sweep sweep-agent
 
 setup:            ## Bend, Lean and the Python venv
 	scripts/setup.sh
@@ -32,6 +32,9 @@ mamba3-bench:     ## twenty forward passes at seqlen 8: the scan benchmark
 
 mamba3-layer:     ## the SISO block as a BendTorch T.Layer, trained with T.Train
 	$(PY) reference/test_mamba3_layer.py
+
+mamba3-step:      ## step decode placeholder: full-prefix generation vs twin golden (proper step pending)
+	$(PY) reference/test_mamba3_step.py
 
 glm-step:         ## the 192-position attention step: state and cache against the full prefix
 	@mkdir -p .scratch
