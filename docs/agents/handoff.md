@@ -7,6 +7,16 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-13 — the fourth block's attention step passes on the real weights
+
+`probe_glm_block.bend` loads the trained fourth block's `ln1`/`qkv`/`out`
+(`results/glm53-hybrid192-ep4/model-400/b3`) and compares the full 192-row
+attention residual with the one-row path and its K/V cache: `max|d| 0`,
+`GLM BLOCK STEP PASS` (`make glm-block-step`, `27.7 s`). The one-row
+RMSNorm, qkv projection, RoPE, sparse softmax and output projection are
+bit-identical to the full prefix. The MLP step and the four-block decode are
+next; this gate does not include the MLP or the other three blocks.
+
 ## 2026-11-13 — the GLM 192 step cache protocol passes
 
 `examples/language/glm53_flash/probe_glm_step.bend` feeds the 192-position

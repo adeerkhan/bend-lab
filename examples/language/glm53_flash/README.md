@@ -282,6 +282,13 @@ full-prefix rows, `make glm-step` prints `lin max|d| 0`, `sp max|d| 0`,
 `GLM STEP PASS`. It uses synthetic q/k/v, no weights; this is the state/cache
 protocol for the decode path, not the full model yet.
 
+`probe_glm_block.bend` is the real-weight one-block gate: the fourth block's
+`ln1`/`qkv`/`out` from `results/glm53-hybrid192-ep4/model-400/b3`, the full
+192-row attention residual against the same norm, projection, RoPE and `sp_y4`
+computed one row at a time with the K/V cache. `make glm-block-step` prints
+`rows 192 attention max|d| 0`, `GLM BLOCK STEP PASS` (`27.7 s`). The MLP step
+and the four-block decode are next.
+
 `reference/glm53_dense_eval.py --episodes N` and the `--episodes N` flag on
 `gen_a.bend`/`gen_h192.bend` run the **first N of 64 episodes** and write
 `eval-<split>-epN.json`; the frozen golden is not touched. A four-episode dev

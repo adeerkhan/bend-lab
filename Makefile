@@ -8,7 +8,7 @@ BEND := $(or $(BEND_BIN),$(HOME)/.bend/bin/bend)
 BEND_VERSION := 2.0.38
 BEND_REF := ../bend-ref
 
-.PHONY: setup check laws sync-bend clean lint env env-check release experiment experiments results report trace dash dashboard session unet-metric mamba3-bench glm-step peaks bounds bench plumbing flow flow64 doctor figures select plots sweep sweep-agent
+.PHONY: setup check laws sync-bend clean lint env env-check release experiment experiments results report trace dash dashboard session unet-metric mamba3-bench glm-step glm-block-step peaks bounds bench plumbing flow flow64 doctor figures select plots sweep sweep-agent
 
 setup:            ## Bend, Lean and the Python venv
 	scripts/setup.sh
@@ -35,6 +35,12 @@ glm-step:         ## the 192-position attention step: state and cache against th
 	$(BEND) -o .scratch/glm_step.bin examples/language/glm53_flash/probe_glm_step.bend
 	@.scratch/glm_step.bin | tee .scratch/glm_step.log
 	@grep -q "GLM STEP PASS" .scratch/glm_step.log
+
+glm-block-step:   ## the fourth block's attention step on the trained weights
+	@mkdir -p .scratch
+	$(BEND) -o .scratch/glm_block.bin examples/language/glm53_flash/probe_glm_block.bend
+	@.scratch/glm_block.bin | tee .scratch/glm_block.log
+	@grep -q "GLM BLOCK STEP PASS" .scratch/glm_block.log
 
 unet-metric:      ## the UNet held-out gate: legibility and spectrum, with can-fail arms
 	$(PY) reference/test_unet_flowers_metric.py

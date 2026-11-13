@@ -9,7 +9,11 @@ What changed for the people who run the lab. Internal refactors are not listed.
 - `make glm-step` runs `probe_glm_step.bend`: the linear attention's prefix
   state and the sparse attention's post-RoPE K/V cache reproduce the
   full-prefix 192-position rows (`lin max|d| 0`, `sp max|d| 0`). Synthetic
-  q/k/v, no weights; the one-block step with the real weights is next.
+  q/k/v, no weights.
+- `make glm-block-step` runs the fourth block's attention on the trained
+  `ln1`/`qkv`/`out`: the full 192-row residual against the one-row cache path
+  is `max|d| 0` (`GLM BLOCK STEP PASS`, `27.7 s`). The MLP step and the
+  four-block decode are next.
 
 ### The GLM evaluation can run a named subset
 
