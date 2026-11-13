@@ -1,17 +1,18 @@
-# The fourth hybrid block's sparse attention, full prefix versus one row at a
-# time, on the trained weights.
+# The fourth hybrid block, full prefix versus one row at a time, on the
+# trained weights.
 #
-# The full path is the reference: RMSNorm, the qkv projection, the split, RoPE
-# per head, `sp_y4`, and the output projection, all on 192 rows. The step path
-# does the same for one row, carrying the post-RoPE K/V cache, and must produce
-# every row's residual output. This is the one-block attention gate; the MLP
-# step and the four-block decode follow.
+# The full path is the reference block (`SpBlock`). The step path does the
+# same for one row: RMSNorm, the qkv projection, the split, RoPE per head,
+# the sparse softmax over the post-RoPE K/V cache, the output projection, and
+# the SwiGLU MLP. This is the one-block gate; the four-block decode follows.
 import Base
 import bendtorch@2.1.0.0/main.bend as T
 import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import ./attn_mh192.bend as A
 import ./attn_c.bend as AC
 import ./lin_bwd.bend as L
+import ./model_h192.bend as M
+import ./weights_h.bend as W
 
 def EPS() -> F32:
   0.000001
@@ -61,71 +62,14 @@ def sp_y32(+t: Nat, +q: List<&2, F32>, +k: List<&2, F32>,
 
 # ---- the full-prefix attention residual ----
 
-def rms_fin192(r: T.Fwd<TA.Mat<1n, 32n>, TA.Mat<192n, 32n>, TA.Mat<192n, 32n>>) -> List<&2, F32>:
+def block_fin(r: T.Fwd<M.BlockP(), TA.Mat<192n, 32n>, M.SpBlockS()>) -> List<&2, F32>:
   match r:
     case T.Fwd{pp, y, s}:
       A.mlD(TA.Mat.to_list(192n, 32n, y))
 
-def rms192(ln: TA.Mat<1n, 32n>, +x: List<&2, F32>) -> List<&2, F32>:
-  rms_fin192(T.rms_fwd(192n, 32n, EPS(), ln, TA.Mat.from_list(192n, 32n, x)))
-
-def mm_fin96(r: TA.MMulNT<192n, 32n, 96n>) -> List<&2, F32>:
-  match r:
-    case TA.MMulNT{x, w, y}:
-      A.mlW(TA.Mat.to_list(192n, 96n, y))
-
-def lin192_96(w: TA.Mat<96n, 32n>, +x: List<&2, F32>) -> List<&2, F32>:
-  mm_fin96(TA.Mat.matmul_nt(192n, 32n, 96n, 0n, TA.Mat.from_list(192n, 32n, x), w))
-
-def mm_fin32(r: TA.MMulNT<192n, 32n, 32n>) -> List<&2, F32>:
-  match r:
-    case TA.MMulNT{x, w, y}:
-      A.mlD(TA.Mat.to_list(192n, 32n, y))
-
-def lin192_32(w: TA.Mat<32n, 32n>, +x: List<&2, F32>) -> List<&2, F32>:
-  mm_fin32(TA.Mat.matmul_nt(192n, 32n, 32n, 0n, TA.Mat.from_list(192n, 32n, x), w))
-
-def qkv_fin(y: A.QKV()) -> List<&2, F32> & (List<&2, F32> & List<&2, F32>):
-  match y:
-    case T.Two{qm, T.Two{km, vm}}:
-      Tuple{A.mlD(TA.Mat.to_list(192n, 32n, qm)),
-        Tuple{A.mlD(TA.Mat.to_list(192n, 32n, km)),
-          A.mlD(TA.Mat.to_list(192n, 32n, vm))}}
-
-def split_fin(r: T.Fwd<Unit, A.QKV(), Unit>) -> List<&2, F32> & (List<&2, F32> & List<&2, F32>):
-  match r:
-    case T.Fwd{pp, y, s}:
-      qkv_fin(y)
-
-def split192(c: TA.Mat<192n, 96n>) -> List<&2, F32> & (List<&2, F32> & List<&2, F32>):
-  split_fin(A.split_fwd(c))
-
-def full_b(outw: TA.Mat<32n, 32n>, +x: List<&2, F32>,
-    +q: List<&2, F32>, +k: List<&2, F32>,
-    +v: List<&2, F32>) -> List<&2, F32>:
-  +y = A.sp_y4(q, k, v)
-  +o = lin192_32(outw, y)
-  L.add_lists(x, o)
-
-def full_a(outw: TA.Mat<32n, 32n>, +x: List<&2, F32>,
-    r: List<&2, F32> & (List<&2, F32> & List<&2, F32>)) -> List<&2, F32>:
-  match r:
-    case Tuple{q, Tuple{k, v}}:
-      full_b(outw, x, q, k, v)
-
-def full_attn(ln: TA.Mat<1n, 32n>, qkvw: TA.Mat<96n, 32n>,
-    outw: TA.Mat<32n, 32n>, +x: List<&2, F32>) -> List<&2, F32>:
-  +xn = rms192(ln, x)
-  +qkv = lin192_96(qkvw, xn)
-  full_a(outw, x, split192(TA.Mat.from_list(192n, 96n, qkv)))
-
-# ---- the step path ----
-
-type SpCache is Type:
-  SpCache{q: List<&2, F32>, k: List<&2, F32>, v: List<&2, F32>}
-
-type SR is Type:
-  SR{acc: List<&2, F32>}
+def y_block(p: M.BlockP(), x: TA.Mat<192n, 32n>) -> List<&2, F32>:
+  block_fin(T.Layer.fwd(M.BlockP(), TA.Mat<192n, 32n>, TA.Mat<192n, 32n>,
+    M.SpBlockS(), M.SpBlock(), p, x))
 
 def ml1d(ml: TA.ML<1n, 32n>) -> List<&2, F32>:
   match ml:
@@ -136,6 +80,47 @@ def ml1w(ml: TA.ML<1n, 96n>) -> List<&2, F32>:
   match ml:
     case TA.ML{m, xs}:
       xs
+
+def ml1h(ml: TA.ML<1n, 128n>) -> List<&2, F32>:
+  match ml:
+    case TA.ML{m, xs}:
+      xs
+
+def mm1_fin128(r: TA.MMulNT<1n, 32n, 128n>) -> List<&2, F32> & TA.Mat<128n, 32n>:
+  match r:
+    case TA.MMulNT{x, w, y}:
+      Tuple{ml1h(TA.Mat.to_list(1n, 128n, y)), w}
+
+def lin1_128(w: TA.Mat<128n, 32n>, +x: List<&2, F32>) -> List<&2, F32> & TA.Mat<128n, 32n>:
+  mm1_fin128(TA.Mat.matmul_nt(1n, 32n, 128n, 0n, TA.Mat.from_list(1n, 32n, x), w))
+
+def mm1_fin_down(r: TA.MMulNT<1n, 128n, 32n>) -> List<&2, F32> & TA.Mat<32n, 128n>:
+  match r:
+    case TA.MMulNT{x, w, y}:
+      Tuple{ml1d(TA.Mat.to_list(1n, 32n, y)), w}
+
+def lin1_down(w: TA.Mat<32n, 128n>, +x: List<&2, F32>) -> List<&2, F32> & TA.Mat<32n, 128n>:
+  mm1_fin_down(TA.Mat.matmul_nt(1n, 128n, 32n, 0n, TA.Mat.from_list(1n, 128n, x), w))
+
+def silu_mul(xs: List<&2, F32>, ys: List<&2, F32>,
+    acc: List<&2, F32>) -> List<&2, F32>:
+  match xs ys:
+    case Nil{} _:
+      List.reverse(&2, F32, acc)
+    case _ Nil{}:
+      List.reverse(&2, F32, acc)
+    case Con{+g, t} Con{u, v}:
+      +den = ((1.0 + F32.exp((0.0 - g : F32))) : F32)
+      +sg = ((g / den : F32))
+      silu_mul(t, v, Con{(sg * u : F32), acc})
+
+# ---- the step path ----
+
+type SpCache is Type:
+  SpCache{q: List<&2, F32>, k: List<&2, F32>, v: List<&2, F32>}
+
+type SR is Type:
+  SR{acc: List<&2, F32>}
 
 def rms_fin1(r: T.Fwd<TA.Mat<1n, 32n>, TA.Mat<1n, 32n>, TA.Mat<1n, 32n>>) -> List<&2, F32> & TA.Mat<1n, 32n>:
   match r:
@@ -161,19 +146,26 @@ def mm1_fin32(r: TA.MMulNT<1n, 32n, 32n>) -> List<&2, F32> & TA.Mat<32n, 32n>:
 def lin1_32(w: TA.Mat<32n, 32n>, +x: List<&2, F32>) -> List<&2, F32> & TA.Mat<32n, 32n>:
   mm1_fin32(TA.Mat.matmul_nt(1n, 32n, 32n, 0n, TA.Mat.from_list(1n, 32n, x), w))
 
+type AttW is Type:
+  AttW{ln: TA.Mat<1n, 32n>, qkv: TA.Mat<96n, 32n>, out: TA.Mat<32n, 32n>}
+
+type MlpW is Type:
+  MlpW{ln2: TA.Mat<1n, 32n>, gate: TA.Mat<128n, 32n>,
+       up: TA.Mat<128n, 32n>, down: TA.Mat<32n, 128n>}
+
 def step_c(lnb: TA.Mat<1n, 32n>, qkvb: TA.Mat<96n, 32n>,
     +q2: List<&2, F32>, +k2: List<&2, F32>,
-    +v2: List<&2, F32>, +x: List<&2, F32>, +t: Nat,
-    r: List<&2, F32> & TA.Mat<32n, 32n>) -> (TA.Mat<1n, 32n> & (TA.Mat<96n, 32n> & TA.Mat<32n, 32n>)) & (List<&2, F32> & SpCache):
+    +v2: List<&2, F32>, +x: List<&2, F32>,
+    r: List<&2, F32> & TA.Mat<32n, 32n>) -> AttW & (List<&2, F32> & SpCache):
   match r:
     case Tuple{o, outb}:
-      Tuple{Tuple{lnb, Tuple{qkvb, outb}},
+      Tuple{AttW{lnb, qkvb, outb},
         Tuple{L.add_lists(x, o), SpCache{q2, k2, v2}}}
 
 def step_b(lnb: TA.Mat<1n, 32n>,
     outw: TA.Mat<32n, 32n>, +qc: List<&2, F32>, +kc: List<&2, F32>,
     +vc: List<&2, F32>, +x: List<&2, F32>, +t: Nat,
-    r: List<&2, F32> & TA.Mat<96n, 32n>) -> (TA.Mat<1n, 32n> & (TA.Mat<96n, 32n> & TA.Mat<32n, 32n>)) & (List<&2, F32> & SpCache):
+    r: List<&2, F32> & TA.Mat<96n, 32n>) -> AttW & (List<&2, F32> & SpCache):
   match r:
     case Tuple{+qkv, qkvb}:
       +qrow = rope32(take(qkv, 0n, 32n), t)
@@ -182,34 +174,74 @@ def step_b(lnb: TA.Mat<1n, 32n>,
       +q2 = List.append(&2, F32, qc, qrow)
       +k2 = List.append(&2, F32, kc, krow)
       +v2 = List.append(&2, F32, vc, vrow)
-      step_c(lnb, qkvb, q2, k2, v2, x, t,
+      step_c(lnb, qkvb, q2, k2, v2, x,
         lin1_32(outw, sp_y32(t, q2, k2, v2)))
 
 def step_a(qkvw: TA.Mat<96n, 32n>,
     outw: TA.Mat<32n, 32n>, +qc: List<&2, F32>, +kc: List<&2, F32>,
     +vc: List<&2, F32>, +x: List<&2, F32>, +t: Nat,
-    r: List<&2, F32> & TA.Mat<1n, 32n>) -> (TA.Mat<1n, 32n> & (TA.Mat<96n, 32n> & TA.Mat<32n, 32n>)) & (List<&2, F32> & SpCache):
+    r: List<&2, F32> & TA.Mat<1n, 32n>) -> AttW & (List<&2, F32> & SpCache):
   match r:
     case Tuple{xn, lnb}:
       step_b(lnb, outw, qc, kc, vc, x, t, lin1_96(qkvw, xn))
 
-def step_row(w: TA.Mat<1n, 32n> & (TA.Mat<96n, 32n> & TA.Mat<32n, 32n>),
-    +x: List<&2, F32>, +t: Nat, c: SpCache) -> (TA.Mat<1n, 32n> & (TA.Mat<96n, 32n> & TA.Mat<32n, 32n>)) & (List<&2, F32> & SpCache):
-  match w c:
-    case Tuple{ln, Tuple{qkvw, outw}} SpCache{qc, kc, vc}:
-      step_a(qkvw, outw, qc, kc, vc, x, t, rms1(ln, x))
+def mlp_d(attW2: AttW, cache: SpCache, +x1: List<&2, F32>,
+    ln2b: TA.Mat<1n, 32n>, gateb: TA.Mat<128n, 32n>,
+    upb: TA.Mat<128n, 32n>,
+    r: List<&2, F32> & TA.Mat<32n, 128n>) -> (AttW & MlpW) & (List<&2, F32> & SpCache):
+  match r:
+    case Tuple{d, downb}:
+      Tuple{Tuple{attW2, MlpW{ln2b, gateb, upb, downb}},
+        Tuple{L.add_lists(x1, d), cache}}
+
+def mlp_c(attW2: AttW, cache: SpCache, +x1: List<&2, F32>,
+    +g: List<&2, F32>, ln2b: TA.Mat<1n, 32n>,
+    gateb: TA.Mat<128n, 32n>, down: TA.Mat<32n, 128n>,
+    r: List<&2, F32> & TA.Mat<128n, 32n>) -> (AttW & MlpW) & (List<&2, F32> & SpCache):
+  match r:
+    case Tuple{u, upb2}:
+      mlp_d(attW2, cache, x1, ln2b, gateb, upb2,
+        lin1_down(down, silu_mul(g, u, Nil{})))
+
+def mlp_b(attW2: AttW, cache: SpCache, +x1: List<&2, F32>,
+    +xn2: List<&2, F32>, ln2b: TA.Mat<1n, 32n>,
+    up: TA.Mat<128n, 32n>, down: TA.Mat<32n, 128n>,
+    r: List<&2, F32> & TA.Mat<128n, 32n>) -> (AttW & MlpW) & (List<&2, F32> & SpCache):
+  match r:
+    case Tuple{g, gateb}:
+      mlp_c(attW2, cache, x1, g, ln2b, gateb, down, lin1_128(up, xn2))
+
+def mlp_a(attW2: AttW, cache: SpCache, +x1: List<&2, F32>,
+    gate: TA.Mat<128n, 32n>, up: TA.Mat<128n, 32n>,
+    down: TA.Mat<32n, 128n>,
+    r: List<&2, F32> & TA.Mat<1n, 32n>) -> (AttW & MlpW) & (List<&2, F32> & SpCache):
+  match r:
+    case Tuple{+xn2, ln2b}:
+      mlp_b(attW2, cache, x1, xn2, ln2b, up, down, lin1_128(gate, xn2))
+
+def step_post(mlpW: MlpW,
+    r: AttW & (List<&2, F32> & SpCache)) -> (AttW & MlpW) & (List<&2, F32> & SpCache):
+  match mlpW r:
+    case MlpW{ln2, gate, up, down} Tuple{attW2, Tuple{+x1, cache}}:
+      mlp_a(attW2, cache, x1, gate, up, down, rms1(ln2, x1))
+
+def step_row(attW: AttW, mlpW: MlpW, +x: List<&2, F32>, +t: Nat,
+    c: SpCache) -> (AttW & MlpW) & (List<&2, F32> & SpCache):
+  match attW c:
+    case AttW{ln, qkvw, outw} SpCache{qc, kc, vc}:
+      step_post(mlpW, step_a(qkvw, outw, qc, kc, vc, x, t, rms1(ln, x)))
 
 def step_go(+left: Nat, +t: Nat, +x: List<&2, F32>, st: SR,
-    r: (TA.Mat<1n, 32n> & (TA.Mat<96n, 32n> & TA.Mat<32n, 32n>)) & (List<&2, F32> & SpCache)) -> SR:
+    r: (AttW & MlpW) & (List<&2, F32> & SpCache)) -> SR:
   match left st r:
     case 0n st0 _:
       st0
-    case 1n SR{acc} Tuple{w2, Tuple{y2, c2}}:
+    case 1n SR{acc} Tuple{Tuple{_, _}, Tuple{y2, _}}:
       SR{List.append(&2, F32, acc, y2)}
-    case 2n+p SR{acc} Tuple{w2, Tuple{y2, c2}}:
+    case 2n+p SR{acc} Tuple{Tuple{attW2, mlpW2}, Tuple{y2, c2}}:
       +acc2 = List.append(&2, F32, acc, y2)
       step_go((1n+p), (t + 1n : Nat), x, SR{acc2},
-        step_row(w2, take(x, Nat.mul((t + 1n : Nat), 32n), 32n),
+        step_row(attW2, mlpW2, take(x, Nat.mul((t + 1n : Nat), 32n), 32n),
           (t + 1n : Nat), c2))
     case _ st1 _:
       st1
@@ -228,27 +260,30 @@ def maxdiff(xs: List<&2, F32>, ys: List<&2, F32>, acc: F32) -> F32:
     case Con{h, t} Con{g, u}:
       maxdiff(t, u, F32.max(acc, F32.abs((h - g : F32))))
 
-def run(lnf: TA.Mat<1n, 32n>, qkvf: TA.Mat<96n, 32n>,
-    outf: TA.Mat<32n, 32n>, lns: TA.Mat<1n, 32n>,
-    qkvs: TA.Mat<96n, 32n>, outs: TA.Mat<32n, 32n>) -> IO(Unit):
+def run(lns: TA.Mat<1n, 32n>, qkvs: TA.Mat<96n, 32n>,
+    outs: TA.Mat<32n, 32n>, ln2s: TA.Mat<1n, 32n>,
+    gates: TA.Mat<128n, 32n>, ups: TA.Mat<128n, 32n>,
+    downs: TA.Mat<32n, 128n>, p3: M.BlockP()) -> IO(Unit):
   +x = ramp(Nat.mul(192n, 32n), 7n)
-  +yfull = full_attn(lnf, qkvf, outf, x)
   +ystep = ys_of(step_go(192n, 0n, x, SR{Nil{}},
-    step_row(Tuple{lns, Tuple{qkvs, outs}}, take(x, 0n, 32n), 0n,
-      SpCache{Nil{}, Nil{}, Nil{}})))
-  +d = maxdiff(ystep, yfull, 0.0)
+    step_row(AttW{lns, qkvs, outs}, MlpW{ln2s, gates, ups, downs},
+      take(x, 0n, 32n), 0n, SpCache{Nil{}, Nil{}, Nil{}})))
+  +yblock = y_block(p3, TA.Mat.from_list(192n, 32n, x))
+  +d = maxdiff(ystep, yblock, 0.0)
   do IO<Unit>:
-    Unit <- IO.print(String.append("rows 192  attention max|d| ", F32.show(d)))
+    Unit <- IO.print(String.append("block max|d| ", F32.show(d)))
     Unit <- IO.print(Bool.pick(String, F32.is_le(d, 1.0e-04),
       "GLM BLOCK STEP PASS", "GLM BLOCK STEP FAIL"))
     return Unit{}
 
 def main() -> IO(Unit):
   do IO<Unit>:
-    lnf : TA.Mat<1n, 32n> <- T.Mat.load(1n, 32n, "results/glm53-hybrid192-ep4/model-400/b3/ln1.bin", 0)
-    qkvf : TA.Mat<96n, 32n> <- T.Mat.load(96n, 32n, "results/glm53-hybrid192-ep4/model-400/b3/qkv.bin", 0)
-    outf : TA.Mat<32n, 32n> <- T.Mat.load(32n, 32n, "results/glm53-hybrid192-ep4/model-400/b3/out.bin", 0)
     lns : TA.Mat<1n, 32n> <- T.Mat.load(1n, 32n, "results/glm53-hybrid192-ep4/model-400/b3/ln1.bin", 0)
     qkvs : TA.Mat<96n, 32n> <- T.Mat.load(96n, 32n, "results/glm53-hybrid192-ep4/model-400/b3/qkv.bin", 0)
     outs : TA.Mat<32n, 32n> <- T.Mat.load(32n, 32n, "results/glm53-hybrid192-ep4/model-400/b3/out.bin", 0)
-    run(lnf, qkvf, outf, lns, qkvs, outs)
+    ln2s : TA.Mat<1n, 32n> <- T.Mat.load(1n, 32n, "results/glm53-hybrid192-ep4/model-400/b3/ln2.bin", 0)
+    gates : TA.Mat<128n, 32n> <- T.Mat.load(128n, 32n, "results/glm53-hybrid192-ep4/model-400/b3/gate.bin", 0)
+    ups : TA.Mat<128n, 32n> <- T.Mat.load(128n, 32n, "results/glm53-hybrid192-ep4/model-400/b3/up.bin", 0)
+    downs : TA.Mat<32n, 128n> <- T.Mat.load(32n, 128n, "results/glm53-hybrid192-ep4/model-400/b3/down.bin", 0)
+    p3 : W.BlockP() <- W.load_block("results/glm53-hybrid192-ep4/model-400/b3")
+    run(lns, qkvs, outs, ln2s, gates, ups, downs, p3)

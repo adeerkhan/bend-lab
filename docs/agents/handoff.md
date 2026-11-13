@@ -9,13 +9,14 @@ leaves the next one blind.
 
 ## 2026-11-13 — the fourth block's attention step passes on the real weights
 
-`probe_glm_block.bend` loads the trained fourth block's `ln1`/`qkv`/`out`
+`probe_glm_block.bend` loads the trained fourth block's
+`ln1`/`ln2`/`qkv`/`out`/`gate`/`up`/`down`
 (`results/glm53-hybrid192-ep4/model-400/b3`) and compares the full 192-row
-attention residual with the one-row path and its K/V cache: `max|d| 0`,
-`GLM BLOCK STEP PASS` (`make glm-block-step`, `27.7 s`). The one-row
-RMSNorm, qkv projection, RoPE, sparse softmax and output projection are
-bit-identical to the full prefix. The MLP step and the four-block decode are
-next; this gate does not include the MLP or the other three blocks.
+`SpBlock` with the one-row path and its K/V cache: `block max|d| 0`,
+`GLM BLOCK STEP PASS` (`make glm-block-step`, `16.1 s`). The one-row RMSNorm,
+qkv projection, RoPE, sparse softmax, output projection and SwiGLU MLP are
+bit-identical to the full prefix. The four-block decode is next; this gate
+covers only the fourth (sparse) block.
 
 ## 2026-11-13 — the GLM 192 step cache protocol passes
 

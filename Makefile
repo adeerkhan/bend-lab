@@ -36,7 +36,7 @@ glm-step:         ## the 192-position attention step: state and cache against th
 	@.scratch/glm_step.bin | tee .scratch/glm_step.log
 	@grep -q "GLM STEP PASS" .scratch/glm_step.log
 
-glm-block-step:   ## the fourth block's attention step on the trained weights
+glm-block-step:   ## the fourth block's step (attention and MLP) on the trained weights
 	@mkdir -p .scratch
 	$(BEND) -o .scratch/glm_block.bin examples/language/glm53_flash/probe_glm_block.bend
 	@.scratch/glm_block.bin | tee .scratch/glm_block.log

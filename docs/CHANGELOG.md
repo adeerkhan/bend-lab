@@ -10,10 +10,10 @@ What changed for the people who run the lab. Internal refactors are not listed.
   state and the sparse attention's post-RoPE K/V cache reproduce the
   full-prefix 192-position rows (`lin max|d| 0`, `sp max|d| 0`). Synthetic
   q/k/v, no weights.
-- `make glm-block-step` runs the fourth block's attention on the trained
-  `ln1`/`qkv`/`out`: the full 192-row residual against the one-row cache path
-  is `max|d| 0` (`GLM BLOCK STEP PASS`, `27.7 s`). The MLP step and the
-  four-block decode are next.
+- `make glm-block-step` runs the fourth block on the trained weights: the
+  full `SpBlock` on 192 rows against the one-row attention + SwiGLU path with
+  the K/V cache is `max|d| 0` (`GLM BLOCK STEP PASS`, `16.1 s`). The
+  four-block decode is next.
 
 ### The GLM evaluation can run a named subset
 

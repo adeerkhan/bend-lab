@@ -283,11 +283,11 @@ full-prefix rows, `make glm-step` prints `lin max|d| 0`, `sp max|d| 0`,
 protocol for the decode path, not the full model yet.
 
 `probe_glm_block.bend` is the real-weight one-block gate: the fourth block's
-`ln1`/`qkv`/`out` from `results/glm53-hybrid192-ep4/model-400/b3`, the full
-192-row attention residual against the same norm, projection, RoPE and `sp_y4`
-computed one row at a time with the K/V cache. `make glm-block-step` prints
-`rows 192 attention max|d| 0`, `GLM BLOCK STEP PASS` (`27.7 s`). The MLP step
-and the four-block decode are next.
+`ln1`/`ln2`/`qkv`/`out`/`gate`/`up`/`down` from
+`results/glm53-hybrid192-ep4/model-400/b3`, compared with the full `SpBlock`
+on 192 rows. The step path does the same work one row at a time with the
+post-RoPE K/V cache. `make glm-block-step` prints `block max|d| 0`,
+`GLM BLOCK STEP PASS` (`16.1 s`). The four-block decode is next.
 
 `reference/glm53_dense_eval.py --episodes N` and the `--episodes N` flag on
 `gen_a.bend`/`gen_h192.bend` run the **first N of 64 episodes** and write
