@@ -72,6 +72,15 @@ The two details that are easy to get wrong:
   `fmod`, so a negative dividend stays negative; the port wraps the result to
   `[0, 2π)` before storing it.
 
+`make mamba3-layer` builds `mamba3_layer.bend` and runs
+`reference/test_mamba3_layer.py`: the BendTorch layer trained ten `T.Train`
+steps is compared with the custom ten-step trainer end to end (tokens exactly;
+final loss and the weight heads within tolerance). The loss gradient path rides
+on `mamba3_siso.bend`'s hand-written backward; `T.Layer` wraps it with
+`fwd`/`bwd`/`step`/`zeros`/`dump`/`load`/`store`/`count`. Per-step loss values
+are not readable from outside `T.Train` on Bend — the gate compares the final
+step's loss and the tokens (see the note in `mamba3_layer.bend`).
+
 ## Commands
 
 The goldens and the twin's kernel check:
@@ -97,6 +106,7 @@ The pieces:
 | file | what it does |
 | --- | --- |
 | `examples/language/mamba3/mamba3_siso.bend` | the forward, backward, ten-step copy task and two-layer greedy generation |
+| `mamba3_layer.bend` | the SISO block as a BendTorch `T.Layer`/`T.Train`, ten SGD steps on the copy task |
 | `probe_mamba3_bwd.bend` | pass 1 of the backward: the output gate and the scan |
 | `probe_mamba3_grad.bend` | the full backward |
 | `probe_mamba3_bad.bend` | the same backward with one moved `dy` |
@@ -150,6 +160,7 @@ module.
 | full LM forward, `lm_hn` / `lm_logits` / loss | `1.03e-07` / `3.48e-07` / `8.85e-08` |
 | full LM ten-step loss / tokens | `1.77e-07`; `[4, 2, 6, 3, 3, 5, 0, 4]`, exact |
 | full LM generation | `[0, 1, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]`, exact |
+| BendTorch `T.Layer`/`T.Train`, ten steps | tokens `[3, 6, 0, 5, 0, 7, 0, 7]` exact; final loss `2.1404066` vs the custom trainer's `2.1401443` (`1.2e-04` relative, gate `1e-3`); weight heads `≤1.3e-06` |
 
 The copy task is `tokens 0..7 in, the same tokens out`: an embedding table
 `8 x 64`, the block, a `64 x 8` head, mean cross-entropy, plain SGD at

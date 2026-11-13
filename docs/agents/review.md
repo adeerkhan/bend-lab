@@ -12,6 +12,7 @@ command that produced its last number.
 | full gate | `make check` | `141/141`, 2026-11-13, `34m26 s` (`check-final-head2`), on the committed HEAD |
 | batch | `scripts/batch.sh` / `make batch` | 14/14 A+C PASS, [batch-20261113-152747.md](../results/batch-20261113-152747.md); Mamba-3 B rows `not run` |
 | Mamba-3 SISO and full LM | `make mamba3` | `MAMBA3 PASS`, 2026-11-12 |
+| Mamba-3 SISO as BendTorch `T.Layer` | `make mamba3-layer` | `MAMBA3 LAYER PASS`, 2026-11-13, wall `26.8 s` |
 
 Short tests run on 2026-11-12, all on the current `2.0.0.0` lane:
 
@@ -30,6 +31,12 @@ Short tests run on 2026-11-12, all on the current `2.0.0.0` lane:
 | classical | `make experiment TASK=iris-crossval` | PASS, `1m05` |
 | gate | `make session TASK=check-fast CMD="make check-fast"` | `31/31`, `23.6 s` |
 | GPU | `make session TASK=gpu-probe CMD="reference/.venv-rf/bin/python reference/gpu_probe.py"` | `50.1 s`, GPU `52-100%`, process `326 MB` |
+
+The 2026-11-13 Mamba-3 status update: `make mamba3-layer` PASS (tokens exactly,
+loss at final step within `1.2e-04`, gate `1e-3`; weight heads `<= 1.3e-05`).
+The per-step loss list is not readable from outside `T.Train` on Bend, so the
+agreement is checked at the final step; see `docs/CHANGELOG.md` and the
+`.local` ledger (ISSUE-120..126) for what blocked the direct comparison.
 
 ## One lane
 

@@ -7,6 +7,21 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-13 — the SISO block is a BendTorch layer: MAMBA3 LAYER PASS
+
+`examples/language/mamba3/mamba3_layer.bend`: the post-swap block registered as
+a `T.Layer` (`fwd`/`bwd`/`step`/`zeros`/`dump`/`load`/`store`/`count`), its
+hand-written backward inside `T.Train`'s own loop, trained ten steps on the
+copy task. `make mamba3-layer` (wall `26.8 s`) gates tokens exactly
+(`[3, 6, 0, 5, 0, 7, 0, 7]`), the final-step loss (`2.1404066` vs the custom
+trainer's `2.1401443`, `1.2e-04`, gate `1e-3`), and the weight heads
+(`<= 1.3e-05`). Per-step losses are not readable from outside `T.Train` on
+Bend (see ISSUE-126 and the guard conditions around `match`/`Tuple`/`+`
+bindings in the ledger), so the loss list itself is not compared. `make
+mamba3` is still PASS. `make versions`, one row. The next items remain the
+decode step (`step_mamba3.bend`) and varlen/GQA/outnorm, after which MIMO is
+a question for the maintainer, not the batch.
+
 ## 2026-11-13 — the batch baseline: 14/14 A+C, Mamba-3 B not run
 
 `scripts/batch.sh` (and `make batch`) runs the matrix through `make session`
@@ -15,10 +30,11 @@ and writes `results/batch-<date>.md`. The full run
 `mamba3-bench`, n4/n16, the GPU probe (0 differing words), `versions`,
 `check-fast` 31/31, the full gate 141/141 in 2460 s, `unet-metric`,
 `glm-decode`, `glm-h192-step` (933 s), and the four short tracks. The Mamba-3
-decode step, `T.Layer`/`T.Train`, varlen, GQA, outnorm, deep, MIMO and the
+decode step, varlen, GQA, outnorm, deep, MIMO and the
 tiny LM are **not run**, with the reasons in the summary; the next single step
 is the decode step, `step_mamba3.bend` against
-`reference/mamba3/mamba_ssm/ops/triton/mamba3/mamba3_siso_step.py`.
+`reference/mamba3/mamba_ssm/ops/triton/mamba3/mamba3_siso_step.py`. The
+`T.Layer`/`T.Train` row landed later the same day (`MAMBA3 LAYER PASS`).
 
 ## 2026-11-13 — the four-block step decoder; the full 192 evaluation
 

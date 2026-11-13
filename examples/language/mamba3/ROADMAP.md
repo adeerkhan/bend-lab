@@ -1,4 +1,9 @@
-# Mamba-3: what to do next, and why
+## 0. The BendTorch layer is done (2026-11-13)
+
+The SISO block is wired into BendTorch `T.Layer` with Bend torch's own
+`T.Train` loop (`mamba3_layer.bend`): `make mamba3-layer` gates the final loss
+(2.1404066 vs the custom trainer's 2.1401443, `1.2e-04` relative) and the
+tokens exactly. The Dumper/Loader, GQA and varlen paths from the goal are next.
 
 The SISO block and a full two-layer tiny LM are correct and gated. This is
 the list of things that are worth doing next, in the order that keeps the

@@ -78,14 +78,13 @@ run gpu-probe "$BEND examples/language/mamba3/probe_bendtorch_gpu.bend" ""
 
 # B. Mamba-3, the tests that remain (added as each gate lands)
 # run mamba3-step "make mamba3-step" "MAMBA3 STEP PASS"
-# run mamba3-layer "make mamba3-layer" "MAMBA3 LAYER PASS"
+run mamba3-layer "make mamba3-layer" "MAMBA3 LAYER PASS"
 # run mamba3-varlen "make mamba3-varlen" "MAMBA3 VARLEN PASS"
 # run mamba3-gqa "make mamba3-gqa" "MAMBA3 GQA PASS"
 # run mamba3-outnorm "make mamba3-outnorm" "MAMBA3 OUTNORM PASS"
 # run mamba3-deep "make mamba3-deep" "MAMBA3 DEEP PASS"
 
 notrun mamba3-step "decode step: step_mamba3.bend not implemented"
-notrun mamba3-layer "T.Layer/T.Train: wrapper not adopted"
 notrun mamba3-varlen "depends on the step path"
 notrun mamba3-gqa "depends on the step path"
 notrun mamba3-outnorm "depends on the step path"

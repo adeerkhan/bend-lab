@@ -4,6 +4,28 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### Mamba-3's SISO block is wired into BendTorch `T.Layer`/`T.Train`
+
+- `make mamba3-layer` builds `examples/language/mamba3/mamba3_layer.bend` and
+  runs `reference/test_mamba3_layer.py`: the block registered as a `T.Layer`
+  (hand-written backward, `Fwd`/`Bwd`/`Step`, zeros gradient, SGD-only
+  `step`) is trained ten `T.Train` steps on the copy task and compared
+  against the custom ten-step trainer on the same weights: tokens exactly
+  (`[3, 6, 0, 5, 0, 7, 0, 7]`), final loss `2.1404066` against the custom
+  `2.1401443` (`1.2e-04` relative, gate `1e-3`), weight heads `<= 1.3e-05`
+  relative, wall `26.8 s`.
+- Bend did not make that wiring easy. See ISSUE-120..126 in the local ledger:
+  matches cannot scrutinize computed values (defs must take them as
+  parameters), multi-scrutinee matches need the full cross product, decreasing
+  self-calls read arguments left to right, shared (`+`) bindings need the
+  `Data` sort, tuple types are `A & B` with the `Tuple{...}` constructor, `IO`
+  binds require typed `x : T <- ...` lines and explicit `IO.pure(T, x)`, and
+  `T.Train`'s per-step loss list is not readable from outside the loop. The
+  per-step losses therefore cannot be compared: the gate checks the final
+  step's loss and the tokens.
+- `make mamba3` still PASS. `scripts/batch.sh` now runs this as the
+  `mamba3-layer` row.
+
 ### One batch driver for the matrix
 
 - `scripts/batch.sh` (and `make batch`) runs every row through `make session`
