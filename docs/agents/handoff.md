@@ -7,6 +7,15 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-13 — the final full gate on the committed HEAD
+
+`make check` is `141/141` in `34m26s` (session `check-final-head2`), run on the
+committed HEAD with the dashboard sampler from the start (1,913 samples over
+the whole run). `make check-fast` is `31/31` (session `check-fast-chunked`),
+and `make mamba3` is PASS (session `mamba3-chunked`). The Mamba-3 chunked scan
+and the rest of the 2026-11-12 review are in the sections below; the next
+single step is `T.Layer`/`T.Train`.
+
 ## 2026-11-12 — Mamba-3's chunked scan: one array across tokens
 
 `pass_c` now runs `sc_go_st`: one 2048-float `Array<F32>` is built from the

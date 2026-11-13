@@ -9,7 +9,7 @@ command that produced its last number.
 | check | command | last result |
 | --- | --- | --- |
 | proofs, frozen references | `make check-fast` | `31/31`, 2026-11-12 |
-| full gate | `make check` | `141/141`, 2026-11-12, `38m10 s` (`check-final-chunked`), on the migrated lane |
+| full gate | `make check` | `141/141`, 2026-11-13, `34m26 s` (`check-final-head2`), on the committed HEAD |
 | Mamba-3 SISO and full LM | `make mamba3` | `MAMBA3 PASS`, 2026-11-12 |
 
 Short tests run on 2026-11-12, all on the current `2.0.0.0` lane:
@@ -53,7 +53,7 @@ The Bend pin remains 2.0.38: it is the installed binary and the Makefile pin.
 2.0.40 needs its own toolchain change.
 
 On this lane: `make check-fast` `31/31`, full `make check` `141/141` in
-`38m10 s`, and `make mamba3` PASS. The migration touched 107 `.bend` files
+`34m26 s`, and `make mamba3` PASS. The migration touched 107 `.bend` files
 and `bend.toml`/`bend.lock`; the env was purged and synced from the lock
 (ISSUE-119).
 
@@ -80,7 +80,7 @@ and `bend.toml`/`bend.lock`; the env was purged and synced from the lock
 
 1. **The lane is aligned** (2026-11-12): BendTorch 2.1.0.0, tensor-array
    0.1.20.0, tensor-gpu 0.1.5.2, Bend 2.0.38. `make check-fast` `31/31` and
-   full `make check` `141/141` in `38m10 s`. Keep new feature work off the
+   full `make check` `141/141` in `34m26 s`. Keep new feature work off the
    lane change; the next item is the science/performance batch.
 2. **Baseline the five tracks** with the short tests above, using the frozen
    references. Write the date, version, command and result into the table.

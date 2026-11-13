@@ -51,7 +51,7 @@ What changed for the people who run the lab. Internal refactors are not listed.
   compatible with BendTorch 2.1.0.0: the `Mat` types are nominally different
   even at the same shape. The compatible lane is BendTorch's own closure; the
   unused tensor-fork wildcard was removed.
-- The full gate passes `141/141` in `38m10 s` and `make check-fast` `31/31`;
+- The full gate passes `141/141` in `34m26 s` and `make check-fast` `31/31`;
   `make mamba3`, `flow64-first`, `vit-first`, `glm53-hybrid128` and
   `iris-crossval` pass on the lane. `bendenv sync` was purged first because it
   keeps old package directories (ISSUE-119).
