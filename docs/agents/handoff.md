@@ -22,6 +22,25 @@ mamba3` is still PASS. `make versions`, one row. The next items remain the
 decode step (`step_mamba3.bend`) and varlen/GQA/outnorm, after which MIMO is
 a question for the maintainer, not the batch.
 
+## 2026-11-13 — Mamba-3: mamba3-layer done; mamba3-step not run
+
+`examples/language/mamba3/mamba3_layer.bend`: the SISO block wired as a
+`T.Layer` with the hand-written backward, trained ten `T.Train` steps on
+the copy task; `make mamba3-layer` prints `MAMBA3 LAYER PASS` (tokens
+exact; final loss `2.1404066` vs `2.1401443`, gate `1e-3`; weight heads
+`<= 1.3e-05` rel). Wall `26.8 s`.
+
+`step_mamba3.bend` was a placeholder reproducing the full-prefix generator;
+it was deleted after review (sanity check: file was byte-identical to
+`probe_mamba3_gen.bend` and was being reported as `MAMBA3 STEP PASS`, which
+is false). The proper decode step is not implemented. All other rows
+(varlen, gqa, outnorm, deep, mimo, tiny-lm) are expected unchanged since
+the step path is missing.
+
+The full gate (`make check`) did not complete this session; the batch run
+was killed during it. `make check-fast` 31/31 PASS; `make mamba3` PASS;
+`make versions` one row.
+
 ## 2026-11-13 — the batch baseline: 14/14 A+C, Mamba-3 B not run
 
 `scripts/batch.sh` (and `make batch`) runs the matrix through `make session`
