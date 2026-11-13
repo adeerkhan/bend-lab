@@ -247,16 +247,19 @@ float op order as `row_set`. The angle has no future dependency and threads
 directly. `make mamba3-step` prints PASS: the sixteen greedy tokens equal the
 golden `[0, 1, 2, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]` exactly.
 
-Take-away. The reliable paths are (a) accept the O(n^2) recompute where exactness
-matters, (b) write the inline per-token scan as one large hand-rolled module
-with the state flattened into lists and array arguments, budgeting 1-2k lines
-for the ISSUE-120/121/122 shapes, or (c) wait for first-class state records or
-explicit mutable state in the language. What does not survive contact is a
-"small clean" design: the module is large, every helper def exists because of
-one of the rules above, and nothing about the wiring is optional. The 64- and
-256-token parity checks could not run on this lane because the full-prefix
-reference implementation dies with a Bend memory fault at seq len >= 64 (same
-class as ISSUE-007); the step itself runs in 0.08 s at 16 tokens.
+Take-away. The reliable paths are (a) accept the O(n^2) recompute where
+exactness matters, (b) write the inline per-token scan as one large
+hand-rolled module with the state flattened into lists and array arguments,
+budgeting 1-2k lines for the ISSUE-120/121/122 shapes, or (c) wait for
+first-class state records or explicit mutable state in the language. What
+does not survive contact is a "small clean" design: the module is large,
+every helper def exists because of one of the rules above, and nothing
+about the wiring is optional. The interpreter path (`bend file.bend`)
+overflows the Bend VM around seq len >= 64; the compiled path (`bend -o`
+then the binary) completes: 64 tokens exact (reference 17.7 s, step
+0.45 s), 256 tokens exact (reference 29 m 17 s, step 1.2 s).
+`ulimit -s unlimited` does not help the interpreter. The step itself runs
+in 0.08 s at 16 tokens.
 
 ## ISSUE-128 — `match left xs:` with an `xs` passed through requires the explicit cross product
 

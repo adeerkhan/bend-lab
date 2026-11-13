@@ -4,10 +4,10 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
-### Mamba-3 decode step: implemented and gated at 16 tokens
+### Mamba-3 decode step: implemented and gated at 16/64/256 tokens
 
-- `examples/language/mamba3/step_mamba3.bend` is a real online decode step
-  for the SISO LM: one row per token, state threaded unmatched through a
+- `examples/language/mamba3/step_mamba3.bend` is a real online decode step for
+  the SISO LM: one row per token, state threaded unmatched through a
   single self-recursive `step_go` (`SR` state: two layer states with the
   2048-float SSM `Array`, the 16-float angle block and a one-row
   pending `x`/`k`/`DT`/`trap`). The trapezoid's dependence of row `t`'s
@@ -18,9 +18,13 @@ What changed for the people who run the lab. Internal refactors are not listed.
   tokens, not an approximation.
 - `make mamba3-step` runs `reference/test_mamba3_step.py`: the sixteen
   greedy tokens equal the golden `[0, 1, 2, 3, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1]` exactly (build 2.2 s, run 0.08 s). 64/256-token parity is
-  unverified on this lane — the full-prefix reference dies with a Bend
-  memory fault at seq len >= 64 — and is not quoted anywhere.
+  1, 1, 1, 1]` exactly (build 2.2 s, run 0.08 s). 64- and 256-token parity
+  were then verified against the compiled full-prefix binaries — 64 exact
+  (step 0.45 s, reference 17.7 s) and 256 exact (step 1.2 s, reference
+  29 m 17 s); `bend file.bend` dies in the interpreter at seq len >= 64,
+  the compiled path works at both lengths.
+- `make check` was re-run after the step landed: 143/143 PASS
+  (37 m 48 s, user 92 m 54 s); `reference/test_mamba3_step.py` is included.
 - The earlier "decode placeholder" claim (identical to the probe, reported
   as PASS) is superseded by this; the placeholder was deleted and the row
   had been recorded as not run. See `results/mamba3-step-gate.md` and the
@@ -30,10 +34,16 @@ What changed for the people who run the lab. Internal refactors are not listed.
   (`2.1568611 → 2.1401443`), the layer's final loss (`2.1404066`, rel `1.23e-04`,
   gate `1e-3`), tokens equal, heads ≤ `8.9e-07`; the per-step layer losses remain
   unreadable (`bendtorch#86`).
+- The Stage-C learning canary was re-run on this lane (16 labels, lr 0.03,
+  50 steps): bend `final_loss` 0.04192596 (twin 0.0419212505),
+  `grad_loss` 0.03683044 (twin 0.0368300416), weights rel 5.5e-05, grads
+  rel 1.2e-03; record `results/glm53-c-canary-repro-20261113.md`. The
+  before-RL 0/24 claim remains unreproduced (no checkpoints in the tree);
+  the third-party published README was not edited.
 - `docs/bend-2.0.38-pitfalls.md` records the ISSUE-120..128 frictions hit
   on this port; `docs/agents/oss-needs.md` records what Base does and does
   not ship (no scan/cumsum anywhere; softmax/CE/argmax live in
-  tensor-array and bendtorch, not in Base). Two language asks are filed as
+  tensor-array and bendtorch, not in Base). Three language asks are filed as
   `bendlang/bend#2146` (records), `bendlang/bend#2147` (forward
   references and mutual recursion) and `bendlang/bend#2150` (encoding for
   evolving state across an online loop) — diagnostics and repros only, no
