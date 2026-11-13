@@ -64,3 +64,6 @@ results/*/weights/
 # named evaluation subsets (the flat weights are derived)
 results/glm53-dense-ep*/
 results/glm53-hybrid192-ep*/
+
+# the step decoder writes the flat weights beside the evaluation
+results/glm53-hybrid192-step-*/model-400/
