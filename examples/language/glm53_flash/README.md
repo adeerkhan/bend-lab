@@ -287,7 +287,10 @@ protocol for the decode path, not the full model yet.
 `results/glm53-hybrid192-ep4/model-400/b3`, compared with the full `SpBlock`
 on 192 rows. The step path does the same work one row at a time with the
 post-RoPE K/V cache. `make glm-block-step` prints `block max|d| 0`,
-`GLM BLOCK STEP PASS` (`16.1 s`). The four-block decode is next.
+`GLM BLOCK STEP PASS` (`16.1 s`). `probe_glm_block_lin.bend` does the same
+for the linear block `b2` with its prefix state `K`/`KV`: `make glm-lin-block`
+prints `lin block max|d| 0`, `GLM LIN BLOCK PASS`. The four-block decode is
+next.
 
 `reference/glm53_dense_eval.py --episodes N` and the `--episodes N` flag on
 `gen_a.bend`/`gen_h192.bend` run the **first N of 64 episodes** and write

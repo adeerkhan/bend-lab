@@ -12,8 +12,10 @@ What changed for the people who run the lab. Internal refactors are not listed.
   q/k/v, no weights.
 - `make glm-block-step` runs the fourth block on the trained weights: the
   full `SpBlock` on 192 rows against the one-row attention + SwiGLU path with
-  the K/V cache is `max|d| 0` (`GLM BLOCK STEP PASS`, `16.1 s`). The
-  four-block decode is next.
+  the K/V cache is `max|d| 0` (`GLM BLOCK STEP PASS`, `16.1 s`).
+- `make glm-lin-block` does the same for the linear block on the trained
+  weights, with the prefix state `K`/`KV`: `lin block max|d| 0`
+  (`GLM LIN BLOCK PASS`). The four-block decode is next.
 
 ### The GLM evaluation can run a named subset
 

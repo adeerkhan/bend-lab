@@ -15,8 +15,10 @@ leaves the next one blind.
 `SpBlock` with the one-row path and its K/V cache: `block max|d| 0`,
 `GLM BLOCK STEP PASS` (`make glm-block-step`, `16.1 s`). The one-row RMSNorm,
 qkv projection, RoPE, sparse softmax, output projection and SwiGLU MLP are
-bit-identical to the full prefix. The four-block decode is next; this gate
-covers only the fourth (sparse) block.
+bit-identical to the full prefix. `probe_glm_block_lin.bend` is the linear
+block `b2`: the prefix state `K`/`KV` path is `lin block max|d| 0`
+(`GLM LIN BLOCK PASS`). The four-block decode is next; these gates cover b3
+(sparse) and b2 (linear).
 
 ## 2026-11-13 — the GLM 192 step cache protocol passes
 
