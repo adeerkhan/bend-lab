@@ -19,6 +19,7 @@ tensor-array `0.1.20.0`, tensor-gpu `0.1.5.2`).
 | [aaaxn/bendtorch#86](https://github.com/aaaxn/bendtorch/issues/86) | Question, not a defect: is keeping only the last-step `loss: F32` on `T.Train` intentional? The per-step curve is not readable from outside the loop. |
 | [bendlang/bend#2146](https://github.com/bendlang/bend/issues/2146) | Record ergonomics: field projection, match on a local binder, or Data-shared records. Carries the three repros from `.local/mamba3-repro/` (`r.a` is not a term; `match` cannot scrutinize a local binder; `+r: R` is rejected). |
 | [bendlang/bend#2147](https://github.com/bendlang/bend/issues/2147) | No forward references and no mutual recursion: the two-def `f`/`g` minimal case. A two-pass compilation or a sanctioned iterative encoding was asked; the local pattern is one self-recursive def. |
+| [bendlang/bend#2150](https://github.com/bendlang/bend/issues/2150) | The intended encoding for evolving state across an online loop (records + `Array<F32>` threaded through one self-recursive def); carries two verified repros and the pointer to the working 16-token mamba3 step gate. |
 | [bendlang/bend#1632](https://github.com/bendlang/bend/issues/1632) | Clearer diagnostics for common mistakes. Items 9 and 10 are ours; the 84 rejections in `reference/corpus/qwenbend/` are ready-made inputs. |
 | [bendlang/bend#1998](https://github.com/bendlang/bend/issues/1998) | A match binder that shadows a parameter prints the name twice and no scope. |
 | [bendlang/bend#1980](https://github.com/bendlang/bend/issues/1980) | `Array<T>` accepts a mixed-depth `ANode` the compiled runtime cannot represent. |
@@ -54,5 +55,5 @@ tensor-array `0.1.20.0`, tensor-gpu `0.1.5.2`).
 | ISSUE-064 `Nat.mul` in a type argument overflows the checker stack | bendlang/bend #1632, item 9 | local repro; compiler limit, not patched here |
 | ISSUE-069 `--check-only` exits 1 on any `bendtorch-gpu` import | `examples/language/mamba3/probe_bendtorch_gpu.bend` | BendTorch, measured; recheck after #41 |
 | ISSUE-102 the published before-RL 0/24 does not reproduce | `results/glm53-dense/eval-dev.json` | reference discrepancy; recorded, not tuned |
-| ISSUE-104, 105, 107 | `bendlang/bend#2146` (records), `bendlang/bend#2147` (forward references / mutual recursion) | language design limits; design around them; asks filed 2026-11-13 |
+| ISSUE-104, 105, 107, 127 | `bendlang/bend#2146` (records), `bendlang/bend#2147` (forward references / mutual recursion), `bendlang/bend#2150` (state threading) | language design limits; design around them; asks filed 2026-11-13 |
 | ISSUE-063 / bend-ml#26 | the U32 facts and the round-trip laws in bend-ml#26 | U32 facts landed; the `Mat.to_list ∘ Mat.of_list` corollary remains upstream |

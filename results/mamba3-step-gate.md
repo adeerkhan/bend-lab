@@ -103,6 +103,8 @@ third-party README (`reference/glm53_flash/README.md`) was not edited.
 - `bendlang/bend#2146` (linked): record field projection / match on a local
   binder / Data-shared records — ISSUE-104/105.
 - `bendlang/bend#2147` (linked): forward references / mutual recursion — ISSUE-107.
-- `bendlang/bend#2146` is the design ask behind the pitfalls doc's
-  ISSUE-120/121/122/123/124/125/128 sections; see
-  `docs/bend-2.0.38-pitfalls.md` and `docs/agents/oss-needs.md`.
+- `bendlang/bend#2150` (linked): the intended encoding for evolving state
+  across an online loop — ISSUE-127; the 126/127 minimal examples are
+  `bendtorch#86` (pointer + limits) and #2146/#2147/#2150.
+- The design asks behind the pitfalls doc's ISSUE-120/121/122/123/124/125/128
+  sections: `docs/bend-2.0.38-pitfalls.md` and `docs/agents/oss-needs.md`.

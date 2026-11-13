@@ -37,8 +37,10 @@ Also this session: `docs/bend-2.0.38-pitfalls.md` (the ISSUE-120..128 "given a
 goal like X, here is what rusts" reference) and `docs/agents/oss-needs.md`
 (what Base does and does not ship for ML work; no scan anywhere; the
 softmax/CE/argmax live in tensor-array and bendtorch, not Base). Two Bend
-language asks were filed as `bendlang/bend#2146` (records) and
-`bendlang/bend#2147` (forward references / mutual recursion) —
+language asks were filed as diagnostics-only issues, no code pushed:
+`bendlang/bend#2146` (records), `bendlang/bend#2147` (forward references /
+mutual recursion), `bendlang/bend#2150` (encoding for evolving state across
+an online loop) —
 diagnostics and repros, no code pushed. `docs/agents/handoff.md` previously
 recorded the step as "not implemented"; that line is now closed. ISSUE-102
 was not re-run (the 25.7M checkpoint is not in this tree); our recorded

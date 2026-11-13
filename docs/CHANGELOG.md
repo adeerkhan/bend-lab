@@ -29,10 +29,11 @@ What changed for the people who run the lab. Internal refactors are not listed.
   on this port; `docs/agents/oss-needs.md` records what Base does and does
   not ship (no scan/cumsum anywhere; softmax/CE/argmax live in
   tensor-array and bendtorch, not in Base). Two language asks are filed as
-  `bendlang/bend#2146` (records) and `bendlang/bend#2147` (forward
-  references and mutual recursion) — diagnostics and repros only, no code
-  pushed. `aaaxn/bendtorch#86` asks whether the last-step loss is meant to
-  be all of `T.Train`.
+  `bendlang/bend#2146` (records), `bendlang/bend#2147` (forward
+  references and mutual recursion) and `bendlang/bend#2150` (encoding for
+  evolving state across an online loop) — diagnostics and repros only, no
+  code pushed. `aaaxn/bendtorch#86` asks whether the last-step loss is meant
+  to be all of `T.Train`.
 
 
 ### Mamba-3 decode placeholder: full-prefix twin parity passes
