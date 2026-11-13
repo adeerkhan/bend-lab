@@ -33,9 +33,6 @@ mamba3-bench:     ## twenty forward passes at seqlen 8: the scan benchmark
 mamba3-layer:     ## the SISO block as a BendTorch T.Layer, trained with T.Train
 	$(PY) reference/test_mamba3_layer.py
 
-mamba3-step:      ## step decode placeholder: full-prefix generation vs twin golden (proper step pending)
-	$(PY) reference/test_mamba3_step.py
-
 glm-step:         ## the 192-position attention step: state and cache against the full prefix
 	@mkdir -p .scratch
 	$(BEND) -o .scratch/glm_step.bin examples/language/glm53_flash/probe_glm_step.bend

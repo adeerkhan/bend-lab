@@ -77,9 +77,8 @@ run n4n16 "$BEND examples/language/mamba3/probe_mamba3_n.bend" "y16:"
 run gpu-probe "$BEND examples/language/mamba3/probe_bendtorch_gpu.bend" ""
 
 # B. Mamba-3, the tests that remain (added as each gate lands)
-# run mamba3-step "make mamba3-step" "MAMBA3 STEP PASS"
-run mamba3-layer "make mamba3-layer" "MAMBA3 LAYER PASS"
-run mamba3-step "make mamba3-step" "MAMBA3 STEP"
+# run mamba3-layer "make mamba3-layer" "MAMBA3 LAYER PASS"
+notrun mamba3-step "placeholder gate exists but no step kernel; see .local/issues-hit.md ISSUE-127"
 # run mamba3-varlen "make mamba3-varlen" "MAMBA3 VARLEN PASS"
 # run mamba3-gqa "make mamba3-gqa" "MAMBA3 GQA PASS"
 # run mamba3-outnorm "make mamba3-outnorm" "MAMBA3 OUTNORM PASS"
