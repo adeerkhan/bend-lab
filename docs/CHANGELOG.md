@@ -30,7 +30,8 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 - `scripts/batch.sh` (and `make batch`) runs every row through `make session`
   and writes `results/batch-<date>.md`: status, seconds, sample count and the
-  first failing line. A missing sample count is `unavailable`.
+  first failing line. A missing sample count is `unavailable`. The `mamba3-layer`
+  row is included: `MAMBA3 LAYER PASS`, 2026-11-13.
 - The first full run is 14/14 PASS: Mamba-3 gates, the GPU probe, versions,
   `check-fast` 31/31, the full gate 141/141 in 2460 s, the UNet gate, the GLM
   decoder and 192 evaluation, and the four short tracks. The Mamba-3 decode
