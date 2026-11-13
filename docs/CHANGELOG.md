@@ -4,6 +4,13 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The GLM 192 step cache protocol
+
+- `make glm-step` runs `probe_glm_step.bend`: the linear attention's prefix
+  state and the sparse attention's post-RoPE K/V cache reproduce the
+  full-prefix 192-position rows (`lin max|d| 0`, `sp max|d| 0`). Synthetic
+  q/k/v, no weights; the one-block step with the real weights is next.
+
 ### The GLM evaluation can run a named subset
 
 - `gen_a.bend`, `gen_h192.bend` and `reference/glm53_dense_eval.py` take

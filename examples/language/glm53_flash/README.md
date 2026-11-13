@@ -275,6 +275,13 @@ the final held-out batch prints `val_loss:`; `reference/trace.py` stores that as
 `out/step_<i>.bin` every N steps, in the same flat layout as `final_weights.bin`; `step_4.bin` and
 `final_weights.bin` are byte-identical after a four-step run.
 
+**The step cache protocol.** `probe_glm_step.bend` feeds the 192-position
+attention cores one token at a time: the linear block carries its prefix state
+`K`/`KV`, the sparse block carries the post-RoPE K/V cache. Against the
+full-prefix rows, `make glm-step` prints `lin max|d| 0`, `sp max|d| 0`,
+`GLM STEP PASS`. It uses synthetic q/k/v, no weights; this is the state/cache
+protocol for the decode path, not the full model yet.
+
 `reference/glm53_dense_eval.py --episodes N` and the `--episodes N` flag on
 `gen_a.bend`/`gen_h192.bend` run the **first N of 64 episodes** and write
 `eval-<split>-epN.json`; the frozen golden is not touched. A four-episode dev

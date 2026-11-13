@@ -7,6 +7,16 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-13 — the GLM 192 step cache protocol passes
+
+`examples/language/glm53_flash/probe_glm_step.bend` feeds the 192-position
+attention cores one token at a time: the linear block carries `K`/`KV`, the
+sparse block carries the post-RoPE K/V cache. Against the full-prefix rows,
+`make glm-step` prints `lin max|d| 0` and `sp max|d| 0` (`GLM STEP PASS`). The
+decode path now has a tested state/cache protocol; the next step is the
+one-block step with the real weights, then the four-block decode and the full
+64-episode evaluation.
+
 ## 2026-11-13 — the final full gate on the committed HEAD
 
 `make check` is `141/141` in `34m26s` (session `check-final-head2`), run on the
