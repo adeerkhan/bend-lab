@@ -10,6 +10,7 @@ command that produced its last number.
 | --- | --- | --- |
 | proofs, frozen references | `make check-fast` | `31/31`, 2026-11-12 |
 | full gate | `make check` | `141/141`, 2026-11-13, `34m26 s` (`check-final-head2`), on the committed HEAD |
+| batch | `scripts/batch.sh` / `make batch` | 14/14 A+C PASS, [batch-20261113-152747.md](../results/batch-20261113-152747.md); Mamba-3 B rows `not run` |
 | Mamba-3 SISO and full LM | `make mamba3` | `MAMBA3 PASS`, 2026-11-12 |
 
 Short tests run on 2026-11-12, all on the current `2.0.0.0` lane:

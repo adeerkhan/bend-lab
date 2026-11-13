@@ -1,6 +1,6 @@
 {
   "schema": "mlbend.experiment/3",
-  "created_at": "2026-11-12T13:23:53.644822+00:00",
+  "created_at": "2026-11-13T11:31:13.228114+00:00",
   "task": {
     "name": "glm53-hybrid128",
     "description": "one training step of the 4-block GLM-5.3-Flash hybrid (three linear and one sparse block, width 32, four heads, 128 positions, 74,144 parameters) on the reference's synthetic corpus",
@@ -32,7 +32,7 @@
     "positions": 128
   },
   "git": {
-    "commit": "f1c95b2",
+    "commit": "f6483da",
     "branch": "main",
     "dirty": true
   },
@@ -74,16 +74,6 @@
       "name": "bend-ml-tensor-array",
       "version": "0.1.20.0",
       "hash": "0x5c5507d77be847e1e454ec33ab54e087"
-    },
-    {
-      "name": "bend-ml-tensor-array",
-      "version": "0.1.21.0",
-      "hash": "0x3c0fc6320fc1872747ae0856911080c7"
-    },
-    {
-      "name": "bend-ml-tensor-fork",
-      "version": "0.1.7.2",
-      "hash": "0xdfb90ca84b7ce7e315474b48852d7ec7"
     },
     {
       "name": "bend-ml-tensor-gpu",
@@ -155,14 +145,14 @@
     "numpy": "2.5.4"
   },
   "run": {
-    "build_seconds": 91.818,
-    "seconds_min": 3.017,
+    "build_seconds": 59.91,
+    "seconds_min": 1.547,
     "seconds_all": [
-      3.017
+      1.547
     ],
     "repeat": 1,
     "fetch_seconds": 0.0,
-    "compute_seconds": 3.017,
+    "compute_seconds": 1.547,
     "reference_seconds": 0.0,
     "speed_ratio": 0.0
   },
@@ -170,19 +160,19 @@
     {
       "path": "run",
       "depth": 0,
-      "ms": 3258.0,
+      "ms": 1689.333,
       "kind": "wall"
     },
     {
       "path": "run/init",
       "depth": 1,
-      "ms": 13.0,
+      "ms": 6.0,
       "kind": "once"
     },
     {
       "path": "run/train_new",
       "depth": 1,
-      "ms": 4.0,
+      "ms": 2.0,
       "kind": "once"
     },
     {
@@ -194,13 +184,13 @@
     {
       "path": "run/step",
       "depth": 1,
-      "ms": 3241.0,
+      "ms": 1681.333,
       "kind": "wall"
     },
     {
       "path": "run/step/forward",
       "depth": 2,
-      "ms": 1484.0,
+      "ms": 791.0,
       "kind": "wall"
     },
     {
@@ -212,7 +202,7 @@
     {
       "path": "run/step/backward",
       "depth": 2,
-      "ms": 2059.0,
+      "ms": 1114.0,
       "kind": "wall"
     },
     {
@@ -233,8 +223,8 @@
   "bounds": {},
   "notes": [
     "clock: IO.now is milliseconds; a stage below 1 ms prints <1 ms",
-    "the trace line measures the batch read and T.Train.step: 3241 ms",
-    "the four parts sum to 3544 ms against the 3241 ms step (+9.3%); they are timed on a fresh state, so the difference is measurement, not work",
+    "the trace line measures the batch read and T.Train.step: 1681 ms",
+    "the four parts sum to 1906 ms against the 1681 ms step (+13.4%); they are timed on a fresh state, so the difference is measurement, not work",
     "the three timed steps read rows 0, 1 and 2; split_loss is the loop's first-step loss",
     "parameters 74144",
     "forward check: reference/test_glm53_mh.py 4/4 (linear 8.84e-08, sparse 1.23e-07, four-block model 1.22e-07 relative, N=8)",
@@ -266,7 +256,7 @@
           "note": "no reference for this number"
         }
       },
-      "run_seconds": 3.017,
+      "run_seconds": 1.547,
       "reference_seconds": 0.0
     }
   ],

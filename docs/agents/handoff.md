@@ -7,6 +7,19 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-13 — the batch baseline: 14/14 A+C, Mamba-3 B not run
+
+`scripts/batch.sh` (and `make batch`) runs the matrix through `make session`
+and writes `results/batch-<date>.md`. The full run
+(`results/batch-20261113-152747.md`) is **14/14 PASS**: `mamba3`,
+`mamba3-bench`, n4/n16, the GPU probe (0 differing words), `versions`,
+`check-fast` 31/31, the full gate 141/141 in 2460 s, `unet-metric`,
+`glm-decode`, `glm-h192-step` (933 s), and the four short tracks. The Mamba-3
+decode step, `T.Layer`/`T.Train`, varlen, GQA, outnorm, deep, MIMO and the
+tiny LM are **not run**, with the reasons in the summary; the next single step
+is the decode step, `step_mamba3.bend` against
+`reference/mamba3/mamba_ssm/ops/triton/mamba3/mamba3_siso_step.py`.
+
 ## 2026-11-13 — the four-block step decoder; the full 192 evaluation
 
 `step_h192.bend` runs the hybrid one token at a time: embedding, three linear

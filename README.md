@@ -153,6 +153,9 @@ make session TASK=check-fast CMD="make check-fast"        # any test as a dashbo
 
 `make dashboard PORT=8787` (or `./scripts/dashboard.sh start` for a background
 server) serves the in-house W&B view at `http://127.0.0.1:8787/`: every run in
+`scripts/batch.sh` (or `make batch`) runs the full matrix through the same
+sessions and writes one summary, `results/batch-<date>.md`.
+
 `results/runs.sqlite3`, live sessions, host CPU, RAM, GPU utilization and GPU
 memory, each run's parameter count and configuration, and the selected run's
 train and eval loss, step time, extra signals, system samples, steps and

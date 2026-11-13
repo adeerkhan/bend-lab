@@ -4,6 +4,17 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### One batch driver for the matrix
+
+- `scripts/batch.sh` (and `make batch`) runs every row through `make session`
+  and writes `results/batch-<date>.md`: status, seconds, sample count and the
+  first failing line. A missing sample count is `unavailable`.
+- The first full run is 14/14 PASS: Mamba-3 gates, the GPU probe, versions,
+  `check-fast` 31/31, the full gate 141/141 in 2460 s, the UNet gate, the GLM
+  decoder and 192 evaluation, and the four short tracks. The Mamba-3 decode
+  step, `T.Layer`/`T.Train`, varlen, GQA, outnorm, deep, MIMO and the tiny LM
+  are recorded `not run` with their reasons.
+
 ### The hybrid 192 evaluation is complete
 
 - `step_h192.bend` decodes the four-block hybrid one token at a time: the

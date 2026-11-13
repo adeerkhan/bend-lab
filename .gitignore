@@ -67,3 +67,6 @@ results/glm53-hybrid192-ep*/
 
 # the step decoder writes the flat weights beside the evaluation
 results/glm53-hybrid192-step-*/model-400/
+
+# the batch target writes the combined eval here
+results/glm53-hybrid192-step/

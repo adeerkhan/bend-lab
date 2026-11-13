@@ -1,6 +1,6 @@
 {
   "schema": "mlbend.experiment/3",
-  "created_at": "2026-11-12T13:26:18.738385+00:00",
+  "created_at": "2026-11-13T11:32:48.990317+00:00",
   "task": {
     "name": "iris-crossval",
     "description": "logistic regression over iris, five stratified folds, scaler fitted on the training rows only",
@@ -36,7 +36,7 @@
     "bend": "2.0.38"
   },
   "git": {
-    "commit": "f1c95b2",
+    "commit": "f6483da",
     "branch": "main",
     "dirty": true
   },
@@ -78,16 +78,6 @@
       "name": "bend-ml-tensor-array",
       "version": "0.1.20.0",
       "hash": "0x5c5507d77be847e1e454ec33ab54e087"
-    },
-    {
-      "name": "bend-ml-tensor-array",
-      "version": "0.1.21.0",
-      "hash": "0x3c0fc6320fc1872747ae0856911080c7"
-    },
-    {
-      "name": "bend-ml-tensor-fork",
-      "version": "0.1.7.2",
-      "hash": "0xdfb90ca84b7ce7e315474b48852d7ec7"
     },
     {
       "name": "bend-ml-tensor-gpu",
@@ -159,20 +149,20 @@
     "numpy": "2.5.4"
   },
   "run": {
-    "build_seconds": 119.09,
-    "seconds_min": 0.208,
+    "build_seconds": 88.868,
+    "seconds_min": 0.102,
     "seconds_all": [
-      0.214,
-      0.212,
-      0.215,
-      0.208,
-      0.218
+      0.121,
+      0.102,
+      0.117,
+      0.104,
+      0.105
     ],
     "repeat": 1,
     "fetch_seconds": 0.001,
-    "compute_seconds": 0.207,
-    "reference_seconds": 2.537,
-    "speed_ratio": 12.201
+    "compute_seconds": 0.101,
+    "reference_seconds": 3.378,
+    "speed_ratio": 33.265
   },
   "stages": [],
   "stages_source": null,
@@ -209,8 +199,8 @@
           "pass": true
         }
       },
-      "run_seconds": 0.214,
-      "reference_seconds": 2.537
+      "run_seconds": 0.121,
+      "reference_seconds": 3.378
     },
     {
       "seed": 43,
@@ -240,8 +230,8 @@
           "pass": true
         }
       },
-      "run_seconds": 0.212,
-      "reference_seconds": 0.988
+      "run_seconds": 0.102,
+      "reference_seconds": 0.781
     },
     {
       "seed": 44,
@@ -271,8 +261,8 @@
           "pass": true
         }
       },
-      "run_seconds": 0.215,
-      "reference_seconds": 0.787
+      "run_seconds": 0.117,
+      "reference_seconds": 0.509
     },
     {
       "seed": 45,
@@ -302,8 +292,8 @@
           "pass": true
         }
       },
-      "run_seconds": 0.208,
-      "reference_seconds": 1.104
+      "run_seconds": 0.104,
+      "reference_seconds": 0.597
     },
     {
       "seed": 46,
@@ -333,8 +323,8 @@
           "pass": true
         }
       },
-      "run_seconds": 0.218,
-      "reference_seconds": 0.932
+      "run_seconds": 0.105,
+      "reference_seconds": 0.647
     }
   ],
   "metrics": {

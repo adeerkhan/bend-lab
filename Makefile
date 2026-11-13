@@ -8,7 +8,7 @@ BEND := $(or $(BEND_BIN),$(HOME)/.bend/bin/bend)
 BEND_VERSION := 2.0.38
 BEND_REF := ../bend-ref
 
-.PHONY: setup check laws sync-bend clean lint env env-check release experiment experiments results report trace dash dashboard session unet-metric mamba3-bench glm-step glm-block-step glm-lin-block glm-decode glm-h192-step peaks bounds bench plumbing flow flow64 doctor figures select plots sweep sweep-agent
+.PHONY: setup check laws sync-bend clean lint env env-check release experiment experiments results report trace dash dashboard session unet-metric mamba3-bench glm-step glm-block-step glm-lin-block glm-decode glm-h192-step batch peaks bounds bench plumbing flow flow64 doctor figures select plots sweep sweep-agent
 
 setup:            ## Bend, Lean and the Python venv
 	scripts/setup.sh
@@ -53,6 +53,9 @@ glm-decode:       ## the four-block step decoder: episode 0 tokens against the f
 	$(BEND) -o .scratch/step_h192.bin examples/language/glm53_flash/step_h192.bend
 	@.scratch/step_h192.bin --episodes 1 | tee .scratch/step_h192.log
 	@$(PY) reference/glm53_step_gen_check.py .scratch/step_h192.log
+
+batch:            ## the streamlined matrix: scripts/batch.sh (ROWS=... for a subset)
+	scripts/batch.sh
 
 glm-h192-step:    ## the full hybrid 192 dev and confirm evaluation with the step decoder
 	@mkdir -p .scratch
