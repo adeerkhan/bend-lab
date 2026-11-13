@@ -7,6 +7,49 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-13 — the decode step exists and PASSes at 16 tokens; 64/256 unverified
+
+`examples/language/mamba3/step_mamba3.bend` is a real online decode step for
+the Mamba-3 SISO LM (two weight-tied layers): one row processed per token,
+state threaded unmatched through a single self-recursive `step_go`
+(`r: SR`). Carried per layer: the 2048-float SSM state in one `Array<F32>`,
+the 16-float angle state, and the previous row's `x`/`k`/`DT`/`trap` pending
+tensors. The full-prefix reference folds every row with `scale = 0` when it is
+the last row of a pass (`shift` from the next row's `DT` is `Nil`); an online
+decoder therefore also folds every row with `scale = 0` and, when the next
+row's `DT`/`trap` arrive, applies an additive rank-one correction
+`S[v, q] += (scale * x_v) * k_q` in the same float op order as the reference's
+`row_set`. `make mamba3-step` prints `MAMBA3 STEP PASS` (run 0.08 s, build
+2.2 s): the sixteen greedy tokens equal the golden
+`[0, 1, 2, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]` exactly.
+
+Not verified on this lane: 64- and 256-token parity — the full-prefix
+reference dies with a Bend memory fault at seq len >= 64 (`bend: memory
+fault`), the same class as ISSUE-007. The step at 64 tokens itself runs in
+0.45 s. Do not quote 64/256 numbers from this session.
+
+ISSUE-126: `T.Train` carries one `loss: F32` (final step only); the layer gate
+compares only tokens, final-step loss and weight heads, and says so. The
+upstream question is filed as `aaaxn/bendtorch#86`. No per-step curve gate
+exists because none can.
+
+Also this session: `docs/bend-2.0.38-pitfalls.md` (the ISSUE-120..128 "given a
+goal like X, here is what rusts" reference) and `docs/agents/oss-needs.md`
+(what Base does and does not ship for ML work; no scan anywhere; the
+softmax/CE/argmax live in tensor-array and bendtorch, not Base). Two Bend
+language asks were filed as `bendlang/bend#2146` (records) and
+`bendlang/bend#2147` (forward references / mutual recursion) —
+diagnostics and repros, no code pushed. `docs/agents/handoff.md` previously
+recorded the step as "not implemented"; that line is now closed. ISSUE-102
+was not re-run (the 25.7M checkpoint is not in this tree); our recorded
+numbers stand and the third-party published README was not edited.
+
+Remaining open rows after this: mamba3-varlen, -gqa, -outnorm, -deep (all
+blocked behind nothing now — they may reuse `step_mamba3.bend`), MIMO (design
+question for the maintainer), tiny-lm. `make check-fast` and `make mamba3`
+were re-run this session and pass; the full gate (`make check`) was not
+re-run. See `results/mamba3-step-gate.md` for commands.
+
 ## 2026-11-13 — the SISO block is a BendTorch layer: MAMBA3 LAYER PASS
 
 `examples/language/mamba3/mamba3_layer.bend`: the post-swap block registered as

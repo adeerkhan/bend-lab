@@ -4,7 +4,42 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### Mamba-3 decode step: implemented and gated at 16 tokens
+
+- `examples/language/mamba3/step_mamba3.bend` is a real online decode step
+  for the SISO LM: one row per token, state threaded unmatched through a
+  single self-recursive `step_go` (`SR` state: two layer states with the
+  2048-float SSM `Array`, the 16-float angle block and a one-row
+  pending `x`/`k`/`DT`/`trap`). The trapezoid's dependence of row `t`'s
+  `scale` on row `t+1`'s `DT`/`trap` is handled by folding every row with
+  `scale = 0` and applying an additive rank-one SSM correction
+  `S[v, q] += (scale * x_v) * k_q` when the next row's `DT`/`trap` arrive,
+  in the same float op order as the reference pass — exact parity at 16
+  tokens, not an approximation.
+- `make mamba3-step` runs `reference/test_mamba3_step.py`: the sixteen
+  greedy tokens equal the golden `[0, 1, 2, 3, 1, 1, 1, 1, 1, 1, 1, 1,
+  1, 1, 1, 1]` exactly (build 2.2 s, run 0.08 s). 64/256-token parity is
+  unverified on this lane — the full-prefix reference dies with a Bend
+  memory fault at seq len >= 64 — and is not quoted anywhere.
+- The earlier "decode placeholder" claim (identical to the probe, reported
+  as PASS) is superseded by this; the placeholder was deleted and the row
+  had been recorded as not run. See `results/mamba3-step-gate.md` and the
+  ISSUE-127 entry in the local ledger.
+- `docs/bend-2.0.38-pitfalls.md` records the ISSUE-120..128 frictions hit
+  on this port; `docs/agents/oss-needs.md` records what Base does and does
+  not ship (no scan/cumsum anywhere; softmax/CE/argmax live in
+  tensor-array and bendtorch, not in Base). Two language asks are filed as
+  `bendlang/bend#2146` (records) and `bendlang/bend#2147` (forward
+  references and mutual recursion) — diagnostics and repros only, no code
+  pushed. `aaaxn/bendtorch#86` asks whether the last-step loss is meant to
+  be all of `T.Train`.
+
+
 ### Mamba-3 decode placeholder: full-prefix twin parity passes
+
+> Superseded by "Mamba-3 decode step: implemented and gated at 16 tokens"
+> (2026-11-13): the placeholder was deleted, and this section is kept as
+> history only.
 
 - `make mamba3-step` runs `reference/test_mamba3_step.py` against
   `examples/language/mamba3/step_mamba3.bend` (identical to the probe's
