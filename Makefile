@@ -8,7 +8,7 @@ BEND := $(or $(BEND_BIN),$(HOME)/.bend/bin/bend)
 BEND_VERSION := 2.0.38
 BEND_REF := ../bend-ref
 
-.PHONY: setup check laws sync-bend clean lint env env-check release experiment experiments results report trace dash dashboard session unet-metric mamba3-bench glm-step glm-block-step glm-lin-block peaks bounds bench plumbing flow flow64 doctor figures select plots sweep sweep-agent
+.PHONY: setup check laws sync-bend clean lint env env-check release experiment experiments results report trace dash dashboard session unet-metric mamba3-bench glm-step glm-block-step glm-lin-block glm-decode glm-h192-step peaks bounds bench plumbing flow flow64 doctor figures select plots sweep sweep-agent
 
 setup:            ## Bend, Lean and the Python venv
 	scripts/setup.sh
@@ -47,6 +47,17 @@ glm-lin-block:    ## the linear block's step (attention and MLP) on the trained 
 	$(BEND) -o .scratch/glm_lin_block.bin examples/language/glm53_flash/probe_glm_block_lin.bend
 	@.scratch/glm_lin_block.bin | tee .scratch/glm_lin_block.log
 	@grep -q "GLM LIN BLOCK PASS" .scratch/glm_lin_block.log
+
+glm-decode:       ## the four-block step decoder: episode 0 tokens against the full prefix
+	@mkdir -p .scratch
+	$(BEND) -o .scratch/step_h192.bin examples/language/glm53_flash/step_h192.bend
+	@.scratch/step_h192.bin --episodes 1 | tee .scratch/step_h192.log
+	@$(PY) reference/glm53_step_gen_check.py .scratch/step_h192.log
+
+glm-h192-step:    ## the full hybrid 192 dev and confirm evaluation with the step decoder
+	@mkdir -p .scratch
+	$(BEND) -o .scratch/step_h192.bin examples/language/glm53_flash/step_h192.bend
+	$(PY) reference/glm53_dense_eval.py --weights results/glm53-hybrid128/weights/final_weights.bin --out results/glm53-hybrid192-step --splits dev,confirm --episodes 64 --layout hybrid --binary .scratch/step_h192.bin --golden ''
 
 unet-metric:      ## the UNet held-out gate: legibility and spectrum, with can-fail arms
 	$(PY) reference/test_unet_flowers_metric.py

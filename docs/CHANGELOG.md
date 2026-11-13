@@ -4,6 +4,18 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The hybrid 192 evaluation is complete
+
+- `step_h192.bend` decodes the four-block hybrid one token at a time: the
+  embedding, three linear blocks with their prefix state, the sparse block
+  with its K/V cache, the final norm and the tied head. `make glm-decode`
+  reproduces episode 0's 48 tokens exactly (3.35 s/episode, about 130x the
+  full-prefix generator).
+- The full evaluation, `make glm-h192-step`: dev **0/64 solved, 0/192 tests,
+  0 valid, 64 at the token cap** in **306.997 s**; confirm the same in
+  **311.955 s**. The first four dev token lists match the full-prefix
+  four-episode run; these are the full 192 results (ISSUE-101).
+
 ### The GLM 192 step cache protocol
 
 - `make glm-step` runs `probe_glm_step.bend`: the linear attention's prefix

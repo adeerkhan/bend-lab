@@ -24,7 +24,7 @@ Short tests run on 2026-11-12, all on the current `2.0.0.0` lane:
 | Mamba-3 | `make mamba3` | PASS, `46.5 s` total; train probe `9.81 s` (the probe is noisy: `5.25-10.50 s` over three runs) |
 | GLM | `make trace TASK=glm53-hybrid128 STEPS=30` | 30 steps, loss `5.5635 -> 3.2657`, eval `3.2838`, loop `72.9 s`, 118 system samples |
 | GLM | `make experiment TASK=glm53-hybrid128` | PASS, one step, `5m55` |
-| GLM | `reference/glm53_dense_eval.py --episodes 4 --layout hybrid --splits dev` | subset `4/64`, `0/4` solved, `0/12` tests, `29.2 min`; not the 192 result |
+| GLM | `make glm-h192-step` | full 192: dev `0/64`, `0/192` tests, `306.997 s`; confirm `0/64`, `0/192`, `311.955 s`; step decoder |
 | Mamba-3 | `make session TASK=mamba3 CMD="make mamba3"` | PASS, `22.2 s` |
 | classical | `make experiment TASK=iris-crossval` | PASS, `1m05` |
 | gate | `make session TASK=check-fast CMD="make check-fast"` | `31/31`, `23.6 s` |
@@ -73,7 +73,7 @@ and `bend.toml`/`bend.lock`; the env was purged and synced from the lock
 | classical ML | `make experiment TASK=...` | `iris-crossval`, `wine-pca`, `transformer-periodic` | none; `Mat.reshape` only if a preprocess needs it | align the lane, rerun the report cards, compare to frozen references |
 | diffusion | `reference/test_*.py`, `make experiment`, `make unet-metric` | `diffusion-2d`, `vit-first`, `cifar-10`, the UNet held-out gate | `Conv2dNB`, `GroupNorm`, `Tile`, `RoPE2d`, GPU lane | adopt the layers that replace local copies; rerun the gates |
 | flow matching | `reference/test_flow64.py`, `make experiment` | `flow64-first`; the 6,000-step `flowers-flow` only when a gate or claim needs it | `Conv2dNB`, `GroupNorm`, GPU lane | check the forward/sampler gate; report legibility as measured, not gated |
-| GLM-5.3 Flash | `make experiment TASK=glm53-hybrid128` | one hybrid step; 192 evaluation only after the list core changes | attention triangle and parallel forward, gradient accumulation, `Mat.reshape`, Mat/Array core | make the list core an array core first; then rerun the 192 lane |
+| GLM-5.3 Flash | `make experiment TASK=glm53-hybrid128`, `make glm-h192-step` | one hybrid step; the full 192 evaluation now runs in 307 s/312 s with the step decoder | attention triangle and parallel forward, gradient accumulation, `Mat.reshape`, Mat/Array core | the training core is still list-based; the 192 evaluation is no longer blocked |
 | Mamba-3 | `make mamba3`, `make mamba3-bench`, `scripts/mamba3_ab.sh` | the SISO and full-LM gates; the 20-forward benchmark | `Mat.matmul_nt`, `T.Layer`/`T.Train`, GPU lane | the chunked array scan is about 24% faster on forward at the medians (same-session `0.41-0.42 s` against `0.53-0.55 s`; a second session gave 15%); the train probe is equal within noise; next is `T.Layer`/`T.Train` |
 
 ## Order

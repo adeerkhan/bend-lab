@@ -280,7 +280,15 @@ attention cores one token at a time: the linear block carries its prefix state
 `K`/`KV`, the sparse block carries the post-RoPE K/V cache. Against the
 full-prefix rows, `make glm-step` prints `lin max|d| 0`, `sp max|d| 0`,
 `GLM STEP PASS`. It uses synthetic q/k/v, no weights; this is the state/cache
-protocol for the decode path, not the full model yet.
+protocol for the decode path.
+
+`step_h192.bend` is the four-block decoder: the embedding, three linear
+blocks and the sparse block one token at a time, the final norm and the tied
+head. `make glm-decode` gates episode 0 against the recorded full-prefix
+tokens: `48 tokens, identical to the full prefix: GLM DECODE PASS` (3.35 s).
+`make glm-h192-step` runs the full 64-episode dev and confirm splits. The
+step generator is **3.35 s/episode** against `437 s/episode` for the
+full-prefix generator, about **130x**.
 
 `probe_glm_block.bend` is the real-weight one-block gate: the fourth block's
 `ln1`/`ln2`/`qkv`/`out`/`gate`/`up`/`down` from
@@ -297,9 +305,11 @@ next.
 `eval-<split>-epN.json`; the frozen golden is not touched. A four-episode dev
 subset of the hybrid took **1749.7 s (29.2 min)**, solved **0/4**, passed
 **0/12 tests**, and hit the token cap on all four. This is an explicitly named
-subset, **not the 192 evaluation**: the full 64 episodes extrapolate to about
-**7.8 h**, over the one-hour rule, so the full result still waits for the fast
-core.
+subset of the full-prefix generator. The step decoder runs the **full** 64
+episodes: dev **0/64 solved, 0/192 tests, 0 valid, 64 at the token cap** in
+**306.997 s**, confirm the same in **311.955 s**. The step decoder's first
+four dev token lists are identical to the full-prefix four-episode run, and
+episode 0 matches exactly. These are the full 192 results, not a subset.
 
 ## The reference on this machine
 

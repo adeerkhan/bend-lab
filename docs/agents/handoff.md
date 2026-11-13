@@ -7,6 +7,21 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-13 — the four-block step decoder; the full 192 evaluation
+
+`step_h192.bend` runs the hybrid one token at a time: embedding, three linear
+blocks with the prefix state `K`/`KV`, the sparse block with its K/V cache,
+the final norm and the tied head. `make glm-decode` reproduces episode 0's
+48 tokens exactly (`GLM DECODE PASS`, 3.35 s/episode against 437 s/episode
+for the full-prefix generator, about 130x). The first four dev token lists
+also match the full-prefix four-episode run.
+
+`make glm-h192-step` runs the full evaluation: dev **0/64 solved, 0/192
+tests, 0 valid, 64 token-cap** in **306.997 s**; confirm the same in
+**311.955 s**. These are the full 192 results, not the subset (ISSUE-101).
+The one-block gates (`glm-step`, `glm-block-step`, `glm-lin-block`) are
+below; the next track is the Mamba-3 decode step and `T.Layer`/`T.Train`.
+
 ## 2026-11-13 — the fourth block's attention step passes on the real weights
 
 `probe_glm_block.bend` loads the trained fourth block's
