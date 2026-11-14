@@ -7,6 +7,60 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-14 — Mamba-3 breadth: varlen, gqa and outnorm are green; deep/mimo/tiny-lm open
+
+Rows 1-3 of the goal are done, each with a gate file, a Makefile target, a
+batch row, a fresh PASS and its own commit. Rows 4-6 are not started.
+
+- **varlen** (`make mamba3-varlen`, `c10e3dd`): packed `[u ; u]` with the
+  boundary at 8. `forward_vl` runs pass_a once over the packed input and
+  each segment's angle/SSM passes on its own slice with its own
+  zero-supplemented DT/trap row (a true reset of the angle state, the SSM
+  array and the trapezoid's shifted term). Both segments reproduce the
+  twin-gated 8-row golden: y rel `5.5e-07`, angle `1.5e-07`, states
+  `5.0e-07` (gate `1e-5`). Gate `reference/test_mamba3_varlen.py`.
+- **gqa** (`make mamba3-gqa`, `74c4c3e`): ngroups 2, rope_fraction 1.0.
+  in_proj 340, 2 B/C groups, per-v-head biases, v-head h reads group h//2,
+  angle state per v-head with 8 pairs. `forward_gqa`/`backward_gqa` match
+  `reference/mamba3_gqa_twin.py` (CPU, our own explicit t-loop, golden
+  `reference/mamba3_gqa_golden.npz`) at every forward intermediate (y rel
+  `6.7e-07`, gate `1e-5`) and every gradient (`<= 1.1e-06`, gate `1e-4`;
+  `dang_raw` compared summed over tokens, the SISO convention — note the
+  GQA backward's `dangle` accumulator MUST start at `zline(32n)`, not
+  `Nil`, or every angle-dependent gradient is zero).
+- **outnorm** (`make mamba3-outnorm`, `cfcacde`): is_outproj_norm, gated
+  grouped RMSNorm (group_size 32). Kernel out_v stays ungated; y =
+  rms32(out_v) * norm_w * silu(z); the backward runs the grouped RMS chain
+  into out_v and keeps the norm weight gradient in `dW_on` via its own
+  `BWON`/`GRADON` accumulators (the shared records are unchanged). Matches
+  `reference/mamba3_outnorm_twin.py` at every forward intermediate (rel
+  `<= 1.1e-06`) and every gradient including `dW_on` (rel `<= 2.9e-06`,
+  gate `1e-4`).
+- Fresh batch `results/batch-20261114-211606.md`: all three PASS.
+- All other gates re-run green after each row: `make mamba3`, `mamba3-layer`,
+  `mamba3-step`, `mamba3-train-curve`, `check-fast` 31/31.
+
+**Open rows (not started), in the goal's order:**
+
+- **deep**: 4/8/16-layer stacks with a residual and a final norm per stack.
+  Needs a depth-4 twin (compose four `mamba3_twin.py` blocks), a hand-unrolled
+  4-layer forward/backward/generation chain (the LM chain is two layers,
+  `lm_h2`/`lm_after_g2`/`lm_after_g1` are the template), and memory/time
+  banners for depths 8 and 16 (`unavailable` if the lane cannot hold them).
+- **mimo**: build the oracle FIRST. The reference MIMO path is the TileLang
+  `mamba3_mimo_combined` kernel; check whether it imports and runs on this
+  lane before any port. If it cannot run, record why — do not ship a
+  self-referential gate.
+- **tiny-lm**: a real small corpus, small vocab, multi-layer stack, AdamW
+  with weight decay, gradient clipping, an LR schedule, a held-out split, a
+  manifest + report card, and a comparison against the twin on the same data
+  and seed.
+
+Everything above is un-blocked engineering work; nothing waits on the
+maintainer. The full gate (`make check`) was last green at 144/144 before
+the breadth rows; re-run it when the next row lands (the new tests are
+`test_mamba3_*.py` and are picked up automatically).
+
 ## 2026-11-14 — Mamba-3 breadth, one row at a time: varlen done, GQA forward
 
 Row order from the goal: varlen → gqa → outnorm → deep → mimo → tiny-lm.
