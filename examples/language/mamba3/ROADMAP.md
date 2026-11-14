@@ -85,6 +85,16 @@ The reference has `tests/modules/test_mamba3_varlen.py` for exactly this.
 **Accept.** Two sequences run separately and concatenated with `cu_seqlens`
 give the same outputs and the same final states, at `1e-5`.
 
+**Done: varlen (2026-11-14).** `probe_mamba3_varlen.bend` packs `[u ; u]`
+(16 rows) with the boundary after row 8. `forward_vl` runs `pass_a` once
+over the packed input, then each segment's pass B/C on its own slice with
+its own zero-supplemented DT/trap row (a true reset of the angle state, the
+SSM array and the trapezoid's shifted term). `make mamba3-varlen` compares
+both segments to the twin-gated 8-row golden: y rel `5.5e-07`, angle
+`1.5e-07`, states `5.0e-07` (gate `1e-5`); build 2.6 s, run 0.10 s.
+Batch remains 1: a batch dimension is the training-loop row (3e), not this
+state-reset item.
+
 **3b. `ngroups > 1` (GQA) and `rope_fraction 1.0`.** The kernel supports
 grouped Q/K heads and a full-width rotation. Both change the shape plumbing,
 not the recurrence. Test the angle layout and the B/C bias broadcast.

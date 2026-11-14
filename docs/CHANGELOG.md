@@ -4,6 +4,18 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### Mamba-3 varlen: the packed input resets at the boundary
+
+- `forward_vl` in `mamba3_siso.bend` runs the row-independent `pass_a` once
+  over a packed `[A ; B]` input and each segment's angle/SSM passes on its
+  own slice, with the segment's own zero-supplemented DT/trap row — a true
+  reset of the angle state, the SSM array and the trapezoid's shifted term.
+  `make mamba3-varlen` (`probe_mamba3_varlen.bend`, 16 packed rows, boundary
+  at 8) reproduces the twin-gated 8-row golden in both segments: y rel
+  `5.5e-07`, angle `1.5e-07`, states `5.0e-07`, gate `1e-5`; build 2.6 s,
+  run 0.10 s. `PROBE_MAMBA3`'s 8-row golden is unchanged, so `make mamba3`
+  and the other gates are untouched.
+
 ### Mamba-3 decode step: implemented and gated at 16/64/256 tokens
 
 - `examples/language/mamba3/step_mamba3.bend` is a real online decode step for

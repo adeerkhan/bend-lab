@@ -795,6 +795,81 @@ def forward(+u: List<&2, F32>, +w_in: List<&2, F32>,
     D, w_out, n)
 
 
+# ---------------------------------------------------------------------------
+# varlen: a packed input [A ; B], with the state reset at each boundary
+#
+# The stateful passes (B: the angle recurrence, C: the SSM scan) never see
+# one segment's rows from another.  The row-independent pass (A: in_proj)
+# runs once over the packed input; each segment's pass B/C then runs on the
+# segment's own slice, with its own zero-supplemented DT/trap row, exactly
+# as a standalone pass does.  The boundary is therefore a true reset of the
+# four states (angle, SSM, and the trapezoid's shifted term).
+
+type VL is Type:
+  VL{ya: List<&2, F32>, yb: List<&2, F32>,
+     states_a: List<&2, F32>, states_b: List<&2, F32>,
+     angle_a: List<&2, F32>, angle_b: List<&2, F32>}
+
+def vl_out(fa: FWD, fb: FWD, +len: Nat) -> VL:
+  match fa fb:
+    case FWD{pre, z, x, Braw, Craw, dd_dt, dd_A, trap_raw, ang_raw,
+        A, DT, ADT, trap, gamma, shift, scale, Bn, Cn, angle, q, k,
+        qk, states, out_v, y_inner, ya}
+      FWD{pre2, z2, x2, Braw2, Craw2, dd_dt2, dd_A2, trap_raw2,
+        ang_raw2, A2, DT2, ADT2, trap2, gamma2, shift2, scale2, Bn2, Cn2,
+        angle2, q2, k2, qk2, states2, out_v2, y_inner2, yb}:
+      VL{ya, yb, states, states2, angle, angle2}
+
+def vl_segs(pr: PRE, +B_bias: List<&2, F32>,
+    +C_bias: List<&2, F32>, +D: List<&2, F32>,
+    +w_out: List<&2, F32>, +n: Nat, +n_first: Nat) -> VL:
+  match pr:
+    case PRE{+pre, +z, +x, +Braw, +Craw, +dd_dt, +dd_A,
+        +trap_raw, +ang_raw, +A, +DT, +ADT, +trap, +Bn, +Cn}:
+      +lenb = (n - n_first : Nat)
+      vl_out(forward_pre(PRE{
+        take_row(pre, 0n, Nat.mul(n_first, 304n)),
+        take_row(z, 0n, Nat.mul(n_first, 128n)),
+        take_row(x, 0n, Nat.mul(n_first, 128n)),
+        take_row(Braw, 0n, Nat.mul(n_first, 16n)),
+        take_row(Craw, 0n, Nat.mul(n_first, 16n)),
+        take_row(dd_dt, 0n, Nat.mul(n_first, 4n)),
+        take_row(dd_A, 0n, Nat.mul(n_first, 4n)),
+        take_row(trap_raw, 0n, Nat.mul(n_first, 4n)),
+        take_row(ang_raw, 0n, Nat.mul(n_first, 4n)),
+        take_row(A, 0n, Nat.mul(n_first, 4n)),
+        take_row(DT, 0n, Nat.mul(n_first, 4n)),
+        take_row(ADT, 0n, Nat.mul(n_first, 4n)),
+        take_row(trap, 0n, Nat.mul(n_first, 4n)),
+        take_row(Bn, 0n, Nat.mul(n_first, 16n)),
+        take_row(Cn, 0n, Nat.mul(n_first, 16n))},
+        B_bias, C_bias, D, w_out, n_first),
+      forward_pre(PRE{
+        take_row(pre, Nat.mul(n_first, 304n), Nat.mul(lenb, 304n)),
+        take_row(z, Nat.mul(n_first, 128n), Nat.mul(lenb, 128n)),
+        take_row(x, Nat.mul(n_first, 128n), Nat.mul(lenb, 128n)),
+        take_row(Braw, Nat.mul(n_first, 16n), Nat.mul(lenb, 16n)),
+        take_row(Craw, Nat.mul(n_first, 16n), Nat.mul(lenb, 16n)),
+        take_row(dd_dt, Nat.mul(n_first, 4n), Nat.mul(lenb, 4n)),
+        take_row(dd_A, Nat.mul(n_first, 4n), Nat.mul(lenb, 4n)),
+        take_row(trap_raw, Nat.mul(n_first, 4n), Nat.mul(lenb, 4n)),
+        take_row(ang_raw, Nat.mul(n_first, 4n), Nat.mul(lenb, 4n)),
+        take_row(A, Nat.mul(n_first, 4n), Nat.mul(lenb, 4n)),
+        take_row(DT, Nat.mul(n_first, 4n), Nat.mul(lenb, 4n)),
+        take_row(ADT, Nat.mul(n_first, 4n), Nat.mul(lenb, 4n)),
+        take_row(trap, Nat.mul(n_first, 4n), Nat.mul(lenb, 4n)),
+        take_row(Bn, Nat.mul(n_first, 16n), Nat.mul(lenb, 16n)),
+        take_row(Cn, Nat.mul(n_first, 16n), Nat.mul(lenb, 16n))},
+        B_bias, C_bias, D, w_out, lenb), n_first)
+
+def forward_vl(+u: List<&2, F32>, +w_in: List<&2, F32>,
+    +dt_bias: List<&2, F32>, +B_bias: List<&2, F32>,
+    +C_bias: List<&2, F32>, +Bw: List<&2, F32>,
+    +Cw: List<&2, F32>, +D: List<&2, F32>,
+    +w_out: List<&2, F32>, +n: Nat, +n_first: Nat) -> VL:
+  vl_segs(pass_a(u, w_in, dt_bias, Bw, Cw, n), B_bias, C_bias, D,
+    w_out, n, n_first)
+
 def show(xs: List<&2, F32>) -> String:
   match xs:
     case Nil{}:

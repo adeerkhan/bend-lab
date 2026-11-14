@@ -85,7 +85,7 @@ run mamba3-train-curve "make mamba3-train-curve" "MAMBA3 TRAIN CURVE PASS"
 # run mamba3-outnorm "make mamba3-outnorm" "MAMBA3 OUTNORM PASS"
 # run mamba3-deep "make mamba3-deep" "MAMBA3 DEEP PASS"
 
-notrun mamba3-varlen "not implemented; depends on the step path (which exists)"
+run mamba3-varlen "make mamba3-varlen" "MAMBA3 VARLEN PASS"
 notrun mamba3-gqa "not implemented; depends on the step path (which exists)"
 notrun mamba3-outnorm "not implemented; depends on the step path (which exists)"
 notrun mamba3-deep "not implemented; depends on the step path (which exists)"
