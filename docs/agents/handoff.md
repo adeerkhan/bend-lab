@@ -7,6 +7,43 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-14 — Mamba-3 breadth, one row at a time: varlen done, GQA forward
+
+Row order from the goal: varlen → gqa → outnorm → deep → mimo → tiny-lm.
+**varlen: done and committed** (`c10e3dd`). **gqa: forward gated, backward
+pending** (`854af4a`). **outnorm, deep, mimo, tiny-lm: not started** (the
+order forbids starting one before the previous is green).
+
+- **varlen** (`make mamba3-varlen` PASS, batch `results/batch-20261114-210204.md`):
+  `forward_vl` runs `pass_a` once over a packed `[A ; B]` input and each
+  segment's angle/SSM passes on its own slice with its own zero-supplemented
+  DT/trap row (a true reset of the angle state, the SSM array and the
+  trapezoid's shifted term). Both segments reproduce the twin-gated 8-row
+  golden: y rel `5.5e-07`, angle `1.5e-07`, states `5.0e-07`, gate `1e-5`;
+  build 2.6 s, run 0.10 s. Gate file `reference/test_mamba3_varlen.py`,
+  probe `probe_mamba3_varlen.bend`, 16 packed rows with the boundary at 8.
+- **gqa** (ngroups 2, rope_fraction 1.0): `forward_gqa` (in_proj 340, B/C per
+  group with per-v-head biases, v-head h reads group h//2, 8 angle pairs)
+  matches `reference/mamba3_gqa_twin.py` — our CPU config twin; golden
+  `reference/mamba3_gqa_golden.npz` — at every forward intermediate (y rel
+  `6.7e-07`, states `1.1e-06`). `make mamba3-gqa` prints `MAMBA3 GQA PARTIAL`
+  and exits 1. **Remaining for this row**: the analytic backward is SISO-only —
+  port the angle widths (4→8: `rope_bwd_go`, `rope_bwd`, `dang_head_go`,
+  `dang_t`, `ang_ddt_go`, `head_pre_bw`), and the group-indexed pieces
+  (`hp_all` dCn/dBn per group, `rms_bwd`/`rms_bwd_w` per group, `pass_a_bwd`
+  dW_in with the 340-row / 32-wide B/C slices). Then compare at 1e-4 per
+  tensor against the golden's gradients (`dW_in`, `ddt_bias`, `dB_bias`,
+  `dC_bias`, `dB_norm_w`, `dC_norm_w`, `dD`, `dW_out`, `du`, and the
+  `g_*` intermediates). The batch row must stay `not run` until that gate
+  passes; do not mark the row PASS on the forward alone.
+- Rows 3–6 (outnorm, deep, mimo, tiny-lm) have no code yet; 3c is the small
+  one (gated RMSNorm after the block), 3e/4 are composition, 3d needs its own
+  oracle first.
+- All existing gates re-run green this session: `make mamba3`, `mamba3-layer`,
+  `mamba3-step`, `mamba3-train-curve`, `mamba3-varlen`, `check-fast` 31/31.
+  `make check` was last green at 144/144 before this session's Mamba work;
+  re-run it when the next row lands.
+
 ## 2026-11-13 — the decode step exists and is verified at 16, 64 and 256 tokens
 
 `examples/language/mamba3/step_mamba3.bend` is a real online decode step for
