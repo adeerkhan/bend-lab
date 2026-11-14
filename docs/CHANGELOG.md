@@ -16,6 +16,16 @@ What changed for the people who run the lab. Internal refactors are not listed.
   gradient (all `<= 1.1e-06`, gate `1e-4`; the angle gradient summed over
   tokens, as the SISO gate does). Build 4.6 s, run 0.44 s; `MAMBA3 GQA PASS`.
 
+### MambaViT: the patch embedding and tokens are gated (A1a)
+
+- `probe_mamba_vit_emb.bend` implements the ViT half of the reference's
+  forward: the 4x4 patch extraction, `LN -> Linear -> LN` embedding, the cls
+  token and the position embedding. `make mamba-vit-emb` compares `emb`
+  (49x32) and `tokens` (50x32) against `reference/mamba_vit_bins.py`'s
+  dump at 1e-5: rel `2.8e-07` and `2.0e-07`.
+- The eight Mamba-1 blocks, the final norm, the pool and the head (A1b) are
+  not built; the gate prints that and the batch row stays `not run`.
+
 ### Mamba-3 tiny-LM: the corpus subset and its read-back are gated
 
 - `reference/mamba3_tiny_data.py` builds a deterministic tiny subset of the
