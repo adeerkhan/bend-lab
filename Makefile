@@ -8,7 +8,7 @@ BEND := $(or $(BEND_BIN),$(HOME)/.bend/bin/bend)
 BEND_VERSION := 2.0.38
 BEND_REF := ../bend-ref
 
-.PHONY: setup check laws sync-bend clean lint env env-check release experiment experiments results report trace dash dashboard session unet-metric mamba3-bench mamba3-layer mamba3-step mamba3-train-curve mamba3-varlen mamba3-gqa mamba3-outnorm mamba3-deep glm-step glm-block-step glm-lin-block glm-decode glm-h192-step batch peaks bounds bench plumbing flow flow64 doctor figures select plots sweep sweep-agent
+.PHONY: setup check laws sync-bend clean lint env env-check release experiment experiments results report trace dash dashboard session unet-metric mamba3-bench mamba3-layer mamba3-step mamba3-train-curve mamba3-varlen mamba3-gqa mamba3-outnorm mamba3-deep mamba3-tiny-data glm-step glm-block-step glm-lin-block glm-decode glm-h192-step batch peaks bounds bench plumbing flow flow64 doctor figures select plots sweep sweep-agent
 
 setup:            ## Bend, Lean and the Python venv
 	scripts/setup.sh
@@ -48,8 +48,11 @@ mamba3-gqa:        ## ngroups 2 + rope_fraction 1.0: forward and backward
 mamba3-outnorm:    ## is_outproj_norm: the gated grouped RMSNorm after the block
 	$(PY) reference/test_mamba3_outnorm.py
 
-mamba3-deep:       ## depth-4 stack: forward parity (backward/generation pending)
+mamba3-deep:       ## depth-4 stack: forward, ten-step backward and generation
 	$(PY) reference/test_mamba3_deep.py
+
+mamba3-tiny-data:  ## the tiny-LM corpus subset and its Bend read-back (trainer pending)
+	$(PY) reference/test_mamba3_tiny_lm.py
 
 glm-step:         ## the 192-position attention step: state and cache against the full prefix
 	@mkdir -p .scratch

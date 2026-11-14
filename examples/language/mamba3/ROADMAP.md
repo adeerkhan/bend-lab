@@ -180,6 +180,19 @@ report card in the `bend-lab` format, and a comparison against the twin's
 training on the same data. The 25.7M model remains out of scope; a 1–2 layer,
 64-dim model is enough to learn from.
 
+**Started (2026-11-14): the data half is gated.** `reference/mamba3_tiny_data.py`
+takes a deterministic subset of the lab's byte corpus
+(`examples/language/glm53_flash/data/corpus128-b32`, uint8 tokens): the first
+**64** train examples (8,192 tokens) and the corpus's own held-out split (32
+examples, 4,096 tokens), vocab **127**, written with sha256s to
+`.scratch/mamba3_tiny/manifest.json`. `make mamba3-tiny-data` checks the
+hashes, the split identity (no overlap) and that Bend reads both files back
+with the same first sixteen tokens: `MAMBA3 TINY-LM DATA PASS`.
+**Pending:** the trainer — a next-token loss (the current `loss_go` targets
+the row index), AdamW with weight decay, gradient clipping, an LR schedule,
+a held-out evaluation, the report card, and the twin on the same data/seed.
+The batch row stays `not run` until those land.
+
 ## 5. Numerical lanes and the kernel truth
 
 **What.** Treat the four lanes explicitly:

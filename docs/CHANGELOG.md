@@ -16,6 +16,18 @@ What changed for the people who run the lab. Internal refactors are not listed.
   gradient (all `<= 1.1e-06`, gate `1e-4`; the angle gradient summed over
   tokens, as the SISO gate does). Build 4.6 s, run 0.44 s; `MAMBA3 GQA PASS`.
 
+### Mamba-3 tiny-LM: the corpus subset and its read-back are gated
+
+- `reference/mamba3_tiny_data.py` builds a deterministic tiny subset of the
+  lab's byte corpus: the first 64 train examples (8,192 uint8 tokens) and
+  the corpus's own held-out split (4,096 tokens), vocab 127, with sha256s in
+  `.scratch/mamba3_tiny/manifest.json`.
+- `make mamba3-tiny-data` verifies the hashes, the split identity and that
+  Bend reads both files back with the same first sixteen tokens:
+  `MAMBA3 TINY-LM DATA PASS`. The trainer (next-token loss, AdamW + weight
+  decay, clipping, LR schedule, held-out eval, report card, twin) is not
+  built yet; the batch row stays `not run`.
+
 ### Mamba-3 mimo: blocked on its oracle (recorded, no gate)
 
 - The reference MIMO forward is the TileLang kernel `mamba3_mimo_combined`,
