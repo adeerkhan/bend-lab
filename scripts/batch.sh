@@ -87,7 +87,7 @@ run mamba3-train-curve "make mamba3-train-curve" "MAMBA3 TRAIN CURVE PASS"
 
 run mamba3-varlen "make mamba3-varlen" "MAMBA3 VARLEN PASS"
 run mamba3-gqa "make mamba3-gqa" "MAMBA3 GQA PASS"
-notrun mamba3-outnorm "not implemented; depends on the step path (which exists)"
+run mamba3-outnorm "make mamba3-outnorm" "MAMBA3 OUTNORM PASS"
 notrun mamba3-deep "not implemented; depends on the step path (which exists)"
 notrun mimo "needs its own oracle; after rows 1-6"
 notrun tiny-lm "over the timebox; named corpus subset not defined"

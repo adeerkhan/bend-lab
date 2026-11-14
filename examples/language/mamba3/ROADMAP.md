@@ -116,6 +116,14 @@ block, with `group_size = headdim`. The SISO port currently uses the default
 `False`. This is a small extra backward through a per-head RMSNorm and the
 SiLU gate, and it is a good test of the norm chain already written.
 
+**Done (2026-11-14).** `forward_on`/`backward_on`: the kernel's out_v stays
+ungated, then `y = rms32(out_v) * norm_w * silu(z)` and out_proj; the backward
+runs the grouped RMS chain into out_v and keeps the norm weight's gradient in
+its own accumulator (`BWON`/`GRADON`, so the shared records do not change).
+`make mamba3-outnorm` matches `reference/mamba3_outnorm_twin.py` at every
+forward intermediate (rel `<= 1.1e-06`, gate `1e-5`) and every gradient
+(rel `<= 2.9e-06`, gate `1e-4`), including `dW_on`; build 4.6 s, run 0.36 s.
+
 **3d. MIMO.** The module's MIMO rank adds `mimo_x`, `mimo_z` and `mimo_o`
 projections and a headwise norm. It is the largest remaining model feature and
 it needs its own oracle: the SISO twin does not cover it. Do not start it

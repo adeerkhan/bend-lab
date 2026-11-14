@@ -16,6 +16,17 @@ What changed for the people who run the lab. Internal refactors are not listed.
   gradient (all `<= 1.1e-06`, gate `1e-4`; the angle gradient summed over
   tokens, as the SISO gate does). Build 4.6 s, run 0.44 s; `MAMBA3 GQA PASS`.
 
+### Mamba-3 outnorm: is_outproj_norm gated grouped RMSNorm, forward and backward
+
+- `forward_on`/`backward_on` in `mamba3_siso.bend`: the kernel output stays
+  ungated, then `rms` per 32-element group × `norm_w` × `silu(z)`, then
+  out_proj; the backward runs the grouped RMS chain into out_v, keeps the
+  norm weight's gradient in `dW_on` (own `BWON`/`GRADON` accumulators, the
+  shared records unchanged).
+- `make mamba3-outnorm` matches `reference/mamba3_outnorm_twin.py` at every
+  forward intermediate (rel `<= 1.1e-06`, gate `1e-5`) and every gradient
+  (rel `<= 2.9e-06`, gate `1e-4`), `dW_on` included. `MAMBA3 OUTNORM PASS`.
+
 ### Mamba-3 varlen: the packed input resets at the boundary
 
 - `forward_vl` in `mamba3_siso.bend` runs the row-independent `pass_a` once

@@ -2142,6 +2142,288 @@ def backward_gqa(f: FWD, +u: List<&2, F32>, +dy: List<&2, F32>,
 
 
 # ---------------------------------------------------------------------------
+# outproj norm: is_outproj_norm=True, a gated RMSNorm (group_size headdim)
+#
+# The kernel's out_v is ungated; y = rms32(out_v) * norm_w * silu(z) and only
+# then out_proj.  The backward runs the grouped RMS chain into out_v, keeps
+# the norm weight's gradient in its own accumulator (BWON/GRADON) so the
+# shared records do not change.
+
+def rms4(+xs: List<&2, F32>, +ws: List<&2, F32>) -> List<&2, F32>:
+  List.append(&2, F32,
+    rms(take_row(xs, 0n, 32n), take_row(ws, 0n, 32n), 32n),
+    List.append(&2, F32,
+      rms(take_row(xs, 32n, 32n), take_row(ws, 32n, 32n), 32n),
+      List.append(&2, F32,
+        rms(take_row(xs, 64n, 32n), take_row(ws, 64n, 32n), 32n),
+        rms(take_row(xs, 96n, 32n), take_row(ws, 96n, 32n), 32n))))
+
+def rms_pair_cat(r0: RMSG, r1: RMSG) -> RMSG:
+  match r0 r1:
+    case RMSG{dx0, dw0} RMSG{dx1, dw1}:
+      RMSG{List.append(&2, F32, dx0, dx1),
+        List.append(&2, F32, dw0, dw1)}
+
+def rms4_bwd(+xs: List<&2, F32>, +ws: List<&2, F32>,
+    +dys: List<&2, F32>) -> RMSG:
+  rms_pair_cat(
+    rms_pair_cat(
+      rms_bwd(take_row(xs, 0n, 32n), take_row(ws, 0n, 32n),
+        take_row(dys, 0n, 32n), 32n),
+      rms_bwd(take_row(xs, 32n, 32n), take_row(ws, 32n, 32n),
+        take_row(dys, 32n, 32n), 32n)),
+    rms_pair_cat(
+      rms_bwd(take_row(xs, 64n, 32n), take_row(ws, 64n, 32n),
+        take_row(dys, 64n, 32n), 32n),
+      rms_bwd(take_row(xs, 96n, 32n), take_row(ws, 96n, 32n),
+        take_row(dys, 96n, 32n), 32n)))
+
+def sc_finish_read_on(sc: SC, +out: List<&2, F32>,
+    +z_t: List<&2, F32>, +w_out: List<&2, F32>,
+    +won: List<&2, F32>, r: Array<F32> & (List<&2, F32>)) -> STA:
+  match sc:
+    case SC{+states, +out_v, +y_inner, +y0}:
+      match r:
+        case Tuple{arr, +rev}:
+          +state = List.reverse(&2, F32, rev)
+          +yi = mul_lists(rms4(out, won), silu_row(z_t))
+          +y = matvec(w_out, yi, 128n)
+          STA{arr, SC{push_row(states, state), push_row(out_v, out),
+            push_row(y_inner, yi), push_row(y0, y)}}
+
+def sc_finish_st_on(sc: SC, arr: Array<F32>, +out: List<&2, F32>,
+    +z_t: List<&2, F32>, +w_out: List<&2, F32>,
+    +won: List<&2, F32>) -> STA:
+  sc_finish_read_on(sc, out, z_t, w_out, won,
+    arr_read(2048n, U32.from_nat(0n), Nil{}, Array.get(F32, arr, 0)))
+
+def sc_step_done_on(sc: SC, +z_t: List<&2, F32>,
+    +w_out: List<&2, F32>, +won: List<&2, F32>, r: SA) -> STA:
+  match r:
+    case SA{arr2, out}:
+      sc_finish_st_on(sc, arr2, out, z_t, w_out, won)
+
+def sc_step_st_on(st: STA, +x: List<&2, F32>, +z: List<&2, F32>,
+    +ADT: List<&2, F32>, +q: List<&2, F32>, +k: List<&2, F32>,
+    +qk: List<&2, F32>, +scale: List<&2, F32>, +t: Nat,
+    +D: List<&2, F32>, +w_out: List<&2, F32>,
+    +won: List<&2, F32>) -> STA:
+  match st:
+    case STA{arr, sc}:
+      sc_step_done_on(sc, take_row(z, Nat.mul(t, 128n), 128n),
+        w_out, won, scan_all_st(arr, take_row(q, Nat.mul(t, 64n), 64n),
+          take_row(k, Nat.mul(t, 64n), 64n),
+          take_row(x, Nat.mul(t, 128n), 128n),
+          take_row(qk, Nat.mul(t, 4n), 4n),
+          take_row(scale, Nat.mul(t, 4n), 4n),
+          take_row(ADT, Nat.mul(t, 4n), 4n), D))
+
+def sc_go_st_on(+left: Nat, +t: Nat, +x: List<&2, F32>,
+    +z: List<&2, F32>, +ADT: List<&2, F32>, +q: List<&2, F32>,
+    +k: List<&2, F32>, +qk: List<&2, F32>,
+    +scale: List<&2, F32>, +D: List<&2, F32>,
+    +w_out: List<&2, F32>, +won: List<&2, F32>, st: STA) -> SC:
+  match left:
+    case 0n:
+      match st:
+        case STA{arr, sc}:
+          sc
+    case 1n+p:
+      sc_go_st_on(p, (t + 1n : Nat), x, z, ADT, q, k, qk, scale, D,
+        w_out, won, sc_step_st_on(st, x, z, ADT, q, k, qk, scale, t,
+          D, w_out, won))
+
+def pass_c_on(+x: List<&2, F32>, +z: List<&2, F32>,
+    +ADT: List<&2, F32>, +q: List<&2, F32>, +k: List<&2, F32>,
+    +qk: List<&2, F32>, +scale: List<&2, F32>,
+    +D: List<&2, F32>, +w_out: List<&2, F32>,
+    +won: List<&2, F32>, +n: Nat) -> SC:
+  +state0 = zline(2048n)
+  arr0 = arr_of(2048n, state0)
+  sc_go_st_on(n, 0n, x, z, ADT, q, k, qk, scale, D, w_out, won,
+    STA{arr0, SC{state0, Nil{}, Nil{}, Nil{}}})
+
+def forward_qb_on(qb: QB, +pre: List<&2, F32>, +z: List<&2, F32>,
+    +x: List<&2, F32>, +Braw: List<&2, F32>,
+    +Craw: List<&2, F32>, +dd_dt: List<&2, F32>,
+    +dd_A: List<&2, F32>, +trap_raw: List<&2, F32>,
+    +ang_raw: List<&2, F32>, +A: List<&2, F32>,
+    +DT: List<&2, F32>, +ADT: List<&2, F32>,
+    +trap: List<&2, F32>, +Bn: List<&2, F32>,
+    +Cn: List<&2, F32>, +D: List<&2, F32>,
+    +w_out: List<&2, F32>, +won: List<&2, F32>, +n: Nat) -> FWD:
+  match qb:
+    case QB{gamma, shift, +scale, angle, +q, +k, +qk}:
+      sc : SC = pass_c_on(x, z, ADT, q, k, qk, scale, D, w_out,
+        won, n)
+      +DTu = take_row(DT, 0n, Nat.mul(n, 4n))
+      +trapu = take_row(trap, 0n, Nat.mul(n, 4n))
+      forward_sc(sc, pre, z, x, Braw, Craw, dd_dt, dd_A, trap_raw,
+        ang_raw, A, DTu, ADT, trapu, gamma, shift, scale, Bn, Cn,
+        angle, q, k, qk)
+
+def forward_pre_on(pr: PRE, +B_bias: List<&2, F32>,
+    +C_bias: List<&2, F32>, +D: List<&2, F32>,
+    +w_out: List<&2, F32>, +won: List<&2, F32>, +n: Nat) -> FWD:
+  match pr:
+    case PRE{pre, z, x, Braw, Craw, dd_dt, dd_A, trap_raw, +ang_raw,
+        A, +DT, ADT, +trap, +Bn, +Cn}:
+      +DT2 = push_row(DT, zline(4n))
+      +trap2 = push_row(trap, zline(4n))
+      qb : QB = pass_b(DT2, trap2, Bn, Cn, ang_raw, B_bias, C_bias, n)
+      forward_qb_on(qb, pre, z, x, Braw, Craw, dd_dt, dd_A, trap_raw,
+        ang_raw, A, DT2, ADT, trap2, Bn, Cn, D, w_out, won, n)
+
+def forward_on(+u: List<&2, F32>, +w_in: List<&2, F32>,
+    +dt_bias: List<&2, F32>, +B_bias: List<&2, F32>,
+    +C_bias: List<&2, F32>, +Bw: List<&2, F32>,
+    +Cw: List<&2, F32>, +D: List<&2, F32>,
+    +w_out: List<&2, F32>, +won: List<&2, F32>,
+    +n: Nat) -> FWD:
+  forward_pre_on(pass_a(u, w_in, dt_bias, Bw, Cw, n), B_bias, C_bias,
+    D, w_out, won, n)
+
+type BWON is Type:
+  BWON{dq: List<&2, F32>, dk: List<&2, F32>, dx: List<&2, F32>,
+       dqk: List<&2, F32>, dscale: List<&2, F32>,
+       dADT: List<&2, F32>, dD: List<&2, F32>,
+       dstate: List<&2, F32>, do_v: List<&2, F32>,
+       dz: List<&2, F32>, dW_out: List<&2, F32>,
+       dW_on: List<&2, F32>, du: List<&2, F32>}
+
+def rb_dx(r: RMSG) -> List<&2, F32>:
+  match r:
+    case RMSG{dx, dw}:
+      dx
+
+def rb_dw(r: RMSG) -> List<&2, F32>:
+  match r:
+    case RMSG{dx, dw}:
+      dw
+
+def bw_on_add(sb: SB, +do_v: List<&2, F32>, +dz: List<&2, F32>,
+    +dW_out: List<&2, F32>, +dW_on: List<&2, F32>,
+    +do_v0: List<&2, F32>, +dz0: List<&2, F32>,
+    +dq: List<&2, F32>, +dk: List<&2, F32>,
+    +dx: List<&2, F32>, +dqk: List<&2, F32>,
+    +dscale: List<&2, F32>, +dADT: List<&2, F32>,
+    +dD: List<&2, F32>, +du: List<&2, F32>) -> BWON:
+  match sb:
+    case SB{dq0, dk0, dx0, dS, dqk0, dscale0, dADT0, dD0}:
+      BWON{push_row(dq, dq0), push_row(dk, dk0), push_row(dx, dx0),
+        push_row(dqk, dqk0), push_row(dscale, dscale0),
+        push_row(dADT, dADT0), add_lists(dD, dD0), dS,
+        push_row(do_v0, do_v), push_row(dz0, dz), dW_out, dW_on, du}
+
+def bw_on_go(+left: Nat, +t: Nat, +z: List<&2, F32>,
+    +x: List<&2, F32>, +ADT: List<&2, F32>,
+    +q: List<&2, F32>, +k: List<&2, F32>,
+    +qk: List<&2, F32>, +scale: List<&2, F32>,
+    +states: List<&2, F32>, +out_v: List<&2, F32>,
+    +y_inner: List<&2, F32>, +D: List<&2, F32>,
+    +w_out: List<&2, F32>, +won: List<&2, F32>,
+    +dy: List<&2, F32>, bw: BWON) -> BWON:
+  match left bw:
+    case 0n BWON{+dq, +dk, +dx, +dqk, +dscale, +dADT, dD, dstate,
+        +do_v, +dz, dW_out, dW_on, du}:
+      +ndq = Nat.div(List.length(&2, F32, dq), 64n)
+      +ndk = Nat.div(List.length(&2, F32, dk), 64n)
+      +ndx = Nat.div(List.length(&2, F32, dx), 128n)
+      +nqk = Nat.div(List.length(&2, F32, dqk), 4n)
+      +nsc = Nat.div(List.length(&2, F32, dscale), 4n)
+      +ndt = Nat.div(List.length(&2, F32, dADT), 4n)
+      +ndo = Nat.div(List.length(&2, F32, do_v), 128n)
+      +ndz = Nat.div(List.length(&2, F32, dz), 128n)
+      BWON{rev_rows(ndq, dq, 64n, Nil{}),
+        rev_rows(ndk, dk, 64n, Nil{}),
+        rev_rows(ndx, dx, 128n, Nil{}),
+        rev_rows(nqk, dqk, 4n, Nil{}),
+        rev_rows(nsc, dscale, 4n, Nil{}),
+        rev_rows(ndt, dADT, 4n, Nil{}),
+        dD, dstate,
+        rev_rows(ndo, do_v, 128n, Nil{}),
+        rev_rows(ndz, dz, 128n, Nil{}),
+        dW_out, dW_on, du}
+    case 1n+p BWON{dq, dk, dx, dqk, dscale, dADT, dD, dstate, do_v,
+        dz, dW_out, dW_on, du}:
+      +dy_t = take_row(dy, Nat.mul(t, 64n), 64n)
+      +yi_t = take_row(y_inner, Nat.mul(t, 128n), 128n)
+      +z_t = take_row(z, Nat.mul(t, 128n), 128n)
+      +ov_t = take_row(out_v, Nat.mul(t, 128n), 128n)
+      +x_t = take_row(x, Nat.mul(t, 128n), 128n)
+      +q_t = take_row(q, Nat.mul(t, 64n), 64n)
+      +k_t = take_row(k, Nat.mul(t, 64n), 64n)
+      +qk_t = take_row(qk, Nat.mul(t, 4n), 4n)
+      +scale_t = take_row(scale, Nat.mul(t, 4n), 4n)
+      +ADT_t = take_row(ADT, Nat.mul(t, 4n), 4n)
+      +S_t = take_row(states, Nat.mul(t, 2048n), 2048n)
+      +dyi = matvec_t(w_out, dy_t, 64n, 128n)
+      +do_n = mul_lists(dyi, silu_row(z_t))
+      +yn_t = rms4(ov_t, won)
+      +dxv = rb_dx(rms4_bwd(ov_t, won, do_n))
+      +dwo = rb_dw(rms4_bwd(ov_t, won, do_n))
+      +dz_t = mul_lists(mul_lists(dyi, yn_t), silu_deriv_row(z_t))
+      +dW_out2 = add_lists(dW_out, outer(dy_t, yi_t))
+      sb : SB = scan_bw_all(S_t, dstate, dxv, q_t, k_t, x_t,
+        qk_t, scale_t, ADT_t, D)
+      bw_on_go(p, (t - 1n : Nat), z, x, ADT, q, k, qk, scale,
+        states, out_v, y_inner, D, w_out, won, dy,
+        bw_on_add(sb, dxv, dz_t, dW_out2, add_lists(dW_on, dwo),
+          do_v, dz, dq, dk, dx, dqk, dscale, dADT, dD, du))
+
+def bw_on_start(+z: List<&2, F32>, +x: List<&2, F32>,
+    +ADT: List<&2, F32>, +q: List<&2, F32>,
+    +k: List<&2, F32>, +qk: List<&2, F32>,
+    +scale: List<&2, F32>, +states: List<&2, F32>,
+    +out_v: List<&2, F32>, +y_inner: List<&2, F32>,
+    +D: List<&2, F32>, +w_out: List<&2, F32>,
+    +won: List<&2, F32>, +dy: List<&2, F32>, +n: Nat) -> BWON:
+  bw_on_go(n, (n - 1n : Nat), z, x, ADT, q, k, qk, scale, states,
+    out_v, y_inner, D, w_out, won, dy,
+    BWON{Nil{}, Nil{}, Nil{}, Nil{}, Nil{}, Nil{}, zline(4n),
+      zline(2048n), Nil{}, Nil{}, zline(8192n), zline(128n), Nil{}})
+
+type GRADON is Type:
+  GRADON{g: GRAD, dW_on: List<&2, F32>}
+
+def pw_start_on(bw: BWON, +DT: List<&2, F32>, +trap: List<&2, F32>,
+    +A: List<&2, F32>, +dADT: List<&2, F32>,
+    +dd_dt: List<&2, F32>, +dd_A: List<&2, F32>,
+    +dt_bias: List<&2, F32>, +ang_raw: List<&2, F32>,
+    +Braw: List<&2, F32>, +Craw: List<&2, F32>,
+    +Bn: List<&2, F32>, +Cn: List<&2, F32>,
+    +angle: List<&2, F32>, +q: List<&2, F32>,
+    +k: List<&2, F32>, +qk: List<&2, F32>,
+    +gamma: List<&2, F32>, +Bw: List<&2, F32>,
+    +Cw: List<&2, F32>, +B_bias: List<&2, F32>,
+    +C_bias: List<&2, F32>, +w_in: List<&2, F32>,
+    +u: List<&2, F32>, +n: Nat) -> GRADON:
+  match bw:
+    case BWON{dq, dk, dx, dqk, dscale, dadt0, dD, dstate, do_v, dz,
+        dW_out, dW_on, du}:
+      GRADON{pw_start(BW{dq, dk, dx, dqk, dscale, dadt0, dD, dstate,
+        do_v, dz, dW_out, du}, DT, trap, A, dADT, dd_dt, dd_A,
+        dt_bias, ang_raw, Braw, Craw, Bn, Cn, angle, q, k, qk,
+        gamma, Bw, Cw, B_bias, C_bias, w_in, u, n), dW_on}
+
+def backward_on(f: FWD, +u: List<&2, F32>, +dy: List<&2, F32>,
+    +w_in: List<&2, F32>, +w_out: List<&2, F32>,
+    +Bw: List<&2, F32>, +Cw: List<&2, F32>,
+    +dt_bias: List<&2, F32>, +B_bias: List<&2, F32>,
+    +C_bias: List<&2, F32>, +D: List<&2, F32>,
+    +won: List<&2, F32>, +n: Nat) -> GRADON:
+  match f:
+    case FWD{pre, z, x, Braw, Craw, dd_dt, dd_A, trap_raw, ang_raw,
+        A, DT, +ADT, trap, gamma, shift, scale, Bn, Cn, angle, +q, +k,
+        +qk, states, out_v, y_inner, y}:
+      bw : BWON = bw_on_start(z, x, ADT, q, k, qk, scale, states,
+        out_v, y_inner, D, w_out, won, dy, n)
+      pw_start_on(bw, DT, trap, A, ADT, dd_dt, dd_A, dt_bias,
+        ang_raw, Braw, Craw, Bn, Cn, angle, q, k, qk, gamma, Bw,
+        Cw, B_bias, C_bias, w_in, u, n)
+
+
+# ---------------------------------------------------------------------------
 # the ten-step copy task: tokens 0..7 in, the same tokens out
 
 def sgd(+xs: List<&2, F32>, +gs: List<&2, F32>, +lr: F32) -> List<&2, F32>:
