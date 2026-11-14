@@ -51,7 +51,8 @@ reference's published behaviour.
    `d_inner × d_state` per layer plus `exp(dt·A)`.
 2. **Backward at 1e-4** — hand-written through the conv1d, the causal
    scan, `dt = softplus`, and the gate; the same gradient-reversal pattern
-   the Mamba-3 port uses (a scan backward that runs t backwards).
+   the Mamba-3 port uses (a scan backward that runs t backwards). Green:
+   `make mamba-vit-bwd`, 120 gradients, worst rel `5.7e-06`.
 3. **Training parity** — train the same config on MNIST in Bend and compare
    the held-out accuracy against the twin (94.61 % after 1 epoch is the
    number to match), then a report card in `results/`.
@@ -67,7 +68,14 @@ not against a number copied from a README.
 reference's default init, every parameter and every intermediate of the
 8-layer forward into `.scratch/mamba_vit/*.bin` (130 files): the image, the
 patch tokens, each block's output and its accumulated residual, the final
-norm, the pooled vector and the logits. Command:
+norm, the pooled vector and the logits. It also writes the A2 backward's
+oracle (121 more files): `dy`, the ten values that fix the scalar loss
+`loss = sum(logits * dy)`, and the gradient of that scalar with respect to
+every parameter (`g_<the same name as the weight>`) and to the intermediates
+the probes compare (`g_emb`, `g_tokens`, `g_block0..7`, `g_final`,
+`g_pooled`). `dy` is drawn from its own generator after the forward, so the
+130 forward files are byte-identical to the ones A1a/A1b were gated on.
+Command:
 
 ```
 reference/.venv-rf/bin/python reference/mamba_vit_bins.py
@@ -78,6 +86,12 @@ files and prints, under `mv_*` tags, `emb`, `tokens`, `block0..7`,
 `block0..7_res`, `final`, `pooled`, `logits`; `reference/test_mamba_vit.py`
 compares them at 1e-5. The file keeps the `_emb` name it was created with in
 A1a: it now carries the whole forward.
+
+The probe `examples/language/mamba_vit/probe_mamba_vit_bwd.bend` repeats the
+forward (it needs the per-token intermediates the forward gate never printed)
+and walks back through it, printing `mv_g_*` for every file the dump carries;
+`reference/test_mamba_vit_bwd.py` (`make mamba-vit-bwd`) compares all 120 at
+1e-4 relative.
 
 The shapes to load (all row-major float32) and the helpers they need:
 
@@ -131,14 +145,14 @@ and the head, against the same dump, at 1e-5 relative. Measured on this lane
 
 | tag | max abs diff | relative |
 |---|---:|---:|
-| `mv_block5` | 7.6e-10 | **2.16e-06** |
-| `mv_block1` | 5.2e-10 | 1.66e-06 |
-| `mv_block7` | 2.9e-10 | 8.88e-07 |
-| `mv_block2` | 2.6e-10 | 7.79e-07 |
-| `mv_block3` | 2.3e-10 | 6.89e-07 |
-| `mv_block6` | 2.3e-10 | 6.55e-07 |
-| `mv_block0` | 2.5e-10 | 6.48e-07 |
-| `mv_block4` | 2.4e-10 | 6.45e-07 |
+| `mv_block0` | 1.7e-10 | **4.57e-07** |
+| `mv_block2` | 1.5e-10 | 4.33e-07 |
+| `mv_block3` | 1.5e-10 | 4.31e-07 |
+| `mv_block5` | 1.5e-10 | 4.15e-07 |
+| `mv_block6` | 1.5e-10 | 4.09e-07 |
+| `mv_block4` | 1.5e-10 | 3.91e-07 |
+| `mv_block1` | 1.2e-10 | 3.69e-07 |
+| `mv_block7` | 1.2e-10 | 3.55e-07 |
 | `mv_emb` | 8.3e-07 | 2.84e-07 |
 | `mv_pooled` | 7.5e-08 | 2.37e-07 |
 | `mv_final` | 6.9e-07 | 2.08e-07 |
@@ -146,12 +160,63 @@ and the head, against the same dump, at 1e-5 relative. Measured on this lane
 | `mv_tokens` | 8.3e-07 | 1.99e-07 |
 | `mv_logits` | 5.6e-09 | 1.78e-07 |
 
+The table is the run after A2 fixed the scan's slot order (below); the A1b
+commit's worst tag was `block5` at `2.16e-06`, so the fix improved every
+block row about four times and left the rest unchanged.
+
 The residual and token rows carry the largest absolute difference because
 they are the only lists of order one (`|tokens|` max `4.20`); the mixer
 outputs are `4e-4`, so their absolute error is four orders down. Every row is
-under the 1e-5 gate with more than four times the margin at the worst tag.
+under the 1e-5 gate with more than twenty times the margin at the worst tag.
 
-## What the block cost, in Bend idioms
+## A2 is green: the backward at 1e-4
+
+`make mamba-vit-bwd` PASS: 120 gradients (108 parameter tensors and the
+twelve intermediates `g_emb`, `g_tokens`, `g_block0..7`, `g_final`,
+`g_pooled`), all under 1e-4 relative against PyTorch autograd. Measured on
+this lane (`reference/.venv/bin/python reference/test_mamba_vit_bwd.py`),
+worst first:
+
+| tag | max abs diff | max of the reference | relative |
+|---|---:|---:|---:|
+| `g_layers_4_mixer_A_log` | 5.0e-19 | 8.8e-14 | **5.67e-06** |
+| `g_layers_1_mixer_x_proj_weight` | 4.7e-17 | 1.5e-11 | 3.20e-06 |
+| `g_layers_4_mixer_x_proj_weight` | 3.0e-17 | 1.0e-11 | 2.92e-06 |
+| `g_layers_1_mixer_A_log` | 7.5e-19 | 3.1e-13 | 2.41e-06 |
+| `g_layers_5_mixer_dt_proj_weight` | 7.4e-22 | 3.6e-16 | 2.08e-06 |
+| `g_layers_6_mixer_dt_bias` | 9.7e-19 | 5.0e-13 | 1.96e-06 |
+| `g_layers_7_mixer_dt_proj_bias` | 4.0e-19 | 2.2e-13 | 1.83e-06 |
+| `g_to_patch_embedding_1_bias` | 3.8e-06 | 2.6e+01 | 1.47e-07 |
+| `g_mlp_head_weight` | 1.8e-07 | 6.9e-01 | 2.61e-07 |
+| `g_pooled` | 7.5e-09 | 1.1e-01 | 6.80e-08 |
+| `g_mlp_head_bias` | 0 | 2.2e+00 | 0 |
+
+The median of the 120 is `3.8e-07`; 22 are above `1e-06` and all of those are
+the gradients of the SSM parameters (`A_log`, `x_proj`, `dt_proj`, `dt_bias`),
+whose true values are `1e-11` to `1e-15` because `dt` is of order `1e-3` and
+the state of order `1e-7` in this initialisation. A relative gate on a
+quantity of `1e-15` is a gate on the ordering of the same float32 operations
+on both sides, not on the magnitude: `g_layers_5_mixer_dt_proj_weight` agrees
+at `2.1e-06` while its largest entry is `3.6e-16`.
+
+## The scan's slot order was reversed, and only the backward could see it
+
+`upd_c` builds the 64x16 state by prepending each channel's 16-slot row and
+then reversing the whole list. Two reversals cancel, so each row came out in
+the reverse of `A`/`B`/`C`'s slot order: the state was correct as a model
+(the recurrence and the `y = <C, h>` read used the same reversed layout) but
+not as the reference's model. The forward gate could not see it because in
+this initialisation the state contributes about `1e-7` of `y` (`D * x`
+carries the rest), which is the same order as the gate's own slack. The
+backward could: `dC`, `dA` and `d(dt)` are the three gradients that read the
+state, and all three failed (`g_x_proj`'s `C` rows were 100 % off, the
+`A_log` rows 90 %) while `dB`, `dD`, `in_proj`, `out_proj`, `conv1d` and the
+norms matched. Deleting the inner reverse in `upd_c` fixed the layout, made
+the stored state match a NumPy replica at `1.6e-06` relative, and improved
+the forward's block tags fourfold: the backward is a sharper test of a
+recurrent forward than the forward's own outputs.
+
+## What the block and its backward cost, in Bend idioms
 
 1. **A computed value cannot be taken apart.** `match` inspects a parameter
    or a pattern variable only: neither `match f(x):` nor `r = f(x)` then
@@ -178,16 +243,51 @@ under the 1e-5 gate with more than four times the margin at the worst tag.
    conv carries its last three `x` rows in `CVW`, which makes the three-zero
    padding implicit (`y[t] = cb + c3*x[t] + c2*x[t-1] + c1*x[t-2] + c0*x[t-3]`).
 5. **Threading the state.** Rebuilding the 64×16 state as a list per token is
-   `upd_c`/`upd_q`: rows are prepended in reverse and the whole 1024-float
-   list is reversed once at the end of the token (a `List.append` per row is
-   quadratic and was removed). The `Array<F32> & F32` threading of
+   `upd_c`/`upd_q`: each channel's 16-slot row is prepended and the whole
+   1024-float list is reversed once at the end of the token (a `List.append`
+   per row is quadratic and was removed). The `Array<F32> & F32` threading of
    `mamba3_siso.bend`'s `row_set` is not needed: its look-ahead exists so a
    linear array can be updated in place, and the list form has no such
-   constraint.
+   constraint. Two reversals cancel *inside* a row as well as across rows:
+   `upd_q` builds each row backwards, so the outer reverse of the whole list
+   is what puts the rows in channel order, and a second reverse per row
+   reverses the 16 slots (see the slot-order section above).
 6. **A missing activation is invisible in the shapes.** The first run matched
    `h`, `xz` and the conv exactly and was garbage from `x_proj` on: the SiLU
    after the conv (`self.act(self.conv1d(...))`) had been folded into the
    wrong place. Stage dumping (`mv_h`, `mv_xz`, `mv_cv`, `mv_dbl`,
    `mv_state`, `mv_y`) against a NumPy replica of the same formulas found it
    in one run; the shapes and the parameter count cannot.
+7. **Running the scan backwards costs one pass, not one pass per gradient.**
+   At token `t` the whole per-token chain is local: `out_proj`, the SiLU
+   gate, the scan step, `dt = softplus`, `x_proj` and the conv all read
+   token `t`'s stored row plus the carry `G = dL/dh_t`. So one reverse loop
+   accumulates the block's ten per-token parameter gradients (up to 4096
+   floats each) and the per-token `d_xz` rows in the same walk; only the
+   block LayerNorm, a within-row reduction, needs a second pass, and it adds
+   the last two tensors. The conv's three padded taps need `d_y[t+1..t+3]`, which the
+   same reverse order has already computed: the loop carries the last three
+   `d_y` rows (fields `d1`, `d2`, `d3` of the carry record).
+8. **A record can be taken apart once, so a probe hands it on.** The block's
+   forward returns one 11-field record (`BF`: `h`, `xz`, the conv output,
+   `xs`, `dbl`, `dt`, `z`, `y`, the gated `yg`, the 50 states, the output)
+   and only a `def` that matches it can read it; the same value cannot be
+   matched twice, so `bf_out(bf)` and `blk_bwd(bf, ...)` are two separate
+   consumers of two separate values, and the tensors are converted from
+   `TA.Mat` to lists once and passed to both as `+` parameters. A record is
+   a `Type`, so `+bf : BF <- IO.pure(BF, ...)` is refused (`+bf can be used
+   many times, so its type must be Data`); a field that is read twice needs
+   `+field` in the pattern (`... hs (consumed more than once)` otherwise).
+9. **No forward reference, not even for the small helper.** `emb_go` calling
+   `emb_step` before its definition is `a filled definition (an unfilled law
+   is a dead claim: live code cannot use it)`; the step has to come first.
+10. **A relative gate on a tiny gradient is a gate on the operation order.**
+   `dt = softplus(...)` is of order `1e-3` in this initialisation, so the
+   state is `1e-7` and the gradients of `A_log`, `x_proj`, `dt_proj` and
+   `dt_bias` land between `1e-11` and `1e-16`. They pass at `1e-06`
+   relative only because both sides perform the same float32 operations in
+   the same order; the absolute agreement is `1e-17` to `1e-22`. A stage
+   that reorders a sum, e.g. folding `dt * B * x` differently, shows up as a
+   percentage on these four tensors and nowhere else.
+
 

@@ -8,7 +8,7 @@ BEND := $(or $(BEND_BIN),$(HOME)/.bend/bin/bend)
 BEND_VERSION := 2.0.38
 BEND_REF := ../bend-ref
 
-.PHONY: setup check laws sync-bend clean lint env env-check release experiment experiments results report trace dash dashboard session unet-metric mamba3-bench mamba3-layer mamba3-step mamba3-train-curve mamba3-varlen mamba3-gqa mamba3-outnorm mamba3-deep mamba3-tiny-data mamba-vit-emb mamba-vit-fwd glm-step glm-block-step glm-lin-block glm-decode glm-h192-step batch peaks bounds bench plumbing flow flow64 doctor figures select plots sweep sweep-agent
+.PHONY: setup check laws sync-bend clean lint env env-check release experiment experiments results report trace dash dashboard session unet-metric mamba3-bench mamba3-layer mamba3-step mamba3-train-curve mamba3-varlen mamba3-gqa mamba3-outnorm mamba3-deep mamba3-tiny-data mamba-vit-emb mamba-vit-fwd mamba-vit-bwd glm-step glm-block-step glm-lin-block glm-decode glm-h192-step batch peaks bounds bench plumbing flow flow64 doctor figures select plots sweep sweep-agent
 
 setup:            ## Bend, Lean and the Python venv
 	scripts/setup.sh
@@ -59,6 +59,9 @@ mamba-vit-emb:     ## MambaViT A1a: patch embedding + tokens vs the reference du
 
 mamba-vit-fwd:     ## MambaViT A1b: the whole forward, eight blocks to the logits
 	$(PY) reference/test_mamba_vit.py
+
+mamba-vit-bwd:     ## MambaViT A2: the hand-written backward, every gradient at 1e-4
+	$(PY) reference/test_mamba_vit_bwd.py
 
 glm-step:         ## the 192-position attention step: state and cache against the full prefix
 	@mkdir -p .scratch

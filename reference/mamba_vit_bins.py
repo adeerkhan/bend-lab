@@ -1,11 +1,21 @@
-"""Dump MambaViT weights and one forward's intermediates for the Bend gate.
+"""Dump MambaViT weights, one forward's intermediates and one backward's
+gradients for the Bend gates.
 
   reference/.venv-rf/bin/python reference/mamba_vit_bins.py
 
-Writes `.scratch/mamba_vit/npz`-style `.bin` files (one array per file) and
-the reference intermediates for a fixed MNIST image: the patch tokens after
-the embedding, every block's output, the final pooled vector and the logits.
-The Bend probe loads these and must match every intermediate at 1e-5.
+Writes `.scratch/mamba_vit/*.bin` (one array per file, row-major float32):
+
+  * the parameters, `w_<module>_<param>` (A1a/A1b);
+  * the forward: `img`, `emb`, `tokens`, `block0..7`, `block0..7_res`,
+    `final`, `pooled`, `logits` (A1a/A1b);
+  * the loss used for A2 and its backward: `dy`, the gradient of
+    `loss = sum(logits * dy)` with respect to every parameter
+    (`g_<module>_<param>`, the parameter names above) and with respect to
+    the intermediates the probe compares: `g_emb`, `g_tokens`,
+    `g_block0..7`, `g_final`, `g_pooled`.
+
+`dy` is drawn from its own generator, after the forward, so adding the
+backward left every forward number above byte-identical.
 """
 from __future__ import annotations
 
@@ -40,32 +50,70 @@ def main():
     img = ds[0][0]  # (1,28,28) in 0..1
     img = img.unsqueeze(0) - 0.5
     save("img", img.reshape(-1))
+
+    # the forward, kept in the graph: every intermediate the probe compares
+    # carries its gradient
+    emb = m.patches(img)                                   # (1,49,32)
+    emb.retain_grad()
+    toks = torch.cat((m.cls_token.expand(1, -1, -1), emb), 1)
+    toks = toks + m.pos_embedding[:, : toks.shape[1]]
+    toks.retain_grad()
     with torch.no_grad():
-        emb = m.patches(img)[0]                                # (49,32)
-        x = torch.cat((m.cls_token.expand(1, -1, -1), emb.unsqueeze(0)), 1)
-        x = x + m.pos_embedding[:, : x.shape[1]]
-        save("emb", emb)
-        save("tokens", x[0])                                   # (50,32)
-        res = None
-        for i, layer in enumerate(m.layers):
-            x, res = layer(x, res)
+        save("emb", emb[0])
+        save("tokens", toks[0])                            # (50,32)
+    res = None
+    outs = []
+    x = toks
+    for i, layer in enumerate(m.layers):
+        x, res = layer(x, res)
+        x.retain_grad()
+        outs.append(x)
+        with torch.no_grad():
             save(f"block{i}", x[0])
-            for nm, t in (("norm", layer.norm), ("mixer", layer.mixer)):
-                pass
             save(f"block{i}_res", res[0])
-        res = x + res
-        x = m.norm_f(res)
-        save("final", x[0])
-        pooled = x.mean(dim=1)
+    res = x + res
+    xf = m.norm_f(res)
+    xf.retain_grad()
+    with torch.no_grad():
+        save("final", xf[0])
+    pooled = xf.mean(dim=1)
+    pooled.retain_grad()
+    with torch.no_grad():
         save("pooled", pooled[0])
-        logits = m.mlp_head(pooled)
+    logits = m.mlp_head(pooled)
+    with torch.no_grad():
         save("logits", logits[0])
-        print("img", img.numel(), "tokens", tuple(x.shape), "logits", tuple(logits.shape))
+        print("img", img.numel(), "tokens", tuple(xf.shape), "logits", tuple(logits.shape))
+
+    # A2: a fixed scalar loss, and the gradient of everything it depends on.
+    # dy comes from its own generator so the forward files stay identical.
+    gen = torch.Generator().manual_seed(1234)
+    dy = torch.randn(10, generator=gen)
+    save("dy", dy)
+    loss = (logits[0] * dy).sum()
+    m.zero_grad(set_to_none=True)
+    loss.backward()
+    with torch.no_grad():
+        for name, p in m.named_parameters():
+            if p.grad is None:
+                raise SystemExit(f"no gradient for {name}")
+            save("g_" + name.replace(".", "_"), p.grad)
+        save("g_emb", emb.grad[0])
+        save("g_tokens", toks.grad[0])
+        for i, o in enumerate(outs):
+            save(f"g_block{i}", o.grad[0])
+        save("g_final", xf.grad[0])
+        save("g_pooled", pooled.grad[0])
+        print("loss", float(loss), "dy", np.round(dy.numpy(), 5))
+        print("|g_pos_embedding|max", float(m.pos_embedding.grad.abs().max()),
+              "|g_cls|max", float(m.cls_token.grad.abs().max()))
+
     # weights, one file per parameter tensor
     for name, p in m.named_parameters():
         save("w_" + name.replace(".", "_"), p.detach().numpy())
-    print("wrote", len([f for f in os.listdir(OUT) if f.endswith(".bin")]), "files to", OUT)
-    print("logits", np.round(logits[0].numpy(), 5))
+    files = [f for f in os.listdir(OUT) if f.endswith(".bin")]
+    print("wrote", len(files), "files to", OUT)
+    print("logits", np.round(logits[0].detach().numpy(), 5))
 
 
 if __name__ == "__main__":

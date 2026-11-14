@@ -4,6 +4,35 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### MambaViT: the backward is gated, and the scan's slot order was reversed (A2)
+
+- `probe_mamba_vit_bwd.bend` adds a hand-written backward through the head,
+  the mean pool, the final LayerNorm, the eight blocks (out_proj, the SiLU
+  gate, the 64x16 scan running t backwards, `dt = softplus`, `x_proj`, the
+  conv's three padded taps, `in_proj`, the block LayerNorm), the residual
+  stream, the position/cls add and the patch embedding. It prints
+  `mv_g_*` for every gradient the dump carries: 108 parameter tensors and
+  `g_emb`, `g_tokens`, `g_block0..7`, `g_final`, `g_pooled`.
+- `reference/mamba_vit_bins.py` also writes the A2 oracle: `dy`, the ten
+  values fixing `loss = sum(logits * dy)`, and the gradient of that scalar
+  for every parameter and those twelve intermediates. The 130 forward files
+  are byte-identical to the ones A1a/A1b were gated on.
+- `make mamba-vit-bwd` (`reference/test_mamba_vit_bwd.py`) compares all 120
+  at 1e-4 relative: worst `g_layers_4_mixer_A_log` at `5.67e-06`, median
+  `3.8e-07`, 22 above `1e-06` and all of those the gradients of the SSM
+  tensors, whose true values are `1e-11` to `1e-15`. Build 6 s, run 11 s;
+  `MAMBA-VIT BWD PASS`, and the batch row runs it.
+- **The scan's 16 slots were stored in reverse.** `upd_c` reversed each
+  channel's row before prepending it and then reversed the whole list, so
+  the two reversals cancelled across rows but not inside them. The model was
+  self-consistent and the forward gate could not see it (the state is
+  `~1e-7` of `y`; `D * x` carries the rest), but the three gradients that
+  read the state (`dC`, `dA`, `d(dt)`) were 90 to 100 % off while `dB`,
+  `dD`, `in_proj`, `out_proj`, `conv1d` and the norms matched. Deleting the
+  inner reverse fixed it: the state now matches a NumPy replica at
+  `1.6e-06` relative and the forward's block tags improved fourfold (worst
+  `block5` from `2.16e-06` to `4.15e-07`).
+
 ### MambaViT: the whole forward is gated (A1b)
 
 - `probe_mamba_vit_emb.bend` now runs the eight Mamba-1 blocks, the final

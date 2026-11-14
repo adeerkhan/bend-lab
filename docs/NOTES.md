@@ -3,6 +3,50 @@
 Every finding, every measurement and every discarded hypothesis, by date. Read the
 relevant entry before changing performance-sensitive code or a law.
 
+## 2026-11-14 — MambaViT A2: the backward is the sharper test of the scan
+
+- **The forward gate passed on a state whose slots were reversed.** `upd_c`
+  built the 64x16 state by reversing each channel's 16-slot row and then
+  reversing the whole 1024-float list. Across rows the two reversals cancel;
+  inside a row they do not, so every row came out in the reverse of
+  `A`/`B`/`C`'s slot order. The forward is self-consistent (the update and
+  the `y = <C, h>` read share the layout), so its outputs were right to
+  `4e-07` even though the recurrence ran with slot `q` decaying by
+  `A[15-q]`: in this initialisation `D * x` is `~1e-2` and the state's
+  contribution to `y` is `~1e-9`, a factor `1e-7` below the gate.
+- **Three gradients localised it in one run.** With the slot order wrong,
+  `g_x_proj`'s `C` rows were 100 % off and the `A_log` rows 90 %, while
+  `dB` (same tensor, rows 2..18) matched at `1e-06`, and `dD`, `in_proj`,
+  `out_proj`, `conv1d` and the norms all matched. The three that read the
+  stored state are exactly `dC = sum_c h[c,q] dyv[c]`, `dA` and `d(dt)`;
+  `dB` reads only `dt`, `xs` and the carry. A per-column breakdown of one
+  tensor's rows is what named the state, not a stage dump.
+- **Deleting one `List.reverse` fixed it.** The state now matches a NumPy
+  replica at `1.6e-06` relative over all 50 tokens, and the forward's block
+  tags improved fourfold (worst `block5` `2.16e-06` to `4.15e-07`). The
+  A1b forward gate stays green; the A1a/A1b dump is untouched (byte-identical
+  to the 130 files those gates were run on).
+- **The A2 gate: 120 gradients, worst `5.67e-06` relative, gate `1e-4`.**
+  `g_layers_4_mixer_A_log` is the worst; the median is `3.8e-07`; 22 of the
+  120 are above `1e-06` and every one of those is a gradient of `A_log`,
+  `x_proj`, `dt_proj` or `dt_bias`, whose true values are `1e-11` to
+  `1e-15` because `dt = softplus(...)` is `~1e-3` and the state `~1e-7`.
+  On those the relative gate measures whether both sides perform the same
+  float32 operations in the same order (absolute agreement `1e-17` to
+  `1e-22`), not whether either is accurate in isolation.
+- **The oracle needed the right environment.** A first float64 replica of
+  the twin built in `reference/.venv` did not match the dump's weights:
+  `nn.init.trunc_normal_` consumes the RNG differently in that torch build,
+  so the Linear weights differed while the LayerNorms, biases, `A_log` and
+  `dt_bias` matched. Every recomputation for this example uses
+  `reference/.venv-rf`, the environment `mamba_vit_bins.py` was run in.
+- **A NumPy replica of the backward formulas is a cheap oracle for a
+  formula.** The 34x64 `x_proj` gradient splits into rows `0..1` (dt), `2..17`
+  (B) and `18..33` (C), so a per-row comparison names the broken term without
+  any Bend-side debug tags. Two of this session's three suspected bugs were
+  in the replica (the conv taps read time-reversed, one `chunk` on the wrong
+  tensor), not in the probe.
+
 ## 2026-11-10 — the 128 gate, the canary, the mask and the leak
 
 - **The full-model gate now runs at the size the model runs.** `test_glm53_h_bwd128.py` sends

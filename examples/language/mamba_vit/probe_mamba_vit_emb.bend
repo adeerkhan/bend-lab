@@ -303,7 +303,13 @@ def upd_q(+left: Nat, +arow: List<&2, F32>, +hrow: List<&2, F32>,
     case _ _ _ _:
       acc
 
-# pass B: the 64x16 state, one channel row at a time
+# pass B: the 64x16 state, one channel row at a time.
+#
+# `upd_q` builds one channel's 16 slots backwards, so it is PREPENDED as is
+# and the single reverse at the end puts every row in slot order AND the rows
+# in channel order. Reversing the row here as well cancels across rows but
+# reverses the 16 slots inside a row; that layout error is invisible in the
+# forward (the state is ~1e-7 of y) and fails the backward's dC, dA and d(dt).
 def upd_c(+left: Nat, +A: List<&2, F32>, +h: List<&2, F32>,
     +dtr: List<&2, F32>, +brow: List<&2, F32>,
     +xr: List<&2, F32>, acc: List<&2, F32>) -> List<&2, F32>:
@@ -316,8 +322,7 @@ def upd_c(+left: Nat, +A: List<&2, F32>, +h: List<&2, F32>,
       upd_c(p, List.drop(&2, F32, A, 16n), List.drop(&2, F32, h, 16n),
         dt, brow, xt,
         List.append(&2, F32,
-          List.reverse(&2, F32, upd_q(16n, arow, hrow, brow, dh, xh, Nil{})),
-          acc))
+          upd_q(16n, arow, hrow, brow, dh, xh, Nil{}), acc))
     case _ _ _:
       List.reverse(&2, F32, acc)
 
