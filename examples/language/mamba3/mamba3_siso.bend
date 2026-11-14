@@ -3306,3 +3306,222 @@ def lm4_forward(p: LM4, +tokens: List<&2, Nat>,
       +hn = rms_rows(h4, nw, n)
       +logits = head_logits(hn, Wh, n)
       LMO{hn, logits, loss_go(n, 0n, hn, Wh, 0.0)}
+
+def l4_bw(+w: List<&2, F32>, +dt: List<&2, F32>,
+    +bb: List<&2, F32>, +cb: List<&2, F32>,
+    +bw: List<&2, F32>, +cw: List<&2, F32>,
+    +D: List<&2, F32>, +wo: List<&2, F32>,
+    +rows: List<&2, F32>, +dh: List<&2, F32>) -> GRAD:
+  backward(forward(rows, w, dt, bb, cb, bw, cw, D, wo, 8n), rows,
+    dh, w, wo, bw, cw, dt, bb, cb, D, 8n)
+
+type SLM4 is Type:
+  SLM4{loss: F32, p: LM4}
+
+type UPD4 is Type:
+  UPD4{n: L4W, due: List<&2, F32>}
+
+def lm4_upd(g: GRAD, +w: List<&2, F32>, +dt: List<&2, F32>,
+    +bb: List<&2, F32>, +cb: List<&2, F32>,
+    +bw: List<&2, F32>, +cw: List<&2, F32>,
+    +D: List<&2, F32>, +wo: List<&2, F32>,
+    +dh: List<&2, F32>, +lr: F32) -> UPD4:
+  match g:
+    case GRAD{du, dW_in, ddt_bias, dB_bias, dC_bias, dB_norm_w,
+        dC_norm_w, dD, dW_out, do_v, dq, dk, dz, dx, dqk, dscale,
+        dADT, dBn, dCn, dDT, dtrap, ddd_dt, ddd_A, dBraw, dCraw,
+        dang_raw}:
+      UPD4{L4W{sgd(w, dW_in, lr), sgd(dt, ddt_bias, lr),
+        sgd(bb, dB_bias, lr), sgd(cb, dC_bias, lr),
+        sgd(bw, dB_norm_w, lr), sgd(cw, dC_norm_w, lr),
+        sgd(D, dD, lr), sgd(wo, dW_out, lr)},
+        add_lists(dh, du)}
+
+def lm4_f1(r: UPD4, u2: L4W, u3: L4W, u4: L4W,
+    +E: List<&2, F32>, +Wh: List<&2, F32>,
+    +nw: List<&2, F32>, +dWh: List<&2, F32>,
+    +dnw: List<&2, F32>, +loss: F32, +lr: F32) -> SLM4:
+  match r:
+    case UPD4{n1, due}:
+      SLM4{loss, LM4{n1, u2, u3, u4, sgd(E, due, lr),
+        sgd(Wh, dWh, lr), sgd(nw, dnw, lr)}}
+
+def lm4_g1(g1: GRAD, +w1: List<&2, F32>, +dt1: List<&2, F32>,
+    +bb1: List<&2, F32>, +cb1: List<&2, F32>,
+    +bw1: List<&2, F32>, +cw1: List<&2, F32>,
+    +D1: List<&2, F32>, +wo1: List<&2, F32>,
+    +dh1: List<&2, F32>, u2: L4W, u3: L4W, u4: L4W,
+    +E: List<&2, F32>, +Wh: List<&2, F32>,
+    +nw: List<&2, F32>, +dWh: List<&2, F32>,
+    +dnw: List<&2, F32>, +loss: F32, +lr: F32) -> SLM4:
+  lm4_f1(lm4_upd(g1, w1, dt1, bb1, cb1, bw1, cw1, D1, wo1, dh1,
+    lr), u2, u3, u4, E, Wh, nw, dWh, dnw, loss, lr)
+
+def lm4_f2(r: UPD4, l1: L4W, u3: L4W, u4: L4W,
+    +urows: List<&2, F32>, +E: List<&2, F32>,
+    +Wh: List<&2, F32>, +nw: List<&2, F32>,
+    +dWh: List<&2, F32>, +dnw: List<&2, F32>, +loss: F32,
+    +lr: F32) -> SLM4:
+  match r l1:
+    case UPD4{n2, +dh1}
+        L4W{+w1, +dt1, +bb1, +cb1, +bw1, +cw1, +D1, +wo1}:
+      lm4_g1(l4_bw(w1, dt1, bb1, cb1, bw1, cw1, D1, wo1, urows,
+        dh1), w1, dt1, bb1, cb1, bw1, cw1, D1, wo1, dh1, n2, u3,
+        u4, E, Wh, nw, dWh, dnw, loss, lr)
+
+def lm4_g2(g2: GRAD, +w2: List<&2, F32>, +dt2: List<&2, F32>,
+    +bb2: List<&2, F32>, +cb2: List<&2, F32>,
+    +bw2: List<&2, F32>, +cw2: List<&2, F32>,
+    +D2: List<&2, F32>, +wo2: List<&2, F32>,
+    +dh2: List<&2, F32>, u3: L4W, u4: L4W, l1: L4W,
+    +urows: List<&2, F32>, +E: List<&2, F32>,
+    +Wh: List<&2, F32>, +nw: List<&2, F32>,
+    +dWh: List<&2, F32>, +dnw: List<&2, F32>, +loss: F32,
+    +lr: F32) -> SLM4:
+  lm4_f2(lm4_upd(g2, w2, dt2, bb2, cb2, bw2, cw2, D2, wo2, dh2,
+    lr), l1, u3, u4, urows, E, Wh, nw, dWh, dnw, loss, lr)
+
+def lm4_f3(r: UPD4, l2: L4W, l1: L4W, u4: L4W,
+    +h1: List<&2, F32>, +urows: List<&2, F32>,
+    +E: List<&2, F32>, +Wh: List<&2, F32>,
+    +nw: List<&2, F32>, +dWh: List<&2, F32>,
+    +dnw: List<&2, F32>, +loss: F32, +lr: F32) -> SLM4:
+  match r l2:
+    case UPD4{n3, +dh2}
+        L4W{+w2, +dt2, +bb2, +cb2, +bw2, +cw2, +D2, +wo2}:
+      lm4_g2(l4_bw(w2, dt2, bb2, cb2, bw2, cw2, D2, wo2, h1,
+        dh2), w2, dt2, bb2, cb2, bw2, cw2, D2, wo2, dh2, n3, u4,
+        l1, urows, E, Wh, nw, dWh, dnw, loss, lr)
+
+def lm4_g3(g3: GRAD, +w3: List<&2, F32>, +dt3: List<&2, F32>,
+    +bb3: List<&2, F32>, +cb3: List<&2, F32>,
+    +bw3: List<&2, F32>, +cw3: List<&2, F32>,
+    +D3: List<&2, F32>, +wo3: List<&2, F32>,
+    +dh3: List<&2, F32>, u4: L4W, l2: L4W, l1: L4W,
+    +h1: List<&2, F32>, +urows: List<&2, F32>,
+    +E: List<&2, F32>, +Wh: List<&2, F32>,
+    +nw: List<&2, F32>, +dWh: List<&2, F32>,
+    +dnw: List<&2, F32>, +loss: F32, +lr: F32) -> SLM4:
+  lm4_f3(lm4_upd(g3, w3, dt3, bb3, cb3, bw3, cw3, D3, wo3, dh3,
+    lr), l2, l1, u4, h1, urows, E, Wh, nw, dWh, dnw, loss, lr)
+
+def lm4_f4(r: UPD4, l3: L4W, l2: L4W, l1: L4W,
+    +h2: List<&2, F32>, +h1: List<&2, F32>,
+    +urows: List<&2, F32>, +E: List<&2, F32>,
+    +Wh: List<&2, F32>, +nw: List<&2, F32>,
+    +dWh: List<&2, F32>, +dnw: List<&2, F32>, +loss: F32,
+    +lr: F32) -> SLM4:
+  match r l3:
+    case UPD4{n4, +dh3}
+        L4W{+w3, +dt3, +bb3, +cb3, +bw3, +cw3, +D3, +wo3}:
+      lm4_g3(l4_bw(w3, dt3, bb3, cb3, bw3, cw3, D3, wo3, h2,
+        dh3), w3, dt3, bb3, cb3, bw3, cw3, D3, wo3, dh3, n4, l2,
+        l1, h1, urows, E, Wh, nw, dWh, dnw, loss, lr)
+
+def lm4_g4(g4: GRAD, +w4: List<&2, F32>, +dt4: List<&2, F32>,
+    +bb4: List<&2, F32>, +cb4: List<&2, F32>,
+    +bw4: List<&2, F32>, +cw4: List<&2, F32>,
+    +D4: List<&2, F32>, +wo4: List<&2, F32>,
+    +dh4: List<&2, F32>, l3: L4W, l2: L4W, l1: L4W,
+    +h2: List<&2, F32>, +h1: List<&2, F32>,
+    +urows: List<&2, F32>, +E: List<&2, F32>,
+    +Wh: List<&2, F32>, +nw: List<&2, F32>,
+    +dWh: List<&2, F32>, +dnw: List<&2, F32>, +loss: F32,
+    +lr: F32) -> SLM4:
+  lm4_f4(lm4_upd(g4, w4, dt4, bb4, cb4, bw4, cw4, D4, wo4, dh4,
+    lr), l3, l2, l1, h2, h1, urows, E, Wh, nw, dWh, dnw, loss, lr)
+
+def lm4_after_rms(rbr: RBR, l4: L4W, l3: L4W, l2: L4W,
+    l1: L4W, +urows: List<&2, F32>, +h1: List<&2, F32>,
+    +h2: List<&2, F32>, +h3: List<&2, F32>,
+    +E: List<&2, F32>, +Wh: List<&2, F32>,
+    +nw: List<&2, F32>, +dWh: List<&2, F32>,
+    +loss: F32, +lr: F32) -> SLM4:
+  match rbr l4:
+    case RBR{+dh4, dw}
+        L4W{+w4, +dt4, +bb4, +cb4, +bw4, +cw4, +D4, +wo4}:
+      lm4_g4(l4_bw(w4, dt4, bb4, cb4, bw4, cw4, D4, wo4, h3,
+        dh4), w4, dt4, bb4, cb4, bw4, cw4, D4, wo4, dh4, l3, l2,
+        l1, h2, h1, urows, E, Wh, nw, dWh, dw, loss, lr)
+
+def l4_step2(l1: L4W, l2: L4W, l3: L4W, l4: L4W,
+    +E: List<&2, F32>, +Wh: List<&2, F32>,
+    +nw: List<&2, F32>, +lr: F32) -> SLM4:
+  match l1 l2 l3 l4:
+    case L4W{+w1, +dt1, +bb1, +cb1, +bw1, +cw1, +D1, +wo1}
+        L4W{+w2, +dt2, +bb2, +cb2, +bw2, +cw2, +D2, +wo2}
+        L4W{+w3, +dt3, +bb3, +cb3, +bw3, +cw3, +D3, +wo3}
+        L4W{+w4, +dt4, +bb4, +cb4, +bw4, +cw4, +D4, +wo4}:
+      +u = embed(prompt8(), E, 8n)
+      +h1 = add_lists(u, block_y(forward(u, w1, dt1, bb1, cb1, bw1,
+        cw1, D1, wo1, 8n)))
+      +h2 = add_lists(h1, block_y(forward(h1, w2, dt2, bb2, cb2,
+        bw2, cw2, D2, wo2, 8n)))
+      +h3 = add_lists(h2, block_y(forward(h2, w3, dt3, bb3, cb3,
+        bw3, cw3, D3, wo3, 8n)))
+      +h4 = add_lists(h3, block_y(forward(h3, w4, dt4, bb4, cb4,
+        bw4, cw4, D4, wo4, 8n)))
+      +hn = rms_rows(h4, nw, 8n)
+      +loss = loss_go(8n, 0n, hn, Wh, 0.0)
+      +dWh = dWh_go(8n, 0n, hn, Wh, zline(512n))
+      +dhn = dy_all_go(8n, 0n, hn, Wh, Nil{})
+      lm4_after_rms(rms_rows_bwd(h4, nw, dhn, 8n),
+        L4W{w4, dt4, bb4, cb4, bw4, cw4, D4, wo4},
+        L4W{w3, dt3, bb3, cb3, bw3, cw3, D3, wo3},
+        L4W{w2, dt2, bb2, cb2, bw2, cw2, D2, wo2},
+        L4W{w1, dt1, bb1, cb1, bw1, cw1, D1, wo1},
+        u, h1, h2, h3, E, Wh, nw, dWh, loss, lr)
+
+def lm4_step(p: LM4, +lr: F32) -> SLM4:
+  match p:
+    case LM4{l1, l2, l3, l4, +E, +Wh, +nw}:
+      l4_step2(l1, l2, l3, l4, E, Wh, nw, lr)
+
+type L4G is Type:
+  L4G{next: Nat, p: LM4}
+
+def l4_next2(l1: L4W, l2: L4W, l3: L4W, l4: L4W, +n: Nat,
+    +tokens: List<&2, Nat>, +E: List<&2, F32>,
+    +Wh: List<&2, F32>, +nw: List<&2, F32>) -> L4G:
+  match l1 l2 l3 l4:
+    case L4W{+w1, +dt1, +bb1, +cb1, +bw1, +cw1, +D1, +wo1}
+        L4W{+w2, +dt2, +bb2, +cb2, +bw2, +cw2, +D2, +wo2}
+        L4W{+w3, +dt3, +bb3, +cb3, +bw3, +cw3, +D3, +wo3}
+        L4W{+w4, +dt4, +bb4, +cb4, +bw4, +cw4, +D4, +wo4}:
+      +u = embed(tokens, E, n)
+      +h1 = add_lists(u, block_y(forward(u, w1, dt1, bb1, cb1,
+        bw1, cw1, D1, wo1, n)))
+      +h2 = add_lists(h1, block_y(forward(h1, w2, dt2, bb2, cb2,
+        bw2, cw2, D2, wo2, n)))
+      +h3 = add_lists(h2, block_y(forward(h2, w3, dt3, bb3, cb3,
+        bw3, cw3, D3, wo3, n)))
+      +h4 = add_lists(h3, block_y(forward(h3, w4, dt4, bb4, cb4,
+        bw4, cw4, D4, wo4, n)))
+      +hn = rms_rows(h4, nw, n)
+      L4G{last_tok_y(hn, Wh, n),
+        LM4{L4W{w1, dt1, bb1, cb1, bw1, cw1, D1, wo1},
+          L4W{w2, dt2, bb2, cb2, bw2, cw2, D2, wo2},
+          L4W{w3, dt3, bb3, cb3, bw3, cw3, D3, wo3},
+          L4W{w4, dt4, bb4, cb4, bw4, cw4, D4, wo4},
+          E, Wh, nw}}
+
+def l4_next(p: LM4, +n: Nat,
+    +tokens: List<&2, Nat>) -> L4G:
+  match p:
+    case LM4{l1, l2, l3, l4, +E, +Wh, +nw}:
+      l4_next2(l1, l2, l3, l4, n, tokens, E, Wh, nw)
+
+def lm4_gen_go(+left: Nat, r: L4G, +n: Nat,
+    +tokens: List<&2, Nat>) -> List<&2, Nat>:
+  match left r:
+    case 0n L4G{next, p}:
+      List.append(&2, Nat, tokens, Con{next, Nil{}})
+    case 1n+q L4G{next, p}:
+      +tokens2 = List.append(&2, Nat, tokens, Con{next, Nil{}})
+      lm4_gen_go(q, l4_next(p, (n + 1n : Nat), tokens2),
+        (n + 1n : Nat), tokens2)
+
+def lm4_gen(p: LM4, +steps: Nat) -> List<&2, Nat>:
+  lm4_gen_go(steps, l4_next(p, 4n,
+    Con{0n, Con{1n, Con{2n, Con{3n, Nil{}}}}}), 4n,
+    Con{0n, Con{1n, Con{2n, Con{3n, Nil{}}}}})

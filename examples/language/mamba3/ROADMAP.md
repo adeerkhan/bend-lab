@@ -134,16 +134,16 @@ until batch/varlen and the step are stable.
 weight-tied. A deeper stack (4, 8, 16 layers) is the next version of this
 item, with a residual and a final norm per stack.
 
-**Depth-4 forward done; backward/generation pending (2026-11-14).**
-`lm4_forward` (`L4W`/`LM4` records, four independent blocks, a residual
-around each, the final RMSNorm and the head) matches
-`reference/mamba3_deep_twin.py`'s four-block twin at the prompt:
-logits rel `2.6e-07`, loss `8.4e-08`, `hn` `1.6e-07` (gate `1e-5`).
-`make mamba3-deep` prints `MAMBA3 DEEP PARTIAL` and exits 1: the 4-layer
-backward chain (the residual-sum propagation through four `backward` calls
-plus the per-layer SGD) and the 4-layer greedy loop are not built, and
-depths 8/16 are `unavailable` for the same reason — the gate makes no
-claim beyond the forward.
+**Done: depth 4 (2026-11-14).** `lm4_forward`, `lm4_step` and `lm4_gen`
+(`L4W`/`LM4` records, four independent blocks, a residual around each, the
+final RMSNorm and the head). `make mamba3-deep` matches
+`reference/mamba3_deep_twin.py`'s four-block twin at the prompt (logits rel
+`2.6e-07`, loss `8.4e-08`, `hn` `1.6e-07`, gate `1e-5`), at the ten-step
+SGD training run (rel `1.7e-07`, gate `1e-4`) and at the sixteen-token
+greedy generation (exactly equal). Build 9.6 s, run 34.4 s.
+**Depths 8 and 16 are `unavailable`**: the port has the 4-layer stack
+only; deeper records are not built (the lane is not the limit, the code
+is), and the gate says so instead of guessing.
 
 ## 4. Train a real tiny LM, not only a copy task
 

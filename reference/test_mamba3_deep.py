@@ -7,10 +7,14 @@ Dumps the twin's inputs from `reference/mamba3_deep_golden.npz`, builds
 
   deep_logits, deep_loss, deep_hn
 
-The 4-layer backward and generation chains are not built yet, so the gate
-reports them `unavailable` and exits 1 with `MAMBA3 DEEP PARTIAL`; the row
-stays `not run` in the batch until they are gated, and no claim is made
-that is not measured.
+and the ten-step training run and the 16-token greedy generation against
+the twin's own run:
+
+  deep4_losses (10 losses)  1e-4 relative
+  deep4_gen    (16 tokens)  exactly equal
+
+Depths 8 and 16 are `unavailable`: the port has the 4-layer stack only, and
+a deeper record has not been built (the lane is not the limit; the code is).
 """
 from __future__ import annotations
 
@@ -28,6 +32,7 @@ BEND = os.environ.get("BEND", os.path.join(os.path.expanduser("~"), ".bend/bin/b
 BIN = os.path.join(ROOT, ".scratch/mamba3_deep.bin")
 GATE = 1e-5
 PAIRS = [("deep_logits", "logits"), ("deep_loss", "loss"), ("deep_hn", "hn")]
+LOSS_GATE = 1e-4
 
 
 def main():
@@ -82,11 +87,37 @@ def main():
         print(f"{'ok  ' if good else 'FAIL'} {tag}: max|d| {d.max():.6e} "
               f"rel {rel:.6e} gate {GATE:.0e}")
         ok = ok and good
-    print("unavailable backward: the 4-layer chain is not built")
-    print("unavailable generation: the 4-layer greedy loop is not built")
+    got = tags.get("deep4_losses")
+    want = g["train_loss"].astype(np.float64).reshape(-1)
+    if got is None:
+        print("FAIL deep4_losses: not printed")
+        ok = False
+    else:
+        got = got.astype(np.float64)
+        d = np.abs(got - want)
+        rel = float(d.max()) / max(1e-30, float(np.abs(want).max()))
+        good = rel <= LOSS_GATE
+        print(f"{'ok  ' if good else 'FAIL'} deep4_losses: max|d| {d.max():.6e} "
+              f"rel {rel:.6e} gate {LOSS_GATE:.0e}")
+        ok = ok and good
+
+    got = tags.get("deep4_gen")
+    want = g["gen_tokens"].astype(int).reshape(-1)
+    if got is None:
+        print("FAIL deep4_gen: not printed")
+        ok = False
+    else:
+        got = got.astype(int)
+        eq = got.size == want.size and np.array_equal(got, want)
+        print(f"{'ok  ' if eq else 'FAIL'} deep4_gen: {got.tolist()}")
+        if not eq:
+            print(f"     twin: {want.tolist()}")
+        ok = ok and eq
+
+    print("unavailable depths 8/16: not built (the port has the 4-layer stack)")
     print(f"     build {build:.1f} s, run {seconds:.2f} s wall")
-    print("MAMBA3 DEEP", "PASS" if False else "PARTIAL")
-    return 1
+    print("MAMBA3 DEEP", "PASS" if ok else "FAIL")
+    return 0 if ok else 1
 
 
 if __name__ == "__main__":

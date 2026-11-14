@@ -50,9 +50,51 @@ def deep_forward(ms, E, Wh, nw, tokens):
         h = h + W.twin_forward(m, h)["y"]
     hn = W.rms(h, nw, eps=1e-5)
     logits = hn @ Wh.T
-    targets = torch.arange(T, device=DEV)
-    loss = F.cross_entropy(logits.reshape(T, V), targets)
+    if logits.shape[1] == T:
+        targets = torch.arange(T, device=DEV)
+        loss = F.cross_entropy(logits.reshape(T, V), targets)
+    else:
+        loss = None
     return {"u": u, "h": h, "hn": hn, "logits": logits, "loss": loss}
+
+
+def train(ms, E, Wh, nw, steps=10, lr=1e-3):
+    E = E.clone().requires_grad_(True)
+    Wh = Wh.clone().requires_grad_(True)
+    nw = nw.clone().requires_grad_(True)
+    for m in ms:
+        for p_ in m.parameters():
+            p_.requires_grad_(True)
+    tokens = list(range(T))
+    targets = torch.arange(T, device=DEV)
+    losses, tokens_out = [], None
+    for _ in range(steps):
+        out = deep_forward(ms, E, Wh, nw, tokens)
+        logits = out["logits"]
+        loss = F.cross_entropy(logits.reshape(T, V), targets)
+        loss.backward()
+        tokens_out = logits.argmax(-1).detach()
+        with torch.no_grad():
+            for m in ms:
+                for p_ in m.parameters():
+                    p_ -= lr * p_.grad
+                    p_.grad = None
+            E -= lr * E.grad
+            Wh -= lr * Wh.grad
+            nw -= lr * nw.grad
+            E.grad = None
+            Wh.grad = None
+            nw.grad = None
+        losses.append(float(loss.detach()))
+    return losses, tokens_out, E.detach(), Wh.detach(), nw.detach()
+
+
+def generate(ms, E, Wh, nw, steps=12):
+    tokens = [0, 1, 2, 3]
+    for _ in range(steps):
+        out = deep_forward(ms, E, Wh, nw, tokens)
+        tokens.append(int(out["logits"][0, -1].argmax()))
+    return tokens
 
 
 def main():
@@ -76,6 +118,11 @@ def main():
             ("B_norm_w", m.B_norm.weight), ("C_norm_w", m.C_norm.weight),
             ("D", m.D), ("out_proj", m.out_proj.weight)):
             arrays[f"l{i+1}_{key}"] = arr.detach().cpu().numpy()
+    gen_tokens = generate(ms, E, Wh, nw)
+    losses, ttoks, _E2, _Wh2, _nw2 = train(ms, E, Wh, nw)
+    arrays["train_loss"] = np.asarray(losses, dtype=np.float32)
+    arrays["train_tokens"] = ttoks.cpu().numpy().astype(np.float32)
+    arrays["gen_tokens"] = np.asarray(gen_tokens, dtype=np.float32)
     np.savez(args.out, **arrays)
     print(f"wrote {args.out}")
     print("loss %.6f  logits max|.| %.6f" %

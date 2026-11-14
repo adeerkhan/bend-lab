@@ -42,19 +42,17 @@ batch row, a fresh PASS and its own commit. Rows 4-6 are not started.
 
 **Open rows (not started), in the goal's order:**
 
-- **deep**: the depth-4 FORWARD is done and gated (`lm4_forward`,
-  `L4W`/`LM4` records, four blocks, residual each, final RMSNorm + head;
-  matches `reference/mamba3_deep_twin.py`: logits rel `2.6e-07`, loss
-  `8.4e-08`, `hn` `1.6e-07`). **Pending**: the 4-layer backward chain —
-  four `backward` calls with the residual-sum propagation (`dh_{k-1} =
-  dh_k + g_k.du`) and per-layer SGD. The Bend tax that makes it long:
-  a record (`L4W`) cannot be both matched for the backward and reused for
-  the update, so each layer's eight weight lists must travel as `+` params
-  through the chain (the 2-layer `lm_after_g2` is the template, ×4). The
-  generation loop has the same shape (`lm4_gen_go` needs the four records
-  reconstructed from `+` field bindings around each recursive call). Depths
-  8/16 are `unavailable` until the chain exists; the gate exits 1 with
-  `MAMBA3 DEEP PARTIAL` and the batch row stays `not run`.
+- ~~deep~~ — **done (2026-11-14)**: `lm4_forward`, `lm4_step`, `lm4_gen`
+  (`L4W`/`LM4` records). `make mamba3-deep` matches the four-block twin at
+  the prompt (logits rel `2.6e-07`, loss `8.4e-08`, `hn` `1.6e-07`, gate
+  `1e-5`), the ten-step SGD training (rel `1.7e-07`, gate `1e-4`) and the
+  sixteen-token greedy generation (exactly equal). Depths 8/16 are
+  `unavailable` (not built; the gate says so). The Bend tax worth
+  remembering: a `L4W` record cannot be both matched for the backward and
+  reused for the update, so the chain matches each record ONCE with `+`
+  list bindings and rebuilds the bundle for the update; and a Mat
+  (`TA.Mat`) is consumed once, so a probe that needs two model copies must
+  load the files twice (each helper loads its own set).
 - **mimo**: build the oracle FIRST. The reference MIMO path is the TileLang
   `mamba3_mimo_combined` kernel; check whether it imports and runs on this
   lane before any port. If it cannot run, record why — do not ship a
