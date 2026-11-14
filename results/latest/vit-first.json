@@ -1,6 +1,6 @@
 {
   "schema": "mlbend.experiment/3",
-  "created_at": "2026-11-13T11:28:41.863014+00:00",
+  "created_at": "2026-11-14T14:03:36.669146+00:00",
   "task": {
     "name": "vit-first",
     "description": "the ViT's step-0 window in a second: the loss, the target's mean square and the model's, against the twin (the cell for ISSUE-032 and ISSUE-040)",
@@ -32,7 +32,7 @@
     "bend": "2.0.38"
   },
   "git": {
-    "commit": "f6483da",
+    "commit": "fdd9a99",
     "branch": "main",
     "dirty": true
   },
@@ -145,16 +145,16 @@
     "numpy": "2.5.4"
   },
   "run": {
-    "build_seconds": 163.677,
-    "seconds_min": 2.126,
+    "build_seconds": 110.797,
+    "seconds_min": 1.062,
     "seconds_all": [
-      2.126
+      1.062
     ],
     "repeat": 1,
     "fetch_seconds": 0.003,
-    "compute_seconds": 2.123,
-    "reference_seconds": 0.122,
-    "speed_ratio": 0.057
+    "compute_seconds": 1.059,
+    "reference_seconds": 0.037,
+    "speed_ratio": 0.035
   },
   "stages": [],
   "stages_source": null,
@@ -191,8 +191,8 @@
           "pass": true
         }
       },
-      "run_seconds": 2.126,
-      "reference_seconds": 0.122
+      "run_seconds": 1.062,
+      "reference_seconds": 0.037
     }
   ],
   "metrics": {

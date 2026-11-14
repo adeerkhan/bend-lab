@@ -53,6 +53,16 @@ an online loop). ISSUE-102 was not re-run (the 25.7M checkpoint is not in
 this tree); our recorded numbers stand and the third-party published README
 was not edited. `make issues` re-rendered (134 entries, 16 open).
 
+Batch status (2026-11-13/14): fresh `results/batch-20261113-210547.md`
+and `-220714.md` record mamba3-step, mamba3-train-curve, mamba3-layer and
+mamba3 all PASS. The full gate reports **144/144** (the batch runner's pin
+honestly flagging the stale 143/143). Four disk-quota casualties of the
+220714 run (full, vit, glm53, classical — a concurrent session had filled
+shared `/tmp`) all PASS on re-run (190144: vit, classical; 231337: glm53;
+190453: full 2890 s). Varlen/GQA/outnorm/deep remain unimplemented, MIMO
+and tiny-lm remain unavailable; the RL before-RL claim remains
+unreproducible on this lane.
+
 Remaining open rows after this: mamba3-varlen, -gqa, -outnorm, -deep (all
 unblocked — they may reuse `step_mamba3.bend`), MIMO (design question for
 the maintainer), tiny-lm. See `results/mamba3-step-gate.md` for commands.

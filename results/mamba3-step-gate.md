@@ -87,10 +87,13 @@ The step's wall time is 0.08 s at 16 tokens, 0.45 s at 64, 1.2 s at 256 —
 linear in the token count, as an online decoder should be; the full-prefix
 reference is quadratic (1 s / 17.7 s / 29 m 17 s).
 
-`make check` was re-run this session after the step landed: **143/143
-checks passed** (37 m 48 s, user 92 m 54 s), and the full gate includes
-`reference/test_mamba3_step.py: the numbers match (2s)`. Dashboard: the
-16-token gate is run 114 (`make session TASK=mamba3-step CMD="make mamba3-step"`).
+`make check` was re-run after the step landed: at that moment **143/143
+checks passed** (37 m 48 s); after `reference/test_mamba3_train_curve.py`
+landed the gate reports **144/144** (the curve test is auto-included; the
+fresh batch's `full` row honestly flagged the stale `143/143` pin and the
+pin was corrected to 144/144). The full gate includes both Mamba-3 test
+files. Dashboard: the 16-token gate is run 114, the curve gate is run in the
+20261113-205808 session (`make session TASK=mamba3-train-curve`).
 
 ## ISSUE-126 — `T.Train` cannot report the per-step loss
 

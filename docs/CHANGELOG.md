@@ -23,8 +23,11 @@ What changed for the people who run the lab. Internal refactors are not listed.
   (step 0.45 s, reference 17.7 s) and 256 exact (step 1.2 s, reference
   29 m 17 s); `bend file.bend` dies in the interpreter at seq len >= 64,
   the compiled path works at both lengths.
-- `make check` was re-run after the step landed: 143/143 PASS
-  (37 m 48 s, user 92 m 54 s); `reference/test_mamba3_step.py` is included.
+- `make check` was re-run after the step landed: 143/143 PASS at that
+  moment (37 m 48 s, user 92 m 54 s); after
+  `reference/test_mamba3_train_curve.py` landed the gate reports 144/144,
+  its row auto-included; the fresh batch flagged my stale 143/143 pin and
+  the pin was corrected to 144/144.
 - The earlier "decode placeholder" claim (identical to the probe, reported
   as PASS) is superseded by this; the placeholder was deleted and the row
   had been recorded as not run. See `results/mamba3-step-gate.md` and the
@@ -98,6 +101,17 @@ What changed for the people who run the lab. Internal refactors are not listed.
   decoder and 192 evaluation, and the four short tracks. The Mamba-3 decode
   step, `T.Layer`/`T.Train`, varlen, GQA, outnorm, deep, MIMO and the tiny LM
   are recorded `not run` with their reasons.
+- The fresh 2026-11-13 batch (`results/batch-20261113-210547.md`,
+  `-220714.md`) records `mamba3-step` and `mamba3-train-curve` PASS; the full
+  gate reports **144/144** after `test_mamba3_train_curve.py` landed (a stale
+  `143/143` pin in the runner honestly flagged the change; re-pinned). Four
+  rows of the 220714 batch failed with `ENOSPC`/`EDQUOT` on the shared
+  `/tmp` (a concurrent session was flooding it); every failed row passed on
+  re-run with the disk free (`results/batch-20261114-190144.md` vit 112 s,
+  classical 50 s, glm53 155 s in `batch-20261113-231337.md`;
+  `results/batch-20261114-190453.md` full 2890 s). Varlen/GQA/outnorm/deep
+  remain `not run` (not implemented); MIMO and the tiny LM remain
+  unavailable.
 
 ### The hybrid 192 evaluation is complete
 

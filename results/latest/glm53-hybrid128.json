@@ -1,6 +1,6 @@
 {
   "schema": "mlbend.experiment/3",
-  "created_at": "2026-11-13T11:31:13.228114+00:00",
+  "created_at": "2026-11-13T18:16:54.189831+00:00",
   "task": {
     "name": "glm53-hybrid128",
     "description": "one training step of the 4-block GLM-5.3-Flash hybrid (three linear and one sparse block, width 32, four heads, 128 positions, 74,144 parameters) on the reference's synthetic corpus",
@@ -32,7 +32,7 @@
     "positions": 128
   },
   "git": {
-    "commit": "f6483da",
+    "commit": "fdd9a99",
     "branch": "main",
     "dirty": true
   },
@@ -145,14 +145,14 @@
     "numpy": "2.5.4"
   },
   "run": {
-    "build_seconds": 59.91,
-    "seconds_min": 1.547,
+    "build_seconds": 57.647,
+    "seconds_min": 1.542,
     "seconds_all": [
-      1.547
+      1.542
     ],
     "repeat": 1,
     "fetch_seconds": 0.0,
-    "compute_seconds": 1.547,
+    "compute_seconds": 1.542,
     "reference_seconds": 0.0,
     "speed_ratio": 0.0
   },
@@ -160,7 +160,7 @@
     {
       "path": "run",
       "depth": 0,
-      "ms": 1689.333,
+      "ms": 1688.333,
       "kind": "wall"
     },
     {
@@ -184,13 +184,13 @@
     {
       "path": "run/step",
       "depth": 1,
-      "ms": 1681.333,
+      "ms": 1680.333,
       "kind": "wall"
     },
     {
       "path": "run/step/forward",
       "depth": 2,
-      "ms": 791.0,
+      "ms": 757.0,
       "kind": "wall"
     },
     {
@@ -202,13 +202,13 @@
     {
       "path": "run/step/backward",
       "depth": 2,
-      "ms": 1114.0,
+      "ms": 1069.0,
       "kind": "wall"
     },
     {
       "path": "run/step/update",
       "depth": 2,
-      "ms": 1.0,
+      "ms": 0.0,
       "kind": "wall"
     }
   ],
@@ -223,8 +223,8 @@
   "bounds": {},
   "notes": [
     "clock: IO.now is milliseconds; a stage below 1 ms prints <1 ms",
-    "the trace line measures the batch read and T.Train.step: 1681 ms",
-    "the four parts sum to 1906 ms against the 1681 ms step (+13.4%); they are timed on a fresh state, so the difference is measurement, not work",
+    "the trace line measures the batch read and T.Train.step: 1680 ms",
+    "the four parts sum to 1826 ms against the 1680 ms step (+8.7%); they are timed on a fresh state, so the difference is measurement, not work",
     "the three timed steps read rows 0, 1 and 2; split_loss is the loop's first-step loss",
     "parameters 74144",
     "forward check: reference/test_glm53_mh.py 4/4 (linear 8.84e-08, sparse 1.23e-07, four-block model 1.22e-07 relative, N=8)",
@@ -256,7 +256,7 @@
           "note": "no reference for this number"
         }
       },
-      "run_seconds": 1.547,
+      "run_seconds": 1.542,
       "reference_seconds": 0.0
     }
   ],
