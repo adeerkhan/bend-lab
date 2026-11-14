@@ -3,7 +3,7 @@
 Recorded by `reference/test_mamba3_train_curve.py` (regenerated on every run).
 
 Command: `reference/.venv/bin/python reference/test_mamba3_train_curve.py`
-Build 7.4 s, run 16.83 s wall. Bend 2.0.38, reference/.venv.
+Build 6.3 s, run 14.23 s wall. Bend 2.0.38, reference/.venv.
 
 Custom trainer (ten steps, lr 1e-3), ten losses:
 

@@ -47,6 +47,54 @@ def show_gqa(f: M.FWD) -> IO(Unit):
         M.show_tag("gqa_Craw", Craw)
         return Unit{}
 
+def show_grad(g: M.GRAD) -> IO(Unit):
+  match g:
+    case M.GRAD{du, dW_in, ddt_bias, dB_bias, dC_bias, dB_norm_w,
+        dC_norm_w, dD, dW_out, do_v, dq, dk, dz, dx, dqk, dscale,
+        dADT, dBn, dCn, dDT, dtrap, ddd_dt, ddd_A, dBraw, dCraw,
+        dang_raw}:
+      do IO<Unit>:
+        M.show_tag("grad_du", du)
+        M.show_tag("grad_dW_in", dW_in)
+        M.show_tag("grad_ddt_bias", ddt_bias)
+        M.show_tag("grad_dB_bias", dB_bias)
+        M.show_tag("grad_dC_bias", dC_bias)
+        M.show_tag("grad_dB_norm_w", dB_norm_w)
+        M.show_tag("grad_dC_norm_w", dC_norm_w)
+        M.show_tag("grad_dD", dD)
+        M.show_tag("grad_dW_out", dW_out)
+        M.show_tag("grad_do_v", do_v)
+        M.show_tag("grad_dq", dq)
+        M.show_tag("grad_dk", dk)
+        M.show_tag("grad_dz", dz)
+        M.show_tag("grad_dx", dx)
+        M.show_tag("grad_dqk", dqk)
+        M.show_tag("grad_dscale", dscale)
+        M.show_tag("grad_dADT", dADT)
+        M.show_tag("grad_dBn", dBn)
+        M.show_tag("grad_dCn", dCn)
+        M.show_tag("grad_dDT", dDT)
+        M.show_tag("grad_dtrap", dtrap)
+        M.show_tag("grad_ddd_dt", ddd_dt)
+        M.show_tag("grad_ddd_A", ddd_A)
+        M.show_tag("grad_dBraw", dBraw)
+        M.show_tag("grad_dCraw", dCraw)
+        M.show_tag("grad_dang_raw", dang_raw)
+        return Unit{}
+
+def run_all(+w_in: List<&2, F32>, +dt_bias: List<&2, F32>,
+    +B_bias: List<&2, F32>, +C_bias: List<&2, F32>,
+    +Bw: List<&2, F32>, +Cw: List<&2, F32>, +D: List<&2, F32>,
+    +w_out: List<&2, F32>, +u: List<&2, F32>,
+    +dy: List<&2, F32>) -> IO(Unit):
+  do IO<Unit>:
+    show_gqa(M.forward_gqa(u, w_in, dt_bias, B_bias, C_bias, Bw,
+      Cw, D, w_out, 8n))
+    show_grad(M.backward_gqa(M.forward_gqa(u, w_in, dt_bias, B_bias,
+      C_bias, Bw, Cw, D, w_out, 8n), u, dy, w_in, w_out, Bw, Cw,
+      dt_bias, B_bias, C_bias, D, 8n))
+    return Unit{}
+
 def main() -> IO(Unit):
   do IO<Unit>:
     wi : TA.Mat<340n, 64n> <- T.Mat.load(340n, 64n, String.append(ddir(), "/in_proj.bin"), 0)
@@ -58,13 +106,15 @@ def main() -> IO(Unit):
     dd : TA.Mat<1n, 4n> <- T.Mat.load(1n, 4n, String.append(ddir(), "/D.bin"), 0)
     wo : TA.Mat<64n, 128n> <- T.Mat.load(64n, 128n, String.append(ddir(), "/out_proj.bin"), 0)
     u8 : TA.Mat<8n, 64n> <- T.Mat.load(8n, 64n, String.append(ddir(), "/u.bin"), 0)
-    show_gqa(M.forward_gqa(ml64(TA.Mat.to_list(8n, 64n, u8)),
-      ml340(TA.Mat.to_list(340n, 64n, wi)),
+    dy8 : TA.Mat<8n, 64n> <- T.Mat.load(8n, 64n, String.append(ddir(), "/dy.bin"), 0)
+    run_all(ml340(TA.Mat.to_list(340n, 64n, wi)),
       M.ml1x4(TA.Mat.to_list(1n, 4n, dtb)),
       M.ml4x16(TA.Mat.to_list(4n, 16n, bb)),
       M.ml4x16(TA.Mat.to_list(4n, 16n, cb)),
       M.ml1x16(TA.Mat.to_list(1n, 16n, bw)),
       M.ml1x16(TA.Mat.to_list(1n, 16n, cw)),
       M.ml1x4(TA.Mat.to_list(1n, 4n, dd)),
-      M.ml64x128(TA.Mat.to_list(64n, 128n, wo)), 8n))
+      M.ml64x128(TA.Mat.to_list(64n, 128n, wo)),
+      ml64(TA.Mat.to_list(8n, 64n, u8)),
+      ml64(TA.Mat.to_list(8n, 64n, dy8)))
     return Unit{}

@@ -4,17 +4,17 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
-### Mamba-3 GQA: forward gated at ngroups 2, rope_fraction 1.0
+### Mamba-3 GQA: forward and backward at ngroups 2, rope_fraction 1.0
 
-- `forward_gqa` in `mamba3_siso.bend`: the in_proj row is 340 wide, B/C are
-  per group (2) while the B/C biases stay per v-head, v-head h reads group
-  h//2, and the angle state is per v-head with 8 pairs (all 16 q/k dims
-  rotated). It matches `reference/mamba3_gqa_twin.py`'s CPU twin at every
-  forward intermediate (y rel `6.7e-07`, states `1.1e-06`, gate `1e-5`).
-- The analytic backward is still SISO-only: the angle widths (4->8) and the
-  group-indexed dCn/dBn, dW_norm and dW_in assembly are not ported, so
-  `make mamba3-gqa` prints `MAMBA3 GQA PARTIAL` and exits 1, and the batch
-  row stays `not run`. No backward claim is made.
+- `forward_gqa` and `backward_gqa` in `mamba3_siso.bend`: the in_proj row is
+  340 wide, B/C are per group (2) while the B/C biases stay per v-head,
+  v-head h reads group h//2, the angle state is per v-head with 8 pairs (all
+  16 q/k dims rotated), and the backward carries the angle widths (4->8),
+  the group-indexed dCn/dBn and dW_norm, and the 340-row dW_in.
+- `make mamba3-gqa` matches `reference/mamba3_gqa_twin.py`'s CPU twin at
+  every forward intermediate (y rel `6.7e-07`, gate `1e-5`) and at every
+  gradient (all `<= 1.1e-06`, gate `1e-4`; the angle gradient summed over
+  tokens, as the SISO gate does). Build 4.6 s, run 0.44 s; `MAMBA3 GQA PASS`.
 
 ### Mamba-3 varlen: the packed input resets at the boundary
 

@@ -86,7 +86,7 @@ run mamba3-train-curve "make mamba3-train-curve" "MAMBA3 TRAIN CURVE PASS"
 # run mamba3-deep "make mamba3-deep" "MAMBA3 DEEP PASS"
 
 run mamba3-varlen "make mamba3-varlen" "MAMBA3 VARLEN PASS"
-notrun mamba3-gqa "forward gated vs the ngroups-2 twin; analytic backward not ported"
+run mamba3-gqa "make mamba3-gqa" "MAMBA3 GQA PASS"
 notrun mamba3-outnorm "not implemented; depends on the step path (which exists)"
 notrun mamba3-deep "not implemented; depends on the step path (which exists)"
 notrun mimo "needs its own oracle; after rows 1-6"

@@ -1783,6 +1783,365 @@ def backward(f: FWD, +u: List<&2, F32>, +dy: List<&2, F32>,
 
 
 # ---------------------------------------------------------------------------
+# GQA backward: the SISO chain at angle width 8 and two B/C groups
+#
+# The per-head scan, the per-head biases and the per-token DT/trap/ADT
+# gradients are width-generic and reused as they are.  What changes: the
+# angle slices are 8 wide, rope has 8 pairs, dCn/dBn are 32 wide with head
+# h writing group h//2, the per-token RMS gradients run per group, and the
+# in_proj row is 340 wide.
+
+def add_group(+xs: List<&2, F32>, +d: List<&2, F32>,
+    +g: Nat) -> List<&2, F32>:
+  match g:
+    case 0n:
+      List.append(&2, F32, add_lists(take_row(xs, 0n, 16n), d),
+        take_row(xs, 16n, 16n))
+    case _:
+      List.append(&2, F32, take_row(xs, 0n, 16n),
+        add_lists(take_row(xs, 16n, 16n), d))
+
+def hp_add_gqa(hpb: HPB, hp: HP, +g: Nat) -> HP:
+  match hpb hp:
+    case HPB{+dq_pre, +dk_pre, dangle, dgamma}
+        HP{dCn0, dBn0, dCb0, dBb0, dangle0, dgamma0}:
+      HP{add_group(dCn0, dq_pre, g), add_group(dBn0, dk_pre, g),
+        push_row(dCb0, dq_pre), push_row(dBb0, dk_pre),
+        push_row(dangle0, dangle),
+        push_row(dgamma0, Con{dgamma, Nil{}})}
+
+def rope_bwd_gqa_go(+left: Nat, +j: Nat, +drot: List<&2, F32>,
+    +rot: List<&2, F32>, +angles: List<&2, F32>,
+    +adp: List<&2, F32>, +adang: List<&2, F32>) -> RB:
+  match left:
+    case 0n:
+      RB{List.append(&2, F32, adp, take_row(drot, 16n, 0n)), adang}
+    case 1n+p:
+      +a = nth(j, angles)
+      +c = F32.cos(a)
+      +s = F32.sin(a)
+      +d0 = nth(Nat.mul(2n, j), drot)
+      +d1 = nth((Nat.mul(2n, j) + 1n : Nat), drot)
+      +r0 = nth(Nat.mul(2n, j), rot)
+      +r1 = nth((Nat.mul(2n, j) + 1n : Nat), rot)
+      +y0 = ((d0 * c : F32) + (d1 * s : F32) : F32)
+      +y1 = ((0.0 - (d0 * s : F32) : F32) + (d1 * c : F32) : F32)
+      +da = ((0.0 - (d0 * r1 : F32) : F32) + (d1 * r0 : F32) : F32)
+      rope_bwd_gqa_go(p, (j + 1n : Nat), drot, rot, angles,
+        push_row(push_row(adp, Con{y0, Nil{}}), Con{y1, Nil{}}),
+        push_row(adang, Con{da, Nil{}}))
+
+def rope_bwd_gqa(+drot: List<&2, F32>, +rot: List<&2, F32>,
+    +angles: List<&2, F32>) -> RB:
+  rope_bwd_gqa_go(8n, 0n, drot, rot, angles, Nil{}, Nil{})
+
+def both_q_gqa(rbq: RB, +dk_rot: List<&2, F32>,
+    +k_rot: List<&2, F32>, +kang: List<&2, F32>) -> HPR:
+  match rbq:
+    case RB{dq_pre, dq_ang}:
+      both_fin(rope_bwd_gqa(dk_rot, k_rot, kang), dq_pre, dq_ang)
+
+def both_rope_gqa(+dq_rot: List<&2, F32>, +q_rot: List<&2, F32>,
+    +qang: List<&2, F32>, +dk_rot: List<&2, F32>,
+    +k_rot: List<&2, F32>, +kang: List<&2, F32>) -> HPR:
+  both_q_gqa(rope_bwd_gqa(dq_rot, q_rot, qang), dk_rot, k_rot, kang)
+
+def head_pre_bw_gqa(+h: Nat, +Cn_t: List<&2, F32>,
+    +Bn_t: List<&2, F32>, +C_bias: List<&2, F32>,
+    +B_bias: List<&2, F32>, +dq_all: List<&2, F32>,
+    +dk_all: List<&2, F32>, +q_t: List<&2, F32>,
+    +k_t: List<&2, F32>, +qk_t: List<&2, F32>,
+    +gamma_t: List<&2, F32>, +dqk_t: List<&2, F32>,
+    +dscale_t: List<&2, F32>, +angle_t: List<&2, F32>) -> HPB:
+  +g = Nat.div(h, 2n)
+  +cb = take_row(C_bias, Nat.mul(h, 16n), 16n)
+  +bb = take_row(B_bias, Nat.mul(h, 16n), 16n)
+  +qpre = add_lists(take_row(Cn_t, Nat.mul(g, 16n), 16n), cb)
+  +kpre = add_lists(take_row(Bn_t, Nat.mul(g, 16n), 16n), bb)
+  +qk_h = nth(h, dqk_t)
+  +g_h = nth(h, gamma_t)
+  +qk_term = (qk_h * g_h : F32)
+  +ang = take_row(angle_t, Nat.mul(h, 8n), 8n)
+  hpr : HPR = both_rope_gqa(take_row(dq_all, Nat.mul(h, 16n), 16n),
+    take_row(q_t, Nat.mul(h, 16n), 16n), ang,
+    take_row(dk_all, Nat.mul(h, 16n), 16n),
+    take_row(k_t, Nat.mul(h, 16n), 16n), ang)
+  hp_fin(hpr, scale_list(qpre, qk_term), scale_list(kpre, qk_term),
+    ((qk_h * dot(qpre, kpre) : F32) + nth(h, dscale_t) : F32))
+
+def hp_all_gqa(+Cn_t: List<&2, F32>, +Bn_t: List<&2, F32>,
+    +C_bias: List<&2, F32>, +B_bias: List<&2, F32>,
+    +dq_all: List<&2, F32>, +dk_all: List<&2, F32>,
+    +q_t: List<&2, F32>, +k_t: List<&2, F32>,
+    +qk_t: List<&2, F32>, +gamma_t: List<&2, F32>,
+    +dqk_t: List<&2, F32>, +dscale_t: List<&2, F32>,
+    +angle_t: List<&2, F32>) -> HP:
+  hp0 : HP = hp_add_gqa(head_pre_bw_gqa(0n, Cn_t, Bn_t, C_bias,
+    B_bias, dq_all, dk_all, q_t, k_t, qk_t, gamma_t, dqk_t,
+    dscale_t, angle_t),
+    HP{zline(32n), zline(32n), Nil{}, Nil{}, Nil{}, Nil{}}, 0n)
+  hp1 : HP = hp_add_gqa(head_pre_bw_gqa(1n, Cn_t, Bn_t, C_bias,
+    B_bias, dq_all, dk_all, q_t, k_t, qk_t, gamma_t, dqk_t,
+    dscale_t, angle_t), hp0, 0n)
+  hp2 : HP = hp_add_gqa(head_pre_bw_gqa(2n, Cn_t, Bn_t, C_bias,
+    B_bias, dq_all, dk_all, q_t, k_t, qk_t, gamma_t, dqk_t,
+    dscale_t, angle_t), hp1, 1n)
+  hp_add_gqa(head_pre_bw_gqa(3n, Cn_t, Bn_t, C_bias, B_bias,
+    dq_all, dk_all, q_t, k_t, qk_t, gamma_t, dqk_t, dscale_t,
+    angle_t), hp2, 1n)
+
+def dang_head_gqa_go(+left: Nat, +h: Nat,
+    +dangle2: List<&2, F32>, +ang_raw: List<&2, F32>,
+    +DT_t: List<&2, F32>, acc: List<&2, F32>) -> List<&2, F32>:
+  match left:
+    case 0n:
+      acc
+    case 1n+p:
+      +ah = take_row(dangle2, Nat.mul(h, 8n), 8n)
+      +d = dang_j_go(8n, 0n, ah, ang_raw,
+        take_row(DT_t, h, 1n), Nil{})
+      dang_head_gqa_go(p, (h + 1n : Nat), dangle2, ang_raw, DT_t,
+        add_lists(acc, d))
+
+def dang_t_gqa(+dangle2: List<&2, F32>, +ang_raw: List<&2, F32>,
+    +DT_t: List<&2, F32>) -> List<&2, F32>:
+  dang_head_gqa_go(4n, 0n, dangle2, ang_raw, DT_t, zline(8n))
+
+def pre_head_go_gqa(+left: Nat, +h: Nat, +t: Nat,
+    +dgamma: List<&2, F32>, +dADT_t: List<&2, F32>,
+    +A_t: List<&2, F32>, +DT_t: List<&2, F32>,
+    +trap_t: List<&2, F32>, +dd_dt_t: List<&2, F32>,
+    +dd_A_t: List<&2, F32>, +dt_bias: List<&2, F32>,
+    +ang_raw_t: List<&2, F32>, +dangle2: List<&2, F32>,
+    +dscale: List<&2, F32>, +accDT: List<&2, F32>,
+    +acctrap: List<&2, F32>, +accddt: List<&2, F32>,
+    +accdA: List<&2, F32>, +accdang: List<&2, F32>) -> PHB:
+  match left:
+    case 0n:
+      PHB{accDT, acctrap, accddt, accdA, accdang}
+    case 1n+p:
+      +dg = nth(h, dgamma)
+      +dtv = nth(h, DT_t)
+      +tr = nth(h, trap_t)
+      +ad = nth(h, dADT_t)
+      +av = nth(h, A_t)
+      +sh = prev_shift(t, h, dscale)
+      +ang_h = take_row(dangle2, Nat.mul(h, 8n), 8n)
+      +ang_ddt = ang_ddt_go(8n, 0n, ang_h, ang_raw_t, 0.0)
+      +dang_h = dang_j_go(8n, 0n, ang_h, ang_raw_t,
+        take_row(DT_t, h, 1n), Nil{})
+      +dDT = ((((dg * tr : F32) + (ad * av : F32) : F32)
+        + (sh * (1.0 - tr : F32) : F32) : F32) + ang_ddt : F32)
+      +dtrap = ((((dg * dtv : F32) - (sh * dtv : F32) : F32)
+        * tr : F32) * (1.0 - tr : F32) : F32)
+      +ddd_dt = (dDT * sigmoid((nth(h, dd_dt_t)
+        + nth(h, dt_bias) : F32)) : F32)
+      +dA = (ad * dtv : F32)
+      +ddd_A = dA_to_ddA(dA, nth(h, dd_A_t))
+      pre_head_go_gqa(p, (h + 1n : Nat), t, dgamma, dADT_t, A_t,
+        DT_t, trap_t, dd_dt_t, dd_A_t, dt_bias, ang_raw_t, dangle2,
+        dscale, push_row(accDT, Con{dDT, Nil{}}),
+        push_row(acctrap, Con{dtrap, Nil{}}),
+        push_row(accddt, Con{ddd_dt, Nil{}}),
+        push_row(accdA, Con{ddd_A, Nil{}}),
+        add_lists(accdang, dang_h))
+
+def pre_heads_gqa(+t: Nat, +dgamma: List<&2, F32>,
+    +dADT_t: List<&2, F32>, +A_t: List<&2, F32>,
+    +DT_t: List<&2, F32>, +trap_t: List<&2, F32>,
+    +dd_dt_t: List<&2, F32>, +dd_A_t: List<&2, F32>,
+    +dt_bias: List<&2, F32>, +ang_raw_t: List<&2, F32>,
+    +dangle2: List<&2, F32>, +dscale: List<&2, F32>) -> PHB:
+  pre_head_go_gqa(4n, 0n, t, dgamma, dADT_t, A_t, DT_t, trap_t,
+    dd_dt_t, dd_A_t, dt_bias, ang_raw_t, dangle2, dscale, Nil{},
+    Nil{}, Nil{}, Nil{}, zline(8n))
+
+def rms_pair(r0: RMSG, r1: RMSG) -> RMSG:
+  match r0 r1:
+    case RMSG{dx0, dw0} RMSG{dx1, dw1}:
+      RMSG{List.append(&2, F32, dx0, dx1),
+        add_lists(dw0, dw1)}
+
+def rms_bwd_gqa(+xs: List<&2, F32>, +ws: List<&2, F32>,
+    +dys: List<&2, F32>) -> RMSG:
+  rms_pair(rms_bwd(take_row(xs, 0n, 16n), ws,
+      take_row(dys, 0n, 16n), 16n),
+    rms_bwd(take_row(xs, 16n, 16n), ws,
+      take_row(dys, 16n, 16n), 16n))
+
+def pw_fin2_gqa(ph: PHB, rb: RMSG, rc: RMSG,
+    +dCn: List<&2, F32>, +dBn: List<&2, F32>,
+    +dCb: List<&2, F32>, +dBb: List<&2, F32>,
+    +dangle2: List<&2, F32>, +dW_in: List<&2, F32>,
+    +du: List<&2, F32>, +ddt_bias: List<&2, F32>,
+    +dB_bias: List<&2, F32>, +dC_bias: List<&2, F32>,
+    +dBw: List<&2, F32>, +dCw: List<&2, F32>,
+    +dang_raw: List<&2, F32>, +dBn_all: List<&2, F32>,
+    +dCn_all: List<&2, F32>, +dDT_all: List<&2, F32>,
+    +dtrap_all: List<&2, F32>, +ddd_dt_all: List<&2, F32>,
+    +ddd_A_all: List<&2, F32>, +dBraw_all: List<&2, F32>,
+    +dCraw_all: List<&2, F32>, +dz_t: List<&2, F32>,
+    +dx_t: List<&2, F32>, +u_t: List<&2, F32>,
+    +w_in: List<&2, F32>, +dD: List<&2, F32>,
+    +dW_out: List<&2, F32>) -> G2:
+  match ph rb rc:
+    case PHB{dDT, +dtrap, +ddd_dt, +ddd_A, +dang}
+        RMSG{+dxb, dwb} RMSG{+dxc, dwc}:
+      +dpre = cat8(dz_t, dx_t, dxb, dxc, ddd_dt, ddd_A, dtrap,
+        dang)
+      G2{add_lists(dW_in, outer(dpre, u_t)),
+        push_row(du, matvec_t(w_in, dpre, 340n, 64n)),
+        add_lists(ddt_bias, ddd_dt), add_lists(dB_bias, dBb),
+        add_lists(dC_bias, dCb), add_lists(dBw, dwb),
+        add_lists(dCw, dwc), add_lists(dang_raw, dang), dangle2,
+        push_row(dBn_all, dBn), push_row(dCn_all, dCn),
+        push_row(dDT_all, dDT), push_row(dtrap_all, dtrap),
+        push_row(ddd_dt_all, ddd_dt), push_row(ddd_A_all, ddd_A),
+        push_row(dBraw_all, dxb), push_row(dCraw_all, dxc),
+        dD, dW_out}
+
+def pw_finish_gqa(hp: HP, g: G2, +t: Nat,
+    +DT_t: List<&2, F32>, +trap_t: List<&2, F32>,
+    +A_t: List<&2, F32>, +dADT_t: List<&2, F32>,
+    +dd_dt_t: List<&2, F32>, +dd_A_t: List<&2, F32>,
+    +dt_bias: List<&2, F32>, +ang_raw_t: List<&2, F32>,
+    +Braw_t: List<&2, F32>, +Craw_t: List<&2, F32>,
+    +dscale_all: List<&2, F32>, +Bw: List<&2, F32>,
+    +Cw: List<&2, F32>, +dz_t: List<&2, F32>,
+    +dx_t: List<&2, F32>, +u_t: List<&2, F32>,
+    +w_in: List<&2, F32>) -> G2:
+  match hp g:
+    case HP{+dCn, +dBn, dCb, dBb, dangle, dgamma}
+        G2{dW_in, du, ddt_bias, dB_bias, dC_bias, dBw, dCw,
+           dang_raw, dangle0, dBn_all, dCn_all, dDT_all, dtrap_all,
+           ddd_dt_all, ddd_A_all, dBraw_all, dCraw_all, dD, dW_out}:
+      +dangle2 = add_lists(dangle0, dangle)
+      ph : PHB = pre_heads_gqa(t, dgamma, dADT_t, A_t, DT_t, trap_t,
+        dd_dt_t, dd_A_t, dt_bias, ang_raw_t, dangle2, dscale_all)
+      pw_fin2_gqa(ph, rms_bwd_gqa(Braw_t, Bw, dBn),
+        rms_bwd_gqa(Craw_t, Cw, dCn), dCn, dBn, dCb, dBb,
+        dangle2, dW_in, du, ddt_bias, dB_bias, dC_bias, dBw, dCw,
+        dang_raw, dBn_all, dCn_all, dDT_all, dtrap_all, ddd_dt_all,
+        ddd_A_all, dBraw_all, dCraw_all, dz_t, dx_t, u_t, w_in,
+        dD, dW_out)
+
+def pw_go_gqa(+left: Nat, +t: Nat, +DT: List<&2, F32>,
+    +trap: List<&2, F32>, +A: List<&2, F32>,
+    +dADT: List<&2, F32>, +dd_dt: List<&2, F32>,
+    +dd_A: List<&2, F32>, +dt_bias: List<&2, F32>,
+    +ang_raw: List<&2, F32>, +Braw: List<&2, F32>,
+    +Craw: List<&2, F32>, +Bn: List<&2, F32>,
+    +Cn: List<&2, F32>, +angle: List<&2, F32>,
+    +q: List<&2, F32>, +k: List<&2, F32>,
+    +qk: List<&2, F32>, +gamma: List<&2, F32>,
+    +dq_all: List<&2, F32>, +dk_all: List<&2, F32>,
+    +dqk_all: List<&2, F32>, +dscale_all: List<&2, F32>,
+    +Bw: List<&2, F32>, +Cw: List<&2, F32>,
+    +B_bias: List<&2, F32>, +C_bias: List<&2, F32>,
+    +w_in: List<&2, F32>, +u: List<&2, F32>,
+    +dz_all: List<&2, F32>, +dx_all: List<&2, F32>,
+    g: G2) -> G2:
+  match left:
+    case 0n:
+      g
+    case 1n+p:
+      +DT_t = take_row(DT, Nat.mul(t, 4n), 4n)
+      +trap_t = take_row(trap, Nat.mul(t, 4n), 4n)
+      +A_t = take_row(A, Nat.mul(t, 4n), 4n)
+      +dADT_t = take_row(dADT, Nat.mul(t, 4n), 4n)
+      +dd_dt_t = take_row(dd_dt, Nat.mul(t, 4n), 4n)
+      +dd_A_t = take_row(dd_A, Nat.mul(t, 4n), 4n)
+      +ang_raw_t = take_row(ang_raw, Nat.mul(t, 8n), 8n)
+      +Braw_t = take_row(Braw, Nat.mul(t, 32n), 32n)
+      +Craw_t = take_row(Craw, Nat.mul(t, 32n), 32n)
+      +Bn_t = take_row(Bn, Nat.mul(t, 32n), 32n)
+      +Cn_t = take_row(Cn, Nat.mul(t, 32n), 32n)
+      +angle_t = take_row(angle, Nat.mul(t, 32n), 32n)
+      +q_t = take_row(q, Nat.mul(t, 64n), 64n)
+      +k_t = take_row(k, Nat.mul(t, 64n), 64n)
+      +qk_t = take_row(qk, Nat.mul(t, 4n), 4n)
+      +gamma_t = take_row(gamma, Nat.mul(t, 4n), 4n)
+      +dq_t = take_row(dq_all, Nat.mul(t, 64n), 64n)
+      +dk_t = take_row(dk_all, Nat.mul(t, 64n), 64n)
+      +dqk_t = take_row(dqk_all, Nat.mul(t, 4n), 4n)
+      +dsc_t = take_row(dscale_all, Nat.mul(t, 4n), 4n)
+      +dz_t = take_row(dz_all, Nat.mul(t, 128n), 128n)
+      +dx_t = take_row(dx_all, Nat.mul(t, 128n), 128n)
+      +u_t = take_row(u, Nat.mul(t, 64n), 64n)
+      hp : HP = hp_all_gqa(Cn_t, Bn_t, C_bias, B_bias, dq_t, dk_t,
+        q_t, k_t, qk_t, gamma_t, dqk_t, dsc_t, angle_t)
+      pw_go_gqa(p, (t - 1n : Nat), DT, trap, A, dADT, dd_dt, dd_A,
+        dt_bias, ang_raw, Braw, Craw, Bn, Cn, angle, q, k, qk,
+        gamma, dq_all, dk_all, dqk_all, dscale_all, Bw, Cw,
+        B_bias, C_bias, w_in, u, dz_all, dx_all,
+        pw_finish_gqa(hp, g, t, DT_t, trap_t, A_t, dADT_t, dd_dt_t,
+          dd_A_t, dt_bias, ang_raw_t, Braw_t, Craw_t, dscale_all,
+          Bw, Cw, dz_t, dx_t, u_t, w_in))
+
+def to_grad_gqa(g: G2, +do_v: List<&2, F32>, +dz: List<&2, F32>,
+    +dx: List<&2, F32>, +dqk: List<&2, F32>,
+    +dscale: List<&2, F32>, +dADT: List<&2, F32>,
+    +dq: List<&2, F32>, +dk: List<&2, F32>) -> GRAD:
+  match g:
+    case G2{dW_in, +du, ddt_bias, dB_bias, dC_bias, dBw, dCw,
+        dang_raw, dangle, +dBn, +dCn, +dDT, +dtrap, +ddd_dt, +ddd_A,
+        +dBraw, +dCraw, dD, dW_out}:
+      GRAD{rev_rows(Nat.div(List.length(&2, F32, du), 64n), du, 64n, Nil{}),
+        dW_in, ddt_bias, dB_bias, dC_bias, dBw, dCw, dD,
+        dW_out, do_v, dq, dk, dz, dx, dqk, dscale, dADT,
+        rev_rows(Nat.div(List.length(&2, F32, dBn), 32n), dBn, 32n, Nil{}),
+        rev_rows(Nat.div(List.length(&2, F32, dCn), 32n), dCn, 32n, Nil{}),
+        rev_rows(Nat.div(List.length(&2, F32, dDT), 4n), dDT, 4n, Nil{}),
+        rev_rows(Nat.div(List.length(&2, F32, dtrap), 4n), dtrap, 4n, Nil{}),
+        rev_rows(Nat.div(List.length(&2, F32, ddd_dt), 4n), ddd_dt, 4n, Nil{}),
+        rev_rows(Nat.div(List.length(&2, F32, ddd_A), 4n), ddd_A, 4n, Nil{}),
+        rev_rows(Nat.div(List.length(&2, F32, dBraw), 32n), dBraw, 32n, Nil{}),
+        rev_rows(Nat.div(List.length(&2, F32, dCraw), 32n), dCraw, 32n, Nil{}),
+        dang_raw}
+
+def pw_start_gqa(bw: BW, +DT: List<&2, F32>, +trap: List<&2, F32>,
+    +A: List<&2, F32>, +dADT: List<&2, F32>,
+    +dd_dt: List<&2, F32>, +dd_A: List<&2, F32>,
+    +dt_bias: List<&2, F32>, +ang_raw: List<&2, F32>,
+    +Braw: List<&2, F32>, +Craw: List<&2, F32>,
+    +Bn: List<&2, F32>, +Cn: List<&2, F32>,
+    +angle: List<&2, F32>, +q: List<&2, F32>,
+    +k: List<&2, F32>, +qk: List<&2, F32>,
+    +gamma: List<&2, F32>, +Bw: List<&2, F32>,
+    +Cw: List<&2, F32>, +B_bias: List<&2, F32>,
+    +C_bias: List<&2, F32>, +w_in: List<&2, F32>,
+    +u: List<&2, F32>, +n: Nat) -> GRAD:
+  match bw:
+    case BW{+dq, +dk, +dx, +dqk, +dscale, +dADT, dD, dstate, do_v, +dz,
+        dW_out, du}:
+      g : G2 = pw_go_gqa(n, (n - 1n : Nat), DT, trap, A, dADT, dd_dt,
+        dd_A, dt_bias, ang_raw, Braw, Craw, Bn, Cn, angle, q, k, qk,
+        gamma, dq, dk, dqk, dscale, Bw, Cw, B_bias, C_bias, w_in,
+        u, dz, dx,
+        G2{zline(21760n), Nil{}, zline(4n), zline(64n), zline(64n),
+          zline(16n), zline(16n), zline(8n), zline(32n),
+          Nil{}, Nil{}, Nil{}, Nil{}, Nil{}, Nil{}, Nil{}, Nil{}, dD,
+          dW_out})
+      to_grad_gqa(g, do_v, dz, dx, dqk, dscale, dADT, dq, dk)
+
+def backward_gqa(f: FWD, +u: List<&2, F32>, +dy: List<&2, F32>,
+    +w_in: List<&2, F32>, +w_out: List<&2, F32>,
+    +Bw: List<&2, F32>, +Cw: List<&2, F32>,
+    +dt_bias: List<&2, F32>, +B_bias: List<&2, F32>,
+    +C_bias: List<&2, F32>, +D: List<&2, F32>,
+    +n: Nat) -> GRAD:
+  match f:
+    case FWD{pre, z, x, Braw, Craw, dd_dt, dd_A, trap_raw, ang_raw,
+        A, DT, +ADT, trap, gamma, shift, scale, Bn, Cn, angle, +q, +k,
+        +qk, states, out_v, y_inner, y}:
+      bw : BW = bw_start(z, x, ADT, q, k, qk, scale, states, out_v,
+        y_inner, D, w_out, dy, n)
+      pw_start_gqa(bw, DT, trap, A, ADT, dd_dt, dd_A, dt_bias,
+        ang_raw, Braw, Craw, Bn, Cn, angle, q, k, qk, gamma, Bw,
+        Cw, B_bias, C_bias, w_in, u, n)
+
+
+# ---------------------------------------------------------------------------
 # the ten-step copy task: tokens 0..7 in, the same tokens out
 
 def sgd(+xs: List<&2, F32>, +gs: List<&2, F32>, +lr: F32) -> List<&2, F32>:

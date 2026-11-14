@@ -10,10 +10,10 @@ against the twin at 1e-5 relative:
   y, states, angle, q, k, qk, scale, Bn, Cn, DT, ADT, gamma, ang_raw,
   A, trap, pre, out_v, y_inner
 
-The backward for this config is not yet ported: it is reported
-`unavailable` and the gate exits 1 with `MAMBA3 GQA PARTIAL` — the row
-stays `not run` in the batch until the analytic backward lands, so no
-claim is made that is not measured.
+and the analytic backward against the twin's autograd gradients at 1e-4
+per tensor: du, dW_in, ddt_bias, dB_bias, dC_bias, dB_norm_w, dC_norm_w,
+dD, dW_out, and the g_* intermediates (the angle gradient summed over
+tokens, the SISO gate's convention).
 """
 from __future__ import annotations
 
@@ -34,7 +34,20 @@ FWD_TAGS = ["y", "states", "angle", "q", "k", "qk", "scale", "Bn", "Cn",
             "DT", "ADT", "gamma", "ang_raw", "A", "trap", "pre", "out_v",
             "y_inner", "Braw", "Craw"]
 WEIGHTS = ["in_proj", "dt_bias", "B_bias", "C_bias", "B_norm_w",
-           "C_norm_w", "D", "out_proj", "u"]
+           "C_norm_w", "D", "out_proj", "u", "dy"]
+GRAD_TAGS = [("grad_du", "du"), ("grad_dW_in", "dW_in"),
+             ("grad_ddt_bias", "ddt_bias"), ("grad_dB_bias", "dB_bias"),
+             ("grad_dC_bias", "dC_bias"), ("grad_dB_norm_w", "dB_norm_w"),
+             ("grad_dC_norm_w", "dC_norm_w"), ("grad_dD", "dD"),
+             ("grad_dW_out", "dW_out"), ("grad_do_v", "g_out_v"),
+             ("grad_dq", "g_q"), ("grad_dk", "g_k"), ("grad_dz", "g_z"),
+             ("grad_dx", "g_x"), ("grad_dqk", "g_qk"),
+             ("grad_dscale", "g_scale"), ("grad_dADT", "g_ADT"),
+             ("grad_dBn", "g_Bn"), ("grad_dCn", "g_Cn"),
+             ("grad_dDT", "g_DT"), ("grad_dtrap", "g_trap_raw"),
+             ("grad_ddd_dt", "g_dd_dt"), ("grad_ddd_A", "g_dd_A"),
+             ("grad_dBraw", "g_Braw"), ("grad_dCraw", "g_Craw")]
+GRAD_GATE = 1e-4
 
 
 def parse(out):
@@ -108,12 +121,48 @@ def main():
               f"rel {rel:.6e} gate {GATE:.0e}")
         ok = ok and good
 
-    print("FAIL backward: not ported for ngroups 2 (analytic chain is SISO-only)")
+    for tag, key in GRAD_TAGS:
+        got = tags.get(tag)
+        want = golden[key].astype(np.float64).reshape(-1)
+        if got is None:
+            print(f"FAIL {tag}: not printed")
+            ok = False
+            continue
+        got = got.astype(np.float64)
+        if got.size != want.size:
+            print(f"FAIL {tag}: size {got.size} != {want.size}")
+            ok = False
+            continue
+        d = np.abs(got - want)
+        rel = float(d.max()) / max(1e-30, float(np.abs(want).max()))
+        good = rel <= GRAD_GATE
+        print(f"{'ok  ' if good else 'FAIL'} {tag}: max|d| {d.max():.6e} "
+              f"rel {rel:.6e} gate {GRAD_GATE:.0e}")
+        ok = ok and good
+
+    # The port's dang_raw is the per-token raw-angle gradient summed over
+    # tokens, the same convention the SISO gate uses.
+    got = tags.get("grad_dang_raw")
+    want = golden["g_ang_raw"].astype(np.float64).reshape(8, 8).sum(0)
+    if got is None:
+        print("FAIL grad_dang_raw: not printed")
+        ok = False
+    else:
+        got = got.astype(np.float64)
+        if got.size != want.size:
+            print(f"FAIL grad_dang_raw: size {got.size} != {want.size}")
+            ok = False
+        else:
+            d = np.abs(got - want)
+            rel = float(d.max()) / max(1e-30, float(np.abs(want).max()))
+            good = rel <= GRAD_GATE
+            print(f"{'ok  ' if good else 'FAIL'} grad_dang_raw: max|d| "
+                  f"{d.max():.6e} rel {rel:.6e} gate {GRAD_GATE:.0e}")
+            ok = ok and good
+
     print(f"     build {build:.1f} s, run {seconds:.2f} s wall")
-    print("MAMBA3 GQA", "PASS" if ok else "PARTIAL")
-    # The row is not complete until the backward is gated; exit 1 keeps the
-    # batch row out of PASS.
-    return 0 if False else 1
+    print("MAMBA3 GQA", "PASS" if ok else "FAIL")
+    return 0 if ok else 1
 
 
 if __name__ == "__main__":

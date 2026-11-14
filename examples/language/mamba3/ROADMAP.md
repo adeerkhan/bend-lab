@@ -99,15 +99,17 @@ state-reset item.
 grouped Q/K heads and a full-width rotation. Both change the shape plumbing,
 not the recurrence. Test the angle layout and the B/C bias broadcast.
 
-**Forward done; backward pending (2026-11-14).** `forward_gqa` (ngroups 2,
+**Done (2026-11-14).** `forward_gqa` and `backward_gqa` (ngroups 2,
 rope_fraction 1.0: in_proj 340, 2 B/C groups, per-v-head biases, 8 angle
-pairs) matches the config twin (`reference/mamba3_gqa_twin.py`, CPU, same
-cube) at every forward intermediate: y rel `6.7e-07`, states `1.1e-06`,
-q/k `~5e-07`, gate `1e-5` (`make mamba3-gqa`; the gate exits 1 and prints
-`MAMBA3 GQA PARTIAL` because the analytic backward is still SISO-only — the
-angle widths (4->8) and the group-indexed dCn/dBn, dW_norm and dW_in
-assembly are not ported, so the batch row stays `not run` and no backward
-claim is made).
+pairs, group-indexed dCn/dBn and dW_norm, 340-row dW_in) match the config
+twin (`reference/mamba3_gqa_twin.py`, CPU, same cube) at every forward
+intermediate (y rel `6.7e-07`, states `1.1e-06`, gate `1e-5`) and at every
+gradient (du, dW_in, ddt_bias, dB_bias, dC_bias, dB_norm_w, dC_norm_w, dD,
+dW_out and the `g_*` intermediates, all `<= 1.1e-06`, gate `1e-4`; the
+angle gradient is compared summed over tokens, the SISO convention).
+`make mamba3-gqa` prints `MAMBA3 GQA PASS`; build 4.6 s, run 0.44 s.
+The gate is not self-referential: the twin is our own explicit t-loop with
+autograd on the reference module's parameters, written for this config.
 
 **3c. `is_outproj_norm=True`.** The module can add a gated RMSNorm after the
 block, with `group_size = headdim`. The SISO port currently uses the default
