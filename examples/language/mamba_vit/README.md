@@ -114,3 +114,25 @@ The block math (dim 32, d_inner 64, dt_rank 2, d_state 16, d_conv 4):
 
 The scan is 64×16 floats in one `Array<F32>` per layer, stepped 49 times —
 the same shape the Mamba-3 port's `pass_c` uses, without its trapezoid.
+
+## A1a is green; A1b's shape (the blocks)
+
+`make mamba-vit-emb` PASS: `emb` rel `2.8e-07`, `tokens` rel `2.0e-07`
+(commit `00c22aa`). The remaining A1b is the eight blocks, the final norm,
+the mean pool and the head. Two implementation notes that save a rewrite:
+
+1. **Load each block inside an IO recursion.** A `TA.Mat` is consumed once
+   and there are 14 tensors per block, so `run_blocks(+left, +i, x, res)`
+   loads block `i`'s files (paths from `Nat.show(i)`), computes, prints
+   `blockN` / `blockN_res`, and recurses with `i+1` on the new lists. Eleven
+   list values never need to travel as parameters.
+2. **The scan threads `Array<F32> & F32` the way `row_set` does.** Per token
+   and per inner channel `c`, `scan_q` walks the 16 state slots with
+   `Array.get` passed as the next `cur`, `Array.set` for the update, and the
+   dot with `C` accumulated into a `RA{h, acc}` record; `scan_head` carries
+   `RA` out and recurses to `c+1`. The record match is legal because `RA` is
+   a parameter of the continuation helper, not a local.
+
+The three lists the block needs per token are `x` (49x64, `silu(conv1d)`),
+`dt` (49x64, `softplus`), `B`/`C` (49x16) and the constants `A` (64x16),
+`D` (64), plus `z` (49x64) for the gate.
