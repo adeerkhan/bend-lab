@@ -89,7 +89,7 @@ run mamba3-varlen "make mamba3-varlen" "MAMBA3 VARLEN PASS"
 run mamba3-gqa "make mamba3-gqa" "MAMBA3 GQA PASS"
 run mamba3-outnorm "make mamba3-outnorm" "MAMBA3 OUTNORM PASS"
 run mamba3-deep "make mamba3-deep" "MAMBA3 DEEP PASS"
-notrun mimo "needs its own oracle; after rows 1-6"
+notrun mimo "no oracle on this lane: mamba3_mimo_combined is not vendored and TileLang is absent"
 notrun tiny-lm "over the timebox; named corpus subset not defined"
 
 # C. The other gates

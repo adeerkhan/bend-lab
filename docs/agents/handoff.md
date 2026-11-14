@@ -53,10 +53,14 @@ batch row, a fresh PASS and its own commit. Rows 4-6 are not started.
   list bindings and rebuilds the bundle for the update; and a Mat
   (`TA.Mat`) is consumed once, so a probe that needs two model copies must
   load the files twice (each helper loads its own set).
-- **mimo**: build the oracle FIRST. The reference MIMO path is the TileLang
-  `mamba3_mimo_combined` kernel; check whether it imports and runs on this
-  lane before any port. If it cannot run, record why — do not ship a
-  self-referential gate.
+- **mimo — blocked on its oracle (checked 2026-11-14).** The reference MIMO
+  forward is the TileLang kernel `mamba3_mimo_combined`: not vendored, and
+  `tilelang` is not installed, so the module refuses the MIMO config. The
+  vendored `mamba3_mimo_rotary_step.py` covers only the rotary Q/K step
+  (with `apply_rotary_qk_inference_reference`), not the rank projections,
+  the headwise norm or the SSM update. No self-referential gate is shipped;
+  the batch row stays `not run` with that reason. Unblock by vendoring the
+  kernel and TileLang, or with a maintainer-authored MIMO reference.
 - **tiny-lm**: a real small corpus, small vocab, multi-layer stack, AdamW
   with weight decay, gradient clipping, an LR schedule, a held-out split, a
   manifest + report card, and a comparison against the twin on the same data

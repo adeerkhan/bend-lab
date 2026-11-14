@@ -16,6 +16,16 @@ What changed for the people who run the lab. Internal refactors are not listed.
   gradient (all `<= 1.1e-06`, gate `1e-4`; the angle gradient summed over
   tokens, as the SISO gate does). Build 4.6 s, run 0.44 s; `MAMBA3 GQA PASS`.
 
+### Mamba-3 mimo: blocked on its oracle (recorded, no gate)
+
+- The reference MIMO forward is the TileLang kernel `mamba3_mimo_combined`,
+  which is not vendored, and `tilelang` is not installed, so the reference
+  cannot run the MIMO config on this lane. Only the rotary Q/K step
+  (`mamba3_mimo_rotary_step.py`) is vendored, which does not cover the rank
+  projections, the headwise norm or the SSM update. Per the goal's rule the
+  row ships no self-referential gate: it stays `not run` in the batch with
+  that reason, and the ROADMAP records what would unblock it.
+
 ### Mamba-3 deep: depth-4 stack forward, backward and generation
 
 - `lm4_forward`, `lm4_step` and `lm4_gen` (`L4W`/`LM4` records): four

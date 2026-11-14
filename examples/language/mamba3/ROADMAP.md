@@ -129,6 +129,18 @@ projections and a headwise norm. It is the largest remaining model feature and
 it needs its own oracle: the SISO twin does not cover it. Do not start it
 until batch/varlen and the step are stable.
 
+**Blocked on the oracle (2026-11-14).** The reference's MIMO forward is the
+TileLang kernel `mamba3_mimo_combined`; it is **not vendored** in
+`reference/mamba3/mamba_ssm/ops/triton/mamba3/` and `tilelang` is not
+installed (`import tilelang` → `ModuleNotFoundError`), so the module refuses
+the MIMO config (`assert mamba3_mimo_combined is not None`). What IS
+vendored is `mamba3_mimo_rotary_step.py` (the rotary Q/K *step* and its
+`apply_rotary_qk_inference_reference`), which covers only the angle layout,
+not the rank projections, the headwise norm or the SSM update. Per the goal's
+rule, no self-referential gate is shipped: the row stays `not run` with this
+reason until a MIMO oracle exists on the lane (vendoring the kernel + TileLang,
+or a maintainer-authored reference).
+
 **3e. Independent two-layer weights.** Done for the full LM
 (`probe_mamba3_lm.bend`); the single-block generation demo remains
 weight-tied. A deeper stack (4, 8, 16 layers) is the next version of this
