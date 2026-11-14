@@ -16,6 +16,16 @@ What changed for the people who run the lab. Internal refactors are not listed.
   gradient (all `<= 1.1e-06`, gate `1e-4`; the angle gradient summed over
   tokens, as the SISO gate does). Build 4.6 s, run 0.44 s; `MAMBA3 GQA PASS`.
 
+### Mamba-3 deep: depth-4 stack forward; backward and generation pending
+
+- `lm4_forward` (`L4W`/`LM4` records): four independent blocks with a
+  residual around each, the final RMSNorm and the head. It matches
+  `reference/mamba3_deep_twin.py` at the prompt — logits rel `2.6e-07`,
+  loss `8.4e-08`, `hn` `1.6e-07` (gate `1e-5`).
+- The 4-layer backward chain and greedy loop are not built; depths 8/16 are
+  `unavailable` for the same reason. `make mamba3-deep` prints
+  `MAMBA3 DEEP PARTIAL` and exits 1; the batch row stays `not run`.
+
 ### Mamba-3 outnorm: is_outproj_norm gated grouped RMSNorm, forward and backward
 
 - `forward_on`/`backward_on` in `mamba3_siso.bend`: the kernel output stays

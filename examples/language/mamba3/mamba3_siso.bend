@@ -3272,3 +3272,37 @@ def main() -> IO(Unit):
       ml1x16(TA.Mat.to_list(1n, 16n, cw)), ml1x4(TA.Mat.to_list(1n, 4n, dd)),
       ml64x128(TA.Mat.to_list(64n, 128n, wo)), 8n))
     return Unit{}
+
+# ---------------------------------------------------------------------------
+# a four-layer stack: independent weights per layer, a residual around each,
+# a final RMSNorm and the head.
+
+type L4W is Type:
+  L4W{w: List<&2, F32>, dt: List<&2, F32>,
+      bb: List<&2, F32>, cb: List<&2, F32>,
+      bw: List<&2, F32>, cw: List<&2, F32>,
+      D: List<&2, F32>, wo: List<&2, F32>}
+
+type LM4 is Type:
+  LM4{l1: L4W, l2: L4W, l3: L4W, l4: L4W,
+      E: List<&2, F32>, Wh: List<&2, F32>, nw: List<&2, F32>}
+
+def l4_layer(+u: List<&2, F32>, lw: L4W,
+    +n: Nat) -> List<&2, F32>:
+  match lw:
+    case L4W{+w, +dt, +bb, +cb, +bw, +cw, +D, +wo}:
+      add_lists(u, block_y(forward(u, w, dt, bb, cb, bw, cw, D, wo,
+        n)))
+
+def lm4_forward(p: LM4, +tokens: List<&2, Nat>,
+    +n: Nat) -> LMO:
+  match p:
+    case LM4{l1, l2, l3, l4, +E, +Wh, +nw}:
+      +u = embed(tokens, E, n)
+      +h1 = l4_layer(u, l1, n)
+      +h2 = l4_layer(h1, l2, n)
+      +h3 = l4_layer(h2, l3, n)
+      +h4 = l4_layer(h3, l4, n)
+      +hn = rms_rows(h4, nw, n)
+      +logits = head_logits(hn, Wh, n)
+      LMO{hn, logits, loss_go(n, 0n, hn, Wh, 0.0)}
