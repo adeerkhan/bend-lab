@@ -1,17 +1,21 @@
-"""MambaViT gate, first slice (A1a): the patch embedding and the tokens.
+"""MambaViT gate: the whole forward (A1a + A1b).
 
   reference/.venv/bin/python reference/test_mamba_vit.py
 
 Requires the reference dump (`reference/mamba_vit_bins.py`, 130 files in
 `.scratch/mamba_vit`). Builds `probe_mamba_vit_emb.bend`, runs it and
-compares at 1e-5 relative:
+compares every intermediate at 1e-5 relative:
 
-  mv_emb     (49,32)  the patch tokens after LN -> Linear -> LN
-  mv_tokens  (50,32)  cls token prepended, pos embedding added
+  mv_emb          (49,32)   the patch tokens after LN -> Linear -> LN  (A1a)
+  mv_tokens       (50,32)   cls token prepended, pos embedding added   (A1a)
+  mv_block0..7    (50,32)   each Mamba-1 block's mixer output          (A1b)
+  mv_block0..7_res (50,32)  each block's accumulated residual          (A1b)
+  mv_final        (50,32)   the final LayerNorm                        (A1b)
+  mv_pooled       (32)      the mean over the 50 tokens                (A1b)
+  mv_logits       (10)      the head                                   (A1b)
 
-The eight Mamba-1 blocks, the final norm, the pool and the head are not
-built yet (A1b); this gate covers the ViT half only, and the row stays
-`not run` in the batch until the full forward is compared.
+`MAMBA-VIT EMB PASS` covers the two embedding tags, `MAMBA-VIT FWD PASS`
+everything; both lines are printed, so a reader sees which half failed.
 """
 from __future__ import annotations
 
@@ -24,9 +28,12 @@ import numpy as np
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DUMP = os.path.join(ROOT, ".scratch/mamba_vit")
 BEND = os.environ.get("BEND", os.path.join(os.path.expanduser("~"), ".bend/bin/bend"))
-BIN = os.path.join(ROOT, ".scratch/mv_emb.bin")
+BIN = os.path.join(ROOT, ".scratch/mv_full.bin")
 GATE = 1e-5
-PAIRS = [("mv_emb", "emb"), ("mv_tokens", "tokens")]
+EMB = [("mv_emb", "emb"), ("mv_tokens", "tokens")]
+FWD = ([("mv_block%d" % i, "block%d" % i) for i in range(8)]
+       + [("mv_block%d_res" % i, "block%d_res" % i) for i in range(8)]
+       + [("mv_final", "final"), ("mv_pooled", "pooled"), ("mv_logits", "logits")])
 
 
 def main():
@@ -44,7 +51,7 @@ def main():
                        text=True, timeout=1800)
     if p.returncode != 0:
         sys.stderr.write(p.stderr)
-        raise SystemExit("mamba-vit-emb binary failed")
+        raise SystemExit("mamba-vit-fwd binary failed")
     tags = {}
     for line in p.stdout.splitlines():
         if ": " not in line:
@@ -54,27 +61,36 @@ def main():
         if v.size:
             tags[tag] = v
     ok = True
-    for tag, key in PAIRS:
-        got = tags.get(tag)
-        want = np.fromfile(os.path.join(DUMP, key + ".bin"), dtype="<f4").astype(np.float64)
-        if got is None:
-            print(f"FAIL {tag}: not printed")
-            ok = False
-            continue
-        got = got.astype(np.float64)
-        if got.size != want.size:
-            print(f"FAIL {tag}: size {got.size} != {want.size}")
-            ok = False
-            continue
-        d = np.abs(got - want)
-        rel = float(d.max()) / max(1e-30, float(np.abs(want).max()))
-        good = rel <= GATE
-        print(f"{'ok  ' if good else 'FAIL'} {tag}: max|d| {d.max():.6e} "
-              f"rel {rel:.6e} gate {GATE:.0e}")
-        ok = ok and good
-    print("unavailable blocks/final/pooled/logits: A1b not built")
-    print("MAMBA-VIT EMB", "PASS" if ok else "FAIL")
-    return 0 if ok else 1
+    half = {}
+
+    def compare(pairs, name):
+        good = True
+        for tag, key in pairs:
+            got = tags.get(tag)
+            want = np.fromfile(os.path.join(DUMP, key + ".bin"), dtype="<f4").astype(np.float64)
+            if got is None:
+                print(f"FAIL {tag}: not printed")
+                good = False
+                continue
+            got = got.astype(np.float64)
+            if got.size != want.size:
+                print(f"FAIL {tag}: size {got.size} != {want.size}")
+                good = False
+                continue
+            d = np.abs(got - want)
+            rel = float(d.max()) / max(1e-30, float(np.abs(want).max()))
+            one = rel <= GATE
+            print(f"{'ok  ' if one else 'FAIL'} {tag}: max|d| {d.max():.6e} "
+                  f"rel {rel:.6e} gate {GATE:.0e}")
+            good = good and one
+        half[name] = good
+        return good
+
+    ok = compare(EMB, "emb")
+    ok = compare(FWD, "fwd") and ok
+    print("MAMBA-VIT EMB", "PASS" if half["emb"] else "FAIL")
+    print("MAMBA-VIT FWD", "PASS" if (half["emb"] and half["fwd"]) else "FAIL")
+    return 0 if (ok and half["emb"] and half["fwd"]) else 1
 
 
 if __name__ == "__main__":

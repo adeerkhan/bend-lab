@@ -4,6 +4,24 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### MambaViT: the whole forward is gated (A1b)
+
+- `probe_mamba_vit_emb.bend` now runs the eight Mamba-1 blocks, the final
+  LayerNorm, the mean pool over the 50 tokens and the head, loading each
+  block's twelve tensors inside one IO recursion and printing
+  `mv_block0..7`, `mv_block0..7_res`, `mv_final`, `mv_pooled` and
+  `mv_logits` beside the A1a tags.
+- `make mamba-vit-fwd` compares all twenty-three tags against
+  `reference/mamba_vit_bins.py`'s dump at 1e-5: the worst is `block5` at
+  rel `2.2e-06`, the residual rows and `tokens` at `2.0e-07`, `logits` at
+  `1.8e-07`. `MAMBA-VIT EMB PASS` covers the two embedding tags and
+  `MAMBA-VIT FWD PASS` everything; the batch row runs the gate instead of
+  `not run`.
+- The block keeps the 64x16 scan as a flat list rebuilt per token, so no
+  `Array<F32> & F32` threading is needed; the notes in the README record
+  why, and the three Bend idioms (no destructuring of a computed value, no
+  pure `let` in a `do` block, one flat list per pass) that cost rewrites.
+
 ### Mamba-3 GQA: forward and backward at ngroups 2, rope_fraction 1.0
 
 - `forward_gqa` and `backward_gqa` in `mamba3_siso.bend`: the in_proj row is

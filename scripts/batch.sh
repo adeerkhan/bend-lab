@@ -89,7 +89,7 @@ run mamba3-varlen "make mamba3-varlen" "MAMBA3 VARLEN PASS"
 run mamba3-gqa "make mamba3-gqa" "MAMBA3 GQA PASS"
 run mamba3-outnorm "make mamba3-outnorm" "MAMBA3 OUTNORM PASS"
 run mamba3-deep "make mamba3-deep" "MAMBA3 DEEP PASS"
-notrun mamba-vit "A1a (patch embedding + tokens) gated; blocks/final/head pending"
+run mamba-vit-fwd "make mamba-vit-fwd" "MAMBA-VIT FWD PASS"
 notrun mimo "no oracle on this lane: mamba3_mimo_combined is not vendored and TileLang is absent"
 notrun tiny-lm "data + read-back gated (make mamba3-tiny-data); trainer pending"
 
