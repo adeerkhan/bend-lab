@@ -134,10 +134,15 @@ description, 96 prompts/16 samples/96 updates, 1240 s; confirm-three-families
 greedy **3/24 → 12/24**, all-eight **15/64 → 21/64**; the published
 `0/24 → 16/24` and `25/64 → 34/64` are not reproduced in magnitude).
 Our documents state this (`docs/CHANGELOG.md`, `docs/agents/handoff.md`,
-`docs/agents/upstream.md`). This session did not re-run the RL canary: the
-25.7M before-RL checkpoint is not in this tree and retraining is out of
-scope for one session; the numbers above stand as measured. The published
-third-party README (`reference/glm53_flash/README.md`) was not edited.
+`docs/agents/upstream.md`). This session did re-run the Stage-C learning
+canary end-to-end (`results/glm53-c-canary-repro-20261113.md`): bend
+`final_loss` 0.04192596 (twin 0.0419212505, rel 1.1e-04), `grad_loss`
+0.03683044 (twin 0.0368300416, rel 1.1e-05), weights rel 5.5e-05, grads
+rel 1.2e-03 — the training pipeline itself reproduces on this lane. The
+RL before-RL 0/24 itself cannot be re-verified: the 25.7M checkpoint is
+not in this tree and retraining is out of scope for one session; the
+measured numbers above stand as recorded. The published third-party
+README (`reference/glm53_flash/README.md`) was not edited.
 
 ## Bend language asks (tracked elsewhere)
 
