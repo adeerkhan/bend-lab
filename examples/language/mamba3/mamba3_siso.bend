@@ -870,6 +870,154 @@ def forward_vl(+u: List<&2, F32>, +w_in: List<&2, F32>,
   vl_segs(pass_a(u, w_in, dt_bias, Bw, Cw, n), B_bias, C_bias, D,
     w_out, n, n_first)
 
+# ---------------------------------------------------------------------------
+# GQA: ngroups 2, rope_fraction 1.0
+#
+# The q/k heads are the groups (2) and the v-heads stay 4, so v-head h reads
+# B/C from group h//2 while the biases stay per v-head; the angle state is
+# per v-head with 8 pairs (all 16 q/k dims rotated).  The in_proj row is 340
+# wide: z 128, x 128, B 2x16, C 2x16, dd_dt 4, dd_A 4, trap 4, ang_raw 8.
+
+def pa_step_gqa(p: PRE, +u_t: List<&2, F32>, +w_in: List<&2, F32>,
+    +dt_bias: List<&2, F32>, +Bw: List<&2, F32>,
+    +Cw: List<&2, F32>) -> PRE:
+  match p:
+    case PRE{pre0, z0, x0, Braw0, Craw0, dd_dt0, dd_A0, trap_raw0,
+        ang_raw0, A0, DT0, ADT0, trap0, Bn0, Cn0}:
+      +pre = matvec(w_in, u_t, 64n)
+      +z = take_row(pre, 0n, 128n)
+      +x = take_row(pre, 128n, 128n)
+      +Braw = take_row(pre, 256n, 32n)
+      +Craw = take_row(pre, 288n, 32n)
+      +dd_dt = take_row(pre, 320n, 4n)
+      +dd_A = take_row(pre, 324n, 4n)
+      +trap_raw = take_row(pre, 328n, 4n)
+      +ang_raw = take_row(pre, 332n, 8n)
+      +A = htail_row(dd_A)
+      +DT = softplus_row(dd_dt, dt_bias)
+      +ADT = mul_lists(A, DT)
+      +trap = sigmoid_row(trap_raw)
+      +Bn = List.append(&2, F32, rms(take_row(Braw, 0n, 16n), Bw, 16n),
+        rms(take_row(Braw, 16n, 16n), Bw, 16n))
+      +Cn = List.append(&2, F32, rms(take_row(Craw, 0n, 16n), Cw, 16n),
+        rms(take_row(Craw, 16n, 16n), Cw, 16n))
+      PRE{push_row(pre0, pre), push_row(z0, z), push_row(x0, x),
+        push_row(Braw0, Braw), push_row(Craw0, Craw),
+        push_row(dd_dt0, dd_dt), push_row(dd_A0, dd_A),
+        push_row(trap_raw0, trap_raw), push_row(ang_raw0, ang_raw),
+        push_row(A0, A), push_row(DT0, DT), push_row(ADT0, ADT),
+        push_row(trap0, trap), push_row(Bn0, Bn), push_row(Cn0, Cn)}
+
+def pa_go_gqa(+left: Nat, +t: Nat, +u: List<&2, F32>,
+    +w_in: List<&2, F32>, +dt_bias: List<&2, F32>,
+    +Bw: List<&2, F32>, +Cw: List<&2, F32>, p: PRE) -> PRE:
+  match left:
+    case 0n:
+      p
+    case 1n+q:
+      pa_go_gqa(q, (t + 1n : Nat), u, w_in, dt_bias, Bw, Cw,
+        pa_step_gqa(p, take_row(u, Nat.mul(t, 64n), 64n), w_in,
+          dt_bias, Bw, Cw))
+
+def pass_a_gqa(+u: List<&2, F32>, +w_in: List<&2, F32>,
+    +dt_bias: List<&2, F32>, +Bw: List<&2, F32>,
+    +Cw: List<&2, F32>, +n: Nat) -> PRE:
+  pa_go_gqa(n, 0n, u, w_in, dt_bias, Bw, Cw,
+    PRE{Nil{}, Nil{}, Nil{}, Nil{}, Nil{}, Nil{}, Nil{}, Nil{},
+      Nil{}, Nil{}, Nil{}, Nil{}, Nil{}, Nil{}, Nil{}})
+
+def pbg_heads(+left: Nat, +h: Nat, +angle_prev: List<&2, F32>,
+    +Bn_t: List<&2, F32>, +Cn_t: List<&2, F32>,
+    +ang_raw_t: List<&2, F32>, +DT_t: List<&2, F32>,
+    +gamma_t: List<&2, F32>, +B_bias: List<&2, F32>,
+    +C_bias: List<&2, F32>, +gamma0: List<&2, F32>,
+    +shift0: List<&2, F32>, +scale0: List<&2, F32>,
+    +angle0: List<&2, F32>, +q0: List<&2, F32>,
+    +k0: List<&2, F32>, +qk0: List<&2, F32>,
+    +angle_t: List<&2, F32>) -> PBR:
+  match left:
+    case 0n:
+      PBR{angle_t, QB{gamma0, shift0, scale0, angle0, q0, k0, qk0}}
+    case 1n+p:
+      +g = Nat.div(h, 2n)
+      +cb = take_row(C_bias, Nat.mul(h, 16n), 16n)
+      +bb = take_row(B_bias, Nat.mul(h, 16n), 16n)
+      +qpre = add_lists(take_row(Cn_t, Nat.mul(g, 16n), 16n), cb)
+      +kpre = add_lists(take_row(Bn_t, Nat.mul(g, 16n), 16n), bb)
+      +qk_h = (nth(h, gamma_t) * dot(qpre, kpre) : F32)
+      +ap = take_row(angle_prev, Nat.mul(h, 8n), 8n)
+      +ang_h = angle_step(ap, ang_raw_t, nth(h, DT_t), 8n)
+      +qh = rope(qpre, ang_h, 8n)
+      +kh = rope(kpre, ang_h, 8n)
+      pbg_heads(p, (h + 1n : Nat), angle_prev, Bn_t, Cn_t, ang_raw_t,
+        DT_t, gamma_t, B_bias, C_bias, gamma0, shift0, scale0,
+        push_row(angle0, ang_h), push_row(q0, qh), push_row(k0, kh),
+        push_row(qk0, Con{qk_h, Nil{}}), push_row(angle_t, ang_h))
+
+def pbg_step(q: QB, +DT: List<&2, F32>, +trap: List<&2, F32>,
+    +Bn: List<&2, F32>, +Cn: List<&2, F32>,
+    +ang_raw: List<&2, F32>, +B_bias: List<&2, F32>,
+    +C_bias: List<&2, F32>, +t: Nat,
+    +angle_prev: List<&2, F32>) -> PBR:
+  match q:
+    case QB{gamma0, shift0, scale0, angle0, q0, k0, qk0}:
+      +off = Nat.mul(t, 4n)
+      +nxt = Nat.mul((t + 1n : Nat), 4n)
+      +DT_t = take_row(DT, off, 4n)
+      +DT_n = take_row(DT, nxt, 4n)
+      +trap_t = take_row(trap, off, 4n)
+      +trap_n = take_row(trap, nxt, 4n)
+      +gamma_t = mul_lists(DT_t, trap_t)
+      +shift_t = mul_lists(DT_n, one_minus(trap_n))
+      +scale_t = add_lists(gamma_t, shift_t)
+      +Bn_t = take_row(Bn, Nat.mul(t, 32n), 32n)
+      +Cn_t = take_row(Cn, Nat.mul(t, 32n), 32n)
+      +ang_raw_t = take_row(ang_raw, Nat.mul(t, 8n), 8n)
+      pbg_heads(4n, 0n, angle_prev, Bn_t, Cn_t, ang_raw_t, DT_t,
+        gamma_t, B_bias, C_bias, push_row(gamma0, gamma_t),
+        push_row(shift0, shift_t), push_row(scale0, scale_t),
+        angle0, q0, k0, qk0, Nil{})
+
+def pb_go_gqa(+left: Nat, +t: Nat, +DT: List<&2, F32>,
+    +trap: List<&2, F32>, +Bn: List<&2, F32>, +Cn: List<&2, F32>,
+    +ang_raw: List<&2, F32>, +B_bias: List<&2, F32>,
+    +C_bias: List<&2, F32>, r: PBR) -> QB:
+  match left r:
+    case 0n PBR{angle_prev, qb}:
+      qb
+    case 1n+p PBR{angle_prev, qb}:
+      pb_go_gqa(p, (t + 1n : Nat), DT, trap, Bn, Cn, ang_raw, B_bias,
+        C_bias, pbg_step(qb, DT, trap, Bn, Cn, ang_raw, B_bias,
+          C_bias, t, angle_prev))
+
+def pass_b_gqa(+DT: List<&2, F32>, +trap: List<&2, F32>,
+    +Bn: List<&2, F32>, +Cn: List<&2, F32>,
+    +ang_raw: List<&2, F32>, +B_bias: List<&2, F32>,
+    +C_bias: List<&2, F32>, +n: Nat) -> QB:
+  pb_go_gqa(n, 0n, DT, trap, Bn, Cn, ang_raw, B_bias, C_bias,
+    PBR{Nil{}, QB{Nil{}, Nil{}, Nil{}, Nil{}, Nil{}, Nil{}, Nil{}}})
+
+def forward_pre_gqa(pr: PRE, +B_bias: List<&2, F32>,
+    +C_bias: List<&2, F32>, +D: List<&2, F32>,
+    +w_out: List<&2, F32>, +n: Nat) -> FWD:
+  match pr:
+    case PRE{pre, z, x, Braw, Craw, dd_dt, dd_A, trap_raw, +ang_raw,
+        A, +DT, ADT, +trap, +Bn, +Cn}:
+      +DT2 = push_row(DT, zline(4n))
+      +trap2 = push_row(trap, zline(4n))
+      qb : QB = pass_b_gqa(DT2, trap2, Bn, Cn, ang_raw, B_bias,
+        C_bias, n)
+      forward_qb(qb, pre, z, x, Braw, Craw, dd_dt, dd_A, trap_raw,
+        ang_raw, A, DT2, ADT, trap2, Bn, Cn, D, w_out, n)
+
+def forward_gqa(+u: List<&2, F32>, +w_in: List<&2, F32>,
+    +dt_bias: List<&2, F32>, +B_bias: List<&2, F32>,
+    +C_bias: List<&2, F32>, +Bw: List<&2, F32>,
+    +Cw: List<&2, F32>, +D: List<&2, F32>,
+    +w_out: List<&2, F32>, +n: Nat) -> FWD:
+  forward_pre_gqa(pass_a_gqa(u, w_in, dt_bias, Bw, Cw, n), B_bias,
+    C_bias, D, w_out, n)
+
 def show(xs: List<&2, F32>) -> String:
   match xs:
     case Nil{}:

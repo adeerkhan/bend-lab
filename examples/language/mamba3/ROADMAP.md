@@ -99,6 +99,16 @@ state-reset item.
 grouped Q/K heads and a full-width rotation. Both change the shape plumbing,
 not the recurrence. Test the angle layout and the B/C bias broadcast.
 
+**Forward done; backward pending (2026-11-14).** `forward_gqa` (ngroups 2,
+rope_fraction 1.0: in_proj 340, 2 B/C groups, per-v-head biases, 8 angle
+pairs) matches the config twin (`reference/mamba3_gqa_twin.py`, CPU, same
+cube) at every forward intermediate: y rel `6.7e-07`, states `1.1e-06`,
+q/k `~5e-07`, gate `1e-5` (`make mamba3-gqa`; the gate exits 1 and prints
+`MAMBA3 GQA PARTIAL` because the analytic backward is still SISO-only — the
+angle widths (4->8) and the group-indexed dCn/dBn, dW_norm and dW_in
+assembly are not ported, so the batch row stays `not run` and no backward
+claim is made).
+
 **3c. `is_outproj_norm=True`.** The module can add a gated RMSNorm after the
 block, with `group_size = headdim`. The SISO port currently uses the default
 `False`. This is a small extra backward through a per-head RMSNorm and the

@@ -4,6 +4,18 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### Mamba-3 GQA: forward gated at ngroups 2, rope_fraction 1.0
+
+- `forward_gqa` in `mamba3_siso.bend`: the in_proj row is 340 wide, B/C are
+  per group (2) while the B/C biases stay per v-head, v-head h reads group
+  h//2, and the angle state is per v-head with 8 pairs (all 16 q/k dims
+  rotated). It matches `reference/mamba3_gqa_twin.py`'s CPU twin at every
+  forward intermediate (y rel `6.7e-07`, states `1.1e-06`, gate `1e-5`).
+- The analytic backward is still SISO-only: the angle widths (4->8) and the
+  group-indexed dCn/dBn, dW_norm and dW_in assembly are not ported, so
+  `make mamba3-gqa` prints `MAMBA3 GQA PARTIAL` and exits 1, and the batch
+  row stays `not run`. No backward claim is made.
+
 ### Mamba-3 varlen: the packed input resets at the boundary
 
 - `forward_vl` in `mamba3_siso.bend` runs the row-independent `pass_a` once
