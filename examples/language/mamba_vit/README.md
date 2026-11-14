@@ -60,3 +60,57 @@ The comparison to the reference is therefore two-layered and honest: the
 model is theirs (its math, shapes and init), the oracle is our twin (which
 we verified learns as they claim), and the port is judged against the twin,
 not against a number copied from a README.
+
+## The reference dump (done) and the Bend forward probe (next)
+
+`reference/mamba_vit_bins.py` writes, for a fixed MNIST image and the
+reference's default init, every parameter and every intermediate of the
+8-layer forward into `.scratch/mamba_vit/*.bin` (130 files): the image, the
+patch tokens, each block's output and its accumulated residual, the final
+norm, the pooled vector and the logits. Command:
+
+```
+reference/.venv-rf/bin/python reference/mamba_vit_bins.py
+```
+
+The probe `examples/language/mamba_vit/probe_mamba_vit.bend` must load those
+files and print, under `mv_*` tags, `emb`, `tokens`, `block0..7`,
+`block0..7_res`, `final`, `pooled`, `logits` for comparison at 1e-5.
+
+The shapes to load (all row-major float32) and the helpers they need:
+
+| file | shape | helper |
+|---|---|---|
+| `img` | 784 | one row |
+| `w_to_patch_embedding_0_weight` / `_bias` | 16 / 16 | 1×16 |
+| `w_to_patch_embedding_1_weight` / `_bias` | 32×16 / 32 | 32×16, 32 |
+| `w_to_patch_embedding_2_weight` / `_bias` | 32 / 32 | 1×32 |
+| `w_cls_token` | 1×1×32 | 32 |
+| `w_pos_embedding` | 50×32 | 50×32 |
+| `w_layers_N_norm_weight` / `_bias` | 32 / 32 | 1×32 |
+| `w_layers_N_mixer_in_proj_weight` | 128×32 | 128×32 |
+| `w_layers_N_mixer_conv1d_weight` | 64×1×4 | 64×4 (squeeze the group axis) |
+| `w_layers_N_mixer_conv1d_bias` | 64 | 1×64 |
+| `w_layers_N_mixer_x_proj_weight` | 34×64 | 34×64 |
+| `w_layers_N_mixer_dt_proj_weight` / `_bias` | 64×2 / 64 | 64×2, 1×64 |
+| `w_layers_N_mixer_A_log` | 64×16 | 64×16 |
+| `w_layers_N_mixer_D` | 64 | 1×64 |
+| `w_layers_N_mixer_out_proj_weight` | 32×64 | 32×64 |
+| `w_norm_f_weight` / `_bias` | 32 / 32 | 1×32 |
+| `w_mlp_head_weight` / `_bias` | 10×32 / 10 | 10×32, 1×10 |
+
+The block math (dim 32, d_inner 64, dt_rank 2, d_state 16, d_conv 4):
+
+1. `res = x + res` (res is the running sum), `h = LN(res)` per token;
+2. `xz = in_proj(h)` (128), `z = xz[64:]`, `x = silu(conv1d(xz[:64]))` with
+   the causal conv over the 49 tokens (pad three zero tokens in front, then
+   `y[t,c] = bias[c] + sum_k w[c,k]*xp[t+k,c]`);
+3. `dbl = x_proj(x)` (34): `dt_raw = dbl[0:2]`, `B = dbl[2:18]`, `C = dbl[18:34]`;
+   `dt[c] = softplus(dot(dt_proj_w[c], dt_raw) + dt_proj_b[c] + dt_bias[c])`
+   (note: `dt_bias` is in the twin's `w_layers_N_mixer_dt_bias`);
+4. `A[c,q] = -exp(A_log[c,q])`; scan `h[c,q] = exp(dt[c]*A[c,q])*h + dt[c]*B[q]*x[c]`,
+   `y[c] = sum_q h[c,q]*C[q] + D[c]*x[c]`;
+5. `y = y * silu(z)`, `out = out_proj(y)` (32); the block returns `(out, res)`.
+
+The scan is 64×16 floats in one `Array<F32>` per layer, stepped 49 times —
+the same shape the Mamba-3 port's `pass_c` uses, without its trapezoid.
