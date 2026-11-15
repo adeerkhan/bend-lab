@@ -4,6 +4,52 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### Mamba-3 tiny-LM: AdamW + clipping + warmup/cosine against the twin (B2)
+
+- `examples/language/mamba3/train_mamba3_tiny.bend` trains the two-layer SISO
+  Mamba-3 LM on the byte corpus: the first 20 train examples, batch 1 in file
+  order, 127 next-byte targets per example (the last position is dropped — the
+  corpus is one stream, so no target ever crosses an example boundary).
+  AdamW (lr 1e-3, weight_decay 0.01, betas (0.9, 0.999), eps 1e-8, bias
+  correction, decoupled decay), gradient clipping by global norm at 1.0,
+  warmup 5 steps linear then cosine from 1e-3 to 1e-4; the eps, the clipping
+  formula and the schedule are identical on both sides.
+- The weights travel as one flat 71,952-value list in the manifest order and
+  the AdamW moments as flat lists, so the update never round-trips a record.
+  The embedding gradient is scattered by token id into the 127x64 table (a
+  token's gradient is the sum of the per-position gradients of every position
+  that used it) — the copy-task SGD path applies the (8, 64) table-row
+  gradient directly, which is only valid because the copy task is a
+  permutation.
+- `make mamba3-tiny-opt` (`reference/test_mamba3_tiny_opt.py`) regenerates the
+  twin dump (`reference/mamba3_tiny_twin.py`, float32 CPU, fixed seeds
+  101/102/20261115), runs the same schedule in both, and checks: the loss at
+  every step at 1e-3 (worst ~1e-07), the gradient norm at every step at 1e-3
+  (both sides clip at 1.0 several steps), the train hits (512/2540 on both
+  sides) and the final per-tensor sums of squares at 1e-3.
+  `MAMBA3 TINY OPT PASS`. Measured wall time ~17 min for 20 steps and the
+  held-out evaluation on this lane.
+- The full corpus (64 examples, one pass) is not the budget of this row: a
+  128-position forward+backward is what it costs, and the run uses the first
+  20. The held-out evaluation is after the last step, which is "every N
+  steps" with N = steps; mid-training evaluation is unavailable at this cost.
+- B3 (the held-out compare and the report card) lands with its own commit.
+
+### Mamba-3 tiny-LM: the held-out run is a report card, not a win (B3)
+
+- `make mamba3-tiny-lm` (`reference/test_mamba3_tiny_lm_run.py`) runs the same
+  twin dump/train and the same Bend trainer as the B2 gate, then compares the
+  held-out metrics on the 4,096-byte split (4,064 next-byte targets): loss
+  curve 1e-3, gradient norms 1e-3, train hits within 2 examples, final weights
+  at 1e-3, bits/byte within 0.02 and token accuracy within 2 points.
+- `results/mamba3-tiny-lm.md` records bits/byte, token accuracy, step count,
+  schedule and seed, and the baselines (unigram 4.8093, bigram 3.3569
+  bits/byte). The number is what 20 steps of 1e-3 AdamW on 20 train examples
+  reach: the twin and the Bend trainer agree to ~1e-07 per step, and **both**
+  numbers are far above the bigram baseline — the report card says so and
+  does not claim a language-model result. The full corpus pass is unavailable
+  at this budget.
+
 ### Mamba-3 decode step: varlen, GQA and outnorm breadth rows (C1/C2/C3)
 
 - `examples/language/mamba3/step_mamba3_varlen.bend`: the two-layer LM

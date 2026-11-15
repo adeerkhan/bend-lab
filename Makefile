@@ -57,6 +57,9 @@ mamba3-tiny-data:  ## the tiny-LM corpus subset and its Bend read-back (trainer 
 mamba3-lm-tgt:     ## Mamba-3 tiny-LM B1: next-token loss/dy/dWh vs the NumPy twin
 	$(PY) reference/test_mamba3_lm_tgt.py
 
+mamba3-tiny-opt:   ## Mamba-3 tiny-LM B2: AdamW + clipping + warmup/cosine vs the twin
+	$(PYRF) reference/test_mamba3_tiny_opt.py
+
 mamba3-step-varlen: ## Mamba-3 decode breadth C1: the step at the packed-prompt boundary
 	$(PY) reference/test_mamba3_step_varlen.py
 

@@ -221,10 +221,17 @@ in `mamba3_siso.bend` take the target list instead of the row index
 `probe_mamba3_lm_tgt.bend`, and compares against a float64 NumPy twin:
 loss rel `2.6e-08`, dy `1.9e-07`, dWh `2.0e-07`, gate `1e-5`; build 2.6 s,
 run 0.1 s.
-**Pending:** B2 (AdamW + clipping + warmup/cosine + held-out evaluation,
-the twin on the same data/seed) and B3 (the 4,096-byte held-out compare and
-the report card). The batch row for `tiny-lm` stays `not run` until those
-land.
+**Started (2026-11-15): B2 is gated.** `train_mamba3_tiny.bend` trains the
+two-layer SISO LM on the first 20 train examples (batch 1 in file order,
+127 next-byte targets per example, the last position dropped): AdamW lr
+1e-3 / wd 0.01 / betas (0.9, 0.999) / eps 1e-8, clipping by global norm at
+1.0, warmup 5 steps linear then cosine 1e-3 to 1e-4, and the embedding
+gradient scattered by token id. `make mamba3-tiny-opt` compares against the
+float32 twin (fixed seeds 101/102/20261115) at the same schedule: worst
+per-step loss rel `4.3e-07`, worst grad norm rel `1.3e-04`, train hits
+512/2540 == 512/2540, final per-tensor sums of squares at 1e-3.
+**Pending:** B3 (the held-out compare and the report card). The batch row for
+`tiny-lm` stays `not run` until B3 lands.
 
 ## 5. Numerical lanes and the kernel truth
 
