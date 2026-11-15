@@ -60,6 +60,9 @@ mamba3-lm-tgt:     ## Mamba-3 tiny-LM B1: next-token loss/dy/dWh vs the NumPy tw
 mamba3-step-varlen: ## Mamba-3 decode breadth C1: the step at the packed-prompt boundary
 	$(PY) reference/test_mamba3_step_varlen.py
 
+mamba3-step-gqa:    ## Mamba-3 decode breadth C2: the step at ngroups 2, rope_fraction 1.0
+	$(PY) reference/test_mamba3_step_gqa.py
+
 
 mamba-vit-emb:     ## MambaViT A1a: patch embedding + tokens vs the reference dump
 	$(PY) reference/test_mamba_vit.py

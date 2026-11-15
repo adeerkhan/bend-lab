@@ -95,6 +95,7 @@ run mamba-vit-train "make mamba-vit-train" "MAMBA-VIT TRAIN PASS"
 notrun mimo "no oracle on this lane: mamba3_mimo_combined is not vendored and TileLang is absent"
 run mamba3-lm-tgt "make mamba3-lm-tgt" "MAMBA3 LM TGT PASS"
 run mamba3-step-varlen "make mamba3-step-varlen" "MAMBA3 STEP VARLEN PASS"
+run mamba3-step-gqa "make mamba3-step-gqa" "MAMBA3 STEP GQA PASS"
 notrun tiny-lm "data + read-back gated (make mamba3-tiny-data); trainer pending"
 
 # C. The other gates

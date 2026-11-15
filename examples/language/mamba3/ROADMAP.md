@@ -66,9 +66,10 @@ the SISO row: the step's tokens equal the full-prefix pass's, exactly, at 16 and
   compares against the packed full-prefix pass and the SISO-config twin's
   greedy decode: both give `0 1 2 3 0 1 2 3 3 3 3 3 3 3 3 3` at 16 tokens
   (`make mamba3-step-varlen`, `MAMBA3 STEP VARLEN PASS`).
-- **GQA (C2)** and **outnorm (C3)**: the same row at the other two configs;
-  their gates land with their own commits (`make mamba3-step-gqa`,
-  `make mamba3-step-outnorm`).
+- **GQA (C2).** `step_mamba3_gqa.bend` decodes a plain prompt with the
+  ngroups 2, rope_fraction 1.0 block (2 B/C groups shared by the 4 v-heads,
+  per-v-head B/C biases, 8 angle pairs per head). `make mamba3-step-gqa`,
+  `MAMBA3 STEP GQA PASS`.
 
 The varlen probe uses the two-layer LM with **independent** layer weights (the
 twin's), the residual `h = u + y` per layer and the final RMSNorm with `nw`
