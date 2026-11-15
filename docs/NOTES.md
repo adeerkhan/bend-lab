@@ -2693,3 +2693,15 @@ steps.
   scrutinize a computed value" rule covers a local binder created in the same
   def; the comparison has to travel as a parameter of a second def
   (`tiny_lr_go(+c: Cmp, ...)`).
+
+## 2026-11-15 (later) — D is out of budget, recorded as such
+
+- The architecture comparison (Mamba-3 / Mamba-1 / tiny Transformer, equal
+  parameters, flowers 5-class and the byte corpus) was **not run**: no
+  Bend Transformer exists in this repo, no flowers Bend task/adapter exists,
+  the 5-class folder set is unpinned, and an equal-parameter match
+  across three architectures is a design task, not an experiment. No numbers
+  were recorded for D; the reasons and the measured anchors (1297.2 s per
+  20 steps for the Mamba-3 arm, 1869.8 s per 160+256 images for the
+  Mamba-1 arm, baselines 3.3569 / 4.8093 bits/byte) are in
+  `results/mamba3-arch-comparison.md`.
