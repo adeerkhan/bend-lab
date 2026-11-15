@@ -2664,3 +2664,32 @@ because the field at `t = 0` is `-x`, lr 1e-2 which diverged after ~1,000 steps,
 convolution reaching 0.086 in 300 steps (the marginal field is linear), and a learned linear bypass beside the U which
 took the loss from 0.84 to 0.19 at 3,000 steps. ISSUE-065 carries the next levers: 32 channels, 8 images a step, 20k
 steps.
+
+## 2026-11-15 (later) — Mamba-3 decode breadth (C1-C3): the SISO step is the wrong model for the LM
+
+- **The SISO decode and the two-layer LM are different models.** The gated
+  SISO step is the single-block model: `y1 = block(u); y2 = block(y1);
+  logits = Wh @ y2`. The two-layer LM (the lm golden) is residual per layer,
+  RMSNorm with `nw` before the head, independent l1/l2 weights:
+  `h1 = u + y1; h2 = h1 + y2; hn = rms(h2, nw); logits = hn @ Wh`. The C
+  probes ported the SISO wire verbatim at first, which decodes the *same
+  deterministic wrong stream* in the step and a *different* stream in the
+  full-prefix pass; the gates fail on token equality and the two streams can
+  never agree. The fix was to wire the step into the LM's model (residual
+  add, RMSNorm with `nw`, then the head), not to re-derive the block.
+- **The packed varlen prompt is a prompt.** `next_in(t, nxt)` returned the
+  position-t argmax for every t >= 3, so rows 4..7 of the packed prompt were
+  fed the argmax instead of the literal packed tokens. The twin and the
+  full-prefix pass agree; the step differed at the first generated token.
+  `next_in` knows the fixed pack (`[0,1,2,3,0,1,2,3]`) and hands over to
+  greedy only at row 8.
+- **A gate that runs is not a gate that passes.** All three probes were
+  built and printed plausible tokens before they were compared to anything;
+  `step_mamba3_*.bend` only became gates when the two independent passes
+  were generated first and the tokens compared exactly. A debug copy left in
+  the varlen probe (plen 4n, pstart 3n, plain seed) had to be reverted to the
+  packed-prompt constants.
+- **`+c = Nat.cmp(...)` then `match c` is also rejected.** The "a match cannot
+  scrutinize a computed value" rule covers a local binder created in the same
+  def; the comparison has to travel as a parameter of a second def
+  (`tiny_lr_go(+c: Cmp, ...)`).

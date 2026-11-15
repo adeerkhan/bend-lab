@@ -56,6 +56,27 @@ the chunked array scan is the measured win.
 
 ## 2. A decode step and a real generation loop
 
+**Breadth at decode (2026-11-15).** Three step rows land, each gated exactly like
+the SISO row: the step's tokens equal the full-prefix pass's, exactly, at 16 and
+64 tokens, and both equal the config twin's golden (`reference/mamba3_cfg_lm.py`).
+
+- **varlen (C1).** `step_mamba3_varlen.bend` decodes the packed prompt
+  `[0,1,2,3|0,1,2,3]` with the state reset at the boundary (the angle state, the
+  SSM array and the trapezoid's shifted term all re-zero at t == 4). The gate
+  compares against the packed full-prefix pass and the SISO-config twin's
+  greedy decode: both give `0 1 2 3 0 1 2 3 3 3 3 3 3 3 3 3` at 16 tokens
+  (`make mamba3-step-varlen`, `MAMBA3 STEP VARLEN PASS`).
+- **GQA (C2)** and **outnorm (C3)**: the same row at the other two configs;
+  their gates land with their own commits (`make mamba3-step-gqa`,
+  `make mamba3-step-outnorm`).
+
+The varlen probe uses the two-layer LM with **independent** layer weights (the
+twin's), the residual `h = u + y` per layer and the final RMSNorm with `nw`
+before the head — the same model the full-prefix pass gates. The SISO decode
+is the *single-block* model (no residual, no final norm, weight-tied layers);
+a naive port of it decodes a different model, which the full-prefix pass's
+disagreement caught in one run.
+
 **What.** Implement the reference's step path: one token at a time, carrying
 the four states (`angle`, SSM, K, V). The current generation re-runs the whole
 prefix for every token, which is `O(T^2)` in the prefix and `1.166 s` for

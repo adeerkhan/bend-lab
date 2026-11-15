@@ -4,6 +4,27 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### Mamba-3 decode step: varlen breadth row (C1)
+
+- `examples/language/mamba3/step_mamba3_varlen.bend`: the two-layer LM
+  decodes the packed prompt `[0,1,2,3|0,1,2,3]`, the state reset at row 4
+  (angle, SSM array and the trapezoid's shifted term). The gate
+  (`reference/test_mamba3_step_varlen.py`, `make mamba3-step-varlen`) compares
+  step vs full-prefix vs the SISO-config twin's golden at 16 and 64 tokens,
+  exactly: all three agree on `0 1 2 3 0 1 2 3 3 3 ...`.
+- The probe compares against `reference/mamba3_cfg_lm.py`'s dump and greedy
+  golden (`.scratch/siso_lm_data/`), never against itself; the gate regenerates
+  the dump and goldens before building. The probe found a wire bug: the SISO
+  decode is the single-block model (no residual, no final RMSNorm,
+  weight-tied layers), and a naive port decodes a different model; the
+  full-prefix pass disagreed and the probe was rewired to the residual+RMS
+  model (`h = u + y` per layer, RMSNorm before the head). The same bug was
+  fixed in the two sibling probes before their rows committed. The GQA and
+  outnorm rows land with their own commits.
+- `reference/mamba3_cfg_lm.py` writes the dumps and the goldens for the three
+  breadth configs; the packed prompt's reset matches the reference's varlen
+  semantics (per-segment independent passes, concatenated).
+
 ### Mamba-3 tiny-LM: next-token loss with explicit targets is gated (B1)
 
 - `loss_tgt_go`/`dy_all_tgt_go`/`dWh_tgt_go` in `mamba3_siso.bend` are the
