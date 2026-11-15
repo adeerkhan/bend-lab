@@ -54,6 +54,9 @@ mamba3-deep:       ## depth-4 stack: forward, ten-step backward and generation
 mamba3-tiny-data:  ## the tiny-LM corpus subset and its Bend read-back (trainer pending)
 	$(PY) reference/test_mamba3_tiny_lm.py
 
+mamba3-lm-tgt:     ## Mamba-3 tiny-LM B1: next-token loss/dy/dWh vs the NumPy twin
+	$(PY) reference/test_mamba3_lm_tgt.py
+
 mamba-vit-emb:     ## MambaViT A1a: patch embedding + tokens vs the reference dump
 	$(PY) reference/test_mamba_vit.py
 

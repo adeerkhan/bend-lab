@@ -2737,6 +2737,47 @@ def last_tok(f: FWD, +Wh: List<&2, F32>, +n: Nat) -> Nat:
       +yl = take_row(y, Nat.mul((n - 1n : Nat), 64n), 64n)
       argmax(matvec(Wh, yl, 64n), 8n)
 
+def loss_tgt_go(+left: Nat, +t: Nat, +y: List<&2, F32>,
+    +Wh: List<&2, F32>, +targets: List<&2, Nat>,
+    +vocab: Nat, +invT: F32, +acc: F32) -> F32:
+  match left:
+    case 0n:
+      acc
+    case 1n+p:
+      +y_t = take_row(y, Nat.mul(t, 64n), 64n)
+      +tgt = nth_nat(t, targets)
+      loss_tgt_go(p, (t + 1n : Nat), y, Wh, targets, vocab, invT,
+        (acc + ce_loss(matvec(Wh, y_t, 64n), tgt, vocab, invT) : F32))
+
+def dy_all_tgt_go(+left: Nat, +t: Nat, +y: List<&2, F32>,
+    +Wh: List<&2, F32>, +targets: List<&2, Nat>,
+    +vocab: Nat, +invT: F32,
+    acc: List<&2, F32>) -> List<&2, F32>:
+  match left:
+    case 0n:
+      acc
+    case 1n+p:
+      +y_t = take_row(y, Nat.mul(t, 64n), 64n)
+      +tgt = nth_nat(t, targets)
+      +rows = Nat.div(List.length(&2, F32, Wh), 64n)
+      +dl = ce_dl(matvec(Wh, y_t, 64n), tgt, vocab, invT)
+      dy_all_tgt_go(p, (t + 1n : Nat), y, Wh, targets, vocab, invT,
+        push_row(acc, matvec_t(Wh, dl, rows, 64n)))
+
+def dWh_tgt_go(+left: Nat, +t: Nat, +y: List<&2, F32>,
+    +Wh: List<&2, F32>, +targets: List<&2, Nat>,
+    +vocab: Nat, +invT: F32,
+    acc: List<&2, F32>) -> List<&2, F32>:
+  match left:
+    case 0n:
+      acc
+    case 1n+p:
+      +y_t = take_row(y, Nat.mul(t, 64n), 64n)
+      +tgt = nth_nat(t, targets)
+      +dl = ce_dl(matvec(Wh, y_t, 64n), tgt, vocab, invT)
+      dWh_tgt_go(p, (t + 1n : Nat), y, Wh, targets, vocab, invT,
+        add_lists(acc, outer(dl, y_t)))
+
 def gen_go(+left: Nat, +n: Nat, +tokens: List<&2, Nat>,
     +w_in: List<&2, F32>, +dt_bias: List<&2, F32>,
     +B_bias: List<&2, F32>, +C_bias: List<&2, F32>,

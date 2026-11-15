@@ -188,10 +188,17 @@ examples, 4,096 tokens), vocab **127**, written with sha256s to
 `.scratch/mamba3_tiny/manifest.json`. `make mamba3-tiny-data` checks the
 hashes, the split identity (no overlap) and that Bend reads both files back
 with the same first sixteen tokens: `MAMBA3 TINY-LM DATA PASS`.
-**Pending:** the trainer — a next-token loss (the current `loss_go` targets
-the row index), AdamW with weight decay, gradient clipping, an LR schedule,
-a held-out evaluation, the report card, and the twin on the same data/seed.
-The batch row stays `not run` until those land.
+**Started (2026-11-15): B1 is gated.** `loss_tgt_go`/`dy_all_tgt_go`/`dWh_tgt_go`
+in `mamba3_siso.bend` take the target list instead of the row index
+(`ce_loss`/`ce_dl` already took `n` and `invT`). `make mamba3-lm-tgt`
+(`reference/test_mamba3_lm_tgt.py`) dumps fixed y/Wh/targets, builds
+`probe_mamba3_lm_tgt.bend`, and compares against a float64 NumPy twin:
+loss rel `2.6e-08`, dy `1.9e-07`, dWh `2.0e-07`, gate `1e-5`; build 2.6 s,
+run 0.1 s.
+**Pending:** B2 (AdamW + clipping + warmup/cosine + held-out evaluation,
+the twin on the same data/seed) and B3 (the 4,096-byte held-out compare and
+the report card). The batch row for `tiny-lm` stays `not run` until those
+land.
 
 ## 5. Numerical lanes and the kernel truth
 
