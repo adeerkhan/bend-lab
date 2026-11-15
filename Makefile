@@ -63,6 +63,9 @@ mamba3-step-varlen: ## Mamba-3 decode breadth C1: the step at the packed-prompt 
 mamba3-step-gqa:    ## Mamba-3 decode breadth C2: the step at ngroups 2, rope_fraction 1.0
 	$(PY) reference/test_mamba3_step_gqa.py
 
+mamba3-step-outnorm: ## Mamba-3 decode breadth C3: the step with is_outproj_norm
+	$(PY) reference/test_mamba3_step_on.py
+
 
 mamba-vit-emb:     ## MambaViT A1a: patch embedding + tokens vs the reference dump
 	$(PY) reference/test_mamba_vit.py

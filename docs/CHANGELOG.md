@@ -4,7 +4,7 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
-### Mamba-3 decode step: varlen and GQA breadth rows (C1/C2)
+### Mamba-3 decode step: varlen, GQA and outnorm breadth rows (C1/C2/C3)
 
 - `examples/language/mamba3/step_mamba3_varlen.bend`: the two-layer LM
   decodes the packed prompt `[0,1,2,3|0,1,2,3]`, the state reset at row 4
@@ -18,19 +18,22 @@ What changed for the people who run the lab. Internal refactors are not listed.
   step == full-prefix == the GQA twin's golden at 16 and 64 tokens: all three
   agree on `0 1 2 3 0 3 0 3 ...` at 16 (the model, a fresh random-weight LM,
   settles into a 0/3 cycle; the golden pins it down).
+- `examples/language/mamba3/step_mamba3_outnorm.bend` (C3): the step with
+  `is_outproj_norm=True` (out_v ungated, then `y_inner = rms32(out_v) *
+  norm.weight * silu(z)` and out_proj). `reference/test_mamba3_step_on.py`
+  (`make mamba3-step-outnorm`) checks step == full-prefix == the outnorm
+  twin's golden at 16 and 64 tokens: all three agree on `0 1 2 3 0 3 0 3 ...`
+  at 16 and at 64.
 - The probe compares against `reference/mamba3_cfg_lm.py`'s dump and greedy
   golden (`.scratch/<cfg>_lm_data/`), never against itself; the gate regenerates
-  the dump and goldens before building. The probe found a wire bug: the SISO
+  the dump and goldens before building. The probes found a wire bug: the SISO
   decode is the single-block model (no residual, no final RMSNorm,
   weight-tied layers), and a naive port decodes a different model; the
-  full-prefix pass disagreed and the probe was rewired to the residual+RMS
-  model (`h = u + y` per layer, RMSNorm before the head). The same bug was
-  fixed in the two sibling probes before their rows committed. The GQA and
-  outnorm rows land with their own commits.
+  full-prefix pass disagreed and the probes were rewired to the residual+RMS
+  model (`h = u + y` per layer, RMSNorm before the head).
 - `reference/mamba3_cfg_lm.py` writes the dumps and the goldens for the three
   breadth configs; the packed prompt's reset matches the reference's varlen
-  semantics (per-segment independent passes, concatenated). The outnorm row
-  (C3) lands with its own commit.
+  semantics (per-segment independent passes, concatenated).
 
 ### Mamba-3 tiny-LM: next-token loss with explicit targets is gated (B1)
 
