@@ -4,6 +4,31 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### MambaViT: the subset trainer, parity with the twin (A3)
+
+- `examples/language/mamba_vit/train_mamba_vit.bend` trains the model A1b and
+  A2 define: one flat 83,050-value parameter list, cross entropy with the
+  mean-over-batch gradient, global-norm clipping at 1.0 and AdamW in torch's
+  order, batch 32 in file order, constant lr.
+- `reference/mamba_vit_train_data.py` writes the fixed MNIST slice (the
+  first 2,048 train and 512 test images as 0..1 float32), the seed-0 init as
+  108 per-tensor files plus one flat file, and a manifest with every sha256
+  and flat offset. `reference/mamba_vit_twin_train.py` runs the twin on the
+  same data and schedule in float64 and records `twin.json`.
+- `make mamba-vit-train` (`reference/test_mamba_vit_train.py`) checks the
+  manifest hashes, the loss curve every step at 1e-3 relative, both
+  accuracies within 2 points and the 108 final per-tensor sums of squares at
+  1e-3: **`MAMBA-VIT TRAIN PASS`**, and the batch row runs it.
+- **The full epoch is unavailable at this budget and the gate says so.** The
+  twin's **94.61 % after one 60,000-image epoch** needs 1,875 steps of batch
+  32. The measured Bend run (2026-11-15, `make mamba-vit-train`) is
+  1869.8 s wall for the 160 training + 256 held-out images (4.49 s per
+  image), so the fixed 2,048-image subset is on the order of hours and a
+  60,000-image epoch on the order of days; the run trains 160 images (5 steps
+  of 32) and evaluates 256 held-out ones. The twin's 94.61 % after one full
+  epoch has no Bend counterpart here, and the gate prints that instead of a
+  number.
+
 ### MambaViT: the backward is gated, and the scan's slot order was reversed (A2)
 
 - `probe_mamba_vit_bwd.bend` adds a hand-written backward through the head,

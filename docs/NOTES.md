@@ -1,5 +1,50 @@
 # Notes
 
+## 2026-11-15 — MambaViT A3: the checksums, not the loss curve, test the update
+
+- **A rotated flat gradient passes a 1e-3 loss gate.** The trainer keeps the
+  83,050 parameters as one flat list in `named_parameters()` order (`pos`,
+  `cls`, then the patch embedding, the eight blocks, the final norm and the
+  head) and builds each image's gradient by prepending, which reverses the
+  order of the prepends. The first version put the patch embedding's six
+  tensors in front of `pos`/`cls` and rotated the first 2,272 values by
+  1,632. Every weight still moved by ~1e-3 (AdamW's first step is
+  `±lr/(1-0.9) = ±1e-3` on any element whose gradient is above eps), so the
+  loss moved by ~1e-6 and a 1e-3 loss gate would have passed. The per-tensor
+  sums of squares localized it in one run: six tensors off by `1e-02` to
+  `1e-04`, the other 102 under `1e-06`. The order now matches the manifest
+  and all 108 are under `4e-06` after one step.
+- **The first AdamW step is a sign, not a magnitude.** With `v` starting at
+  zero, `sqrt(v)/sqrt(1-0.999) = |g|` and `m/(1-0.9) = g`, so the update is
+  `lr*g/(|g|+eps)`: `±1e-3` for every element whose gradient clears `eps`,
+  and damped only in the `1e-8` neighbourhood. Any tensor whose gradients
+  land near `1e-8` therefore has an update that depends on the last float32
+  digit (the `pos_embedding` gradient has entries at `3.7e-08`, and its
+  checksum agrees at `5.7e-05` where the rest agree at `1e-06`). That is a
+  property of the schedule, not of the port.
+- **The bias the A1b/A2 dump could not carry.** `to_patch_embedding.1.bias`
+  is zero in the seed-0 dump, so the forward gate's program never adds it
+  and the backward gate's LayerNorm reads the unbiased `pre`. After one
+  update it is no longer zero, and the LayerNorm is over the 16 patch
+  values, so the bias is not a shift the mean can absorb: both directions
+  need it. The probes are unchanged; the trainer adds it in both.
+- **The scan's per-token state rows are a carry, not an index.** The A2
+  backward reads `h_t` and `h_{t-1}` out of the 50x1024 state list with
+  `take_row`, which walks up to 51,200 values per token per block. Passing
+  the remaining list and the row one ahead instead took the A2 probe's
+  8.36 s single image to 12.8 s per *training* image including the update,
+  the flat accumulation and the parameter slicing; the carry is exact (the
+  row one ahead is `h_{t-1}`, empty at the last token, where the probe's
+  `hp_of` returns zeros).
+- **The budget is the honest part of the result.** Measured 2026-11-15
+  (`reference/test_mamba_vit_train.py`): 1869.8 s wall for the 160 training +
+  256 held-out images (4.49 s per image), so the 2,048-image subset the task
+  asked for is on the order of hours and one 60,000-image epoch on the order
+  of days. The gate therefore
+  trains 160 images (5 steps of 32) and evaluates 256 held-out images, with
+  the same schedule on both sides, and prints that the twin's 94.61 %
+  full-epoch number is `unavailable` on Bend.
+
 Every finding, every measurement and every discarded hypothesis, by date. Read the
 relevant entry before changing performance-sensitive code or a law.
 

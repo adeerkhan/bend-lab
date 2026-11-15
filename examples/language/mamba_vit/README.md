@@ -54,8 +54,13 @@ reference's published behaviour.
    the Mamba-3 port uses (a scan backward that runs t backwards). Green:
    `make mamba-vit-bwd`, 120 gradients, worst rel `5.7e-06`.
 3. **Training parity** — train the same config on MNIST in Bend and compare
-   the held-out accuracy against the twin (94.61 % after 1 epoch is the
-   number to match), then a report card in `results/`.
+   the held-out accuracy against the twin. Green on a fixed subset at a
+   budget this lane can hold: `make mamba-vit-train`, `MAMBA-VIT TRAIN PASS`
+   (see "A3" below). The twin's 94.61 % after one 60,000-image epoch is
+   **unavailable** on Bend: the measured run (2026-11-15, `make mamba-vit-train`)
+   is 1869.8 s wall for 160 training + 256 held-out images (4.49 s per image),
+   so a full epoch is on the order of days and the fixed 2,048-image subset
+   on the order of hours.
 
 The comparison to the reference is therefore two-layered and honest: the
 model is theirs (its math, shapes and init), the oracle is our twin (which
@@ -291,3 +296,56 @@ recurrent forward than the forward's own outputs.
    percentage on these four tensors and nowhere else.
 
 
+## A3 is green: subset training parity with the twin
+
+`make mamba-vit-train` PASS (`reference/test_mamba_vit_train.py`,
+`MAMBA-VIT TRAIN PASS`). `examples/language/mamba_vit/train_mamba_vit.bend`
+is the trainer: the A1b forward and the A2 backward, one flat 83,050-value
+parameter list in `named_parameters()` order, cross entropy with the
+mean-over-batch gradient, clipping by global norm at 1.0 and AdamW in torch's
+order (lr 1e-3, weight_decay 0.01, betas 0.9/0.999, eps 1e-8, bias
+correction, decoupled decay), batch 32 in file order, constant lr. The twin
+(`reference/mamba_vit_twin_train.py`, `MambaViT` from `mamba_vit_twin.py` in
+float64 on the CPU) runs the same data, the same init and the same schedule,
+and `twin.json` records the oracle.
+
+The data is `.scratch/mv_mnist/` (`reference/mamba_vit_train_data.py`): the
+first 2,048 MNIST training images and the first 512 test images as 0..1
+float32 (`ToTensor`, not the A1b dump's centered image), the seed-0 init as
+108 per-tensor files plus one flat file, and a manifest with every sha256 and
+the flat offset of every tensor.
+
+**The budget, and why it is a subset.** Measured on this lane 2026-11-15
+(`reference/test_mamba_vit_train.py`): 1869.8 s wall for the 160 training +
+256 held-out images (4.49 s per image), so the fixed 2,048-image subset is
+on the order of hours and a 60,000-image epoch on the order of days. The
+run therefore trains on the first 160 of the 2,048 images (5
+steps of 32) and evaluates the first 256 held-out images, and the gate checks
+parity at that budget: **the twin's 94.61 % after one full epoch is
+`unavailable` on Bend**, and the accuracy below is what 5 steps at lr 1e-3
+reach, not a claim on the epoch. The gate prints this in its own output.
+
+| check | Bend | twin (float64) | gate |
+|---|---|---|---|
+| loss, every cstep | same curve | same curve | 1e-3 relative |
+| gradient norm, every step | clipped at 1.0 | clipped at 1.0 | 1e-3 relative |
+| train hits (pre-update) | 25/160 | 25/160 | 2 points |
+| held-out hits | 35/256 | 35/256 | 2 points |
+| final weights (108 sums of squares) | — | — | 1e-3 relative |
+
+Two things the gates could not see, both found by this run:
+
+- **The patch embedding's linear bias.** A1b/A2 ran on the seed-0 dump,
+  where `to_patch_embedding.1.bias` is zero, so their forward adds nothing
+  and their backward's LayerNorm reads the unbiased `pre`. A3 updates that
+  bias on the first step, and a LayerNorm over the 16 patch values is not
+  shift-invariant per feature, so both the forward and the backward need the
+  bias. The probe is unchanged (its dump still has the zero bias); the
+  trainer adds it in both directions.
+- **The flat gradient's head order.** The first version prepended the patch
+  embedding's six tensors in front of `pos`/`cls` while the flat parameter
+  list is `pos`, `cls`, then the patch embedding. The loss curve could not
+  see a rotation inside the first 2,272 values (the weights move by 1e-3 in
+  the wrong tenors yet the loss by ~1e-6), and the per-tensor checksums
+  localized it in one run: six tensors off by 1e-2 to 1e-4, the other 102
+  under 1e-6. The order is now the manifest's.

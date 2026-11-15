@@ -91,6 +91,7 @@ run mamba3-outnorm "make mamba3-outnorm" "MAMBA3 OUTNORM PASS"
 run mamba3-deep "make mamba3-deep" "MAMBA3 DEEP PASS"
 run mamba-vit-fwd "make mamba-vit-fwd" "MAMBA-VIT FWD PASS"
 run mamba-vit-bwd "make mamba-vit-bwd" "MAMBA-VIT BWD PASS"
+run mamba-vit-train "make mamba-vit-train" "MAMBA-VIT TRAIN PASS"
 notrun mimo "no oracle on this lane: mamba3_mimo_combined is not vendored and TileLang is absent"
 notrun tiny-lm "data + read-back gated (make mamba3-tiny-data); trainer pending"
 
