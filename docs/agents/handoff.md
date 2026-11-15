@@ -7,6 +7,130 @@ context: a fresh agent reads this first, then the issue it names, then
 **Write it before you stop.** An agent that ends a session without writing this
 leaves the next one blind.
 
+## 2026-11-15 — the goal ran to its end: A, B, C green; D is out of budget; `make check` recorded
+
+The goal (MambaViT in Bend, the tiny-LM trainer, breadth at decode) was
+taken through every row it allows. A1-A3, B1-B3 and C1-C3 are green, each
+with a gate file, a Makefile target, a batch row, a fresh PASS under the
+dashboard, its own commit and pushes to `origin`. D (the architecture
+comparison) is **not run and recorded as out of budget**, not estimated;
+the comparison's purpose (equal parameters, one config, one dataset) is
+a design task, not an experiment. mimo remains blocked on its oracle, untouched.
+
+### A. MambaViT (MNIST, 83,050 params, 8× Mamba-1 blocks)
+
+- **A1a** (`00c22aa`): patch embedding + tokens gated, `MAMBA-VIT EMB PASS`
+  (emb rel `2.8e-07`, tokens `2.0e-07`, gate `1e-5`).
+- **A1b** (`675cba0`): the eight blocks, final norm, mean pool, head,
+  `MAMBA-VIT FWD PASS` (21 tags; worst `mv_block5` rel `2.2e-06`, gate `1e-5`).
+- **A2** (`5bcb62f`): hand-written backward through conv1d / scan /
+  softplus / gate, 120 gradients, `MAMBA-VIT BWD PASS` (worst
+  `g_layers_4_mixer_A_log` rel `5.7e-06`; it caught a real forward bug — the
+  reversed state row — and improved the forward 4×).
+- **A3** (`3318b04`): subset training parity vs the float64 twin on a fixed
+  MNIST slice (first 2,048 train / 512 test images as 0..1 float32, seed-0
+  init in `named_parameters()` order, one flat 83,050-value list). The run
+  trains the first 160 images (5 steps of batch 32), AdamW lr 1e-3, wd 0.01,
+  betas (0.9, 0.999), eps 1e-8, global-norm clip at 1.0, constant lr, the
+  first 256 held-out images evaluated. Loss curve per step ≤ rel
+  `1.5e-07`, gradient norms ≤ `1.3e-06`, train/test hits exactly equal the
+  twin (20/160 pre-update, 35/256 held-out), 108 per-tensor sums of squares
+  ≤ `7.0e-05`. `MAMBA-VIT TRAIN PASS`; the 60,000-image epoch is
+  **unavailable** at this budget (~1869.8 s wall for 416 images on this
+  lane, so a full epoch is on the order of days, not in session).
+- Gate output and the unavailable framing: `reference/test_mamba_vit_train.py`,
+  `examples/language/mamba_vit/README.md`, `results/mamba-vit-20261114.md`.
+
+### B. tiny-LM (two-layer SISO Mamba-3 LM, byte corpus, vocab 127)
+
+- **B1** (`2c791df`): next-token loss with explicit targets
+  (`loss_tgt_go`/`dy_all_tgt_go`/`dWh_tgt_go`, the copy-task functions
+  untouched). `make mamba3-lm-tgt` vs a float64 NumPy twin: loss rel
+  `2.6e-08`, dy `1.9e-07`, dWh `2.0e-07` (gate `1e-5`). `MAMBA3 LM TGT PASS`.
+- **B2** (`18babef`): AdamW lr 1e-3 / wd 0.01 / betas (0.9, 0.999) / eps
+  1e-8 / bias correction / decoupled decay, global-norm clipping at 1.0,
+  warmup 5 steps linear then cosine to 1e-4, one example per step in file
+  order, 127 next-byte targets per example (the corpus's last position is
+  dropped — no target crosses an example boundary), embedding gradient
+  scattered by token id. `make mamba3-tiny-opt` vs the float32 twin: loss
+  curve worst rel `4.3e-07`, gradient norms `1.3e-04`, train hits
+  `512/2540` on both sides, final per-tensor sums of squares `7.9e-06`
+  (gate `1e-3`). `MAMBA3 TINY OPT PASS`; 1297.2 s wall for 20 steps
+  (64.9 s/step) in the crash/restart run, 846.3 s in the dashboard rerun.
+- **B3** (`results/mamba3-tiny-lm.md`): the held-out run on the 4,096-byte
+  corpus split — Bend and the twin agree to rel ~1e-07 per training step
+  (worst `4.3e-07`); held-out bits/byte ~6.248 (both), token accuracy
+  ~0.315 (both), hits 1279/4064 (both). **Both numbers are above the
+  bigram baseline (3.3569) and nowhere near it — 20 steps of AdamW on 20
+  train examples learns the byte distribution of this corpus poorly, and
+  the report card says exactly that** (unigram 4.8093, bigram 3.3569).
+  `MAMBA3 TINY-LM PASS` (`make mamba3-tiny-lm`).
+
+### C. breadth at decode (the two-layer LM, independent layer weights)
+
+Each gate compares against the already-gated full-prefix pass, never against
+itself, and against the config twin's golden, at 16 and 64 tokens exactly:
+
+- **C1 / varlen** (`15be2c8`): the packed prompt `[0,1,2,3|0,1,2,3]`, the
+  decode state reset at row 4 (angle, SSM array, the trapezoid's shifted
+  term). `make mamba3-step-varlen`, `MAMBA3 STEP VARLEN PASS`.
+- **C2 / GQA** (`06733bf`): ngroups 2, rope_fraction 1.0.
+  `make mamba3-step-gqa`, `MAMBA3 STEP GQA PASS`.
+- **C3 / outnorm** (`952b323`): `is_outproj_norm=True` (out_v ungated,
+  `y_inner = rms32(out_v) * norm.weight * silu(z)`, then out_proj).
+  `make mamba3-step-outnorm`, `MAMBA3 STEP OUTNORM PASS`.
+- The three probes' wire bug (ISSUE-133/134/135 in the local ledger): the
+  SISO decode is the *single-block* model (no residual, no final RMSNorm,
+  weight-tied layers), and a naive port decodes a different model than the
+  full-prefix pass. The probes were rewired to `h = u + y` per layer with
+  the final RMSNorm before the head.
+
+### D. the architecture comparison (Mamba-3 vs Mamba-1 vs a tiny Transformer)
+
+**Not run; recorded as out of budget** (`results/mamba3-arch-comparison.md`,
+referenced from NOTES.md), not estimated. The Transformer arm does not exist
+in this repo; the flowers path for a Bend trainer does not exist; the
+3,670-image 5-class flowers set is unpinned (`/tmp/opencode/flowers/`); the
+pinned Oxford-102 cache is Oxford-102, not 5-class. Equal-parameter models
+across three architectures is a design task, not an experiment. No numbers
+were recorded for D.
+
+### mimo
+
+**Blocked on its oracle, untouched** (no TileLang, no vendored
+mamba3_mimo_combined). Do not start it.
+
+### Measurement state
+
+- `make mamba3`: **PASS** (all Mamba gates, after every row).
+- `check-fast`: **31/31**.
+- `make check` (full, once, this session): **158/158 checks passed**
+  (78 minutes on this lane; every Mamba gate re-ran inside it; the
+  tiny-LM/MambaViT trainer gates included: `test_mamba3_tiny_opt.py` 847 s,
+  `test_mamba3_tiny_lm_run.py` 846 s, `test_mamba_vit_train.py` 1278 s).
+  The previous recorded pin was 144/144; this session added seven gates
+  (A3's `test_mamba_vit_train.py`, B1-B3's `test_mamba3_lm_tgt.py`,
+  `test_mamba3_tiny_opt.py`, `test_mamba3_tiny_lm_run.py`, C1-C3's
+  `test_mamba3_step_varlen.py`, `test_mamba3_step_gqa.py`,
+  `test_mamba3_step_on.py`), and the runner reports **158** lines `ok`;
+  the exact per-file accounting is what `check_all.py` printed, and there
+  were no failures. `scripts/batch.sh` `run full` was re-pinned to 158 in
+  the same change.
+- The batch rows for A1a/A1b/A2/A3/B1/B2/B3/C1/C2/C3 are `run` rows in
+  `scripts/batch.sh`; `mimo` remains `notrun`.
+
+### Honesty guards that bit this session
+
+- A3's full epoch is recorded as **unavailable** everywhere, never as an
+  estimate; the B3 bits/byte is reported as above the bigram baseline, with
+  the report card saying so verbatim.
+- `.local/` never committed; `make issues` re-rendered for ISSUE-133..135.
+- The A3 dashboard run was recorded honestly; a mis-invoked session
+  (`--benchmarks` on a gate that rejects flags) was left in the store as a
+  failed run and superseded by the correct one.
+- The goal's "one row = one gate = one commit" was kept: 8 row-commits in
+  this run, each pushed.
+
 ## 2026-11-14 — Mamba-3 breadth: varlen, gqa and outnorm are green; deep/mimo/tiny-lm open
 
 Rows 1-3 of the goal are done, each with a gate file, a Makefile target, a

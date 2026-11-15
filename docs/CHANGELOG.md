@@ -92,8 +92,7 @@ What changed for the people who run the lab. Internal refactors are not listed.
   (8x64), Wh (8x64) and targets (3, 1, 4, 1, 5, 7, 2, 6), builds
   `probe_mamba3_lm_tgt.bend`, and compares against a float64 NumPy twin at
   1e-5: loss rel `2.6e-08`, dy `1.9e-07`, dWh `2.0e-07`.
-  `MAMBA3 LM TGT PASS`; build 2.6 s, run 0.1 s. The tiny-LM batch row
-  stays `not run` until the trainer (B2/B3) lands.
+  `MAMBA3 LM TGT PASS`; build 2.6 s, run 0.1 s.
 
 ### MambaViT: the subset trainer, parity with the twin (A3)
 

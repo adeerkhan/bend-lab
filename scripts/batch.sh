@@ -103,7 +103,7 @@ run mamba3-step-outnorm "make mamba3-step-outnorm" "MAMBA3 STEP OUTNORM PASS"
 # C. The other gates
 run versions "make versions" "A review lane is one row"
 run check-fast "make check-fast" "31/31 checks passed"
-run full "make check" "144/144 checks passed"
+run full "make check" "158/158 checks passed"
 run unet "make unet-metric" "UNET METRIC PASS"
 run glm-decode "make glm-decode" "GLM DECODE PASS"
 run glm-192 "make glm-h192-step" "wrote results/glm53-hybrid192-step/eval-"

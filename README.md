@@ -195,6 +195,7 @@ trace is standard library only: no library support is needed to time our runs.
 | `transformers/periodic` | periodic 0…7, 32 × 8 | loss and next-token accuracy | 2.359 → 0.002, accuracy 1.00 |
 | `transformers/attention` | synthetic 4 × 8 | every output against NumPy | checksum 1.76295, delta 3.3e-9 |
 | `language/mamba_vit` | MNIST, 160 × 28×28, seed 0 | five training steps against the float64 twin | loss and clipped gradient norm per step at 1e-3, final weights (108 sums of squares) at 1e-3 |
+| `language/mamba3-tiny-lm` | byte corpus, 20 train examples × 128 positions, seed 101/102/20261115, 20 steps | AdamW vs the float32 twin | loss per step at 1e-3, weights at 1e-3, held-out bits/byte 6.2476 == 6.2476, accuracy 0.3147 == 0.3147 |
 | `classification/crossval` | iris, 150 × 4 | five stratified folds, no leakage | 0.9307 ± 0.006 (sklearn 0.9307) |
 | `classification/knn` | breast cancer, 683 × 9 | accuracy on the same split | 0.978102 (sklearn 0.978102) |
 | `classification/naive_bayes` | breast cancer, 683 × 9 | accuracy on the same split | 0.985401 (sklearn 0.985401) |
