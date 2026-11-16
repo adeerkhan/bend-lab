@@ -303,6 +303,13 @@ the full-prefix pass and the exact step both emit the twin's 16 tokens
 exactly; the per-step fmod+fix wrap and the cumsum-mod wrap agree.
 `make mamba3-wrap` (`MAMBA3 WRAP PASS`).
 
+**B4 (2026-11-16).** The clamp boundaries are now pinned: A sits
+exactly at -A_floor below the knife edge, trap saturates to exactly
+0/1, softplus is honest at large/small dd_dt. The ladder found the
+port's `softplus` overflowing to inf past x ~ 88.7 (torch yields x);
+fixed in this row to torch's threshold=20 semantics (behavior change,
+`make mamba3` green after). `make mamba3-clamps` (`MAMBA3 CLAMPS PASS`).
+
 - **Finite differences** for the scan and the preprocessing at a few
   coordinates, to catch a sign that happens to cancel in the loss.
 - **State round-trip**: run T tokens, then continue from the returned state;

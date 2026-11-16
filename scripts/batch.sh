@@ -105,6 +105,7 @@ run cases "make mamba3-cases" "MAMBA3 CASES PASS"
 run fd "make mamba3-fd" "MAMBA3 FD PASS"
 run state "make mamba3-state" "MAMBA3 STATE PASS"
 run wrap "make mamba3-wrap" "MAMBA3 WRAP PASS"
+run clamps "make mamba3-clamps" "MAMBA3 CLAMPS PASS"
 
 # C. The other gates
 run versions "make versions" "A review lane is one row"

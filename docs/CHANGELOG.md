@@ -4,6 +4,20 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The correctness campaign, row B4
+
+- `make mamba3-clamps` (`reference/test_mamba3_clamps.py`): A at
+  -A_floor exactly (clamp knife edge and below), trap saturating to
+  exactly 0/1, softplus at large/small dd_dt. Found and fixed in the
+  same row: the port's `softplus` computed `log(1+exp(x))`, which
+  overflows F32 past x ~ 88.7 where torch yields x; fixed to torch's
+  threshold=20 semantics, `make mamba3` green after the change.
+  `MAMBA3 CLAMPS PASS`.
+- Also recorded: the twin's `heavy_tail` yields a nan gradient at
+  dd_A == 1.0 exactly (torch `where` evaluates both branches; the
+  reciprocal branch hits 0*inf). Never fired in the gated runs; ledger.
+
+
 ### The correctness campaign, row B3
 
 - `make mamba3-wrap` (`reference/test_mamba3_wrap.py`): a synthetic

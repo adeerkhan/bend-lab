@@ -179,8 +179,15 @@ def neg_htail(+x: F32) -> F32:
   +f = htail(x)
   neg_if(F32.is_lt(f, 0.0001), f)
 
+def softplus_threshold(b: Bool, +x: F32) -> F32:
+  match b:
+    case True{}:
+      x
+    case False{}:
+      F32.log((1.0 + F32.exp(x) : F32))
+
 def softplus(+x: F32) -> F32:
-  F32.log((1.0 + F32.exp(x) : F32))
+  softplus_threshold(F32.is_gt(x, 20.0), x)
 
 def sigmoid(+x: F32) -> F32:
   +e = F32.exp((0.0 - x : F32))
