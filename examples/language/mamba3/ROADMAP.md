@@ -230,8 +230,17 @@ gradient scattered by token id. `make mamba3-tiny-opt` compares against the
 float32 twin (fixed seeds 101/102/20261115) at the same schedule: worst
 per-step loss rel `4.3e-07`, worst grad norm rel `1.3e-04`, train hits
 512/2540 == 512/2540, final per-tensor sums of squares at 1e-3.
-**Pending:** B3 (the held-out compare and the report card). The batch row for
-`tiny-lm` stays `not run` until B3 lands.
+**Done (2026-11-16): B3 and the run page.** The held-out compare and its
+report card are [`results/mamba3-tiny-lm.md`](../../../results/mamba3-tiny-lm.md)
+(6.2476 bits/byte in both lanes, far above the bigram baseline — no LM
+claim). The run's one-page report, rendered once with `make report
+TASK=mamba3-tiny-lm`, is
+[`results/mamba3-tiny-lm-page.txt`](../../../results/mamba3-tiny-lm-page.txt);
+its record is `results/raw/mamba3-tiny-lm-20261116T150311Z.json` and its
+frozen reference `results/reference/mamba3-tiny-lm.json`. `make validate`
+is the one gate for all of this; the tiny-LM itself is gated by
+`make mamba3-tiny-lm`. The card carries the variant and says `bounds:
+unavailable` (no stage split declared), not a fabricated floor.
 
 ## 5. Numerical lanes and the kernel truth
 

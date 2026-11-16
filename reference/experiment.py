@@ -233,6 +233,52 @@ def reference_glm53(context=None):
     return {"params": 74144, "first_loss": None, "final_loss": None}
 
 
+def parse_mamba3_tiny(out):
+    """The tiny-LM's tags: the last loss, the hits, the held-out scalars, the sum of squares."""
+    def num(key):
+        m = re.search(rf"^{key}: ([0-9.eE+-]+(?:\s+[0-9.eE+-]+)*)\s*$", out, re.M)
+        return [float(v) for v in m.group(1).split()] if m else []
+    losses = num("tiny_train_losses")
+    parsed = {"final_loss": losses[-1] if losses else None}
+    for key in ("tiny_train_hits", "tiny_heldout_hits", "tiny_bits_per_byte",
+                "tiny_heldout_acc"):
+        vals = num(key)
+        parsed[key.replace("tiny_", "")] = float(vals[0]) if vals else None
+    # the Bend program prints one sum of squares per tensor (26 values);
+    # the twin's record has the same breakdown, and the compared scalar is
+    # the total L2-squared norm of all 71,952 parameters
+    sq = num("tiny_w_sumsq")
+    parsed["w_sumsq"] = float(sum(sq)) if sq else None
+    return parsed
+
+
+def reference_mamba3_tiny(context=None):
+    """The twin, recomputed live: same 20 steps, same seeds (101/102/20261115), CPU F32.
+
+    Requires the byte-corpus subset (.scratch/mamba3_tiny/manifest.json);
+    regenerates it with reference/mamba3_tiny_data.py when absent.  The
+    retrain is the measured reference_seconds of this task; it is CPU F32
+    and deterministic given the fixed seeds.
+    """
+    tiny = os.path.join(ROOT, ".scratch/mamba3_tiny")
+    pyrf = os.environ.get("PYRF", os.path.join(ROOT, "reference/.venv-rf/bin/python"))
+    if not os.path.isfile(os.path.join(tiny, "manifest.json")):
+        subprocess.run([pyrf, os.path.join(ROOT, "reference/mamba3_tiny_data.py")],
+                       cwd=ROOT, check=True)
+    subprocess.run([pyrf, os.path.join(ROOT, "reference/mamba3_tiny_twin.py"),
+                    "--mode", "train"], cwd=ROOT, check=True)
+    with open(os.path.join(tiny, "twin.json")) as f:
+        d = json.load(f)
+    return {
+        "final_loss": float(d["losses"][-1]),
+        "train_hits": float(d["train_hits"]),
+        "heldout_hits": float(d["heldout"]["hits"]),
+        "bits_per_byte": float(d["heldout"]["bits_per_byte"]),
+        "heldout_acc": float(d["heldout"]["accuracy"]),
+        "w_sumsq": float(sum(d["final_sumsq"].values())),
+    }
+
+
 def parse_diffusion_vit(out):
     losses = [float(v) for v in re.findall(r"^loss: ([0-9.eE+-]+)$", out, re.M)]
     vals = {k: float(re.search(rf"^{k}: ([0-9.eE+-]+)$", out, re.M).group(1))
@@ -794,6 +840,27 @@ TASKS = {
         "reference": reference_cancer_knn,
         "metrics": {
             "accuracy": {"tolerance": 0.000001, "mode": "absolute"},
+        },
+    },
+    "mamba3-tiny-lm": {
+        "description": "the two-layer SISO Mamba-3 tiny-LM on the byte corpus: 20 steps of AdamW on the first 20 train examples, batch 1, 127 next-byte targets per example, two weight-tied blocks, d_model 64, d_state 16",
+        "program": "examples/language/mamba3/train_mamba3_tiny.bend",
+        "dataset": {"name": "mamba3-byte-corpus-64", "rows": 64, "features": 128,
+                    "source": "examples/language/glm53_flash/data/corpus128-b32 (local file), first 64 train examples, the whole 8-example held-out split, byte-tokenised"},
+        "seed": 0,
+        "variant": {"batch": 1, "positions": 128},
+        "notes": ["20 steps of AdamW (warmup 5 then cosine 1e-3 -> 1e-4), clip by global norm at 1.0, betas (0.9, 0.999), eps 1e-8, weight_decay 0.01",
+                  "the numbers are what 20 steps of 1e-3 AdamW on 20 examples reach; both lanes sit far above the bigram baseline (3.3569 bits/byte); no language-model claim is made",
+                  "the held-out evaluation is after the last step (each N steps with N = steps); mid-training evaluation is unavailable at this budget"],
+        "parse": parse_mamba3_tiny,
+        "reference": reference_mamba3_tiny,
+        "metrics": {
+            "final_loss": {"tolerance": 1e-3, "mode": "absolute"},
+            "bits_per_byte": {"tolerance": 2e-2, "mode": "absolute"},
+            "heldout_hits": {"tolerance": 0, "mode": "exact"},
+            "train_hits": {"tolerance": 0, "mode": "exact"},
+            "w_sumsq": {"tolerance": 1e-3, "mode": "relative"},
+            "heldout_acc": {"tolerance": 2e-2, "mode": "absolute"},
         },
     },
 }

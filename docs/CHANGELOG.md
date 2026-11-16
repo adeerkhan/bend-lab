@@ -4,6 +4,29 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The run record v3, row C4: the tiny-LM page and one gate
+
+- `reference/experiment.py` gains the `mamba3-tiny-lm` task: the two-layer
+  SISO LM on the byte corpus, 20 steps, batch 1, 127 next-byte targets,
+  the fixed seeds 101/102/20261115, compared against the twin retrained
+  live (CPU F32). Run 2026-11-16: bend vs twin final loss -9.9e-07,
+  bits/byte -1.6e-06, held-out/train hits exact (1279, 512), w_sumsq
+  -7.3e-04 abs (a 2.6e-07 relative difference); run 1965 s, build 6.7 s,
+  reference 9.1 s; PASS. The frozen reference is
+  `results/reference/mamba3-tiny-lm.json`.
+- Two real failures were fixed, not waved through: the first run's parser
+  missed `show_tag`'s trailing space (all metrics printed `-`), and the
+  new task then tripped the frozen-reference gate (`make validate QUICK=1`
+  went red). The parser regex now accepts the trailing space, the second
+  run passes, and the reference was frozen from that passing record —
+  no tolerance was loosened. The failed raw record is not published.
+- `make report TASK=mamba3-tiny-lm` was rendered once into
+  `results/mamba3-tiny-lm-page.txt` (no stages declared; six metrics and
+  PASS), linked from ROADMAP §4 with the report card and the record.
+- `make validate` is the one gate for the lab; its full run's number is
+  recorded in `docs/agents/handoff.md` when it completes.
+
+
 ### The run record v3, row C3: the refusal gates
 
 - Fixture stage: existing behavior pinned by `reference/test_stages.py` —

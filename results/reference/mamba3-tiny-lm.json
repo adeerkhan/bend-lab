@@ -1,0 +1,24 @@
+{
+  "schema": "mlbend.reference/1",
+  "task": "mamba3-tiny-lm",
+  "created_at": "2026-11-16T15:03:11.750504+00:00",
+  "frozen_at": "2026-11-16T15:05:17.472143+00:00",
+  "command": "reference/references.py --freeze --task mamba3-tiny-lm",
+  "source": {
+    "record": "results/latest/mamba3-tiny-lm.json",
+    "created_at": "2026-11-16T15:03:11.750504+00:00"
+  },
+  "bend": "2.0.38",
+  "git": "c99da7d",
+  "machine": "Linux-7.2.15-300.fc45.x86_64-x86_64-with-glibc2.44",
+  "seeds": {
+    "0": {
+      "final_loss": 4.3330535888671875,
+      "bits_per_byte": 6.247649822790555,
+      "heldout_hits": 1279.0,
+      "train_hits": 512.0,
+      "w_sumsq": 2800.7393162527455,
+      "heldout_acc": 0.31471456692913385
+    }
+  }
+}

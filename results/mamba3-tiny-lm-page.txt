@@ -1,0 +1,15 @@
+reference/.venv/bin/python reference/report_run.py --task mamba3-tiny-lm 
+task     mamba3-tiny-lm · bend · cpu · threads unavailable · bend 2.0.38 · 28 cpus
+record   main c99da7d (dirty) · seeds 1 · dataset 3f42d3537cfa
+run      1965.153 s for the task · build 6.738 s · reference 9.149 s · fetch 0.000 s warm
+stages   none declared: this task writes no stage split
+
+metric                                    bend                   reference                 delta  ok
+final_loss                             4.33305                     4.33305            -9.889e-07  ok
+bits_per_byte                          6.24765                     6.24765            -1.623e-06  ok
+heldout_hits                              1279                        1279                     0  ok
+train_hits                                 512                         512                     0  ok
+w_sumsq                                2800.74                     2800.74            -0.0007304  ok
+heldout_acc                           0.314715                    0.314715             1.307e-08  ok
+
+PASS
