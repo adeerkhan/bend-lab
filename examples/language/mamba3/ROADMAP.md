@@ -316,6 +316,11 @@ zeroed `D` (7.6e-01) — each builds, each blows the forward gate by
 orders of magnitude, and the good program still matches the golden at
 5.5e-07. `make mamba3-canfail` (`MAMBA3 CANFAIL PASS`).
 
+**B6 (2026-11-16).** Determinism is measured, not assumed: two separate
+builds of `mamba3_siso.bend` print bitwise-identical seqlen-8 forward
+tags (out_v, y_inner, y; sumsq identical to 1e-9). `make mamba3-det`
+(`MAMBA3 DET PASS`).
+
 - **Finite differences** for the scan and the preprocessing at a few
   coordinates, to catch a sign that happens to cancel in the loss.
 - **State round-trip**: run T tokens, then continue from the returned state;

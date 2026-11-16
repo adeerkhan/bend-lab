@@ -4,6 +4,14 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The correctness campaign, row B6
+
+- `make mamba3-det` (`reference/test_mamba3_det.py`): two separate
+  builds of `mamba3_siso.bend` print bitwise-identical seqlen-8
+  forward tags (out_v, y_inner, y); sumsq identical to 1e-9.
+  `MAMBA3 DET PASS`.
+
+
 ### The correctness campaign, row B5
 
 - `make mamba3-canfail` (`reference/test_mamba3_canfail.py`): three
