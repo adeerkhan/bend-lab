@@ -4,6 +4,17 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The lanes gate under a loaded GPU: a compile-resource cap
+
+- A full-check run raised `OutOfResources` (Triton autotune selected a
+  num_stages=3 config needing 122384 B of shared memory on a 101376 B
+  GPU). `reference/mamba3_lanes.py` now caps autotuned stages to <= 2
+  in its dump subprocess — a compile-resource cap, not a tolerance
+  change. Re-measured from fresh dumps: ieee 2.490e-06, tf32 2.392e-03,
+  module 2.396e-02, all within the committed bounds; `MAMBA3 LANES PASS`,
+  check-fast 31/31. Ledger entry added.
+
+
 ### D1 follow-up: the card keeps its variant/bounds across regeneration
 
 - `reference/test_mamba3_tiny_lm_run.py` now generates the card's

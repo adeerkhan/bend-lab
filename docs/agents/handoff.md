@@ -128,3 +128,14 @@ QUICK=1` are green.
   `docs/mamba3-tiny-lanes.md`, `results/mamba3-tiny-lm.md`,
   `results/mamba3-tiny-lm-page.txt`; `make issues` re-rendered (145
   entries, `.local/` only).
+
+### Last fix after the handoff draft
+
+A full-check run saw a transient Triton `OutOfResources` in the lanes
+gate (autotune chose a config needing 122384 B of shared memory on a
+101376 B GPU). `reference/mamba3_lanes.py` now caps autotuned
+`num_stages` to <= 2 in the dump subprocess — a compile-resource cap,
+not a tolerance change. Fresh lane maxima: ieee 2.490e-06, tf32
+2.392e-03, module 2.396e-02; `MAMBA3 LANES PASS`, check-fast 31/31.
+The full `make check` delta above still stands (the two 1800 s
+timeouts were not retried with any gate change).

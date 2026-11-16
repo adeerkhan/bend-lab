@@ -116,6 +116,34 @@ def dump_twin(T):
     print(f"wrote twin_{T}.npz (T={T})")
 
 
+
+def _cap_autotune_stages():
+    """Keep autotune configs that fit this GPU's shared memory (101376 B).
+
+    The vendored autotune lists include num_stages=3 configs that can ask
+    for 122384 B of shared memory; on a loaded GPU Triton selected one and
+    raised OutOfResources under the full check (the gate passed standalone).
+    This is a compile-resource cap, not a numeric tolerance: the dots are
+    unchanged, and the lane bounds are asserted from fresh dumps below.
+    """
+    import mamba_ssm.ops.triton.mamba3.mamba3_siso_fwd as fwd
+    import mamba_ssm.ops.triton.mamba3.mamba3_siso_bwd as bwd
+    import mamba_ssm.ops.triton.mamba3.angle_dt as angle
+    capped = 0
+    for mod in (fwd, bwd, angle):
+        for name in dir(mod):
+            obj = getattr(mod, name)
+            configs = getattr(obj, "configs", None)
+            if isinstance(configs, (list, tuple)):
+                keep = [c for c in configs if (getattr(c, "num_stages", 1) or 1) <= 2]
+                if len(keep) != len(configs):
+                    try:
+                        obj.configs = keep
+                        capped += 1
+                    except (AttributeError, TypeError):
+                        pass
+    return capped
+
 def dump_kernel(T):
     """The F32 kernel lane: low-level Triton fwd/bwd with F32 tensors.
 
@@ -127,6 +155,7 @@ def dump_kernel(T):
     lane = os.environ.get("TRITON_F32_DEFAULT", "tf32")  # read before triton loads
     import torch.nn.functional as F
     import mamba3_twin as W
+    _cap_autotune_stages()
     from mamba_ssm.ops.triton.mamba3.mamba3_siso_fwd import mamba3_siso_fwd
     from mamba_ssm.ops.triton.mamba3.mamba3_siso_bwd import (
         compute_dqkv, compute_dqktheta, compute_ddt_dtrap_dinput_states)
