@@ -4,6 +4,28 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The run record v3, row C2: the one-page report, verified
+
+- `reference/report_run.py` prints Burn's order — header (task,
+  trainer/lane/threads/Bend/machine/cpus), the run, the stages with
+  path/ms/share/kind/bound/achieved/floor ms/gain ms, totals
+  (unaccounted/unclaimed), the ladder ("how much is on the table"),
+  the worklist, the metric table, PASS/FAIL.
+- `make report TASK=vit-step` renders the latest record (2026-11-16):
+  stages `run` 458.7 ms total; `run/step/forward` 205.0 ms at 44.7 %
+  share, 10.0 % of its floor (20.55 ms, gain 184.45);
+  `run/step/loss_backward_opt` 213.7 ms, 19.2 % of its floor (41.11 ms,
+  gain 172.56); ladder 415.0 ms with 3 of 5 leaves floored; worklist
+  ranks the two kernels first (184.4 ms, 172.6 ms), then run/init
+  (20.0 ms), run/step/input (17.0 ms, less preprocess), host 58.0 ms;
+  unaccounted 0.0 ms, unclaimed unavailable.
+- `make report TASK=vit-step AGAINST=results/raw/vit-step-20261101T083152Z.json`
+  (cpu record): `mismatch lane: cpu -> gpu` prints as a banner and every
+  delta row says `lane changed` — never a percentage. Not a regression
+  verdict; a variant banner.
+- The page is unchanged; this row is the verification and the record of it.
+
+
 ### The run record v3, row C1: schema and docs verified, not rewritten
 
 - The landed schema is `mlbend.experiment/3` (superset of the goal's
