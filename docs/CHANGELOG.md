@@ -4,6 +4,17 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The correctness campaign, row B5
+
+- `make mamba3-canfail` (`reference/test_mamba3_canfail.py`): three
+  corruptions of the Bend source, applied at run time to
+  .scratch/canfail/ copies — missing `shifted` (y rel 3.2e-01), wrong
+  rope sign (6.6e-02), zeroed `D` (7.6e-01). Each must exceed the
+  forward gate 1e-5, i.e., the mutation would fail `make mamba3`; the
+  good program still matches the golden at 5.5e-07.
+  `MAMBA3 CANFAIL PASS`.
+
+
 ### The correctness campaign, row B4
 
 - `make mamba3-clamps` (`reference/test_mamba3_clamps.py`): A at

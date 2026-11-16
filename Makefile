@@ -8,7 +8,7 @@ BEND := $(or $(BEND_BIN),$(HOME)/.bend/bin/bend)
 BEND_VERSION := 2.0.38
 BEND_REF := ../bend-ref
 
-.PHONY: setup check laws sync-bend clean lint env env-check release experiment experiments results report trace dash dashboard session unet-metric mamba3-bench mamba3-layer mamba3-step mamba3-train-curve mamba3-varlen mamba3-gqa mamba3-outnorm mamba3-deep mamba3-lanes mamba-bf16-curve mamba3-cases mamba3-fd mamba3-state mamba3-wrap mamba3-clamps mamba3-tiny-data mamba-vit-emb mamba-vit-fwd mamba-vit-bwd mamba-vit-train glm-step glm-block-step glm-lin-block glm-decode glm-h192-step batch peaks bounds bench plumbing flow flow64 doctor figures select plots sweep sweep-agent
+.PHONY: setup check laws sync-bend clean lint env env-check release experiment experiments results report trace dash dashboard session unet-metric mamba3-bench mamba3-layer mamba3-step mamba3-train-curve mamba3-varlen mamba3-gqa mamba3-outnorm mamba3-deep mamba3-lanes mamba-bf16-curve mamba3-cases mamba3-fd mamba3-state mamba3-wrap mamba3-clamps mamba3-canfail mamba3-tiny-data mamba-vit-emb mamba-vit-fwd mamba-vit-bwd mamba-vit-train glm-step glm-block-step glm-lin-block glm-decode glm-h192-step batch peaks bounds bench plumbing flow flow64 doctor figures select plots sweep sweep-agent
 
 setup:            ## Bend, Lean and the Python venv
 	scripts/setup.sh
@@ -71,6 +71,9 @@ mamba3-wrap:       ## angle wrap: a synthetic sequence crossing 2pi, exact loop 
 
 mamba3-clamps:     ## clamp boundaries: A at -A_floor, trap at 0/1, softplus at large/small dd_dt
 	$(PY) reference/test_mamba3_clamps.py
+
+mamba3-canfail:    ## can-fails: missing shifted, wrong rope sign, zeroed D — each must FAIL its gate
+	$(PY) reference/test_mamba3_canfail.py
 
 mamba3-tiny-data:  ## the tiny-LM corpus subset and its Bend read-back (trainer pending)
 	$(PY) reference/test_mamba3_tiny_lm.py

@@ -310,6 +310,12 @@ port's `softplus` overflowing to inf past x ~ 88.7 (torch yields x);
 fixed in this row to torch's threshold=20 semantics (behavior change,
 `make mamba3` green after). `make mamba3-clamps` (`MAMBA3 CLAMPS PASS`).
 
+**B5 (2026-11-16).** The can-fail pattern now covers three more
+mutations: missing `shifted` (y rel 3.2e-01), wrong rope sign (6.6e-02),
+zeroed `D` (7.6e-01) — each builds, each blows the forward gate by
+orders of magnitude, and the good program still matches the golden at
+5.5e-07. `make mamba3-canfail` (`MAMBA3 CANFAIL PASS`).
+
 - **Finite differences** for the scan and the preprocessing at a few
   coordinates, to catch a sign that happens to cancel in the loss.
 - **State round-trip**: run T tokens, then continue from the returned state;
