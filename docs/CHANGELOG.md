@@ -4,6 +4,16 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The correctness campaign, row B2
+
+- `make mamba3-state` (`reference/test_mamba3_state.py`): the exact-step
+  decode run twice — 30 steps from a fresh state vs 10 steps then 20
+  resumed from the returned state — token for token identical (31
+  tokens), and the first 16 equal the `gen_tokens` golden. Driver:
+  `examples/language/mamba3/probe_mamba3_state.bend`, which shares
+  `S.layer_row` rather than copying it. `MAMBA3 STATE PASS`.
+
+
 ### The correctness campaign, row B1
 
 - `make mamba3-fd` (`reference/test_mamba3_fd.py`): dL/du by autograd

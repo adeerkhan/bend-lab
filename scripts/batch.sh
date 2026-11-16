@@ -103,6 +103,7 @@ run lanes "make mamba3-lanes" "MAMBA3 LANES PASS"
 run bf16-curve "make mamba-bf16-curve" "MAMBA3 BF16 CURVE PASS"
 run cases "make mamba3-cases" "MAMBA3 CASES PASS"
 run fd "make mamba3-fd" "MAMBA3 FD PASS"
+run state "make mamba3-state" "MAMBA3 STATE PASS"
 
 # C. The other gates
 run versions "make versions" "A review lane is one row"

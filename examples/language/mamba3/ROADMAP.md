@@ -288,6 +288,13 @@ tolerance and the command. No lane is silently promoted to the oracle.
 y-gradient matches the bumped-input twin (delta = 1e-2, worst rel
 8.6e-05, bound 1e-2); `make mamba3-fd` (`MAMBA3 FD PASS`).
 
+**B2 (2026-11-16).** The exact-step decoder's state round-trip lands:
+30 steps from a fresh state == 10 steps then 20 resumed from the
+returned state (31 tokens, identical token for token); the first 16
+equal the `gen_tokens` golden. Driver:
+`examples/language/mamba3/probe_mamba3_state.bend`; `make mamba3-state`
+(`MAMBA3 STATE PASS`).
+
 - **Finite differences** for the scan and the preprocessing at a few
   coordinates, to catch a sign that happens to cancel in the loss.
 - **State round-trip**: run T tokens, then continue from the returned state;
