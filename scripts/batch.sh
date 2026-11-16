@@ -99,6 +99,7 @@ run mamba3-tiny-lm "make mamba3-tiny-lm" "MAMBA3 TINY-LM PASS"
 run mamba3-step-varlen "make mamba3-step-varlen" "MAMBA3 STEP VARLEN PASS"
 run mamba3-step-gqa "make mamba3-step-gqa" "MAMBA3 STEP GQA PASS"
 run mamba3-step-outnorm "make mamba3-step-outnorm" "MAMBA3 STEP OUTNORM PASS"
+run lanes "make mamba3-lanes" "MAMBA3 LANES PASS"
 
 # C. The other gates
 run versions "make versions" "A review lane is one row"

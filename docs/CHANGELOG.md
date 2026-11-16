@@ -4,6 +4,32 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### Mamba-3 numerical lanes: the SISO block through four lanes (A1)
+
+- `make mamba3-lanes` (`reference/test_mamba3_lanes.py`) dumps the SISO
+  block at T = 1, 2, 4, 8, 16, 64 through four lanes — the F32 twin
+  (oracle), the vendored Triton kernel with IEEE dots, the same kernel
+  with TF32 dots, and the public bf16 `Mamba3` module — and asserts the
+  per-lane tripwires recorded in `docs/mamba3-lanes.md`: ieee ≤ 1e-05
+  (measured 2.56e-06), tf32 ≤ 5e-03 (measured 2.39e-03), module ≤ 5e-02
+  (measured 2.40e-02). `MAMBA3 LANES PASS`.
+- `docs/mamba3-lanes.md` is the table: forward (out_v, q, k*sc, qk,
+  scale, gamma, final state), kernel backward (dQ/dK/dV-equivalent input
+  grads), module backward (du, dW_in, dW_out, the norm weights, biases).
+  The kernel lane stores SSM states in bf16 by contract
+  (`mamba3_siso_fwd.py:604`) and everyone inherits that rounding; the F32
+  lanes cannot go through `mamba3_siso_combined` (it always casts to
+  bf16), so they call the low-level kernels and replicate the backward
+  step by step; `TRITON_F32_DEFAULT` is read at Triton import, so the
+  ieee/tf32 lanes run as separate processes.
+- Two accounting notes are documented in the doc because they look like
+  precision bugs and are not: the twin's DT gradient includes the
+  `ADT = A*DT` path while the kernel returns it separately as dADT, and
+  the kernel's incoming gradient is `silu(z) * (dy @ W_out)` because the
+  twin's `y` is post-`out_proj`.
+- T = 64 is also the chunk boundary. The bf16 module remains a reported
+  lane and is never the oracle.
+
 ### Mamba-3 tiny-LM: AdamW + clipping + warmup/cosine against the twin (B2)
 
 - `examples/language/mamba3/train_mamba3_tiny.bend` trains the two-layer SISO

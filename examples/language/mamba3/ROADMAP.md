@@ -248,10 +248,22 @@ per-step loss rel `4.3e-07`, worst grad norm rel `1.3e-04`, train hits
 public module is not the oracle; the F32 twin is. The kernel's default TF32
 dot is another lane again.
 
-**Learn.** Run the same comparison at T = 1, 2, 4, 8, 16, 64 and at a chunk
-boundary. At T = 1 the result is the `D + gamma*(q.k)` skip only; at T = 2 the
-state and the shifted term enter; at T = 64 the chunk boundary enters. Those
-three cases explain the whole kernel.
+**Learn.** Run the same comparison at T = 1, 2, 4, 8, 16, 64 (64 is also the
+chunk boundary). At T = 1 the result is the `D + gamma*(q.k)` skip only; at
+T = 2 the state and the shifted term enter; at T = 64 the chunk boundary
+enters. Those three cases explain the whole kernel.
+
+**Status (2026-11-16).** A1 is green and committed: the four lanes at
+T = 1, 2, 4, 8, 16, 64 (forward, kernel backward, module backward) are in
+[`docs/mamba3-lanes.md`](../../../docs/mamba3-lanes.md), gated by
+`make mamba3-lanes` (`MAMBA3 LANES PASS`; ieee ≤ 1e-05 measured 2.6e-06,
+tf32 ≤ 5e-03 measured 2.4e-03, module ≤ 5e-02 measured 2.4e-02). No lane
+is silently promoted to the oracle; the F32 twin remains the oracle and the
+module remains a reported lane.  Two corrections fell out of building it:
+`mamba3_siso_combined` always casts to bf16 (the F32 lanes call the
+low-level kernels and replicate the backward step by step), and the kernel
+stores SSM states in bf16 even in the F32 lanes
+(`mamba3_siso_fwd.py:604`).
 
 **Accept.** A table of max relative errors per lane and per tensor, with the
 tolerance and the command. No lane is silently promoted to the oracle.
