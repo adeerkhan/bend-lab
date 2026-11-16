@@ -4,6 +4,24 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### D1 follow-up: the card keeps its variant/bounds across regeneration
+
+- `reference/test_mamba3_tiny_lm_run.py` now generates the card's
+  `variant` / `bounds` section itself, reading the variant from
+  `results/latest/mamba3-tiny-lm.json` and printing `bounds: unavailable`
+  with the reason (or `unavailable` + the command when no record exists).
+  A hand-edit used to vanish the next time `make check` ran this gate;
+  the regenerated card now keeps it. No number is invented by the writer.
+- Full `make check` did **not** complete in this session: two runs each
+  hit the unchanged 1800 s per-test timeout (first
+  `test_mamba_vit_train.py`, then `test_mamba3_tiny_lm_run.py`, with 141
+  ok checks before the second failure). The host was running Dota 2 at
+  ~248% CPU; a timed-out gate also left its Bend binary running and was
+  killed by hand. No timeout, tolerance or gate was loosened. See
+  `docs/agents/handoff.md` and `.local/issues-hit.md`. `make check-fast`
+  and `make validate QUICK=1` are green (31/31).
+
+
 ### Mamba-3 tiny-LM card, row D1: variant and bounds, no new run
 
 - `results/mamba3-tiny-lm.md` gains a `variant` / `bounds` section read
