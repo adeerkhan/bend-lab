@@ -30,6 +30,22 @@ Command: `make mamba3-tiny-lm` (`reference/test_mamba3_tiny_lm_run.py`)
 | held-out token accuracy | **0.3147** (1279/4064) | **0.3147** (1279/4064) |
 | final weights (19 per-tensor sums of squares), worst rel | 7.858e-06 | reference |
 
+## Variant and bounds (read from the run record, no new run)
+
+- `variant` (`results/latest/mamba3-tiny-lm.json`, from `make experiment
+  TASK=mamba3-tiny-lm`, 2026-11-16): trainer `bend`, lane `cpu`, threads
+  `unavailable` (the runtime default), Bend `2.0.38`, batch 1, positions 128.
+- `bounds`: **unavailable**. The task declares no stage split (there is no
+  plumbing program for this two-layer LM), so no per-stage floor exists; the
+  run page prints "none declared: this task writes no stage split". A
+  floor would need a measured plumbing bench of the trainer; that is not
+  measured here, so it is not zero and not an estimate.
+- Run page: `results/mamba3-tiny-lm-page.txt`, rendered with `make report
+  TASK=mamba3-tiny-lm`; the record is
+  `results/raw/mamba3-tiny-lm-20261116T150311Z.json`. The page repeats the
+  numbers above (bend vs the twin at 1e-6 on the loss and bits/byte, exact
+  hits, PASS); no new run or number is added by this section.
+
 ## Against the baselines (the same 4,096 held-out bytes)
 
 - unigram 4.8093 bits/byte; bigram **3.3569** bits/byte (the corpus statistics, unchanged by this run);

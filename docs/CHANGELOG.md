@@ -4,6 +4,17 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### Mamba-3 tiny-LM card, row D1: variant and bounds, no new run
+
+- `results/mamba3-tiny-lm.md` gains a `variant` / `bounds` section read
+  from the C4 run record: trainer bend, lane cpu, threads unavailable,
+  Bend 2.0.38, batch 1, positions 128; `bounds: unavailable` because the
+  task declares no stage split (no plumbing program for this two-layer
+  LM), never a zero or an estimate. The card links the rendered page,
+  the record and the frozen reference; no new run, no new number, no
+  architecture comparison.
+
+
 ### The run record v3, row C4: the tiny-LM page and one gate
 
 - `reference/experiment.py` gains the `mamba3-tiny-lm` task: the two-layer
