@@ -4,6 +4,14 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The correctness campaign, row B1
+
+- `make mamba3-fd` (`reference/test_mamba3_fd.py`): dL/du by autograd
+  through the twin vs central finite differences (delta = 1e-2) on the
+  bumped-input twin at seqlen 4, worst rel 8.6e-05, bound 1e-2.
+  `MAMBA3 FD PASS`.
+
+
 ### The kernel's explanatory cases: T = 1, T = 2, T = 64 (A3)
 
 - `make mamba3-cases` (`reference/test_mamba3_cases.py`) re-derives the

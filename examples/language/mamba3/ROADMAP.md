@@ -284,6 +284,10 @@ tolerance and the command. No lane is silently promoted to the oracle.
 
 ## 6. A correctness campaign
 
+**B1 (2026-11-16).** Finite differences land: at seqlen 4 the autograd
+y-gradient matches the bumped-input twin (delta = 1e-2, worst rel
+8.6e-05, bound 1e-2); `make mamba3-fd` (`MAMBA3 FD PASS`).
+
 - **Finite differences** for the scan and the preprocessing at a few
   coordinates, to catch a sign that happens to cancel in the loss.
 - **State round-trip**: run T tokens, then continue from the returned state;
