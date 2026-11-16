@@ -4,6 +4,23 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The tiny-LM 20-step curve in two lanes (A2)
+
+- `make mamba-bf16-curve` (`reference/test_mamba3_bf16_curve.py`) trains
+  the byte-corpus tiny-LM identically in the CUDA F32 twin lane
+  (explicit t-by-t loop) and the public bf16 `Mamba3` module lane (same
+  data, same seeds 101/102/SEEDX 20261115, same AdamW + clip + warmup /
+  cosine schedule, 20 steps, 127 targets per example). The bf16 curve
+  stays within 5.7e-05 of the F32 curve per step (max at step 19), the
+  gradient norms within 6.7e-05, and both lanes land 512/2540 train
+  hits. The CUDA F32 record agrees with the recorded CPU F32 run
+  (`twin.json`) to 4.8e-07 per step — device is a banner, never a delta.
+  A lane measurement, not a verdict; see `docs/mamba3-tiny-lanes.md`.
+- The gate pins the recorded CUDA F32 curve (deterministic per build),
+  asserts bf16-vs-f32 ≤ 5e-04 (measured 5.7e-05), the hits equality, and
+  finiteness. `MAMBA3 BF16 CURVE PASS`.
+
+
 ### Mamba-3 numerical lanes: the SISO block through four lanes (A1)
 
 - `make mamba3-lanes` (`reference/test_mamba3_lanes.py`) dumps the SISO

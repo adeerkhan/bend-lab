@@ -253,7 +253,15 @@ chunk boundary). At T = 1 the result is the `D + gamma*(q.k)` skip only; at
 T = 2 the state and the shifted term enter; at T = 64 the chunk boundary
 enters. Those three cases explain the whole kernel.
 
-**Status (2026-11-16).** A1 is green and committed: the four lanes at
+**Status (2026-11-16).** A1 and A2 are green and committed: A2 trains the
+byte-corpus tiny-LM identically in the CUDA F32 twin lane and the public
+bf16 module lane (same data, seeds, schedule, 20 steps); the bf16 curve
+stays within 5.7e-05 of the F32 curve per step and both lanes land 512/2540
+train hits — a lane measurement, not a verdict; see
+[`docs/mamba3-tiny-lanes.md`](../../../docs/mamba3-tiny-lanes.md), gated by
+`make mamba-bf16-curve` (`MAMBA3 BF16 CURVE PASS`).
+
+A1 is green and committed: the four lanes at
 T = 1, 2, 4, 8, 16, 64 (forward, kernel backward, module backward) are in
 [`docs/mamba3-lanes.md`](../../../docs/mamba3-lanes.md), gated by
 `make mamba3-lanes` (`MAMBA3 LANES PASS`; ieee ≤ 1e-05 measured 2.6e-06,
