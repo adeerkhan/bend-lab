@@ -13,7 +13,7 @@ What changed for the people who run the lab. Internal refactors are not listed.
   --references frozen --no-latest` (PASS against the frozen reference,
   the command `make validate` runs); the old `mlbend.experiment/1`
   records render with `reference/report_run.py` (checked on
-  results/raw/attention-parity-20261023, prints \`task\`, \`run\`, metric
+  results/raw/attention-parity-20261023, prints `task`, `run`, metric
   table, PASS).
 - No experiment, timing number, or bound was changed. Verification runs
   did not commit new raw records; the checked-in 5-seed iris record is
