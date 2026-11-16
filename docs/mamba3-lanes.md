@@ -144,3 +144,20 @@ the correctness campaign, in this file when it lands.
 - The `ieee` lane is the closest this GPU gives to the reference
   recurrence, not a bitwise guarantee.
 - A lane/device/thread/version change is a banner, never a delta.
+
+## The explanatory cases (A3)
+
+The three T that explain the whole kernel.  Same tolerances as the lane
+tables above; the closed forms are the twin's own math written out, so a
+disagreement is a bug, not a lane difference.
+
+| case | what it shows | closed form vs twin | kernel (ieee) vs twin | module (bf16) vs twin |
+|---|---|---|---|---|
+| T = 1 | the result is the `D + gamma*(q.k)` skip only; the SSM term `q @ state^T` is 0 (the initial state is zeros) | 0.000e+00 | 4.842e-08 | 3.642e-03 |
+| T = 2 | the state enters: `state_1 = a_0 * state_0 + x_0 ⊗ (scale_0 * k_0)` with `scale_0 = DT_0*trap_0 + DT_1*(1-trap_1)`; `o_1 = a_1 * q_1 . state_1 + (D + qk_1) * x_1` | 0.000e+00 | 4.842e-08 | 3.454e-03 |
+| T = 64 | one full chunk (`chunk_size=64`): the in-chunk cumulative decay `DA_CS == cumsum(ADT * log2 e)` over the block (kernel vs `torch.cumsum`: 8.517e-08) | 8.517e-08 | 4.049e-07 | 6.495e-03 |
+
+`make mamba3-cases` (`reference/test_mamba3_cases.py`) re-derives all of
+this; `MAMBA3 CASES PASS`.  The closed forms match the twin exactly
+(measured 0.0 on 2026-11-16), which is the expected identity: the twin is
+these closed forms nested in a loop.

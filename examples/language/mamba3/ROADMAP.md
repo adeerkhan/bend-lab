@@ -253,7 +253,13 @@ chunk boundary). At T = 1 the result is the `D + gamma*(q.k)` skip only; at
 T = 2 the state and the shifted term enter; at T = 64 the chunk boundary
 enters. Those three cases explain the whole kernel.
 
-**Status (2026-11-16).** A1 and A2 are green and committed: A2 trains the
+**Status (2026-11-16).** A1–A3 are green and committed. A3: the three
+explanatory cases — T = 1 (`D + gamma*(q.k)` skip), T = 2 (the state
+enters), T = 64 (one full chunk, `DA_CS == cumsum(ADT*log2 e)` at
+8.5e-08) — are in [`docs/mamba3-lanes.md`](../../../docs/mamba3-lanes.md)
+and gated by `make mamba3-cases` (`MAMBA3 CASES PASS`).
+
+A2 trains the
 byte-corpus tiny-LM identically in the CUDA F32 twin lane and the public
 bf16 module lane (same data, seeds, schedule, 20 steps); the bf16 curve
 stays within 5.7e-05 of the F32 curve per step and both lanes land 512/2540

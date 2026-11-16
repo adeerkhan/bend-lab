@@ -4,6 +4,18 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The kernel's explanatory cases: T = 1, T = 2, T = 64 (A3)
+
+- `make mamba3-cases` (`reference/test_mamba3_cases.py`) re-derives the
+  closed forms: at T = 1 the output is the `D + gamma*(q.k)` skip (SSM
+  term is zero); at T = 2 token 0 writes the state and token 1 reads it;
+  at T = 64 (one full chunk) the kernel's in-chunk cumulative decay
+  `DA_CS` equals `cumsum(ADT * log2 e)` (8.5e-08). The twin matches its
+  own closed forms exactly (0.0); the IEEE kernel lane lands within
+  4.1e-07 of the twin; the bf16 module within 6.5e-03. Short table in
+  `docs/mamba3-lanes.md` (the A3 section). `MAMBA3 CASES PASS`.
+
+
 ### The tiny-LM 20-step curve in two lanes (A2)
 
 - `make mamba-bf16-curve` (`reference/test_mamba3_bf16_curve.py`) trains
