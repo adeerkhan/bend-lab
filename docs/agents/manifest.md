@@ -140,6 +140,20 @@ One real record (`diffusion-vit`, 2026-10-31), trimmed to the new fields:
 loss/backward/optimizer) sum to the step. The shares are the reader's: 166 /
 486.333 = 34.1 % for the forward.
 
+### Bounds: the sidecar and the moved floor
+
+A task's floors live in two places: the record keeps the copy it was made
+with (evidence), and `results/bounds-<task>.json` is the current declaration
+(a fixed formula has to reach every page without re-running the task).
+`bounds_for` merges them per stage path: the sidecar wins for the paths it
+declares, and the record's own copy covers the rest.
+
+A sidecar path that is not a stage of this run is a **moved floor** — the
+stage moved or the sidecar is stale. It is refused: dropped from the
+declaration, the refusal printed once naming the sidecar and the path, and
+every other path still scores. A floor that silently does nothing is worse
+than none. `reference/test_bounds_for.py` pins the semantics.
+
 ## Peaks: what makes a ceiling usable
 
 `make peaks` writes `results/peaks-<machine>.json` from `bench/peaks`, and the

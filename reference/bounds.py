@@ -250,20 +250,52 @@ def sidecar(task):
     return os.path.join(ROOT, "results", f"bounds-{task}.json")
 
 
+_warned = set()
+
+
 def bounds_for(record):
-    """The bounds of a task: its sidecar (the current declaration) first.
+    """The bounds of a task, per stage path.
 
     A bound is a formula over the task's shapes, not a measurement, so a fixed
-    formula has to reach every page: the record keeps the copy it was made with
-    as evidence, and the page names the sidecar it used. Falling back to the
-    record's own copy would keep a corrected floor invisible until the task was
-    re-run.
+    formula has to reach every page. The sidecar (the current declaration,
+    `results/bounds-<task>.json`) wins per path over the record's own copy:
+    correcting a formula has to reach pages without re-running the task.
+
+    A sidecar path that is not a stage of this run (the stage moved, the task
+    was restructured, the sidecar is stale) is a moved floor: it is refused —
+    the path is dropped, the refusal is printed once naming the sidecar and the
+    path, and every other path still scores. Silently taking effect, or silently
+    scoring nothing, would both be worse than the refusal.
     """
+    recorded = dict(record.get("bounds") or {})
     task = (record.get("task") or {}).get("name")
-    if task and os.path.isfile(sidecar(task)):
-        with open(sidecar(task)) as f:
-            return json.load(f)
-    return record.get("bounds") or {}
+    if not task:
+        return recorded
+    path = sidecar(task)
+    if not os.path.isfile(path):
+        return recorded
+    with open(path) as f:
+        side = json.load(f)
+    known = set(recorded)
+    known |= {row.get("path") for row in (record.get("stages") or [])
+              if isinstance(row, dict) and row.get("path")}
+    if not known:
+        # nothing to check the sidecar against; keep the record's behaviour
+        known = set(side)
+    moved = sorted(set(side) - known)
+    if moved:
+        key = (path, tuple(moved))
+        if key not in _warned:
+            _warned.add(key)
+            print(f"bounds: {os.path.relpath(path, ROOT)} declares "
+                  f"{', '.join(moved)}: no such stage in this run record; "
+                  f"the moved floor is refused", flush=True)
+    merged = dict(recorded)
+    for stage, part in side.items():
+        if stage in moved:
+            continue
+        merged[stage] = part
+    return merged
 
 
 def floor_us(record, path):

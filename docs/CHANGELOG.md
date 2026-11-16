@@ -4,6 +4,25 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The run record v3, row C3: the refusal gates
+
+- Fixture stage: existing behavior pinned by `reference/test_stages.py` —
+  a stage program that prints `the dataset failed` is refused by the
+  capture (`run_program` raises); a normal split is not refused.
+- Moved floor: `reference/bounds.py`'s `bounds_for` merged per stage path
+  with a refusal for sidecar paths that are not stages of this run — the
+  moved floor is dropped, the refusal is printed once naming the sidecar
+  and the path, and every other path still scores. New gate
+  `reference/test_bounds_for.py` (no sidecar / overlap / extends / single
+  moved floor / all-moved sidecar). Existing sidecars are unchanged and
+  still render (`make report TASK=vit-step` shows the same floors).
+- Mismatch banner: new gate `reference/test_against.py` synthesizes two
+  records (cpu -> gpu, one renamed stage, one new stage) and asserts the
+  page prints `mismatch lane: cpu -> gpu`, `lane changed` in every
+  overlapping delta row (never a percentage), `added` for the new stage,
+  `gone` for the vanished one.
+
+
 ### The run record v3, row C2: the one-page report, verified
 
 - `reference/report_run.py` prints Burn's order — header (task,
