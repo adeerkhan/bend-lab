@@ -295,6 +295,14 @@ equal the `gen_tokens` golden. Driver:
 `examples/language/mamba3/probe_mamba3_state.bend`; `make mamba3-state`
 (`MAMBA3 STATE PASS`).
 
+**B3 (2026-11-16).** The angle wrap is now exercised: a synthetic
+sequence with dt_bias filled to 10.0 makes the raw cumsum reach ~44 rad
+(~7 crossings per head; the seeded golden input never crosses, ~0.22 rad
+max). The exact loop matches the twin at angle 1.1e-06 and y 3.6e-07;
+the full-prefix pass and the exact step both emit the twin's 16 tokens
+exactly; the per-step fmod+fix wrap and the cumsum-mod wrap agree.
+`make mamba3-wrap` (`MAMBA3 WRAP PASS`).
+
 - **Finite differences** for the scan and the preprocessing at a few
   coordinates, to catch a sign that happens to cancel in the loss.
 - **State round-trip**: run T tokens, then continue from the returned state;

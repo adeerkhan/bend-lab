@@ -4,6 +4,16 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The correctness campaign, row B3
+
+- `make mamba3-wrap` (`reference/test_mamba3_wrap.py`): a synthetic
+  sequence whose angle cumsum crosses 2pi (~7 crossings per head;
+  dt_bias filled to 10.0, the seeded golden input never crosses). The
+  exact loop matches the twin at angle 1.1e-06 and y 3.6e-07; the
+  full-prefix pass and the exact step both emit the twin's 16 tokens
+  exactly; the two wrap variants agree at F32. `MAMBA3 WRAP PASS`.
+
+
 ### The correctness campaign, row B2
 
 - `make mamba3-state` (`reference/test_mamba3_state.py`): the exact-step
