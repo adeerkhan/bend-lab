@@ -4,6 +4,22 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The run record v3, row C1: schema and docs verified, not rewritten
+
+- The landed schema is `mlbend.experiment/3` (superset of the goal's
+  `schema: 2`; documented in `docs/agents/manifest.md`). Verified on this
+  lane, 2026-11-16: `make experiment TASK=iris-crossval` (5-seed live
+  reference, PASS) and `reference/experiment.py --task vit-step --seeds 0
+  --references frozen --no-latest` (PASS against the frozen reference,
+  the command `make validate` runs); the old `mlbend.experiment/1`
+  records render with `reference/report_run.py` (checked on
+  results/raw/attention-parity-20261023, prints \`task\`, \`run\`, metric
+  table, PASS).
+- No experiment, timing number, or bound was changed. Verification runs
+  did not commit new raw records; the checked-in 5-seed iris record is
+  untouched.
+
+
 ### The correctness campaign, row B6
 
 - `make mamba3-det` (`reference/test_mamba3_det.py`): two separate

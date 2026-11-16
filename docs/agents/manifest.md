@@ -7,7 +7,11 @@ file, and so is `reference/report_run.py`.
 
 The schema is `mlbend.experiment/3`. A reader keys on the fields, not on the
 string: a `1` record has no `stages`, `variant`, `peaks`, `bounds`, `counts` or
-`notes`, and still renders.
+`notes`, and still renders. (The goal text that introduced this row called it
+"schema: 2"; the landed schema is the `3` above — it is a superset of the
+`2` draft's fields, not a downgrade. The `/1` records from before the run
+record's stage split still render: `reference/report_run.py` prints them
+without stages and without floors.)
 
 ## Fields
 
