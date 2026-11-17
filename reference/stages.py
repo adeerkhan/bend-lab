@@ -175,6 +175,7 @@ def capture(cfg, repeats=3):
     """
     spec = cfg["stages"]
     program = spec.get("program", "bench/plumbing/main.bend")
+    repeats = spec.get("repeats", repeats)
     measure = run_program(program, repeats)
     if spec.get("tree") == "glm53":
         stages, counts, notes = glm53_tree(measure)

@@ -109,6 +109,8 @@ run clamps "make mamba3-clamps" "MAMBA3 CLAMPS PASS"
 run canfail "make mamba3-canfail" "MAMBA3 CANFAIL PASS"
 run det "make mamba3-det" "MAMBA3 DET PASS"
 run record-compat "make record-compat" "old and new run records render"
+run oracle-boundary "make oracle-boundary" "PASS: the oracle stays outside the run path"
+run lane-matrix "make lane-matrix" "20/20 compliant"
 
 # C. The other gates
 run versions "make versions" "A review lane is one row"

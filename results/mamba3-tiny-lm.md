@@ -33,12 +33,11 @@ Command: `make mamba3-tiny-lm` (`reference/test_mamba3_tiny_lm_run.py`)
 ## Variant and bounds (read from the run record, no new run)
 
 - `variant` (`results/latest/mamba3-tiny-lm.json`): `bend` / `cpu` / threads `unavailable` / Bend `2.0.38`, batch 1, positions 128.
-- `bounds`: **unavailable**. The task declares no stage split (there is no
-  plumbing program for this two-layer LM), so no per-stage floor exists; the
-  run page prints "none declared: this task writes no stage split". A
-  floor would need a measured plumbing bench of the trainer; that is not
-  measured here, so it is not zero and not an estimate.
-- Run page: `results/mamba3-tiny-lm-page.txt` (`make report TASK=mamba3-tiny-lm`).
+- `bounds`: **available** (`results/bounds-mamba3-tiny-lm.json`; stages from `bench/plumbing_mamba_tiny/main.bend`, median of 1).
+  `run/step` **48585 ms** = forward 3177 ms (6.5%) + loss_backward_opt 45408 ms (93.5%); input <1 ms.
+  The floors are lower bounds on matmul arithmetic only. Achieved percentages near zero say overhead dominates this lane, not that a library kernel is slow; the page's "a faster kernel (upstream)" label is a worklist default, not a diagnosis (ISSUE-108 is a local lever).
+- Run page: `results/mamba3-tiny-lm-page.txt` (`make report TASK=mamba3-tiny-lm`). Record: `results/raw/mamba3-tiny-lm-20261117T140317Z.json`.
+
 ## Against the baselines (the same 4,096 held-out bytes)
 
 - unigram 4.8093 bits/byte; bigram **3.3569** bits/byte (the corpus statistics, unchanged by this run);

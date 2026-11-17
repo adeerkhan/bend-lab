@@ -233,14 +233,17 @@ per-step loss rel `4.3e-07`, worst grad norm rel `1.3e-04`, train hits
 **Done (2026-11-16): B3 and the run page.** The held-out compare and its
 report card are [`results/mamba3-tiny-lm.md`](../../../results/mamba3-tiny-lm.md)
 (6.2476 bits/byte in both lanes, far above the bigram baseline — no LM
-claim). The run's one-page report, rendered once with `make report
+claim). The task now declares stages and bounds: the 2026-11-17 record
+puts 93.5% of a 48.6 s step in backward+optimizer and 6.5% in forward,
+with arithmetic floors around 3 ms — overhead dominates this lane, not a
+slow kernel. The run's one-page report, rendered with `make report
 TASK=mamba3-tiny-lm`, is
 [`results/mamba3-tiny-lm-page.txt`](../../../results/mamba3-tiny-lm-page.txt);
-its record is `results/raw/mamba3-tiny-lm-20261116T150311Z.json` and its
+its record is `results/raw/mamba3-tiny-lm-20261117T140317Z.json` and its
 frozen reference `results/reference/mamba3-tiny-lm.json`. `make validate`
 is the one gate for all of this; the tiny-LM itself is gated by
-`make mamba3-tiny-lm`. The card carries the variant and says `bounds:
-unavailable` (no stage split declared), not a fabricated floor.
+`make mamba3-tiny-lm`. The card carries the variant and the measured
+bounds; nothing is fabricated when a floor is unavailable.
 
 ## 5. Numerical lanes and the kernel truth
 

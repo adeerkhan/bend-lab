@@ -4,6 +4,25 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The tiny-LM task is instrumented (stage split and bounds)
+
+- `bench/plumbing_mamba_tiny/main.bend` times the trainer's own functions:
+  input rows, `tiny_parts` forward, and three `tiny_io_example` steps from
+  the same weights (one step is a third). The task now declares stages
+  (median of one) and `bounds.mamba3_tiny_step` — a lower bound on the five
+  matrix products per forward, explicitly excluding the scan, rope, norms,
+  the embedding scatter, the optimizer and temporaries.
+- The fresh 2026-11-17 record passed with the frozen reference: 20 steps,
+  loss/bits-byte within 1e-6 of the twin, hits exact. Stage split:
+  `run/step` 48,585 ms, forward 3,177 ms (6.5%), backward+optimizer
+  45,408 ms (93.5%). The arithmetic floors are ~1-3 ms, so the worklist's
+  near-zero achieved percentages mean overhead dominates — the page's
+  "a faster kernel" label is a default, not a diagnosis (ISSUE-108).
+- The card's generator now emits variant and bounds from the record, so
+  `make check` regeneration cannot erase them; the D1 card is updated
+  with the measured numbers and the honest interpretation.
+
+
 ### Upstream outcomes: #42 merged, #39 closed, follow-up #44 open
 
 - BendTorch PR #42 was merged into devel `8999c69` and issue #39 closed as

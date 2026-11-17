@@ -172,11 +172,50 @@ def flow64_step(params=413440, rows=128, fe=80, px=64):
     }
 
 
+def mamba3_tiny_step(params=71952, rows=128, d_model=64, d_inner=128,
+                     proj=304, vocab=127):
+    """One step of the two-layer SISO tiny-LM at the plumbing bench's shapes.
+
+    The floor counts only the five matrix products per forward (in_proj and
+    out_proj of both blocks, plus the 127-way head). Each weight is read once
+    per step; the backward is charged at two more forwards and writes the
+    parameters once (a lower bound on the real pass). Excluded by design: the
+    recurrent scan's outer products and rotary angles, the norms, the
+    embedding scatter, the optimizer's own arithmetic, and every temporary a
+    kernel keeps in registers. Reporting a smaller "floor" than these would
+    be a guess, not a bound.
+
+    The 128 rows are one example's positions; targets are the next 127 bytes,
+    so the head is one linear over positions. The embedding table is a lookup,
+    not a dense product, and is charged as bytes read in the two in_projs'
+    input only through `linear`'s x term.
+    """
+    matmuls = [
+        linear(rows, d_model, proj),        # layer 1 in_proj
+        linear(rows, d_model, proj),        # layer 2 in_proj
+        linear(rows, d_inner, d_model),     # layer 1 out_proj
+        linear(rows, d_inner, d_model),     # layer 2 out_proj
+        linear(rows, d_model, vocab),       # head
+    ]
+    fwd = {key: sum(part[key] for part in matmuls) for key in ("read", "write", "flops")}
+    backward = {
+        "read": fwd["read"],
+        "write": params * BYTES,
+        "flops": 2 * fwd["flops"],           # two more forwards' worth of grads
+    }
+    return {
+        "run/step/input": {"read": rows * 1, "write": rows * BYTES, "flops": 0},
+        "run/step/forward": fwd,
+        "run/step/loss_backward_opt": backward,
+    }
+
+
 TASK_BOUNDS = {
     "vit-step": vit_step,
     "diffusion-vit": vit_step,
     "cifar-train": cifar_step,
     "flowers-flow": flow64_step,
+    "mamba3-tiny-lm": mamba3_tiny_step,
 }
 
 

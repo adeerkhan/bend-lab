@@ -1,8 +1,46 @@
 reference/.venv/bin/python reference/report_run.py --task mamba3-tiny-lm 
 task     mamba3-tiny-lm · bend · cpu · threads unavailable · bend 2.0.38 · 28 cpus
-record   main c99da7d (dirty) · seeds 1 · dataset 3f42d3537cfa
-run      1965.153 s for the task · build 6.738 s · reference 9.149 s · fetch 0.000 s warm
-stages   none declared: this task writes no stage split
+record   main 720c998 (dirty) · seeds 1 · dataset 3f42d3537cfa
+run      2151.739 s for the task · build 7.902 s · reference 0.000 s · fetch 0.000 s warm
+stages   48585.0 ms · plumbing bench/plumbing_mamba_tiny/main.bend (median of 1) · one tiny-LM step from the trainer's own functions; three full steps from the same weights are divided by three
+         the task ran about 44 steps at the stage root
+timings  wall from IO.now(); a stage below 1 ms prints <1 ms
+peaks    12.027 GB/s read, 29.178 GB/s written · 10.038 GFLOP/s (threads unrecorded) · the runtime default's thread count · flops at results/bench-matmul.json ([128, 128] F32) · results/peaks-Linux-7.2.14-200.fc44.x86_64-x86_64-with-glibc2.43.json
+         clock: IO.now is milliseconds; a stage below 1 ms prints <1 ms
+         init_params 0 ms once per process (in run/init)
+         rows 0 ms and the matrix conversion 0 ms sit inside step_in
+         parameters 71952
+         no separate target stage: this program builds its input and target in one pass, so the target is inside the input
+         20 steps of AdamW (warmup 5 then cosine 1e-3 -> 1e-4), clip by global norm at 1.0, betas (0.9, 0.999), eps 1e-8, weight_decay 0.01
+         the numbers are what 20 steps of 1e-3 AdamW on 20 examples reach; both lanes sit far above the bigram baseline (3.3569 bits/byte); no language-model claim is made
+         the held-out evaluation is after the last step (each N steps with N = steps); mid-training evaluation is unavailable at this budget
+         the stage split is one step, not the whole run
+         references: frozen from results/reference/mamba3-tiny-lm.json; the reference functions did not run
+
+component                               ms   share    kind   bound  achieved floor ms  gain ms
+----------------------------------------------------------------------------------------------
+run                                48585.0  100.0%    wall       -         -        -        -
+  run/init                              <1    0.0%    once       -         -        -        -
+  run/step                         48585.0  100.0%    wall       -         -        -        -
+    run/step/input                      <1    0.0%    host   bytesunavailable     0.00        *
+    run/step/forward                3177.0    6.5%    wall    both      0.1%     1.62  3175.38
+    run/step/loss_backward_opt     45408.0   93.5%    wall    both      0.0%     3.24 45404.76
+
+
+on device                      48585.0 ms   launches unavailable
+host                                <1 ms
+unaccounted                        0.0 ms   stages that are not split
+unclaimed                     unavailable   kernels no stage claimed
+
+  how much is on the table             48580.1 ms   3 of 4 leaves have a floor
+  host              <1   less host work
+  kernels      48580.1   a faster kernel or a fuser
+
+worklist (what the run could give back, each millisecond once)
+  45404.8 ms  run/step/loss_backward_opt    a faster kernel (upstream)  0.0% of its floor; bend-ml/BendTorch
+   3175.4 ms  run/step/forward              a faster kernel (upstream)  0.1% of its floor; bend-ml/BendTorch
+      0.0 ms  run/init                      less host work            once per process (parameter initialisation)
+  fewer launches            unavailable: the record has no launch count
 
 metric                                    bend                   reference                 delta  ok
 final_loss                             4.33305                     4.33305            -9.889e-07  ok

@@ -23,6 +23,7 @@ model results; the card says what the two numbers are.
 """
 from __future__ import annotations
 
+import glob
 import json
 import os
 import subprocess
@@ -84,19 +85,44 @@ def variant_bounds_lines():
                    f"Bend `{v.get('bend', (record.get('bend') or {}).get('version', '?'))}`, "
                    f"batch {v.get('batch', '?')}, positions {v.get('positions', '?')}")
         source = f"`{os.path.relpath(record_path, ROOT)}`"
+    stages = {e["path"]: e for e in (record or {}).get("stages") or []}
+    declared = (record or {}).get("bounds") or {}
+    source_spec = (record or {}).get("stages_source") or {}
+    if stages and declared and "run/step" in stages:
+        step = stages["run/step"]["ms"]
+        fwd = stages.get("run/step/forward", {}).get("ms", 0.0)
+        bwd = stages.get("run/step/loss_backward_opt", {}).get("ms", 0.0)
+        bounds_lines = [
+            "- `bounds`: **available** (`results/bounds-mamba3-tiny-lm.json`;"
+            f" stages from `{source_spec.get('program', '?')}`,"
+            f" median of {source_spec.get('repeats', '?')}).",
+            f"  `run/step` **{step:.0f} ms** = forward {fwd:.0f} ms"
+            f" ({100 * fwd / max(1e-9, step):.1f}%) + loss_backward_opt"
+            f" {bwd:.0f} ms ({100 * bwd / max(1e-9, step):.1f}%); input <1 ms.",
+            "  The floors are lower bounds on matmul arithmetic only. Achieved"
+            " percentages near zero say overhead dominates this lane, not that a"
+            " library kernel is slow; the page's \"a faster kernel (upstream)\""
+            " label is a worklist default, not a diagnosis (ISSUE-108 is a local"
+            " lever).",
+        ]
+    else:
+        bounds_lines = [
+            "- `bounds`: **unavailable**. The task declares no stage split, so",
+            "  no per-stage floor exists; that is not zero and not an estimate.",
+        ]
     page = os.path.join(ROOT, "results/mamba3-tiny-lm-page.txt")
     page_line = ("Run page: `results/mamba3-tiny-lm-page.txt` (`make report "
                  "TASK=mamba3-tiny-lm`).") if os.path.isfile(page) else \
                 "Run page: unavailable (no rendered page yet)."
+    raw = sorted(glob.glob(os.path.join(ROOT, "results/raw/mamba3-tiny-lm-*.json")))
+    if raw:
+        page_line += (" Record: "
+                      f"`{os.path.relpath(raw[-1], ROOT)}`.")
     return [
         "## Variant and bounds (read from the run record, no new run)",
         "",
         f"- `variant` ({source}): {variant}.",
-        "- `bounds`: **unavailable**. The task declares no stage split (there is no",
-        "  plumbing program for this two-layer LM), so no per-stage floor exists; the",
-        '  run page prints "none declared: this task writes no stage split". A',
-        "  floor would need a measured plumbing bench of the trainer; that is not",
-        "  measured here, so it is not zero and not an estimate.",
+        *bounds_lines,
         f"- {page_line}",
         "",
     ]

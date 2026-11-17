@@ -61,6 +61,13 @@ via `bounds_for` and a stale path is refused; and `reference/test_record_compat.
 renders an old record on every full check so the compatibility claim is a
 measured one, not a sentence in this file.
 
+Rule 3 is now a page as well: `make lane-matrix` reads the committed records
+and writes `results/lane-matrix.md`, a task/lane table with the frozen
+reference and PASS state of each cell (20/20 compliant as generated). It runs
+nothing and invents nothing. `make oracle-boundary` is the static gate for
+rule 1: no task program calls an oracle, the runner's binary runs before its
+reference function, and bend records charge `reference_seconds` separately.
+
 ## What this does not ask for
 
 No ONNX package, no model importer, no new backend and no version bump. The

@@ -1,6 +1,6 @@
 {
   "schema": "mlbend.experiment/3",
-  "created_at": "2026-11-16T15:03:11.750504+00:00",
+  "created_at": "2026-11-17T14:03:17.054886+00:00",
   "task": {
     "name": "mamba3-tiny-lm",
     "description": "the two-layer SISO Mamba-3 tiny-LM on the byte corpus: 20 steps of AdamW on the first 20 train examples, batch 1, 127 next-byte targets per example, two weight-tied blocks, d_model 64, d_state 16",
@@ -32,7 +32,7 @@
     "positions": 128
   },
   "git": {
-    "commit": "c99da7d",
+    "commit": "720c998",
     "branch": "main",
     "dirty": true
   },
@@ -145,27 +145,96 @@
     "numpy": "2.5.4"
   },
   "run": {
-    "build_seconds": 6.738,
-    "seconds_min": 1965.153,
+    "build_seconds": 7.902,
+    "seconds_min": 2151.739,
     "seconds_all": [
-      1965.153
+      2151.739
     ],
     "repeat": 1,
     "fetch_seconds": 0.0,
-    "compute_seconds": 1965.153,
-    "reference_seconds": 9.149,
-    "speed_ratio": 0.005
+    "compute_seconds": 2151.739,
+    "reference_seconds": 0.0,
+    "speed_ratio": 0.0
   },
-  "stages": [],
-  "stages_source": null,
-  "counts": {},
+  "stages": [
+    {
+      "path": "run",
+      "depth": 0,
+      "ms": 48585.0,
+      "kind": "wall"
+    },
+    {
+      "path": "run/init",
+      "depth": 1,
+      "ms": 0.0,
+      "kind": "once"
+    },
+    {
+      "path": "run/step",
+      "depth": 1,
+      "ms": 48585.0,
+      "kind": "wall"
+    },
+    {
+      "path": "run/step/input",
+      "depth": 2,
+      "ms": 0.0,
+      "kind": "host"
+    },
+    {
+      "path": "run/step/forward",
+      "depth": 2,
+      "ms": 3177.0,
+      "kind": "wall"
+    },
+    {
+      "path": "run/step/loss_backward_opt",
+      "depth": 2,
+      "ms": 45408.0,
+      "kind": "wall"
+    }
+  ],
+  "stages_source": {
+    "kind": "plumbing",
+    "program": "bench/plumbing_mamba_tiny/main.bend",
+    "repeats": 1,
+    "note": "one tiny-LM step from the trainer's own functions; three full steps from the same weights are divided by three"
+  },
+  "counts": {
+    "run/step/input": {
+      "rows_ms": 0.0,
+      "from_list_ms": 0.0
+    }
+  },
   "peaks": {},
-  "bounds": {},
+  "bounds": {
+    "run/step/input": {
+      "read": 128,
+      "write": 512,
+      "flops": 0
+    },
+    "run/step/forward": {
+      "read": 486524,
+      "write": 441856,
+      "flops": 16236544
+    },
+    "run/step/loss_backward_opt": {
+      "read": 486524,
+      "write": 287808,
+      "flops": 32473088
+    }
+  },
   "notes": [
+    "clock: IO.now is milliseconds; a stage below 1 ms prints <1 ms",
+    "init_params 0 ms once per process (in run/init)",
+    "rows 0 ms and the matrix conversion 0 ms sit inside step_in",
+    "parameters 71952",
+    "no separate target stage: this program builds its input and target in one pass, so the target is inside the input",
     "20 steps of AdamW (warmup 5 then cosine 1e-3 -> 1e-4), clip by global norm at 1.0, betas (0.9, 0.999), eps 1e-8, weight_decay 0.01",
     "the numbers are what 20 steps of 1e-3 AdamW on 20 examples reach; both lanes sit far above the bigram baseline (3.3569 bits/byte); no language-model claim is made",
     "the held-out evaluation is after the last step (each N steps with N = steps); mid-training evaluation is unavailable at this budget",
-    "the stage split is one step, not the whole run"
+    "the stage split is one step, not the whole run",
+    "references: frozen from results/reference/mamba3-tiny-lm.json; the reference functions did not run"
   ],
   "seed_runs": [
     {
@@ -220,8 +289,8 @@
           "pass": true
         }
       },
-      "run_seconds": 1965.153,
-      "reference_seconds": 9.149
+      "run_seconds": 2151.739,
+      "reference_seconds": 0.0
     }
   ],
   "metrics": {
