@@ -8,7 +8,7 @@ BEND := $(or $(BEND_BIN),$(HOME)/.bend/bin/bend)
 BEND_VERSION := 2.0.38
 BEND_REF := ../bend-ref
 
-.PHONY: setup check laws sync-bend clean lint env env-check release experiment experiments results report trace dash dashboard session unet-metric mamba3-bench mamba3-layer mamba3-step mamba3-train-curve mamba3-varlen mamba3-gqa mamba3-outnorm mamba3-deep mamba3-lanes mamba-bf16-curve mamba3-cases mamba3-fd mamba3-state mamba3-wrap mamba3-clamps mamba3-canfail mamba3-det record-compat oracle-boundary lane-matrix mamba3-tiny-data mamba-vit-emb mamba-vit-fwd mamba-vit-bwd mamba-vit-train glm-step glm-block-step glm-lin-block glm-decode glm-h192-step batch peaks bounds bench plumbing flow flow64 doctor figures select plots sweep sweep-agent
+.PHONY: setup check laws sync-bend clean lint env env-check release experiment experiments results report trace dash dashboard session unet-metric mamba3-bench mamba3-layer mamba3-step mamba3-train-curve mamba3-varlen mamba3-gqa mamba3-outnorm mamba3-deep mamba3-lanes mamba-bf16-curve mamba3-cases mamba3-fd mamba3-state mamba3-wrap mamba3-clamps mamba3-canfail mamba3-det record-compat oracle-boundary lane-matrix pages mamba3-tiny-data mamba-vit-emb mamba-vit-fwd mamba-vit-bwd mamba-vit-train glm-step glm-block-step glm-lin-block glm-decode glm-h192-step batch peaks bounds bench plumbing flow flow64 doctor figures select plots sweep sweep-agent
 
 setup:            ## Bend, Lean and the Python venv
 	scripts/setup.sh
@@ -86,6 +86,13 @@ oracle-boundary:   ## no oracle in the run path (static check + committed record
 
 lane-matrix:       ## the task/lane compliance page, from committed records only
 	$(PY) reference/lane_matrix.py
+
+pages:             ## render every task's latest run page from its committed record
+	@mkdir -p results/pages
+	@for t in $(shell $(PY) -c 'import sys; sys.path.insert(0,"reference"); import experiment; print(" ".join(sorted(experiment.TASKS)))'); do \
+	  $(PY) reference/report_run.py --task $$t > results/pages/$$t.txt || exit 1; \
+	done
+	@echo "rendered results/pages/*.txt"
 
 mamba3-tiny-data:  ## the tiny-LM corpus subset and its Bend read-back (trainer pending)
 	$(PY) reference/test_mamba3_tiny_lm.py

@@ -1,0 +1,13 @@
+task     diffusion-digits · bend · cpu · threads unavailable · bend 2.0.38 · 28 cpus
+record   main 0c45702 (dirty) · seeds 1 · dataset e1b683cc2116
+run      148.399 s for the task · build 77.197 s · reference 12.189 s · fetch 0.002 s
+stages   none declared: this task writes no stage split
+
+metric                                    bend                   reference                 delta  ok
+first_loss                             1.00389                     1.00389            -2.907e-08  ok
+data_mean                             0.307565                    0.307565             4.587e-09  ok
+final_loss                           0.0416787                   0.0444931                     -  ok
+sample_mean                            0.38456                    0.380702                     -  ok
+sample_std                            0.354907                    0.359419                     -  ok
+
+PASS

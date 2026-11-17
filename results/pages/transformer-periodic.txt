@@ -1,0 +1,11 @@
+task     transformer-periodic · bend · cpu · threads unavailable · bend 2.0.38 · 28 cpus
+record   evidence/pinned-data-seeds 1ffe18a (dirty) · seeds 1 · dataset 3fd593d82327
+run      0.026 s for the task · build 6.537 s · reference 0.041 s · fetch 0.000 s warm
+stages   none declared: this task writes no stage split
+
+metric                                    bend                   reference                 delta  ok
+first_loss                             2.35914                     2.35914             6.813e-07  ok
+final_loss                          0.00211434                      0.1351                     -  ok
+accuracy                                     1                      0.9375                0.0625  ok
+
+PASS

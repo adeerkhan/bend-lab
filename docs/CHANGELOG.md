@@ -4,6 +4,19 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### Mechanical: one rendered page per task
+
+- `make pages` renders all 20 tasks' latest records through
+  `reference/report_run.py` into `results/pages/*.txt`, with an index. No
+  task was run and no number changed — the pages are a browsable snapshot
+  of the committed records.
+- BendTorch#36's four-batch UNet run is blocked by the checker's row
+  ceiling: B=4 at 64x64 fails with a stack overflow in `term_higher` on a
+  scratch config, while B=2 checks clean. A 32x32 copy type-checks but
+  needs different model types, so it is not the same run. Recorded on #36
+  rather than presenting a different shape as the effective-batch result.
+
+
 ### Research: the hot loop in the tiny-LM backward
 
 - The block backward was split into `bw_start` (scan) and the preprocessing

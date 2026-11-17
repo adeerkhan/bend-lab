@@ -1,0 +1,9 @@
+task     heart-naive-bayes · bend · cpu · threads unavailable · bend 2.0.38 · 28 cpus
+record   evidence/pinned-data-seeds 1ffe18a (dirty) · seeds 1 · dataset e0771c8c824b
+run      0.009 s for the task · build 46.577 s · reference 0.769 s · fetch 0.001 s
+stages   none declared: this task writes no stage split
+
+metric                                    bend                   reference                 delta  ok
+accuracy                                  0.95                        0.95                     0  ok
+
+PASS

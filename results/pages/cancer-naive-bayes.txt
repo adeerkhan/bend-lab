@@ -1,0 +1,9 @@
+task     cancer-naive-bayes · bend · cpu · threads unavailable · bend 2.0.38 · 28 cpus
+record   evidence/pinned-data-seeds 1ffe18a (dirty) · seeds 1 · dataset 4c35090cb5bf
+run      0.022 s for the task · build 47.051 s · reference 0.535 s · fetch 0.000 s warm
+stages   none declared: this task writes no stage split
+
+metric                                    bend                   reference                 delta  ok
+accuracy                              0.985401                    0.985401            -9.854e-09  ok
+
+PASS

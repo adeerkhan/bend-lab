@@ -1,0 +1,12 @@
+task     flow64-first · bend · cpu · threads unavailable · bend 2.0.38 · 28 cpus
+record   main fdd9a99 (dirty) · seeds 1 · dataset ab9a86820fd8
+run      2.935 s for the task · build 29.989 s · reference 0.317 s · fetch 0.000 s warm
+stages   none declared: this task writes no stage split
+
+metric                                    bend                   reference                 delta  ok
+params                                  413440                      413440                     0  ok
+out_sq                               0.0290745                   0.0290745            -2.097e-08  ok
+step_sq                                 1.0198                      1.0198            -1.948e-06  ok
+euler32_sq                             1.04371                     1.04371            -5.233e-07  ok
+
+PASS

@@ -1,0 +1,49 @@
+task     diffusion-vit · bend · cpu · threads unavailable · bend 2.0.38 · 28 cpus
+record   main 71044e1 (dirty) · seeds 1 · dataset e1b683cc2116
+run      624.838 s for the task · build 99.584 s · reference 0.042 s · fetch 0.001 s
+stages   173.3 ms · plumbing bench/plumbing/main.bend (median of 3) · one step from this program, not the task's whole run
+         the task ran about 3605 steps at the stage root
+timings  wall from IO.now(); a stage below 1 ms prints <1 ms
+peaks    12.027 GB/s read, 29.178 GB/s written · 10.038 GFLOP/s (threads unrecorded) · the runtime default's thread count · flops at results/bench-matmul.json ([128, 128] F32) · results/peaks-Linux-7.2.14-200.fc44.x86_64-x86_64-with-glibc2.43.json
+         clock: IO.now is milliseconds; a stage below 1 ms prints <1 ms
+         init_params 7 ms once per process (in run/init)
+         rows 8 ms and the matrix conversion 0 ms sit inside step_in
+         parameters 100736
+         the stage split is one step, not the whole run
+
+component                               ms   share    kind   bound  achieved floor ms  gain ms
+----------------------------------------------------------------------------------------------
+run                                  173.3  100.0%    wall       -         -        -        -
+  run/init                             7.0    4.0%    once       -         -        -        -
+  run/step                           166.3   96.0%    wall       -         -        -        -
+    run/step/input                     7.0    4.0%    host   bytes      0.1%     0.01     6.99
+    run/step/forward                  63.0   36.3%    wall    both     32.6%    20.55    42.45
+    run/step/target                    1.0    0.6%    host       -         -        -        -
+    run/step/loss_backward_opt        95.3   55.0%    wall    both     43.1%    41.11    54.23
+
+
+on device                        173.3 ms   launches unavailable
+host                              15.0 ms
+unaccounted                        0.0 ms   stages that are not split
+unclaimed                     unavailable   kernels no stage claimed
+
+  how much is on the table               118.7 ms   3 of 5 leaves have a floor
+  host            22.0   less host work
+  kernels         96.7   a faster kernel or a fuser
+
+worklist (what the run could give back, each millisecond once)
+     54.2 ms  run/step/loss_backward_opt    a faster kernel (upstream)  43.1% of its floor; the floor counts matmul flops only; bend-ml/BendTorch
+     42.4 ms  run/step/forward              a faster kernel (upstream)  32.6% of its floor; the floor counts matmul flops only; bend-ml/BendTorch
+      7.0 ms  run/init                      less host work            once per process (parameter initialisation)
+      7.0 ms  run/step/input                less preprocess           rows 8 ms of it
+      1.0 ms  run/step/target               less host work            the target build
+  fewer launches            unavailable: the record has no launch count
+
+metric                                    bend                   reference                 delta  ok
+first_loss                             1.00919                     1.00919            -6.271e-09  ok
+data_mean                             0.307565                    0.307565             4.587e-09  ok
+final_loss                           0.0711534                           -                     -  ok
+sample_mean                           0.295717                           -                     -  ok
+sample_std                            0.339538                           -                     -  ok
+
+PASS

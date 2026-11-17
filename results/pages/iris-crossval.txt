@@ -1,0 +1,11 @@
+task     iris-crossval · bend · cpu · threads unavailable · bend 2.0.38 · 28 cpus
+record   main fdd9a99 (dirty) · seeds 5 (42..46) · dataset 6f608b71a731
+run      0.068 s for the task · build 44.203 s · reference 1.672 s · fetch 0.001 s
+stages   none declared: this task writes no stage split
+
+metric                                    bend                   reference                 delta  ok
+mean_accuracy                 0.930667 ± 0.006            0.930667 ± 0.006  -5.867e-08 ± 1.4e-08  ok
+fold_min                          0.84 ± 0.037                0.84 ± 0.037      -2e-08 ± 1.8e-08  ok
+fold_max                      0.986667 ± 0.018            0.986667 ± 0.018  -1.067e-08 ± 1.5e-08  ok
+
+PASS

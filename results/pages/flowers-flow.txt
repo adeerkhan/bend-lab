@@ -1,0 +1,47 @@
+task     flowers-flow · bend · cpu · threads unavailable · bend 2.0.38 · 28 cpus
+record   main e6d2b10 (dirty) · seeds 1 · dataset 566936b650eb
+run      1209.530 s for the task · build 24.210 s · reference 0.410 s · fetch 0.000 s warm
+stages   162.0 ms · plumbing bench/plumbing_flow64/main.bend (median of 3) · one step of the 64x64 flow, not the run; the input stage is the pair build (noise, mix, tokens)
+         the task ran about 7466 steps at the stage root
+timings  wall from IO.now(); a stage below 1 ms prints <1 ms
+peaks    12.027 GB/s read, 29.178 GB/s written · 10.038 GFLOP/s (threads unrecorded) · the runtime default's thread count · flops at results/bench-matmul.json ([128, 128] F32)
+         clock: IO.now is milliseconds; a stage below 1 ms prints <1 ms
+         init_params 23 ms once per process (in run/init)
+         rows 0 ms and the matrix conversion 1 ms sit inside step_in
+         parameters 413440
+         no separate target stage: this program builds its input and target in one pass, so the target is inside the input
+         the stage split is one step, not the whole run
+
+component                               ms   share    kind   bound  achieved floor ms  gain ms
+----------------------------------------------------------------------------------------------
+run                                  162.0  100.0%    wall       -         -        -        -
+  run/init                            23.0   14.2%    once       -         -        -        -
+  run/step                           139.0   85.8%    wall       -         -        -        -
+    run/step/input                     1.0    0.6%    host   bytes      0.3%     0.00     1.00
+    run/step/forward                  31.0   19.1%    wall    both     34.0%    10.54    20.46
+    run/step/loss_backward_opt       107.0   66.0%    wall    both     19.7%    21.09    85.91
+
+
+on device                        162.0 ms   launches unavailable
+host                              24.0 ms
+unaccounted                        0.0 ms   stages that are not split
+unclaimed                     unavailable   kernels no stage claimed
+
+  how much is on the table               131.4 ms   3 of 4 leaves have a floor
+  host            25.0   less host work
+  kernels        106.4   a faster kernel or a fuser
+
+worklist (what the run could give back, each millisecond once)
+     85.9 ms  run/step/loss_backward_opt    a faster kernel (upstream)  19.7% of its floor; the floor counts matmul flops only; bend-ml/BendTorch
+     23.0 ms  run/init                      less host work            once per process (parameter initialisation)
+     20.5 ms  run/step/forward              a faster kernel (upstream)  34.0% of its floor; the floor counts matmul flops only; bend-ml/BendTorch
+      1.0 ms  run/step/input (from_list)    less conversion           the list-to-matrix build; build the matrix directly
+  fewer launches            unavailable: the record has no launch count
+
+metric                                    bend                   reference                 delta  ok
+params                                  413440                      413440                     0  ok
+legibility_heldout                    0.484633                    0.489027             -0.004394  ok
+ceiling                                 0.5621                      0.5621                     -  ok
+final_loss                            0.291029                           -                     -  ok
+
+PASS

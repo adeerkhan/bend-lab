@@ -1,0 +1,50 @@
+task     glm53-hybrid128 · bend · cpu · threads unavailable · bend 2.0.38 · 28 cpus
+record   main fdd9a99 (dirty) · seeds 1 · dataset 57bd157b3367
+run      1.542 s for the task · build 57.647 s · reference 0.000 s · fetch 0.000 s warm
+stages   1688.3 ms · plumbing bench/plumbing_glm53/main.bend (median of 3) · one training iteration at 128 positions: the batch read and T.Train.step; the four step parts are timed on a fresh state from the same weights
+timings  wall from IO.now(); a stage below 1 ms prints <1 ms
+peaks    12.027 GB/s read, 29.178 GB/s written · 10.038 GFLOP/s (threads unrecorded) · the runtime default's thread count · flops at results/bench-matmul.json ([128, 128] F32) · results/peaks-Linux-7.2.14-200.fc44.x86_64-x86_64-with-glibc2.43.json
+         clock: IO.now is milliseconds; a stage below 1 ms prints <1 ms
+         the trace line measures the batch read and T.Train.step: 1680 ms
+         the four parts sum to 1826 ms against the 1680 ms step (+8.7%); they are timed on a fresh state, so the difference is measurement, not work
+         the three timed steps read rows 0, 1 and 2; split_loss is the loop's first-step loss
+         parameters 74144
+         forward check: reference/test_glm53_mh.py 4/4 (linear 8.84e-08, sparse 1.23e-07, four-block model 1.22e-07 relative, N=8)
+         the 1,638,400-token budget is 12,800 steps, about 3.5 h at the measured 0.99-1.18 s step (an extrapolation, not a run)
+         the stage split is one step, not the whole run
+
+component                               ms   share    kind   bound  achieved floor ms  gain ms
+----------------------------------------------------------------------------------------------
+run                                 1688.3  100.0%    wall       -         -        -        -
+  run/init                             6.0    0.4%    once       -         -        -        -
+  run/train_new                        2.0    0.1%    once       -         -        -        -
+  run/load                              <1    0.0%    host       -         -        -        -
+  run/step                          1680.3   99.5%    wall       -         -        -        -
+    run/step/forward                 757.0   44.8%    wall       -         -        -        -
+    run/step/loss                       <1    0.0%    wall       -         -        -        -
+    run/step/backward               1069.0   63.3%    wall       -         -        -        -
+    run/step/update                     <1    0.0%    wall       -         -        -        -
+
+
+on device                       1688.3 ms   launches unavailable
+host                               8.0 ms
+unaccounted                        0.0 ms   stages that are not split
+unclaimed                     unavailable   kernels no stage claimed
+  unaccounted in step           -145.7 ms   the parts exceed the step: they are timed separately
+
+  how much is on the table   unavailable: no stage declares a floor (make bounds TASK=...)
+
+worklist (what the run could give back, each millisecond once)
+   1069.0 ms  run/step/backward             unavailable               no floor: the task declares no bound for this stage
+    757.0 ms  run/step/forward              unavailable               no floor: the task declares no bound for this stage
+      6.0 ms  run/init                      less host work            once per process (parameter initialisation)
+      2.0 ms  run/train_new                 less host work            once per process (parameter initialisation)
+      0.0 ms  run/step/loss                 unavailable               no floor: the task declares no bound for this stage
+  fewer launches            unavailable: the record has no launch count
+
+metric                                    bend                   reference                 delta  ok
+params                                   74144                       74144                     0  ok
+first_loss                             5.56347                           -                     -  ok
+final_loss                             5.56347                           -                     -  ok
+
+PASS

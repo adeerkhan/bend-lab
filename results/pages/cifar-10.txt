@@ -1,0 +1,13 @@
+task     cifar-10 · bend · cpu · threads unavailable · bend 2.0.38 · 28 cpus
+record   main 7962882 (dirty) · seeds 1 · dataset 80f3ca81e569
+run      60.864 s for the task · build 47.496 s · reference 3.008 s · fetch 0.065 s
+stages   none declared: this task writes no stage split
+
+metric                                    bend                   reference                 delta  ok
+first_loss                             1.00145                     1.00145             -7.65e-08  ok
+data_mean                             0.474855                    0.474855             1.689e-09  ok
+final_loss                             1.01675                     1.01675                     -  ok
+sample_mean                           0.493899                    0.493899                     -  ok
+sample_std                            0.428974                    0.428963                     -  ok
+
+PASS

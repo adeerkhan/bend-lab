@@ -1,0 +1,9 @@
+task     wine-pca · bend · cpu · threads unavailable · bend 2.0.38 · 28 cpus
+record   evidence/pinned-data-seeds 1ffe18a (dirty) · seeds 1 · dataset 7dcde7c70def
+run      4.016 s for the task · build 47.485 s · reference 1.170 s · fetch 0.000 s warm
+stages   none declared: this task writes no stage split
+
+metric                                    bend                   reference                 delta  ok
+explained_variance_ratio                    0.275443                    0.275443             3.956e-07  ok
+
+PASS

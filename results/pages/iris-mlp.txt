@@ -1,0 +1,9 @@
+task     iris-mlp · bend · cpu · threads unavailable · bend 2.0.38 · 28 cpus
+record   evidence/pinned-data-seeds 1ffe18a (dirty) · seeds 1 · dataset 6f608b71a731
+run      0.482 s for the task · build 47.454 s · reference 0.271 s · fetch 0.000 s warm
+stages   none declared: this task writes no stage split
+
+metric                                    bend                   reference                 delta  ok
+accuracy                              0.973333                    0.973333             2.667e-08  ok
+
+PASS

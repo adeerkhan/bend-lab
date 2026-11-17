@@ -1,0 +1,12 @@
+task     diffusion-2d · bend · cpu · threads unavailable · bend 2.0.38 · 28 cpus
+record   main e2f8288 (dirty) · seeds 1 · dataset 6764e1b1dd5f
+run      103.705 s for the task · build 8.961 s · reference 207.300 s · fetch 0.000 s warm
+stages   none declared: this task writes no stage split
+
+metric                                    bend                   reference                 delta  ok
+first_loss                             152.954                     152.954            -1.483e-05  ok
+final_loss                           0.0649613                   0.0569123                     -  ok
+sample_mean                           0.385003                    0.385002                     -  ok
+sample_std                            0.599225                    0.599225                     -  ok
+
+PASS

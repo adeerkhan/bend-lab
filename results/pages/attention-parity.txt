@@ -1,0 +1,9 @@
+task     attention-parity · bend · cpu · threads unavailable · bend 2.0.38 · 28 cpus
+record   evidence/pinned-data-seeds 1ffe18a (dirty) · seeds 1 · dataset 439ef1cd0251
+run      0.001 s for the task · build 0.733 s · reference 0.003 s · fetch 0.000 s warm
+stages   none declared: this task writes no stage split
+
+metric                                    bend                   reference                 delta  ok
+checksum                               1.76295                     1.76295             3.342e-09  ok
+
+PASS
