@@ -4,6 +4,18 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### Upstream after the fetch: PR #42 is mergeable again
+
+- BendTorch devel moved to `4528d08` (AdaIN #43), which made our MaxPool2d
+  PR #42 conflict in the Makefile and CHANGELOG. Rebased our fork branch
+  `feat/maxpool2d` onto it (`6e4e1f2`), keeping both AdaIN's and
+  MaxPool2d's checks and entries; GitHub reports `mergeable=true`.
+  Re-verified: `check-maxpool2d` PASS, `check-adain` PASS, `PROOF.bend
+  --verdict` ALL PROOFS CHECK. Evidence on the PR.
+- bendlang/bend now tags **v2.0.40** upstream; this lab stays on 2.0.38 —
+  a version change is a banner, never a delta.
+
+
 ### The full check's timeout now kills the gate's whole subtree
 
 - `reference/check_all.py`'s `run()` starts each gate in its own process
