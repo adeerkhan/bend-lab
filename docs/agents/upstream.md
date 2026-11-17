@@ -17,8 +17,12 @@ last entry in the ledger. Corrections to the older table:
 - **bend-ml#35 is closed** by `Mat.reshape` in #36; `Mat.rows/cols` stay out.
 - **bendlang/bend#1998, #1980, #1632, #1961 are closed** (completed or
   duplicate). Only #2146, #2147 and #2150 remain open language design asks.
-- **BendTorch#42 (our PR) is open** with the three review blockers addressed
-  on `feat/maxpool2d` `89df7b0`; the evidence is on the PR.
+- **BendTorch#42 (our PR) is open and mergeable** after rebasing `feat/maxpool2d`
+  onto devel `4528d08` (AdaIN #43): head `6e4e1f2`, Makefile/CHANGELOG conflicts
+  resolved keeping both changes; `check-maxpool2d`, `check-adain` and
+  `--verdict` PASS. Evidence is on the PR.
+- **bendlang/bend v2.0.40 is tagged upstream**; this lab stays pinned at 2.0.38 —
+  a version change is a banner, not a delta.
 
 ## Open
 
