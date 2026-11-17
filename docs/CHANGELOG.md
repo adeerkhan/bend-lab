@@ -4,6 +4,32 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### Upstream outcomes: #42 merged, #39 closed, follow-up #44 open
+
+- BendTorch PR #42 was merged into devel `8999c69` and issue #39 closed as
+  completed; nuxyel added the GPU twin, seven mutants and the docs on top.
+- Our follow-up PR #44 guards MaxPool2d's geometry by construction (image
+  as kernel + surplus, stride as stride - 1, following Conv2d), addressing
+  the two gaps left in the limitations. `check-maxpool2d` and
+  `check-gpu-layers` PASS.
+- bendlang/bend#1403 was closed as not worth fixing: literal-Nat matches
+  of thousands of rows cost quadratic checker memory, but a few hundred
+  rows check in ~0.2 s and a fix would grow `bend.ts` past its size cap.
+
+
+### Oracle boundary: two more gates
+
+- `make oracle-boundary` (`reference/test_oracle_boundary.py`): no task
+  program imports or calls NumPy/PyTorch/ONNX Runtime; `evaluate` runs the
+  Bend binary before calling `cfg["reference"]`; committed bend records
+  carry `reference_seconds` as its own field. PASS.
+- `make lane-matrix` (`reference/lane_matrix.py`): generates
+  `results/lane-matrix.md` from the committed records — task, lane, trainer,
+  Bend, schema, seed count, frozen reference and record state. 20/20 cells
+  compliant; no task was run to produce the page. Linked from
+  `docs/agents/oracle-boundary.md`.
+
+
 ### Four rules from Burn, made explicit in bend-lab
 
 - `docs/agents/oracle-boundary.md`: the run path is a compiled Bend binary

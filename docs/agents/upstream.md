@@ -17,10 +17,16 @@ last entry in the ledger. Corrections to the older table:
 - **bend-ml#35 is closed** by `Mat.reshape` in #36; `Mat.rows/cols` stay out.
 - **bendlang/bend#1998, #1980, #1632, #1961 are closed** (completed or
   duplicate). Only #2146, #2147 and #2150 remain open language design asks.
-- **BendTorch#42 (our PR) is open and mergeable** after rebasing `feat/maxpool2d`
-  onto devel `4528d08` (AdaIN #43): head `6e4e1f2`, Makefile/CHANGELOG conflicts
-  resolved keeping both changes; `check-maxpool2d`, `check-adain` and
-  `--verdict` PASS. Evidence is on the PR.
+- **BendTorch#42 merged** into devel `8999c69`; #39 is closed as completed.
+  nuxyel added the `gpu.bend` twin (0 ulps on four shapes), seven mutants and
+  the docs on top. Our follow-up for the two gaps he recorded in
+  `docs/limitations.md` is PR [#44](https://github.com/nuxyel/BendTorch/pull/44):
+  geometry guarded by construction (kernel + surplus, stride - 1), as in
+  Conv2d. `check-maxpool2d` and `check-gpu-layers` PASS on the new head.
+- **bendlang/bend#1403 closed as not worth fixing** by icolas-abril: a Nat
+  match with thousands of literal rows costs quadratic checker memory, but
+  a few hundred rows check in ~0.2 s and a fix would grow `bend.ts` past
+  its size cap; succ-pattern rows check in 0.2 s / 83 MB at 3000 rows.
 - **bendlang/bend v2.0.40 is tagged upstream**; this lab stays pinned at 2.0.38 —
   a version change is a banner, not a delta.
 
