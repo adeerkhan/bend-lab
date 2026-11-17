@@ -139,3 +139,32 @@ not a tolerance change. Fresh lane maxima: ieee 2.490e-06, tf32
 2.392e-03, module 2.396e-02; `MAMBA3 LANES PASS`, check-fast 31/31.
 The full `make check` delta above still stands (the two 1800 s
 timeouts were not retried with any gate change).
+
+## 2026-11-17 — follow-ups after the goal
+
+- **Upstream:** BendTorch PR #42 (our MaxPool2d) merged into devel
+  `8999c69`; #39 closed. nuxyel added the GPU twin (0 ulps at four
+  shapes), seven mutants and the docs. Our follow-up PR #44 guards
+  geometry by construction on both lanes (image as kernel + surplus,
+  stride minus one, Conv2d's convention); `check-maxpool2d` and
+  `check-gpu-layers` PASS. `make laws` reaches ALL PROOFS CHECK but its
+  `fast.bend` defs check fails on `Array.get_unchecked` — reproduced on
+  clean upstream devel, an environment/toolchain mismatch. PR #44 is
+  waiting on the maintainer.
+- **bend-lab #2:** the tiny-LM is instrumented. `make report
+  TASK=mamba3-tiny-lm` now shows stages and bounds from the fresh
+  2026-11-17 record: `run/step` 48,585 ms = forward 3,177 ms (6.5%) +
+  loss_backward_opt 45,408 ms (93.5%); the matmul floors are ~1-3 ms,
+  so overhead dominates this lane — the page's "a faster kernel" label
+  is a worklist default, not a diagnosis. The card generator reads
+  variant+bounds from the record, so regeneration cannot erase them.
+- **bend-lab #3:** `make oracle-boundary` (static run-path check) and
+  `make lane-matrix` (task/lane compliance page, 20/20) are committed;
+  `record-compat` still renders schema /1 and /3 records; check-fast
+  31/31.
+- The compiler issue bendlang/bend#1403 was closed as not worth fixing
+  (literal-Nat match memory; succ-pattern rows are the workaround).
+- **Not done:** the full `make check` was deferred by the user; no
+  full-gate number was recorded for this period. bend-ml#26's round-trip
+  proof and BendTorch#36's four-batch run remain outstanding upstream
+  promises; no ONNX work was added — the run path stays oracle-free.
