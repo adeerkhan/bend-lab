@@ -318,3 +318,26 @@ library operation, and the array-vs-list comparison does not pin the cost
 on bend-ml or BendTorch. The next question is local: which part of that
 scan backward (the recomputed forward, the per-token list indexing, or the
 gradient assembly) accounts for the tens of seconds.
+
+### The hot loop inside that backward (same probe, later run)
+
+The backward was split into its two phases by timing `bw_start` (the scan)
+and `S.backward` (scan + preprocessing weights) separately on the same
+weights, and the per-token in_proj accumulation was timed on its own:
+
+| phase (two blocks unless noted) | measured in one run |
+|---|---|
+| full step (three steps, divided by three) | 99.2 s |
+| scan + preprocessing weights | 158.8 s |
+| scan only | 78.4 s |
+| preprocessing weights only (difference) | 80.4 s |
+| 128 × (outer(dpre, u_t) + flat add over 19,456 cells + transpose matvec) | **52.9 s** |
+
+The synthetic hot loop is 66% of the preprocessing phase in the same run,
+so the dominant cost is the per-token in_proj gradient accumulation into a
+19,456-cell linked list (`pw_fin2` in `mamba3_siso.bend`), not the scan and
+not the optimizer. Absolute times in this table vary by ~3x between runs on
+this machine (other processes using the CPU); only the within-run ratios
+are the result. The loop is our code, not a library op — an upstream issue
+would be a guess until someone measures a Mat-backed version of the same
+accumulation.

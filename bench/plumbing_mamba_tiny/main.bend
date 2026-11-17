@@ -130,11 +130,85 @@ def two_backs(+ps: List<&2, F32>, +toks: List<&2, Nat>,
   +g2 = layer_back(w2, dt2, bb2, cb2, bw2, cw2, D2, wo2, h1, dy)
   (g1 + g2 : F32)
 
+
+# the scan half of the block backward (bw_start), with its own forward;
+# subtracting this from layer_back isolates the preprocessing-weight phase
+def bw_dq(b: S.BW) -> F32:
+  match b:
+    case S.BW{+dq, +dk, +dx, +dqk, +dscale, +dADT, +dD, +dstate,
+        +do_v, +dz, +dW_out, +du}:
+      S.sumsq(dq)
+
+def fwd_bw(f: S.FWD, +D: List<&2, F32>, +wo: List<&2, F32>,
+    +dy: List<&2, F32>) -> F32:
+  match f:
+    case S.FWD{pre, +z, +x, Braw, Craw, dd_dt, dd_A, trap_raw, ang_raw,
+        A, +DT, +ADT, trap, gamma, shift, +scale, Bn, Cn, angle, +q, +k,
+        +qk, +states, +out_v, +y_inner, y}:
+      bw_dq(S.bw_start(z, x, ADT, q, k, qk, scale, states, out_v,
+        y_inner, D, wo, dy, M.pos_n()))
+
+def bw_only(+w: List<&2, F32>, +dt: List<&2, F32>, +bb: List<&2, F32>,
+    +cb: List<&2, F32>, +bw: List<&2, F32>, +cw: List<&2, F32>,
+    +D: List<&2, F32>, +wo: List<&2, F32>,
+    +u: List<&2, F32>, +dy: List<&2, F32>) -> F32:
+  fwd_bw(S.forward(u, w, dt, bb, cb, bw, cw, D, wo, M.pos_n()), D, wo, dy)
+
+# one scan-only backward pass through each block (with its own forward)
+def two_scans(+ps: List<&2, F32>, +toks: List<&2, Nat>,
+    +dy: List<&2, F32>) -> F32:
+  +w1 = S.take_row(ps, M.o_l1_in(), 19456n)
+  +dt1 = S.take_row(ps, M.o_l1_dt(), 4n)
+  +bb1 = S.take_row(ps, M.o_l1_bb(), 64n)
+  +cb1 = S.take_row(ps, M.o_l1_cb(), 64n)
+  +bw1 = S.take_row(ps, M.o_l1_bw(), 16n)
+  +cw1 = S.take_row(ps, M.o_l1_cw(), 16n)
+  +D1 = S.take_row(ps, M.o_l1_d(), 4n)
+  +wo1 = S.take_row(ps, M.o_l1_wo(), 8192n)
+  +w2 = S.take_row(ps, M.o_l2_in(), 19456n)
+  +dt2 = S.take_row(ps, M.o_l2_dt(), 4n)
+  +bb2 = S.take_row(ps, M.o_l2_bb(), 64n)
+  +cb2 = S.take_row(ps, M.o_l2_cb(), 64n)
+  +bw2 = S.take_row(ps, M.o_l2_bw(), 16n)
+  +cw2 = S.take_row(ps, M.o_l2_cw(), 16n)
+  +D2 = S.take_row(ps, M.o_l2_d(), 4n)
+  +wo2 = S.take_row(ps, M.o_l2_wo(), 8192n)
+  +E = S.take_row(ps, M.o_e(), 8128n)
+  +u = S.embed(toks, E, M.pos_n())
+  +s1 = bw_only(w1, dt1, bb1, cb1, bw1, cw1, D1, wo1, u, dy)
+  +y1 = S.block_y(S.forward(u, w1, dt1, bb1, cb1, bw1, cw1, D1, wo1, M.pos_n()))
+  +h1 = S.add_lists(u, y1)
+  +s2 = bw_only(w2, dt2, bb2, cb2, bw2, cw2, D2, wo2, h1, dy)
+  (s1 + s2 : F32)
+
 def mat_add_of(+grad: List<&2, F32>) -> F32:
   a : TA.Mat<71952n, 1n> = TA.Mat.from_list(71952n, 1n, grad)
   b : TA.Mat<71952n, 1n> = TA.Mat.from_list(71952n, 1n, grad)
   c : TA.Mat<71952n, 1n> = mpair_a(TA.Mat.add(71952n, 1n, a, b))
   head_or_one(ml_l(TA.Mat.to_list(71952n, 1n, c)))
+
+
+# the per-token in_proj accumulation in pw_fin2: outer(dpre, u_t) into a
+# 19,456-cell flat list, plus the transpose matvec, repeated for each token
+def pw_hot(+w_in: List<&2, F32>, +dpre: List<&2, F32>,
+    +u_t: List<&2, F32>, +dw: List<&2, F32>) -> F32:
+  +o = S.outer(dpre, u_t)
+  +dw2 = S.add_lists(dw, o)
+  +du = S.matvec_t(w_in, dpre, 304n, 64n)
+  (S.sumsq(dw2) + S.sumsq(du) : F32)
+
+def pw_hot_go(+left: Nat, +w_in: List<&2, F32>, +dpre: List<&2, F32>,
+    +u_t: List<&2, F32>, +dw: List<&2, F32>, +acc: F32) -> F32:
+  match left:
+    case 0n:
+      acc
+    case 1n+p:
+      pw_hot_go(p, w_in, dpre, u_t, dw,
+        (acc + pw_hot(w_in, dpre, u_t, dw) : F32))
+
+def pw_hot_x128(+w_in: List<&2, F32>, +dpre: List<&2, F32>,
+    +u_t: List<&2, F32>, +dw: List<&2, F32>) -> F32:
+  pw_hot_go(128n, w_in, dpre, u_t, dw, 0.0)
 
 def main() -> IO(Unit):
   do IO<Unit>:
@@ -197,4 +271,21 @@ def main() -> IO(Unit):
     t13 : Nat <- IO.now()
     Unit <- show_ms("back_x2_with_fwd", Nat.sub(t13, t12))
     Unit <- show_f32("back_head: ", bk)
+
+    t14 : Nat <- IO.now()
+    +sk : F32 <- IO.pure(F32, two_scans(ps0, tk, dy8192))
+    t15 : Nat <- IO.now()
+    Unit <- show_ms("scan_x2_with_fwd", Nat.sub(t15, t14))
+    Unit <- show_f32("scan_head: ", sk)
+
+    +dpre304 : List<&2, F32> <- IO.pure(List<&2, F32>,
+      ones_row(304n, Nil{}))
+    +u64 : List<&2, F32> <- IO.pure(List<&2, F32>, ones_row(64n, Nil{}))
+    +w19456 : List<&2, F32> <- IO.pure(List<&2, F32>,
+      ones_row(19456n, Nil{}))
+    t16 : Nat <- IO.now()
+    +hk : F32 <- IO.pure(F32, pw_hot_x128(w19456, dpre304, u64, w19456))
+    t17 : Nat <- IO.now()
+    Unit <- show_ms("pw_hot_x128", Nat.sub(t17, t16))
+    Unit <- show_f32("pw_hot_head: ", hk)
     return Unit{}

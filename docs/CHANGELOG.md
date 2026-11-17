@@ -4,6 +4,18 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### Research: the hot loop in the tiny-LM backward
+
+- The block backward was split into `bw_start` (scan) and the preprocessing
+  weights phase: in one run, 78.4 s vs 80.4 s for two blocks. A synthetic
+  128-iteration loop of the per-token in_proj accumulation — outer product
+  plus flat add over 19,456 cells and the transpose matvec — took 52.9 s,
+  66% of that phase. The scan and the optimizer are not the bottleneck; the
+  flat-list weight-gradient accumulation in `pw_fin2` is. Absolute times
+  vary ~3x with CPU contention, so only within-run ratios are claimed.
+  Recorded in `examples/language/mamba3/COMPARISON.md`.
+
+
 ### Research: the tiny-LM step is backward-bound, not optimizer-bound
 
 - The plumbing bench now also times the trainer's three AdamW list walks
