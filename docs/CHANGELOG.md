@@ -4,6 +4,17 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### Lanes gate: the autotune cap follows upstream #997
+
+- `reference/mamba3_lanes.py` now keeps only `num_stages=1` configs. The
+  vendored mamba commit predates state-spaces/mamba#997, which found that
+  stages 2/3 silently corrupt `mamba3_siso_fwd` on Blackwell (sm_120) and
+  that stage 3 can ask for 122384 B of shared memory on a 101376 B GPU.
+  The earlier `<= 2` cap fixed the OOM but allowed an upstream-unsafe
+  config; this one is the documented-correct stage. Fresh lane maxima are
+  unchanged (2.490e-06 / 2.392e-03 / 2.396e-02); `MAMBA3 LANES PASS`.
+
+
 ### Upstream after the fetch: PR #42 is mergeable again
 
 - BendTorch devel moved to `4528d08` (AdaIN #43), which made our MaxPool2d

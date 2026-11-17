@@ -141,6 +141,12 @@ the correctness campaign, in this file when it lands.
   (the F32 vs bf16 training curve) and only then a verdict.
 - It does not compare CPU-Bend against CUDA PyTorch; the Bend port is
   checked against the same twin by `make mamba3` and friends.
+- The dump subprocess caps Triton autotune at `num_stages=1` for every
+  vendored kernel. The vendored commit (`e9594ce`) predates upstream
+  state-spaces/mamba#997: on this sm_120 lane, stages 2 and 3 can silently
+  corrupt the forward and stage 3 can exceed the 101376 B shared-memory
+  limit. The lane maxima above were re-measured with the cap: unchanged
+  (ieee 2.490e-06, tf32 2.392e-03, module 2.396e-02).
 - The `ieee` lane is the closest this GPU gives to the reference
   recurrence, not a bitwise guarantee.
 - A lane/device/thread/version change is a banner, never a delta.

@@ -118,13 +118,16 @@ def dump_twin(T):
 
 
 def _cap_autotune_stages():
-    """Keep autotune configs that fit this GPU's shared memory (101376 B).
+    """Keep only num_stages=1, as upstream state-spaces/mamba#997 requires.
 
-    The vendored autotune lists include num_stages=3 configs that can ask
-    for 122384 B of shared memory; on a loaded GPU Triton selected one and
-    raised OutOfResources under the full check (the gate passed standalone).
-    This is a compile-resource cap, not a numeric tolerance: the dots are
-    unchanged, and the lane bounds are asserted from fresh dumps below.
+    The vendored commit (e9594ce) predates #997's prune callback: on
+    Blackwell (sm_100/103/120) num_stages=2 or 3 silently corrupts
+    mamba3_siso_fwd's outputs, and a stage-3 config can also ask for
+    122384 B against this GPU's 101376 B limit (OutOfResources under a
+    full check). Our first cap (<= 2) fixed the OOM but allowed a config
+    upstream calls wrong; this one keeps only the correct stage.
+    No numeric tolerance is changed; the lane bounds are re-measured from
+    fresh dumps below.
     """
     import mamba_ssm.ops.triton.mamba3.mamba3_siso_fwd as fwd
     import mamba_ssm.ops.triton.mamba3.mamba3_siso_bwd as bwd
@@ -135,7 +138,7 @@ def _cap_autotune_stages():
             obj = getattr(mod, name)
             configs = getattr(obj, "configs", None)
             if isinstance(configs, (list, tuple)):
-                keep = [c for c in configs if (getattr(c, "num_stages", 1) or 1) <= 2]
+                keep = [c for c in configs if (getattr(c, "num_stages", 1) or 1) == 1]
                 if len(keep) != len(configs):
                     try:
                         obj.configs = keep
