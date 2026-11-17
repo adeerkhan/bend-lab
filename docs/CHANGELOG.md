@@ -4,6 +4,18 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### Upstream follow-ups from this pass
+
+- bend-ml#26: proved the one-cell round trip on our fork branch
+  (`feat/mat-roundtrip`, `66bb483`): `roundtrip_one` from `get_after_set`
+  plus list-cons congruence, `--check-only` and `--verdict` PASS. Not a PR
+  — the general n-cell law still needs the counter bits, `new_apart` at
+  each step and a two-sided induction. Reported on #26.
+- BendTorch#36: the four-batch UNet run is blocked by the checker's row
+  ceiling (B=4 at 64x64 overflows `term_higher`; B=2 checks clean; a
+  32x32 copy needs different model types). Reported on the issue.
+
+
 ### Mechanical: one rendered page per task
 
 - `make pages` renders all 20 tasks' latest records through

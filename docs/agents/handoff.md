@@ -168,3 +168,28 @@ timeouts were not retried with any gate change).
   full-gate number was recorded for this period. bend-ml#26's round-trip
   proof and BendTorch#36's four-batch run remain outstanding upstream
   promises; no ONNX work was added — the run path stays oracle-free.
+
+## 2026-11-17 — research and upstream follow-ups
+
+- The tiny-LM's step was decomposed with its own bench: optimizer walks
+  0.06 s/step, array add of the same 71,952 cells 0.02 s, forward 3.1-3.7 s,
+  scan ~7-8 s per two blocks, preprocessing weights ~14-80 s per two
+  blocks depending on machine load. A synthetic 128-iteration loop of the
+  per-token in_proj accumulation (outer + 19,456-cell flat add + transpose
+  matvec) took 52.9 s in one run, two thirds of that phase: the hot loop is
+  our flat-list gradient accumulation in `pw_fin2`, not the scan, the
+  optimizer or a library op. Absolute times vary ~3x with CPU contention;
+  within-run ratios only. `examples/language/mamba3/COMPARISON.md` has the
+  tables and caveats.
+- `make pages` rendered all 20 task pages from committed records into
+  `results/pages/`; no runs were made for them.
+- bend-ml#26: a one-cell round-trip law is proved on the fork branch
+  (`feat/mat-roundtrip` 66bb483); the general law needs counter bits,
+  `new_apart` and two-sided induction. BendTorch#36's four-batch UNet run
+  is blocked by the checker's 16,384-row ceiling; reported on both issues.
+- Full `make check` was not completed: resource-capped runs were stopped
+  externally twice and once timed out on test_cifar with a 4 GiB cap that
+  its 4.34 GiB peak could not fit. At 5 GiB that single gate passes in
+  1:53; the full run was then externally terminated at 171 ok / 0 errors,
+  only `test_vit_checkpoint.py` left unchecked. No gate or timeout was
+  loosened.
