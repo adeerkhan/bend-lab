@@ -4,6 +4,18 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The full check's timeout now kills the gate's whole subtree
+
+- `reference/check_all.py`'s `run()` starts each gate in its own process
+  group and, on the unchanged 1800 s timeout, sends SIGTERM then SIGKILL
+  to the group. A timed-out gate no longer leaves its Bend binary at
+  99% CPU loading the next gates into their own timeouts. The timeout
+  and every gate tolerance are unchanged; a timeout is still a FAIL.
+- Verified with a fixture that spawns a sleeping child: the parent gate
+  prints `timed out after 2s; the process group was killed`, exits 1,
+  and the child PID is gone. `make check-fast` stays 31/31.
+
+
 ### The lanes gate under a loaded GPU: a compile-resource cap
 
 - A full-check run raised `OutOfResources` (Triton autotune selected a

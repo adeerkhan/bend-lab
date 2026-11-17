@@ -4,6 +4,7 @@
 """
 import os
 import re
+import signal
 import subprocess
 import sys
 import time
@@ -64,10 +65,43 @@ def native_binary(path):
 
 
 def run(name, cmd, ok_if=None, timeout=1800, env=None):
+    """One gate. Its subtree gets its own process group so a timeout kills it all.
+
+    A test that spawns a Bend binary leaves that binary running when only its
+    Python parent is killed: two full checks once hit the 1800 s limit and
+    left `.scratch/*.bin` at 99% CPU for half an hour each, loading the next
+    gates into their own timeouts. The limit is unchanged; the kill is new.
+    """
     t0 = time.time()
-    r = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT, env=env or ENV_BUILD, timeout=timeout)
-    out = r.stdout + r.stderr
-    ok = (r.returncode == 0) if ok_if is None else ok_if(out, r.returncode)
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                            text=True, cwd=ROOT, env=env or ENV_BUILD,
+                            start_new_session=True)
+    try:
+        stdout, stderr = proc.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        # kill the whole group, not just the Python parent; SIGKILL after a
+        # short grace in case a grandchild ignores SIGTERM
+        for sig, wait in ((signal.SIGTERM, 2), (signal.SIGKILL, None)):
+            try:
+                os.killpg(proc.pid, sig)
+            except ProcessLookupError:
+                break
+            if wait is not None:
+                try:
+                    proc.wait(timeout=wait)
+                except subprocess.TimeoutExpired:
+                    pass
+        stdout, stderr = proc.communicate()
+        out = (stdout or "") + (stderr or "")
+        results.append(False)
+        print(f"ERROR {name} ({time.time() - t0:.0f}s): timed out after "
+              f"{timeout}s; the process group was killed", flush=True)
+        if out.strip():
+            print("     " + out.strip().replace("\n", "\n     ")[-600:], flush=True)
+        print(f"\n{sum(results)}/{len(results)} checks passed before the timeout", flush=True)
+        sys.exit(1)
+    out = stdout + stderr
+    ok = (proc.returncode == 0) if ok_if is None else ok_if(out, proc.returncode)
     results.append(ok)
     print(f"{'ok  ' if ok else 'ERROR'} {name} ({time.time() - t0:.0f}s)", flush=True)
     if not ok:
