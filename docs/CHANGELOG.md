@@ -4,6 +4,20 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### Research: the tiny-LM step is backward-bound, not optimizer-bound
+
+- The plumbing bench now also times the trainer's three AdamW list walks
+  and one array-style pass over the same 71,952 cells. Measured: optimizer
+  **0.06 s/step**, array add **0.02 s**, forward **3.1 s**, full step
+  **51.7 s**, two block backwards with their forwards **71.8 s**. The scan
+  backward dominates; the list-vs-array substrate difference cannot
+  explain a 50 s step. Numbers, caveats (constant dy in the probe, 45-106 s
+  run-to-run spread) and the local next question are in
+  `examples/language/mamba3/COMPARISON.md`; the tiny-LM card links it.
+- No upstream issue: the expensive code is our explicit backward scan, not
+  a measured library operation.
+
+
 ### The tiny-LM task is instrumented (stage split and bounds)
 
 - `bench/plumbing_mamba_tiny/main.bend` times the trainer's own functions:

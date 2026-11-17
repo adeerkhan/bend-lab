@@ -38,6 +38,12 @@ Command: `make mamba3-tiny-lm` (`reference/test_mamba3_tiny_lm_run.py`)
   The floors are lower bounds on matmul arithmetic only. Achieved percentages near zero say overhead dominates this lane, not that a library kernel is slow; the page's "a faster kernel (upstream)" label is a worklist default, not a diagnosis (ISSUE-108 is a local lever).
 - Run page: `results/mamba3-tiny-lm-page.txt` (`make report TASK=mamba3-tiny-lm`). Record: `results/raw/mamba3-tiny-lm-20261117T140317Z.json`.
 
+The step breakdown itself — forward 3.1 s, full step 51.7 s, AdamW's
+71,952-cell list walks 0.06 s, and two block backwards 71.8 s — is in
+[`examples/language/mamba3/COMPARISON.md`](../examples/language/mamba3/COMPARISON.md).
+The scan backward dominates; the optimizer does not. No upstream issue was
+filed because the expensive code is our explicit scan, not a library op.
+
 ## Against the baselines (the same 4,096 held-out bytes)
 
 - unigram 4.8093 bits/byte; bigram **3.3569** bits/byte (the corpus statistics, unchanged by this run);
