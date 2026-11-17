@@ -3,7 +3,9 @@
 Every experiment writes one JSON: `results/raw/<task>-<stamp>.json` (every run,
 never overwritten) and `results/latest/<task>.json` (the last one; the NumPy
 trainer writes `results/latest-numpy/`). The report card is a reading of this
-file, and so is `reference/report_run.py`.
+file, and so is `reference/report_run.py`. The boundaries the record keeps — no oracle in the run path, interop at
+build time, lane as a gated dimension, versioned reads — are written down in
+[`oracle-boundary.md`](oracle-boundary.md).
 
 The schema is `mlbend.experiment/3`. A reader keys on the fields, not on the
 string: a `1` record has no `stages`, `variant`, `peaks`, `bounds`, `counts` or

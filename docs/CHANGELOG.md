@@ -4,6 +4,21 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### Four rules from Burn, made explicit in bend-lab
+
+- `docs/agents/oracle-boundary.md`: the run path is a compiled Bend binary
+  plus weights; the oracle (NumPy/PyTorch/ONNX Runtime) is the check, not a
+  runtime dependency. Foreign-model interop belongs at build time in a
+  separate package; a lane is a typed, gated dimension; records and weights
+  are versioned, never silently rewritten. Burn's docs confirm the shape:
+  models are Rust source, ONNX import is an opt-in build-time crate, and
+  its own correctness checks compare against ONNX Runtime.
+- New gate `make record-compat` (`reference/test_record_compat.py`):
+  renders a committed schema `/1` record and the schema `/3` tiny-LM record,
+  checks task/run/metric/PASS order and that the old record says `none
+  declared` for stages instead of printing a fabricated zero. PASS.
+
+
 ### Lanes gate: the autotune cap follows upstream #997
 
 - `reference/mamba3_lanes.py` now keeps only `num_stages=1` configs. The
