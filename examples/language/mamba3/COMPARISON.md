@@ -282,3 +282,39 @@ is not on it. The full two-layer LM is in the measured table; the variants
 are not. Those are roadmap items, not
 measurements. The comparison is one layer, one batch, eight positions, one
 CPU, one GPU, and one pinned reference commit.
+
+## The tiny-LM step: where the time goes (2026-11-17, CPU lane)
+
+Measured with `bench/plumbing_mamba_tiny/main.bend`, which calls the
+trainer's own functions; the run is a Bend 2.0.38 native binary on this
+machine, no GPU and no Python in the timed region. One diagnostic run
+printed:
+
+| phase | measured | per step |
+|---|---|---|
+| forward (`tiny_parts`, two blocks + head) | 3,076 ms | 3.1 s |
+| full step, three `tiny_io_example` calls | 155,213 ms / 3 | 51.7 s |
+| AdamW's three list walks (m, v, p) over 71,952 cells | 167 ms / 3 | **0.06 s** |
+| one array-style add of the same 71,952 cells (incl. conversions) | 20 ms | 0.02 s |
+| two block backward passes, each with its own forward | 71,814 ms | 71.8 s / 2 blocks |
+
+Subtracting the two forwards from the last row leaves roughly 65 s for the
+two block backwards — the same order as the 51.7 s full step, so the scan
+backward dominates. The optimizer's three passes over all 71,952 weights
+are negligible; an array-style pass over the same cells is ~3x faster than
+the list walks but still only tens of milliseconds, so that difference
+cannot explain a 50 s scan.
+
+These are diagnostics, not a clean partition: the backward probe uses a
+constant upstream dy and includes its own forwards, while the full step
+uses the real loss and dy. The same bench printed 45.8, 106 and 51.7 s per
+step on three runs of this machine; other processes were using the CPU
+during the 106 s run, so no single number here is a stable benchmark. The
+conclusion — backward dominates, optimizer does not — held in every run.
+
+No upstream issue was filed: the expensive code is our explicit backward
+scan in `examples/language/mamba3/mamba3_siso.bend`, not a benchmarked
+library operation, and the array-vs-list comparison does not pin the cost
+on bend-ml or BendTorch. The next question is local: which part of that
+scan backward (the recomputed forward, the per-token list indexing, or the
+gradient assembly) accounts for the tens of seconds.
