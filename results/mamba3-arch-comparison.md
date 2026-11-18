@@ -50,3 +50,54 @@ and the byte-corpus baselines sit at **3.3569** (bigram) and **4.8093**
 Unblock path: a Bend Transformer for this shape, a flowers task/adapter with
 pinned data (Oxford-102 cache), and a session sized for hours of Bend
 runtime per arm. Until then, D is recorded as **unavailable**, not estimated.
+
+## 2026-11-18 — the arm that does exist, and a measured step cost
+
+The "no Transformer arm" reason above is still right for a *pure* attention
+stack, and there is still no Llama trainer at this size in the lab. What does
+exist is an attention-family LM on the same corpus and almost the same
+parameter count: `glm53-hybrid128` (four blocks, three linear and one sparse
+attention, width 32, four heads, **74,144 parameters**) reads the same
+`corpus128-b32` windows at 128 positions, batch 1. The Mamba-3 tiny-LM is
+**71,952 parameters** at 128 positions, batch 1, from the same file. Three
+percent apart in parameters is close enough to time both; it is not close
+enough to compare quality without a matched run.
+
+Same session, 2026-11-18 16:24 to 16:26, load average 2.9, Bend 2.0.38,
+native builds:
+
+| arm | one training step | command |
+|---|---|---|
+| Mamba-3 SISO, two blocks, d_model 64 | **10,860 ms** (32,581 ms / 3) | `bench/plumbing_mamba_tiny/main.bend`, `full_step_x3_ms` |
+| GLM-5.3-Flash hybrid, four blocks, width 32 | **1,245 ms** | `bend examples/language/glm53_flash/train_h128.bend -o /tmp/opencode/glm1.bin`, then `glm1.bin --steps 1 --no-val --no-save --trace` |
+
+The Mamba step is **8.7x** the hybrid's at almost the same parameter count,
+the same 128 positions, the same corpus and the same machine, minutes apart.
+It is not the optimizer (32 ms / 3) and not the input (0 ms): the scan phase
+accounts for 8,972 ms of the 10,860, with the per-token preprocessing inside
+that noise now. This is a **cost** comparison only: the two losses (4.838 and
+5.563) sit on different output vocabularies and are not comparable.
+
+What it does not answer, and what would:
+
+1. **Quality at equal tokens.** One pass of the corpus is 409,600 bytes =
+   3,200 windows of 128: about 9.7 h for Mamba and 1.1 h for the hybrid at
+   today's steps. Same held-out split, same metric (bits/byte), same
+   optimizer and schedule — and the last one is the missing piece: the two
+   trainers use different AdamW settings and schedules today, so the curves
+   would rank the optimizer, not the architecture.
+2. **Quality at equal wall-clock**, which is the practical question: two
+   hours each gives the hybrid about 5,800 steps against Mamba's 660. The
+   8.7x is exactly what that measures.
+3. **The asymptotic claim.** Mamba's case is cost linear in sequence length
+   against attention's quadratic, and 128 positions is where attention is
+   cheapest. A step-cost curve at 128, 256 and 512 positions for both arms
+   would test the reason to use Mamba at all; it is three rebuilds per arm
+   (the shapes are type-level) and one step each.
+
+For reference, the pretrained SmolLM2 models in `nuxyel/llama.bend`
+(134.5M to 1.7B parameters, trained by Hugging Face on the order of a
+trillion tokens, BPE) are not a comparison point for either arm here: a
+different scale, a different tokenizer, and a repository that is inference
+only. Its 76 ms per token at 135M on one thread measures *that engine*
+against llama.cpp (2.6x to 3.9x slower), not Llama against Mamba.

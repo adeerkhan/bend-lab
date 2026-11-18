@@ -2737,3 +2737,17 @@ steps.
   differences. It is exactly 0 only if the layout and the add order are the
   same. `bench/mamba_tiny_accum/main.bend` does that now, and the trainer's
   helpers (`acc_outer`, `arr_dW`) are the ones it measures.
+
+## 2026-11-18 — Mamba-3 and the attention arm, cost measured (quality not)
+
+- Same session, same corpus, same 128 positions, load average 2.9: one
+  Mamba-3 tiny-LM training step is **10,860 ms** at 71,952 parameters, one
+  GLM-5.3-Flash hybrid step is **1,245 ms** at 74,144. The Mamba step is
+  8.7x, and 8,972 ms of it is the two-block scan. This is a cost fact; the
+  two losses are on different vocabularies and do not rank the models.
+- `nuxyel/llama.bend` is an inference engine for pretrained SmolLM2, not a
+  trained-from-scratch model and not a Mamba. Its 76 ms/token at 135M is an
+  engine-versus-engine number (against llama.cpp, transformers, candle), so
+  nothing in it answers Llama against Mamba at our budget. The closest arm
+  we own is the GLM hybrid; the quality comparison is one pass each
+  (3,200 steps) with one shared optimizer and schedule, hours not minutes.
