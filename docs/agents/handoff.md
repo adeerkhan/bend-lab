@@ -193,3 +193,18 @@ timeouts were not retried with any gate change).
   1:53; the full run was then externally terminated at 171 ok / 0 errors,
   only `test_vit_checkpoint.py` left unchecked. No gate or timeout was
   loosened.
+
+## 2026-11-18 — #44 merged; #26 blocked on a design question
+
+- BendTorch PR #44 merged into devel `66a1e1e` (MaxPool2d geometry guards);
+  nuxyel folded its CHANGELOG into #42's entry and kept kernel 0 writable
+  (documented; Conv2d shares the shape).
+- `make laws` on the merged tree passes with **Bend 2.0.40** (EXIT=0,
+  2026-11-18). The earlier `Array.get_unchecked` failure was this lab's
+  2.0.38 pin, not the PR. The lab stays on 2.0.38; the version difference
+  is a banner.
+- bend-ml#26: one-cell law proved (`feat/mat-roundtrip`, 66bb483). The
+  get-returns-array piece was attempted and backed out: `Array.get` needs
+  size-returns-array first, and the parent congruence needs the child as a
+  term while recursion consumes it. The question (Get carrying the array as
+  data, or a rewrite order) is on the issue; no partial lemma committed.

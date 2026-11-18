@@ -4,6 +4,23 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### #44 merged; #26's next piece needs a design answer
+
+- BendTorch PR #44 is merged into devel `66a1e1e`; nuxyel folded its
+  CHANGELOG into #42's entry and documented that a kernel of 0 is still
+  writable (Conv2d has the same shape, so both stay).
+- The `Array.get_unchecked` failure in our earlier `make laws` was this
+  lab's Bend 2.0.38 pin: with Bend 2.0.40 (BendTorch's pin) on the merged
+  tree, `make laws` exits 0 (checked 2026-11-18). The lab keeps 2.0.38;
+  the version difference is a banner, not a code failure.
+- bend-ml#26: the one-cell law is proved on `feat/mat-roundtrip`
+  (66bb483). The next piece, "Array.get hands back its array", was
+  attempted and backed out uncommitted: `Array.get` needs a
+  size-returns-array piece first, and the parent congruence needs the
+  child array as a term while the recursive call consumes it. Asked
+  nuxyel for the intended shape rather than committing a partial lemma.
+
+
 ### #44 merged; the 2.0.38 fast.bend failure was a version banner
 
 - BendTorch PR #44 is merged into devel `66a1e1e` (geometry guards on both
