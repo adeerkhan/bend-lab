@@ -345,18 +345,48 @@ accumulation.
 ### Dedicated measurement: list vs array accumulation
 
 `bench/mamba_tiny_accum/main.bend` runs only the accumulation, 128 tokens of
-a 304-wide dpre against a 64-wide u_t (19,456 cells), with the same values on
-both sides (list and array sums both 318,767,100):
+a 304-wide dpre against a 64-wide u_t (19,456 cells). The list side is
+`outer` + `add_lists`; the array side is `acc_outer`, the helper the trainer
+now uses, with `arr_dW` converting the result back to the list once. The
+values differ per cell, and the program ends by walking both 19,456-cell
+results and printing the sum of the squared differences:
 
-| loop | measured |
+| loop | measured (one run, load average 3.0) |
 |---|---|
-| list `outer` + `add_lists`, 128 tokens | **5,605 ms** |
-| array in-place `Array.get`/`Array.set`, 128 tokens | **35 ms** |
-| `matvec_t` alone, 128 tokens | 115 ms |
+| list `outer` + `add_lists`, 128 tokens | **6,719 ms** |
+| array `acc_outer` + one conversion + the check sum, 128 tokens | **50 ms** |
+| the conversion alone (19,456 cells) | 0 ms (below the 1 ms clock) |
+| sum of squared differences, cell by cell | **0** |
 
-The array form is ~160x faster than the flat-list form for the same
-arithmetic, and both sums agree. This supersedes the contended 52.9 s number
-in the table above (that run had CPU contention; the ratio array/list is the
-stable result). The next step this implies is carrying `dW_in` as an
-`Array<F32>` through `pw_go` and converting to the list once at the end,
-which should be bit-identical because the adds stay in the same order.
+The array form is ~130x faster for the same arithmetic. `cells_diff` is
+exactly 0, which is the claim worth having: the array result is the list
+result cell for cell, not a permutation with the same total. The first
+version of this benchmark wrote the array side in column-major order, so
+both sides summed to the same number (each cell is touched once per token
+either way) while the lists differed; this check is what caught it before
+the trainer was changed.
+
+### The accumulator as an array (2026-11-18)
+
+`G2.dW_in` is an `Array<F32>` now, added in place per token by `acc_outer`
+and rendered as a list once by `arr_dW` at the `to_grad` boundary; the SISO
+and GQA paths both changed. The per-cell add order is unchanged, so the
+result is bit-identical (the check above). The same bench, in one run at
+load average 3.4, timing the trainer's own functions:
+
+| phase (two blocks unless noted) | before (2026-11-17) | after, same process |
+|---|---|---|
+| full step | 48.6 s (recorded run) | 11.9 s |
+| scan + preprocessing weights | 43.2 s / 158.8 s (two runs) | 10.7 s |
+| scan only | 14.8 s / 78.4 s (two runs) | 12.2 s |
+| the old list accumulation alone, 128 tokens | 52.9 s (one run) | 12.6 s |
+
+The last two rows are the point: in the same process, the old accumulation
+loop by itself (12.6 s, one block's worth of tokens) now costs more than the
+entire new backward for two blocks (10.7 s), and the preprocessing phase has
+fallen to the difference between two scans, which came out negative inside
+the noise. Absolute times still move by ~3x with outside CPU load (a game
+held 2.3 cores during the after run), so the before and after columns are
+not one lane; the within-run comparison is. The recorded `mamba3-tiny-lm`
+record is the 2026-11-17 pre-change run; re-recording on an idle machine is
+the next measurement.

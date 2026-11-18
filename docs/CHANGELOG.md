@@ -4,16 +4,40 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
-### Measured: the in_proj accumulation is 160x faster as an array
+### The in_proj accumulator is an array: step 48.6 s to 11.9 s
 
-- `bench/mamba_tiny_accum/main.bend` compares the same 128-token
-  accumulation into 19,456 cells: flat list `outer` + `add_lists`
-  **5,605 ms**, in-place `Array` get/set **35 ms**, `matvec_t` alone
-  **115 ms**; both sides sum to 318,767,100. The array form is the
-  obvious next change to `pw_go` (carry `dW_in` as an Array, convert once),
-  expected bit-identical because the add order is unchanged. Recorded in
-  `examples/language/mamba3/COMPARISON.md`.
+- `G2.dW_in` is an `Array<F32>` in both the SISO and the GQA backward:
+  each token's `outer(dpre, u_t)` is added in place by `acc_outer`, and
+  `arr_dW` renders it as the same list once at the `to_grad` boundary. The
+  per-cell add order is unchanged, so the gradient is bit-identical.
+- `bench/mamba_tiny_accum/main.bend` drives those shipped helpers and ends
+  with a cell-by-cell check of both results: 128 tokens over 19,456 cells
+  cost **6,719 ms** as the old `outer` + `add_lists` and **50 ms** as the
+  array (including the one conversion), with a squared difference of
+  **exactly 0**. The check also caught that the first version of the
+  benchmark wrote the array side in column-major order — same sum, wrong
+  list — before the trainer was touched.
+- In one run at load average 3.4, the old accumulation loop alone
+  (12.6 s) costs more than the whole new backward for two blocks (10.7 s);
+  the step reads 11.9 s against the recorded pre-change 48.6 s, and the
+  preprocessing phase is inside the noise between two scan timings.
+  `examples/language/mamba3/COMPARISON.md` has the table and the caveat:
+  outside CPU load moves absolute times by ~3x, so only the within-run
+  comparison is one lane.
+- `make mamba3`, `make mamba3-gqa` and `make mamba3-tiny-opt` pass; the
+  20-step trainer curve and the final weights match the NumPy twin (worst
+  relative 7.9e-06 against a 1e-03 gate). The `mamba3-tiny-lm` record is
+  still the pre-change run; re-recording on an idle machine is pending.
 
+### Toolchain: `bend update` broke the 2.0.38 pin until its Base was restored
+
+- `bend update` (run to test BendTorch PR #44 on 2.0.40) replaced
+  `~/.bend/bend2/base.bend` and `~/.bend/bend2/effs/` with 2.0.40's files
+  while the 2.0.38 binary was restored afterwards. The hybrid rejected
+  every live `F32.from_nat` call, so `make mamba3` failed on unchanged code.
+  `base.bend`, `bendtt.lean` and `effs/` were restored from the language
+  repository's `v2.0.38` tag; a trivial `F32.from_nat` program and the
+  Mamba-3 gates then pass. The binary itself was never replaced.
 
 ### #44 merged; #26's next piece needs a design answer
 

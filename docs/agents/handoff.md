@@ -208,3 +208,26 @@ timeouts were not retried with any gate change).
   size-returns-array first, and the parent congruence needs the child as a
   term while recursion consumes it. The question (Get carrying the array as
   data, or a rewrite order) is on the issue; no partial lemma committed.
+
+## 2026-11-18 — the tiny-LM backward's hot loop is fixed
+
+- `G2.dW_in` is an `Array<F32>` in `mamba3_siso.bend` (SISO and GQA):
+  `acc_outer` adds each token's `outer(dpre, u_t)` in place, `arr_dW`
+  converts once at `to_grad`. Bit-identical by construction (same cell
+  layout, same add order), checked cell by cell in
+  `bench/mamba_tiny_accum/main.bend` (`cells_diff: 0`).
+- Measured, one process, load average 3.4: the old accumulation loop alone
+  is 12.6 s and the whole new backward for two blocks 10.7 s; the step is
+  11.9 s against the recorded pre-change 48.6 s. The 3.4 load (a game on
+  2.3 cores) makes the before/after a banner; the within-run comparison is
+  the result. `COMPARISON.md` has the table.
+- Gates: `make mamba3` PASS, `make mamba3-gqa` PASS, `make mamba3-tiny-opt`
+  PASS (20-step curve and final weights against the twin, worst rel
+  7.9e-06). The `mamba3-tiny-lm` record is still the 2026-11-17 pre-change
+  run: **re-record it on an idle machine** before quoting a step time for
+  this commit.
+- Toolchain: `bend update` had replaced `~/.bend/bend2/base.bend`,
+  `bendtt.lean` and `effs/` with 2.0.40's files while the 2.0.38 binary
+  stayed, which broke every live `F32.from_nat` call. All three were
+  restored from the `v2.0.38` tag in `../bend`; check ctimes, not only
+  `bend version`. `docs/NOTES.md` has the diagnosis.

@@ -2705,3 +2705,35 @@ steps.
   20 steps for the Mamba-3 arm, 1869.8 s per 160+256 images for the
   Mamba-1 arm, baselines 3.3569 / 4.8093 bits/byte) are in
   `results/mamba3-arch-comparison.md`.
+
+## 2026-11-18 — the 2.0.38 install was a 2.0.40 hybrid, and how it looked
+
+- `make mamba3` failed on code that had not changed (`Error: a live call
+  into the law F32.from_nat`), and a three-line program calling
+  `F32.from_nat` failed the same way. The binary was the 2.0.38 one
+  (`bend version`, md5 against the pre-update copy), but `bend update`,
+  run earlier to test BendTorch PR #44 on 2.0.40, had replaced
+  `~/.bend/bend2/base.bend`, `bendtt.lean` and `effs/` with 2.0.40's
+  files, visible only in their ctimes: every `F32.from_nat` became a law
+  with no implementation.
+- Restoring those three from the language repository's `v2.0.38` tag fixed
+  it; a trivial program prints 3 and all Mamba-3 gates pass. Restoring the
+  binary alone was not enough, and deleting `~/.bend/bend2` is not a
+  re-extract: the compiler reads `BASE_BEND` from that path and dies on the
+  missing file. A version test must check `bend version` **and** the Base/
+  effs ctimes, not the binary alone.
+
+## 2026-11-18 — a permutation with the same sum is not the same gradient
+
+- The first list-vs-array benchmark of the in_proj accumulation wrote the
+  array side in column-major order (fixed column, contiguous dpre) while
+  `outer` is row-major. Every cell is touched once per token either way, so
+  both sides summed to the same number and the 5,605 ms vs 35 ms ratio was
+  right, but the resulting 19,456-cell list was a transpose: shipping that
+  accumulator would have trained with a silently transposed in_proj
+  gradient.
+- The check that catches it is cheap: run both sides on distinct values,
+  convert the array back to a list, and print the sum of squared
+  differences. It is exactly 0 only if the layout and the add order are the
+  same. `bench/mamba_tiny_accum/main.bend` does that now, and the trainer's
+  helpers (`acc_outer`, `arr_dW`) are the ones it measures.

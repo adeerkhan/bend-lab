@@ -155,6 +155,56 @@ def outer_go(+left: Nat, +xs: List<&2, F32>, +ys: List<&2, F32>,
 def outer(+xs: List<&2, F32>, +ys: List<&2, F32>) -> List<&2, F32>:
   outer_go(List.length(&2, F32, xs), xs, ys, Nil{})
 
+# ---- the same accumulation, in place ----
+#
+# outer + add_lists builds a 19,456-cell list for each token and walks it
+# twice; carrying the accumulator as an Array and adding each product in
+# place is the same arithmetic in the same per-cell order (cell (i, j) is
+# i * len(ys) + j, outer's row-major layout), so the list arr_dW gives back
+# is bit-identical to the one the trainer used to build. One pass per token.
+
+def first_of(r: Array<F32> & F32) -> Array<F32>:
+  match r:
+    case Tuple{a, _}:
+      a
+
+def acc_cell_go(+left: Nat, +idx: U32, +xi: F32,
+    +ys: List<&2, F32>, cur: Array<F32> & F32) -> Array<F32> & F32:
+  match left ys:
+    case 0n _:
+      cur
+    case 1n+p Con{+yj, yt}:
+      match cur:
+        case Tuple{a, v}:
+          +j = U32.add(idx, U32.from_nat(1n))
+          acc_cell_go(p, j, xi, yt,
+            Array.get(F32,
+              Array.set(F32, a, idx, (v + (yj * xi : F32) : F32)), j))
+    case _ _:
+      cur
+
+def acc_row(+idx: U32, +xi: F32, +ys: List<&2, F32>,
+    a: Array<F32>) -> Array<F32>:
+  first_of(acc_cell_go(List.length(&2, F32, ys), idx, xi, ys,
+    Array.get(F32, a, idx)))
+
+def acc_outer_go(+left: Nat, +i: Nat, +stride: Nat,
+    +xs: List<&2, F32>, +ys: List<&2, F32>,
+    a: Array<F32>) -> Array<F32>:
+  match left xs:
+    case 0n _:
+      a
+    case 1n+p Con{+xi, xt}:
+      acc_outer_go(p, Nat.add(i, 1n), stride, xt, ys,
+        acc_row(U32.from_nat(Nat.mul(i, stride)), xi, ys, a))
+    case _ _:
+      a
+
+def acc_outer(+xs: List<&2, F32>, +ys: List<&2, F32>,
+    a: Array<F32>) -> Array<F32>:
+  acc_outer_go(List.length(&2, F32, xs), 0n,
+    List.length(&2, F32, ys), xs, ys, a)
+
 # ---------------------------------------------------------------------------
 # scalar functions
 
@@ -484,6 +534,17 @@ def arr_read(+left: Nat, +i: U32, +acc: List<&2, F32>,
         case Tuple{a, v}:
           arr_read(p, U32.add(i, U32.from_nat(1n)), Con{v, acc},
             Array.get(F32, a, U32.add(i, U32.from_nat(1n))))
+
+def rev_of(r: Array<F32> & (List<&2, F32>)) -> List<&2, F32>:
+  match r:
+    case Tuple{_, rev}:
+      rev
+
+# the first n cells as the list they came from: arr_read walks in reverse,
+# so one reverse restores the order
+def arr_dW(+n: Nat, a: Array<F32>) -> List<&2, F32>:
+  List.reverse(&2, F32,
+    rev_of(arr_read(n, U32.from_nat(0n), Nil{}, Array.get(F32, a, 0))))
 
 def scan_rows_arr(+left: Nat, +p: Nat, arr: Array<F32>,
     +state_h: List<&2, F32>, +q_h: List<&2, F32>, +k_h: List<&2, F32>,
@@ -1583,7 +1644,7 @@ def pre_heads(+t: Nat, +dgamma: List<&2, F32>,
 
 
 type G2 is Type:
-  G2{dW_in: List<&2, F32>, du: List<&2, F32>,
+  G2{dW_in: Array<F32>, du: List<&2, F32>,
      ddt_bias: List<&2, F32>, dB_bias: List<&2, F32>,
      dC_bias: List<&2, F32>, dBw: List<&2, F32>,
      dCw: List<&2, F32>, dang_raw: List<&2, F32>,
@@ -1606,7 +1667,7 @@ def cat8(+a: List<&2, F32>, +b: List<&2, F32>,
 def pw_fin2(ph: PHB, rb: RMSG, rc: RMSG,
     +dCn: List<&2, F32>, +dBn: List<&2, F32>,
     +dCb: List<&2, F32>, +dBb: List<&2, F32>,
-    +dangle2: List<&2, F32>, +dW_in: List<&2, F32>,
+    +dangle2: List<&2, F32>, dW_in: Array<F32>,
     +du: List<&2, F32>, +ddt_bias: List<&2, F32>,
     +dB_bias: List<&2, F32>, +dC_bias: List<&2, F32>,
     +dBw: List<&2, F32>, +dCw: List<&2, F32>,
@@ -1622,7 +1683,7 @@ def pw_fin2(ph: PHB, rb: RMSG, rc: RMSG,
     case PHB{dDT, +dtrap, +ddd_dt, +ddd_A, +dang}
         RMSG{+dxb, dwb} RMSG{+dxc, dwc}:
       +dpre = cat8(dz_t, dx_t, dxb, dxc, ddd_dt, ddd_A, dtrap, dang)
-      G2{add_lists(dW_in, outer(dpre, u_t)),
+      G2{acc_outer(dpre, u_t, dW_in),
         push_row(du, matvec_t(w_in, dpre, 304n, 64n)),
         add_lists(ddt_bias, ddd_dt), add_lists(dB_bias, dBb),
         add_lists(dC_bias, dCb), add_lists(dBw, dwb),
@@ -1735,7 +1796,7 @@ def to_grad(g: G2, +do_v: List<&2, F32>, +dz: List<&2, F32>,
         dang_raw, dangle, +dBn, +dCn, +dDT, +dtrap, +ddd_dt, +ddd_A,
         +dBraw, +dCraw, dD, dW_out}:
       GRAD{rev_rows(Nat.div(List.length(&2, F32, du), 64n), du, 64n, Nil{}),
-        dW_in, ddt_bias, dB_bias, dC_bias, dBw, dCw, dD,
+        arr_dW(19456n, dW_in), ddt_bias, dB_bias, dC_bias, dBw, dCw, dD,
         dW_out, do_v, dq, dk, dz, dx, dqk, dscale, dADT,
         rev_rows(Nat.div(List.length(&2, F32, dBn), 16n), dBn, 16n, Nil{}),
         rev_rows(Nat.div(List.length(&2, F32, dCn), 16n), dCn, 16n, Nil{}),
@@ -1766,7 +1827,7 @@ def pw_start(bw: BW, +DT: List<&2, F32>, +trap: List<&2, F32>,
         dt_bias, ang_raw, Braw, Craw, Bn, Cn, angle, q, k, qk,
         gamma, dq, dk, dqk, dscale, Bw, Cw, B_bias, C_bias, w_in,
         u, dz, dx,
-        G2{zline(19456n), Nil{}, zline(4n), zline(64n), zline(64n),
+        G2{Array.new(F32, TA.cap_depth(19456n), 0.0), Nil{}, zline(4n), zline(64n), zline(64n),
           zline(16n), zline(16n), zline(4n), zline(16n), Nil{},
           Nil{}, Nil{}, Nil{}, Nil{}, Nil{}, Nil{}, Nil{}, dD,
           dW_out})
@@ -1979,7 +2040,7 @@ def rms_bwd_gqa(+xs: List<&2, F32>, +ws: List<&2, F32>,
 def pw_fin2_gqa(ph: PHB, rb: RMSG, rc: RMSG,
     +dCn: List<&2, F32>, +dBn: List<&2, F32>,
     +dCb: List<&2, F32>, +dBb: List<&2, F32>,
-    +dangle2: List<&2, F32>, +dW_in: List<&2, F32>,
+    +dangle2: List<&2, F32>, dW_in: Array<F32>,
     +du: List<&2, F32>, +ddt_bias: List<&2, F32>,
     +dB_bias: List<&2, F32>, +dC_bias: List<&2, F32>,
     +dBw: List<&2, F32>, +dCw: List<&2, F32>,
@@ -1996,7 +2057,7 @@ def pw_fin2_gqa(ph: PHB, rb: RMSG, rc: RMSG,
         RMSG{+dxb, dwb} RMSG{+dxc, dwc}:
       +dpre = cat8(dz_t, dx_t, dxb, dxc, ddd_dt, ddd_A, dtrap,
         dang)
-      G2{add_lists(dW_in, outer(dpre, u_t)),
+      G2{acc_outer(dpre, u_t, dW_in),
         push_row(du, matvec_t(w_in, dpre, 340n, 64n)),
         add_lists(ddt_bias, ddd_dt), add_lists(dB_bias, dBb),
         add_lists(dC_bias, dCb), add_lists(dBw, dwb),
@@ -2094,7 +2155,7 @@ def to_grad_gqa(g: G2, +do_v: List<&2, F32>, +dz: List<&2, F32>,
         dang_raw, dangle, +dBn, +dCn, +dDT, +dtrap, +ddd_dt, +ddd_A,
         +dBraw, +dCraw, dD, dW_out}:
       GRAD{rev_rows(Nat.div(List.length(&2, F32, du), 64n), du, 64n, Nil{}),
-        dW_in, ddt_bias, dB_bias, dC_bias, dBw, dCw, dD,
+        arr_dW(21760n, dW_in), ddt_bias, dB_bias, dC_bias, dBw, dCw, dD,
         dW_out, do_v, dq, dk, dz, dx, dqk, dscale, dADT,
         rev_rows(Nat.div(List.length(&2, F32, dBn), 32n), dBn, 32n, Nil{}),
         rev_rows(Nat.div(List.length(&2, F32, dCn), 32n), dCn, 32n, Nil{}),
@@ -2125,7 +2186,7 @@ def pw_start_gqa(bw: BW, +DT: List<&2, F32>, +trap: List<&2, F32>,
         dd_A, dt_bias, ang_raw, Braw, Craw, Bn, Cn, angle, q, k, qk,
         gamma, dq, dk, dqk, dscale, Bw, Cw, B_bias, C_bias, w_in,
         u, dz, dx,
-        G2{zline(21760n), Nil{}, zline(4n), zline(64n), zline(64n),
+        G2{Array.new(F32, TA.cap_depth(21760n), 0.0), Nil{}, zline(4n), zline(64n), zline(64n),
           zline(16n), zline(16n), zline(8n), zline(32n),
           Nil{}, Nil{}, Nil{}, Nil{}, Nil{}, Nil{}, Nil{}, Nil{}, dD,
           dW_out})
