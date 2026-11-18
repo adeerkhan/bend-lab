@@ -371,8 +371,11 @@ the trainer was changed.
 `G2.dW_in` is an `Array<F32>` now, added in place per token by `acc_outer`
 and rendered as a list once by `arr_dW` at the `to_grad` boundary; the SISO
 and GQA paths both changed. The per-cell add order is unchanged, so the
-result is bit-identical (the check above). The same bench, in one run at
-load average 3.4, timing the trainer's own functions:
+result is bit-identical: the check above reports 0, and on the real probe
+`probe_mamba3_grad.bend` built against `275f057` and against this commit
+prints the same 26 lines, `dW_in`'s 19,456 numbers included (`cmp` finds no
+difference). The same bench, in one run at load average 3.4, timing the
+trainer's own functions:
 
 | phase (two blocks unless noted) | before (2026-11-17) | after, same process |
 |---|---|---|

@@ -215,7 +215,9 @@ timeouts were not retried with any gate change).
   `acc_outer` adds each token's `outer(dpre, u_t)` in place, `arr_dW`
   converts once at `to_grad`. Bit-identical by construction (same cell
   layout, same add order), checked cell by cell in
-  `bench/mamba_tiny_accum/main.bend` (`cells_diff: 0`).
+  `bench/mamba_tiny_accum/main.bend` (`cells_diff: 0`), and byte-identical
+  on the real gradient: `probe_mamba3_grad.bend` built at `275f057` and
+  at `c7f533d` prints the same 26 lines (`cmp` clean).
 - Measured, one process, load average 3.4: the old accumulation loop alone
   is 12.6 s and the whole new backward for two blocks 10.7 s; the step is
   11.9 s against the recorded pre-change 48.6 s. The 3.4 load (a game on

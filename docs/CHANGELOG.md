@@ -9,7 +9,10 @@ What changed for the people who run the lab. Internal refactors are not listed.
 - `G2.dW_in` is an `Array<F32>` in both the SISO and the GQA backward:
   each token's `outer(dpre, u_t)` is added in place by `acc_outer`, and
   `arr_dW` renders it as the same list once at the `to_grad` boundary. The
-  per-cell add order is unchanged, so the gradient is bit-identical.
+  per-cell add order is unchanged, so the gradient is bit-identical:
+  `probe_mamba3_grad.bend` built against `275f057` and against the new
+  commit print byte-identical output, the 19,456 `dW_in` numbers
+  included.
 - `bench/mamba_tiny_accum/main.bend` drives those shipped helpers and ends
   with a cell-by-cell check of both results: 128 tokens over 19,456 cells
   cost **6,719 ms** as the old `outer` + `add_lists` and **50 ms** as the
