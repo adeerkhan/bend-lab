@@ -19,10 +19,15 @@ last entry in the ledger. Corrections to the older table:
   duplicate). Only #2146, #2147 and #2150 remain open language design asks.
 - **BendTorch#42 merged** into devel `8999c69`; #39 is closed as completed.
   nuxyel added the `gpu.bend` twin (0 ulps on four shapes), seven mutants and
-  the docs on top. Our follow-up for the two gaps he recorded in
-  `docs/limitations.md` is PR [#44](https://github.com/nuxyel/BendTorch/pull/44):
-  geometry guarded by construction (kernel + surplus, stride - 1), as in
-  Conv2d. `check-maxpool2d` and `check-gpu-layers` PASS on the new head.
+  the docs on top. Our follow-up PR
+  [#44](https://github.com/nuxyel/BendTorch/pull/44) is **merged** into devel
+  `66a1e1e`: geometry guarded by construction (kernel + surplus, stride - 1),
+  as in Conv2d. One size is still writable — a kernel of 0 — and nuxyel
+  documented it rather than changing the API; Conv2d has the same shape.
+- **Bend 2.0.38 vs 2.0.40 is a banner, not a code failure**: our report that
+  `make laws` failed on `Array.get_unchecked` was this lab's pin (2.0.38);
+  on Bend 2.0.40, the version BendTorch pins, the same merged devel passes
+  `make laws` (EXIT=0, checked 2026-11-18). The lab stays on 2.0.38.
 - **bendlang/bend#1403 closed as not worth fixing** by icolas-abril: a Nat
   match with thousands of literal rows costs quadratic checker memory, but
   a few hundred rows check in ~0.2 s and a fix would grow `bend.ts` past

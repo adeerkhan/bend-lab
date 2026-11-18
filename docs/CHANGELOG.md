@@ -4,6 +4,22 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### #44 merged; the 2.0.38 fast.bend failure was a version banner
+
+- BendTorch PR #44 is merged into devel `66a1e1e` (geometry guards on both
+  lanes). nuxyel folded its CHANGELOG into #42's entry and documented that
+  a kernel of 0 is still writable, leaving the API as Conv2d's.
+- `make laws` passes with **Bend 2.0.40** on the merged tree (EXIT=0,
+  2026-11-18); our earlier `Array.get_unchecked` failure came from this
+  lab's 2.0.38 pin, not from the PR. The lab keeps 2.0.38; the version
+  difference is recorded as a banner.
+- bend-ml#26: nuxyel asked for the proof in small PRs (each proved with
+  `--verdict`, no @unsafe, no axioms, law last) and pointed at `ASet.copy`
+  as the pattern for "Array.get hands back its array with the facts as
+  equations". The one-cell law stays on the fork branch; the next piece is
+  the get-returns-array lemma.
+
+
 ### Upstream follow-ups from this pass
 
 - bend-ml#26: proved the one-cell round trip on our fork branch
