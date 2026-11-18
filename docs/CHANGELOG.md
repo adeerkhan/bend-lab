@@ -4,6 +4,17 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### Measured: the in_proj accumulation is 160x faster as an array
+
+- `bench/mamba_tiny_accum/main.bend` compares the same 128-token
+  accumulation into 19,456 cells: flat list `outer` + `add_lists`
+  **5,605 ms**, in-place `Array` get/set **35 ms**, `matvec_t` alone
+  **115 ms**; both sides sum to 318,767,100. The array form is the
+  obvious next change to `pw_go` (carry `dW_in` as an Array, convert once),
+  expected bit-identical because the add order is unchanged. Recorded in
+  `examples/language/mamba3/COMPARISON.md`.
+
+
 ### #44 merged; #26's next piece needs a design answer
 
 - BendTorch PR #44 is merged into devel `66a1e1e`; nuxyel folded its

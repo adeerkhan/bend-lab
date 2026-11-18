@@ -341,3 +341,22 @@ this machine (other processes using the CPU); only the within-run ratios
 are the result. The loop is our code, not a library op — an upstream issue
 would be a guess until someone measures a Mat-backed version of the same
 accumulation.
+
+### Dedicated measurement: list vs array accumulation
+
+`bench/mamba_tiny_accum/main.bend` runs only the accumulation, 128 tokens of
+a 304-wide dpre against a 64-wide u_t (19,456 cells), with the same values on
+both sides (list and array sums both 318,767,100):
+
+| loop | measured |
+|---|---|
+| list `outer` + `add_lists`, 128 tokens | **5,605 ms** |
+| array in-place `Array.get`/`Array.set`, 128 tokens | **35 ms** |
+| `matvec_t` alone, 128 tokens | 115 ms |
+
+The array form is ~160x faster than the flat-list form for the same
+arithmetic, and both sums agree. This supersedes the contended 52.9 s number
+in the table above (that run had CPU contention; the ratio array/list is the
+stable result). The next step this implies is carrying `dW_in` as an
+`Array<F32>` through `pw_go` and converting to the list once at the end,
+which should be bit-identical because the adds stay in the same order.
