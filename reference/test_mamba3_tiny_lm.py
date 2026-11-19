@@ -58,8 +58,8 @@ def main():
     corpus_val = np.fromfile(os.path.join(SRC, "corpus128-val_batch.bin"), dtype=np.uint8)
     train = np.fromfile(os.path.join(TINY, "train_tokens.bin"), dtype=np.uint8)
     held = np.fromfile(os.path.join(TINY, "heldout_tokens.bin"), dtype=np.uint8)
-    good = train.size == 64 * 128 and np.array_equal(train, corpus_train[: train.size])
-    print(f"{'ok  ' if good else 'FAIL'} train split: first 64 corpus examples ({train.size} tokens)")
+    good = train.size == 200 * 128 and np.array_equal(train, corpus_train[: train.size])
+    print(f"{'ok  ' if good else 'FAIL'} train split: first 200 corpus examples ({train.size} tokens)")
     ok = ok and good
     good = held.size == corpus_val.size and np.array_equal(held, corpus_val)
     print(f"{'ok  ' if good else 'FAIL'} held-out split: the corpus's own val file ({held.size} tokens)")

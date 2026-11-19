@@ -43,6 +43,58 @@ def ddir() -> String:
 def steps_n() -> Nat:
   20n
 
+# The run configuration: the steps (the warmup/cosine stretches to it), the
+# peak learning rate in parts per million, and the data directory. The
+# defaults are the gated run; --steps/--lr-ppm/--data change one field each.
+type Run is Type:
+  Run{steps: Nat, lrppm: Nat, data: String}
+
+def run_default() -> Run:
+  Run{steps_n(), 1000n, ddir()}
+
+def nat_or(m: Maybe<&2, Nat>, d: Nat) -> Nat:
+  match m:
+    case Some{x}:
+      x
+    case None{}:
+      d
+
+def run_go(args: List<String>, r: Run) -> Run:
+  match args:
+    case Nil{}:
+      r
+    case Con{a, rest}:
+      match a:
+        case "--steps":
+          match rest:
+            case Nil{}:
+              r
+            case Con{b, more}:
+              match r:
+                case Run{+steps, lrppm, +data}:
+                  run_go(more, Run{nat_or(Nat.read(b), steps), lrppm, data})
+        case "--lr-ppm":
+          match rest:
+            case Nil{}:
+              r
+            case Con{b, more}:
+              match r:
+                case Run{+steps, lrppm, +data}:
+                  run_go(more, Run{steps, nat_or(Nat.read(b), lrppm), data})
+        case "--data":
+          match rest:
+            case Nil{}:
+              r
+            case Con{b, more}:
+              match r:
+                case Run{+steps, lrppm, +data}:
+                  run_go(more, Run{steps, lrppm, b})
+        case _:
+          run_go(rest, r)
+
+def run_of(args: List<String>) -> Run:
+  run_go(args, run_default())
+
 def pos_n() -> Nat:
   128n
 
@@ -161,11 +213,11 @@ def p_go(+left: Nat, +p: List<&2, F32>, +m: List<&2, F32>,
       p_go(p, pt, mt, vt, dec, sc, b2r, ep,
         Con{(((ph * dec : F32) - ((sc * mh : F32) / den : F32)) : F32), acc})
 
-def peak() -> F32:
-  0.001
+def peak_of(+lrppm: Nat) -> F32:
+  (F32.from_nat(lrppm) / 1000000.0 : F32)
 
-def lr_floor() -> F32:
-  0.0001
+def lr_floor_of(+peakv: F32) -> F32:
+  (peakv / 10.0 : F32)
 
 def warmup_n() -> Nat:
   5n
@@ -182,22 +234,23 @@ def wd() -> F32:
 def eps() -> F32:
   0.00000001
 
-def tiny_lr_go(+c: Cmp, +s: Nat) -> F32:
+def tiny_lr_go(+c: Cmp, +s: Nat, +steps: Nat, +peakv: F32) -> F32:
   match c:
     case LT{}:
-      (peak() * (F32.from_nat(Nat.add(s, 1n))
+      (peakv * (F32.from_nat(Nat.add(s, 1n))
         / F32.from_nat(warmup_n()) : F32) : F32)
     case EQ{}:
-      peak()
+      peakv
     case GT{}:
       +t = (F32.from_nat(Nat.sub(s, warmup_n()))
-        / F32.from_nat(Nat.sub(steps_n(), warmup_n())) : F32)
-      (lr_floor() + ((peak() - lr_floor() : F32)
-        * (0.5 + (0.5 * F32.cos((3.141592653589793 * t : F32)) : F32)
-          : F32) : F32) : F32)
+        / F32.from_nat(Nat.sub(steps, warmup_n())) : F32)
+      (lr_floor_of(peakv)
+        + ((peakv - lr_floor_of(peakv) : F32)
+          * (0.5 + (0.5 * F32.cos((3.141592653589793 * t : F32)) : F32)
+            : F32) : F32) : F32)
 
-def tiny_lr(+s: Nat) -> F32:
-  tiny_lr_go(Nat.cmp(s, warmup_n()), s)
+def tiny_lr(+s: Nat, +steps: Nat, +peakv: F32) -> F32:
+  tiny_lr_go(Nat.cmp(s, warmup_n()), s, steps, peakv)
 
 def inv127() -> F32:
   (1.0 / 127.0 : F32)
@@ -514,8 +567,8 @@ type TRES is Type:
 def train_loop(+left: Nat, +t: Nat, +ps: List<&2, F32>,
     +ms: List<&2, F32>, +vs: List<&2, F32>,
     +ls: List<&2, F32>, +ns: List<&2, F32>,
-    +hits: Nat,
-    +toks: List<&2, U32>, acc: Maybe<TS>) -> IO(TRES):
+    +hits: Nat, +toks: List<&2, U32>,
+    +steps: Nat, +peakv: F32, acc: Maybe<TS>) -> IO(TRES):
   match left acc:
     case 0n None{}:
       do IO<TRES>:
@@ -535,9 +588,9 @@ def train_loop(+left: Nat, +t: Nat, +ps: List<&2, F32>,
       do IO<TRES>:
         +tk : List<&2, Nat> <- IO.pure(List<&2, Nat>, bytes_to_nats(
           u32_row(toks, Nat.mul(t, pos_n()), pos_n())))
-        +lr_t : F32 <- IO.pure(F32, tiny_lr(t))
+        +lr_t : F32 <- IO.pure(F32, tiny_lr(t, steps, peakv))
         train_loop(p, (t + 1n : Nat), ps, ms, vs, ls, ns, hits,
-          toks, Some{tiny_io_example(ps, ms, vs, tk, t, lr_t)})
+          toks, steps, peakv, Some{tiny_io_example(ps, ms, vs, tk, t, lr_t)})
     case 1n+p Some{ts}:
       match ts:
         case TS{+p2, +m2, +v2, +loss, +gn, +h}:
@@ -550,11 +603,11 @@ def train_loop(+left: Nat, +t: Nat, +ps: List<&2, F32>,
             +tk : List<&2, Nat> <- IO.pure(List<&2, Nat>,
               bytes_to_nats(
                 u32_row(toks, Nat.mul(t, pos_n()), pos_n())))
-            +lr_t : F32 <- IO.pure(F32, tiny_lr(t))
+            +lr_t : F32 <- IO.pure(F32, tiny_lr(t, steps, peakv))
             train_loop(p, (t + 1n : Nat), p2, m2, v2,
               List.append(&2, F32, ls, Con{loss, Nil{}}),
               List.append(&2, F32, ns, Con{gn, Nil{}}),
-              Nat.add(hits, h), toks,
+              Nat.add(hits, h), toks, steps, peakv,
               Some{tiny_io_example(p2, m2, v2, tk, t, lr_t)})
 
 # ---- the report ----
@@ -639,20 +692,28 @@ def run_eval(res: TRES, +toks: List<&2, U32>) -> IO(Unit):
         show_ev(ev)
         return Unit{}
 
+def run_io(r: Run) -> IO(Unit):
+  match r:
+    case Run{+steps, lrppm, +data}:
+      do IO<Unit>:
+        wf : TA.Mat<71952n, 1n> <- T.Mat.load(71952n, 1n,
+          String.append(data, "/w_init_flat.bin"), 0)
+        tb : List<&2, U32> <- T.read_at(
+          String.append(data, "/train_tokens.bin"), 0,
+          U32.from_nat(Nat.mul(steps, pos_n())))
+        hb : List<&2, U32> <- T.read_at(
+          String.append(data, "/heldout_tokens.bin"), 0, 4096)
+        +toks_all : List<&2, U32> <- IO.pure(List<&2, U32>, tb)
+        +htoks : List<&2, U32> <- IO.pure(List<&2, U32>, hb)
+        +ps0 : List<&2, F32> <- IO.pure(List<&2, F32>,
+          ml_flat(TA.Mat.to_list(71952n, 1n, wf)))
+        res : TRES <- train_loop(steps, 0n, ps0,
+          M.zline(params_n()), M.zline(params_n()),
+          Nil{}, Nil{}, 0n, toks_all, steps, peak_of(lrppm), None{})
+        run_eval(res, htoks)
+        return Unit{}
+
 def main() -> IO(Unit):
   do IO<Unit>:
-    wf : TA.Mat<71952n, 1n> <- T.Mat.load(71952n, 1n,
-      String.append(ddir(), "/w_init_flat.bin"), 0)
-    tb : List<&2, U32> <- T.read_at(
-      String.append(ddir(), "/train_tokens.bin"), 0, 2560)
-    hb : List<&2, U32> <- T.read_at(
-      String.append(ddir(), "/heldout_tokens.bin"), 0, 4096)
-    +toks_all : List<&2, U32> <- IO.pure(List<&2, U32>, tb)
-    +htoks : List<&2, U32> <- IO.pure(List<&2, U32>, hb)
-    +ps0 : List<&2, F32> <- IO.pure(List<&2, F32>,
-      ml_flat(TA.Mat.to_list(71952n, 1n, wf)))
-    res : TRES <- train_loop(steps_n(), 0n, ps0,
-      M.zline(params_n()), M.zline(params_n()),
-      Nil{}, Nil{}, 0n, toks_all, None{})
-    run_eval(res, htoks)
-    return Unit{}
+    args : List<String> <- IO.args()
+    run_io(run_of(args))
