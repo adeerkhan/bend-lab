@@ -1,0 +1,370 @@
+{
+  "schema": "mlbend.experiment/3",
+  "created_at": "2026-11-19T07:54:50.208378+00:00",
+  "task": {
+    "name": "mamba3-tiny-lm",
+    "description": "the two-layer SISO Mamba-3 tiny-LM on the byte corpus: 20 steps of AdamW on the first 20 train examples, batch 1, 127 next-byte targets per example, two weight-tied blocks, d_model 64, d_state 16",
+    "program": "examples/language/mamba3/train_mamba3_tiny.bend",
+    "dataset": {
+      "name": "mamba3-byte-corpus-64",
+      "rows": 64,
+      "features": 128,
+      "source": "examples/language/glm53_flash/data/corpus128-b32 (local file), first 64 train examples, the whole 8-example held-out split, byte-tokenised",
+      "files": [],
+      "bytes": 0,
+      "sha256": "3f42d3537cfa4588b1e33dc1f165492040b09c7e9fe5538f01069875c7843cd6",
+      "expected_sha256": null,
+      "fetch_seconds": 0.0,
+      "cache": "/home/adeerkhan/github/bend/bend-lab/reference/.cache/datasets"
+    },
+    "seed": 0
+  },
+  "seeds": [
+    0
+  ],
+  "trainer": "bend",
+  "variant": {
+    "trainer": "bend",
+    "lane": "cpu",
+    "threads": null,
+    "bend": "2.0.38",
+    "batch": 1,
+    "positions": 128
+  },
+  "git": {
+    "commit": "7a6e04f",
+    "branch": "main",
+    "dirty": false
+  },
+  "bend": {
+    "version": "2.0.38"
+  },
+  "packages": [
+    {
+      "name": "bend-ml-autograd",
+      "version": "0.1.1.0",
+      "hash": "0x0ed882696c6c048c64c66242a999a426"
+    },
+    {
+      "name": "bend-ml-bpe-tokenizer",
+      "version": "0.1.3.0",
+      "hash": "0x559a0abb492a951db15be435191b6d0a"
+    },
+    {
+      "name": "bend-ml-nat-lemmas",
+      "version": "0.1.0.0",
+      "hash": "0xa7aa06c09e97c6747c12cc64bb5203d9"
+    },
+    {
+      "name": "bend-ml-nat-lemmas",
+      "version": "0.1.1.0",
+      "hash": "0x2bbe4207657ea8b1158567d930651411"
+    },
+    {
+      "name": "bend-ml-nat-lemmas",
+      "version": "0.1.2.0",
+      "hash": "0x09966385f3a8541fb22fd49450cdf477"
+    },
+    {
+      "name": "bend-ml-tensor",
+      "version": "0.1.0.0",
+      "hash": "0xf9837737d2c3f58ae1d0c5df42255584"
+    },
+    {
+      "name": "bend-ml-tensor-array",
+      "version": "0.1.20.0",
+      "hash": "0x5c5507d77be847e1e454ec33ab54e087"
+    },
+    {
+      "name": "bend-ml-tensor-gpu",
+      "version": "0.1.5.2",
+      "hash": "0x14e5af4fd3ad6b86b8b16959a9f5960b"
+    },
+    {
+      "name": "bendtorch-gpu",
+      "version": "2.1.0.0",
+      "hash": "0xc222e83b37d53779b42f2125d79e6c55"
+    },
+    {
+      "name": "mlbend-cluster",
+      "version": "0.1.0.0",
+      "hash": "0x0c4fbc7d44d2e3e47247a6c1f12c05e0"
+    },
+    {
+      "name": "mlbend-datasets",
+      "version": "0.1.6.0",
+      "hash": "0x43f00fa69fc1132fa416c0f389d0a503"
+    },
+    {
+      "name": "mlbend-generative",
+      "version": "0.1.1.0",
+      "hash": "0xd48e7ce018b6fa7dc613b629e4260a23"
+    },
+    {
+      "name": "mlbend-huggingface",
+      "version": "0.1.1.0",
+      "hash": "0x9f97047b6ffb57443a7a2a2f0adefcbd"
+    },
+    {
+      "name": "mlbend-metrics",
+      "version": "0.1.0.0",
+      "hash": "0xcffef0c9b0e924c8e74e1d965dfb4106"
+    },
+    {
+      "name": "mlbend-pipeline",
+      "version": "0.1.0.0",
+      "hash": "0xea73a86e2118529cadd597fb3727979b"
+    },
+    {
+      "name": "mlbend-preprocess",
+      "version": "0.1.0.0",
+      "hash": "0xa8182854f375cd61135ccd32993993cc"
+    },
+    {
+      "name": "mlbend-report",
+      "version": "0.1.0.0",
+      "hash": "0x97687e0483c49ddb64fe1ee5f5244927"
+    },
+    {
+      "name": "mlbend-select",
+      "version": "0.1.0.0",
+      "hash": "0xf6594aa2392363c8ab774bc81fb20b9d"
+    },
+    {
+      "name": "mlbend-split",
+      "version": "0.1.1.0",
+      "hash": "0xe8b7953f71ec5b441a90a08e0961269b"
+    }
+  ],
+  "machine": {
+    "platform": "Linux-7.2.15-300.fc45.x86_64-x86_64-with-glibc2.44",
+    "machine": "x86_64",
+    "processor": "",
+    "cpu_count": 28,
+    "python": "3.15.0",
+    "numpy": "2.5.4"
+  },
+  "run": {
+    "build_seconds": 6.248,
+    "seconds_min": 523.27,
+    "seconds_all": [
+      523.27
+    ],
+    "repeat": 1,
+    "fetch_seconds": 0.0,
+    "compute_seconds": 523.27,
+    "reference_seconds": 4.838,
+    "speed_ratio": 0.009
+  },
+  "stages": [
+    {
+      "path": "run",
+      "depth": 0,
+      "ms": 11163.333,
+      "kind": "wall"
+    },
+    {
+      "path": "run/init",
+      "depth": 1,
+      "ms": 0.0,
+      "kind": "once"
+    },
+    {
+      "path": "run/step",
+      "depth": 1,
+      "ms": 11163.333,
+      "kind": "wall"
+    },
+    {
+      "path": "run/step/input",
+      "depth": 2,
+      "ms": 0.0,
+      "kind": "host"
+    },
+    {
+      "path": "run/step/forward",
+      "depth": 2,
+      "ms": 2557.0,
+      "kind": "wall"
+    },
+    {
+      "path": "run/step/loss_backward_opt",
+      "depth": 2,
+      "ms": 8606.333,
+      "kind": "wall"
+    }
+  ],
+  "stages_source": {
+    "kind": "plumbing",
+    "program": "bench/plumbing_mamba_tiny/main.bend",
+    "repeats": 1,
+    "note": "one tiny-LM step from the trainer's own functions; three full steps from the same weights are divided by three"
+  },
+  "counts": {
+    "run/step/input": {
+      "rows_ms": 0.0,
+      "from_list_ms": 0.0
+    }
+  },
+  "peaks": {},
+  "bounds": {
+    "run/step/input": {
+      "read": 128,
+      "write": 512,
+      "flops": 0
+    },
+    "run/step/forward": {
+      "read": 486524,
+      "write": 441856,
+      "flops": 16236544
+    },
+    "run/step/loss_backward_opt": {
+      "read": 486524,
+      "write": 287808,
+      "flops": 32473088
+    }
+  },
+  "notes": [
+    "clock: IO.now is milliseconds; a stage below 1 ms prints <1 ms",
+    "init_params 0 ms once per process (in run/init)",
+    "rows 0 ms and the matrix conversion 0 ms sit inside step_in",
+    "parameters 71952",
+    "no separate target stage: this program builds its input and target in one pass, so the target is inside the input",
+    "20 steps of AdamW (warmup 5 then cosine 1e-3 -> 1e-4), clip by global norm at 1.0, betas (0.9, 0.999), eps 1e-8, weight_decay 0.01",
+    "the numbers are what 20 steps of 1e-3 AdamW on 20 examples reach; both lanes sit far above the bigram baseline (3.3569 bits/byte); no language-model claim is made",
+    "the held-out evaluation is after the last step (each N steps with N = steps); mid-training evaluation is unavailable at this budget",
+    "the stage split is one step, not the whole run"
+  ],
+  "seed_runs": [
+    {
+      "seed": 0,
+      "metrics": {
+        "final_loss": {
+          "bend": 4.3330526,
+          "reference": 4.3330535888671875,
+          "delta": -9.888671872460009e-07,
+          "tolerance": 0.001,
+          "mode": "absolute",
+          "pass": true
+        },
+        "bits_per_byte": {
+          "bend": 6.2476482,
+          "reference": 6.247649822790555,
+          "delta": -1.6227905543786392e-06,
+          "tolerance": 0.02,
+          "mode": "absolute",
+          "pass": true
+        },
+        "heldout_hits": {
+          "bend": 1279.0,
+          "reference": 1279.0,
+          "delta": 0,
+          "tolerance": 0,
+          "mode": "exact",
+          "pass": true
+        },
+        "train_hits": {
+          "bend": 512.0,
+          "reference": 512.0,
+          "delta": 0,
+          "tolerance": 0,
+          "mode": "exact",
+          "pass": true
+        },
+        "w_sumsq": {
+          "bend": 2800.7385859,
+          "reference": 2800.7393162527455,
+          "delta": -0.0007303527454496361,
+          "tolerance": 0.001,
+          "mode": "relative",
+          "pass": true
+        },
+        "heldout_acc": {
+          "bend": 0.31471458,
+          "reference": 0.31471456692913385,
+          "delta": 1.3070866167197437e-08,
+          "tolerance": 0.02,
+          "mode": "absolute",
+          "pass": true
+        }
+      },
+      "run_seconds": 523.27,
+      "reference_seconds": 4.838
+    }
+  ],
+  "metrics": {
+    "final_loss": {
+      "bend": 4.3330526,
+      "reference": 4.3330535888671875,
+      "delta": -9.888671872460009e-07,
+      "tolerance": 0.001,
+      "mode": "absolute",
+      "pass": true,
+      "bend_sd": null,
+      "reference_sd": null,
+      "delta_sd": null,
+      "n_seeds": 1
+    },
+    "bits_per_byte": {
+      "bend": 6.2476482,
+      "reference": 6.247649822790555,
+      "delta": -1.6227905543786392e-06,
+      "tolerance": 0.02,
+      "mode": "absolute",
+      "pass": true,
+      "bend_sd": null,
+      "reference_sd": null,
+      "delta_sd": null,
+      "n_seeds": 1
+    },
+    "heldout_hits": {
+      "bend": 1279.0,
+      "reference": 1279.0,
+      "delta": 0.0,
+      "tolerance": 0,
+      "mode": "exact",
+      "pass": true,
+      "bend_sd": null,
+      "reference_sd": null,
+      "delta_sd": null,
+      "n_seeds": 1
+    },
+    "train_hits": {
+      "bend": 512.0,
+      "reference": 512.0,
+      "delta": 0.0,
+      "tolerance": 0,
+      "mode": "exact",
+      "pass": true,
+      "bend_sd": null,
+      "reference_sd": null,
+      "delta_sd": null,
+      "n_seeds": 1
+    },
+    "w_sumsq": {
+      "bend": 2800.7385859,
+      "reference": 2800.7393162527455,
+      "delta": -0.0007303527454496361,
+      "tolerance": 0.001,
+      "mode": "relative",
+      "pass": true,
+      "bend_sd": null,
+      "reference_sd": null,
+      "delta_sd": null,
+      "n_seeds": 1
+    },
+    "heldout_acc": {
+      "bend": 0.31471458,
+      "reference": 0.31471456692913385,
+      "delta": 1.3070866167197437e-08,
+      "tolerance": 0.02,
+      "mode": "absolute",
+      "pass": true,
+      "bend_sd": null,
+      "reference_sd": null,
+      "delta_sd": null,
+      "n_seeds": 1
+    }
+  },
+  "passed": true
+}

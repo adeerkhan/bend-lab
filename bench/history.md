@@ -15,3 +15,4 @@ and scan heads moved.
 | date | change | a ms/step | b ms/step | rounds | load |
 |---|---|---|---|---|---|
 | 2026-11-18 | list accumulator → array accumulator (FORCE=1, reference) | 10860 | — | 1 | 2.9 |
+| 2026-11-19 | array accumulator, first idle record | 11163 | — | 1 | 0.52 |

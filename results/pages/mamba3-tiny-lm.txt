@@ -1,8 +1,8 @@
 task     mamba3-tiny-lm · bend · cpu · threads unavailable · bend 2.0.38 · 28 cpus
-record   main 720c998 (dirty) · seeds 1 · dataset 3f42d3537cfa
-run      2151.739 s for the task · build 7.902 s · reference 0.000 s · fetch 0.000 s warm
-stages   48585.0 ms · plumbing bench/plumbing_mamba_tiny/main.bend (median of 1) · one tiny-LM step from the trainer's own functions; three full steps from the same weights are divided by three
-         the task ran about 44 steps at the stage root
+record   main 7a6e04f · seeds 1 · dataset 3f42d3537cfa
+run      523.270 s for the task · build 6.248 s · reference 4.838 s · fetch 0.000 s warm
+stages   11163.3 ms · plumbing bench/plumbing_mamba_tiny/main.bend (median of 1) · one tiny-LM step from the trainer's own functions; three full steps from the same weights are divided by three
+         the task ran about 47 steps at the stage root
 timings  wall from IO.now(); a stage below 1 ms prints <1 ms
 peaks    12.027 GB/s read, 29.178 GB/s written · 10.038 GFLOP/s (threads unrecorded) · the runtime default's thread count · flops at results/bench-matmul.json ([128, 128] F32) · results/peaks-Linux-7.2.14-200.fc44.x86_64-x86_64-with-glibc2.43.json
          clock: IO.now is milliseconds; a stage below 1 ms prints <1 ms
@@ -14,30 +14,29 @@ peaks    12.027 GB/s read, 29.178 GB/s written · 10.038 GFLOP/s (threads unreco
          the numbers are what 20 steps of 1e-3 AdamW on 20 examples reach; both lanes sit far above the bigram baseline (3.3569 bits/byte); no language-model claim is made
          the held-out evaluation is after the last step (each N steps with N = steps); mid-training evaluation is unavailable at this budget
          the stage split is one step, not the whole run
-         references: frozen from results/reference/mamba3-tiny-lm.json; the reference functions did not run
 
 component                               ms   share    kind   bound  achieved floor ms  gain ms
 ----------------------------------------------------------------------------------------------
-run                                48585.0  100.0%    wall       -         -        -        -
+run                                11163.3  100.0%    wall       -         -        -        -
   run/init                              <1    0.0%    once       -         -        -        -
-  run/step                         48585.0  100.0%    wall       -         -        -        -
+  run/step                         11163.3  100.0%    wall       -         -        -        -
     run/step/input                      <1    0.0%    host   bytesunavailable     0.00        *
-    run/step/forward                3177.0    6.5%    wall    both      0.1%     1.62  3175.38
-    run/step/loss_backward_opt     45408.0   93.5%    wall    both      0.0%     3.24 45404.76
+    run/step/forward                2557.0   22.9%    wall    both      0.1%     1.62  2555.38
+    run/step/loss_backward_opt      8606.3   77.1%    wall    both      0.0%     3.24  8603.10
 
 
-on device                      48585.0 ms   launches unavailable
+on device                      11163.3 ms   launches unavailable
 host                                <1 ms
 unaccounted                        0.0 ms   stages that are not split
 unclaimed                     unavailable   kernels no stage claimed
 
-  how much is on the table             48580.1 ms   3 of 4 leaves have a floor
+  how much is on the table             11158.5 ms   3 of 4 leaves have a floor
   host              <1   less host work
-  kernels      48580.1   a faster kernel or a fuser
+  kernels      11158.5   a faster kernel or a fuser
 
 worklist (what the run could give back, each millisecond once)
-  45404.8 ms  run/step/loss_backward_opt    a faster kernel (upstream)  0.0% of its floor; bend-ml/BendTorch
-   3175.4 ms  run/step/forward              a faster kernel (upstream)  0.1% of its floor; bend-ml/BendTorch
+   8603.1 ms  run/step/loss_backward_opt    a faster kernel (upstream)  0.0% of its floor; bend-ml/BendTorch
+   2555.4 ms  run/step/forward              a faster kernel (upstream)  0.1% of its floor; bend-ml/BendTorch
       0.0 ms  run/init                      less host work            once per process (parameter initialisation)
   fewer launches            unavailable: the record has no launch count
 
