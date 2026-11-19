@@ -228,10 +228,10 @@ timeouts were not retried with any gate change).
   7.9e-06). `mamba3` and `mamba3-gqa` were re-run on the final tree;
   `tiny-opt` ran one multiply earlier, before the operand order was
   made `scale_list`'s, which is bit-neutral for finite values and is
-  covered by the probe diff. The `mamba3-tiny-lm` record is still the
-  2026-11-17 pre-change run (`git` 720c998): **re-record it on an idle
-  machine** with `make experiment TASK=mamba3-tiny-lm` before quoting a
-  step time for this commit.
+  covered by the probe diff. The `mamba3-tiny-lm` record was re-made on
+  2026-11-19 at load 0.52 (`git` 7a6e04f): **11,163 ms/step** (forward
+  2,557, backward and optimizer 8,606) against 48,585 ms/step on
+  2026-11-17. `bench/history.md` has the row.
 - Toolchain: `bend update` had replaced `~/.bend/bend2/base.bend`,
   `bendtt.lean` and `effs/` with 2.0.40's files while the 2.0.38 binary
   stayed, which broke every live `F32.from_nat` call. All three were

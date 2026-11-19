@@ -390,6 +390,8 @@ entire new backward for two blocks (10.7 s), and the preprocessing phase has
 fallen to the difference between two scans, which came out negative inside
 the noise. Absolute times still move by ~3x with outside CPU load (a game
 held 2.3 cores during the after run), so the before and after columns are
-not one lane; the within-run comparison is. The recorded `mamba3-tiny-lm`
-record is the 2026-11-17 pre-change run; re-recording on an idle machine is
-the next measurement.
+not one lane; the within-run comparison is. The `mamba3-tiny-lm` record
+was re-made on 2026-11-19 at load 0.52: **11,163 ms per step** (forward
+2,557 ms, backward and optimizer 8,606 ms) against the 2026-11-17
+record's 48,585 ms per step, 4.3x. Both records are in `results/raw/`;
+`bench/history.md` has the rows.

@@ -80,8 +80,11 @@ What changed for the people who run the lab. Internal refactors are not listed.
   comparison is one lane.
 - `make mamba3`, `make mamba3-gqa` and `make mamba3-tiny-opt` pass; the
   20-step trainer curve and the final weights match the NumPy twin (worst
-  relative 7.9e-06 against a 1e-03 gate). The `mamba3-tiny-lm` record is
-  still the pre-change run; re-recording on an idle machine is pending.
+  relative 7.9e-06 against a 1e-03 gate).
+- The `mamba3-tiny-lm` record was re-made on 2026-11-19 at load 0.52:
+  **11,163 ms per step** (forward 2,557, backward and optimizer 8,606),
+  against 48,585 ms per step in the 2026-11-17 record. Both are in
+  `results/raw/`; `bench/history.md` has the row.
 
 ### Toolchain: `bend update` broke the 2.0.38 pin until its Base was restored
 
