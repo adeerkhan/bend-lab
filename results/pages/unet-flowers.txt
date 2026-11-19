@@ -1,0 +1,17 @@
+task     unet-flowers · bend · cpu · threads unavailable · bend 2.0.38 · 28 cpus
+record   main 5232e84 (dirty) · seeds 1 · dataset 87ee501ca709
+run      unavailable for the task · build unavailable · reference unavailable · fetch 0.000 s warm
+stages   none declared: this task writes no stage split
+
+metric                                    bend                   reference                 delta  ok
+params                                  298439                           -                     -  ok
+final_loss                           0.0259002                           -                     -  ok
+draws                                       64                           -                     -  ok
+legibility_held                       0.547348                    0.573776              -0.02643  ok
+legibility_ceiling                    0.573776                           -                     -  ok
+legibility_floor                      0.058161                           -                     -  ok
+span                                  0.948743                           -                     -  ok
+spectrum_high                        0.0344778                           -                     -  ok
+spectrum_low                        0.00174826                           -                     -  ok
+
+PASS

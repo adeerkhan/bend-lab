@@ -4,6 +4,22 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The trained UNet is a registered run record
+
+- `make unet-record` re-scores the committed 64 draws with `make unet-metric`
+  and writes `results/latest/unet-flowers.json`: 298,439 parameters, 3,600
+  steps, held-out legibility 0.5473 against a 0.5738 ceiling and 0.0582
+  floor (94.87% of the span), with a manifest of the git commit, the Bend
+  pin, the packages, the machine and the pinned flowers files.
+- The record says `run.kind = migration`: the model was trained on
+  2026-11-08, no checkpoint is committed, and timings print `unavailable`
+  rather than zero. The report card and `results/pages/unet-flowers.txt`
+  render from it; `results/RESULTS.md` includes it.
+- `report_run.py` and `experiment.summary` now print `unavailable` for a
+  record with no fresh run, instead of formatting a missing timing as a
+  number or raising.
+
+
 ### 200 windows, and the runner passes the shared step budget to both arms
 
 - `reference/mamba3_tiny_data.py` was inconsistent with the trainer: it

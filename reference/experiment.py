@@ -1268,6 +1268,9 @@ def summary(root_dir):
         raise SystemExit(f"no reports in {latest_dir}: run --all first")
     rows = [json.load(open(os.path.join(latest_dir, f)))
             for f in sorted(os.listdir(latest_dir)) if f.endswith(".json")]
+
+    def ms(v):
+        return "unavailable" if v is None else f"{v * 1000:.0f}"
     lines = [
         "# Results",
         "",
@@ -1295,10 +1298,10 @@ def summary(root_dir):
                 f"| {name} | {len(m.get('seeds') or [1])} "
                 f"| {show_metric(b, row.get('bend_sd'))} | {show_metric(r, row.get('reference_sd'))} "
                 f"| {show_metric(delta, row.get('delta_sd'), 4)} "
-                f"| {m['run']['fetch_seconds'] * 1000:.0f} "
-                f"| {m['run']['seconds_min'] * 1000:.0f} "
-                f"| {m['run']['compute_seconds'] * 1000:.0f} "
-                f"| {m['run']['reference_seconds'] * 1000:.0f} "
+                f"| {ms(m['run'].get('fetch_seconds'))} "
+                f"| {ms(m['run'].get('seconds_min'))} "
+                f"| {ms(m['run'].get('compute_seconds'))} "
+                f"| {ms(m['run'].get('reference_seconds'))} "
                 f"| {'ok' if row['pass'] else 'FAIL'} |")
     lines += ["", "Bend and reference are mean ± sample deviation over the seeds when a task",
               "has more than one; a single-seed task has no deviation. The dataset, seeds,",

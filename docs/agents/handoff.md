@@ -302,3 +302,13 @@ timeouts were not retried with any gate change).
   after the data file was extended to 200 windows. Its report will land in
   `results/arch-72k-pilot.{md,json}` with the banners that remain (the
   GLM's optimizer, constant LR and 260-wide head).
+
+## 2026-11-19 — the UNet is a first-class record
+
+- `make unet-record` re-scores the committed draws with `make unet-metric`
+  and writes `results/latest/unet-flowers.json` (migration, with a manifest).
+  Held 0.5473, ceiling 0.5738, floor 0.0582, span 94.87%; timings are
+  `unavailable`, not zero; the page and `RESULTS.md` include it.
+- Next UNet steps: save a checkpoint on a fresh run so sampling from the
+  trained model is possible, then the B=2 four-pair run from BendTorch#36.
+  No new architecture has a measured reason yet.

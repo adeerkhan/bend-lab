@@ -1,0 +1,396 @@
+{
+ "schema": "mlbend.experiment/3",
+ "created_at": "2026-11-19T13:39:08.188609+00:00",
+ "task": {
+  "name": "unet-flowers",
+  "description": "the trained 64x64 UNet denoiser on the pinned flowers split: 298,439 parameters, 3,600 steps, 64 draws, held-out legibility scored against a real held-out flower (the ceiling) and noise (the floor)",
+  "program": "examples/diffusion/unet/train.bend",
+  "dataset": {
+   "name": "flowers64",
+   "rows": 7066,
+   "features": 4096,
+   "sha256": "87ee501ca70989502e9c668da46b72c79ab90054265b89488e3567d396918184",
+   "files": {
+    "flowers64-trainfull-gray.u8": "87ee501ca70989502e9c668da46b72c79ab90054265b89488e3567d396918184",
+    "flowers64-hold-gray.u8": "f08730fe6730aacf440526420dfd645cd78f2ed1ef3fa82dacb1d90f2b978cf8"
+   }
+  },
+  "seed": 0
+ },
+ "seeds": [
+  0
+ ],
+ "trainer": "bend",
+ "variant": {
+  "trainer": "bend",
+  "lane": "cpu",
+  "threads": null,
+  "bend": "2.0.38",
+  "images": 2,
+  "channels": 64,
+  "steps": 3600,
+  "euler": 32
+ },
+ "git": {
+  "commit": "5232e84",
+  "branch": "main",
+  "dirty": true
+ },
+ "bend": {
+  "version": "2.0.38"
+ },
+ "packages": [
+  {
+   "name": "bend-ml-autograd",
+   "version": "0.1.1.0",
+   "hash": "0x0ed882696c6c048c64c66242a999a426"
+  },
+  {
+   "name": "bend-ml-bpe-tokenizer",
+   "version": "0.1.3.0",
+   "hash": "0x559a0abb492a951db15be435191b6d0a"
+  },
+  {
+   "name": "bend-ml-nat-lemmas",
+   "version": "0.1.0.0",
+   "hash": "0xa7aa06c09e97c6747c12cc64bb5203d9"
+  },
+  {
+   "name": "bend-ml-nat-lemmas",
+   "version": "0.1.1.0",
+   "hash": "0x2bbe4207657ea8b1158567d930651411"
+  },
+  {
+   "name": "bend-ml-nat-lemmas",
+   "version": "0.1.2.0",
+   "hash": "0x09966385f3a8541fb22fd49450cdf477"
+  },
+  {
+   "name": "bend-ml-tensor",
+   "version": "0.1.0.0",
+   "hash": "0xf9837737d2c3f58ae1d0c5df42255584"
+  },
+  {
+   "name": "bend-ml-tensor-array",
+   "version": "0.1.20.0",
+   "hash": "0x5c5507d77be847e1e454ec33ab54e087"
+  },
+  {
+   "name": "bend-ml-tensor-gpu",
+   "version": "0.1.5.2",
+   "hash": "0x14e5af4fd3ad6b86b8b16959a9f5960b"
+  },
+  {
+   "name": "bendtorch-gpu",
+   "version": "2.1.0.0",
+   "hash": "0xc222e83b37d53779b42f2125d79e6c55"
+  },
+  {
+   "name": "mlbend-cluster",
+   "version": "0.1.0.0",
+   "hash": "0x0c4fbc7d44d2e3e47247a6c1f12c05e0"
+  },
+  {
+   "name": "mlbend-datasets",
+   "version": "0.1.6.0",
+   "hash": "0x43f00fa69fc1132fa416c0f389d0a503"
+  },
+  {
+   "name": "mlbend-generative",
+   "version": "0.1.1.0",
+   "hash": "0xd48e7ce018b6fa7dc613b629e4260a23"
+  },
+  {
+   "name": "mlbend-huggingface",
+   "version": "0.1.1.0",
+   "hash": "0x9f97047b6ffb57443a7a2a2f0adefcbd"
+  },
+  {
+   "name": "mlbend-metrics",
+   "version": "0.1.0.0",
+   "hash": "0xcffef0c9b0e924c8e74e1d965dfb4106"
+  },
+  {
+   "name": "mlbend-pipeline",
+   "version": "0.1.0.0",
+   "hash": "0xea73a86e2118529cadd597fb3727979b"
+  },
+  {
+   "name": "mlbend-preprocess",
+   "version": "0.1.0.0",
+   "hash": "0xa8182854f375cd61135ccd32993993cc"
+  },
+  {
+   "name": "mlbend-report",
+   "version": "0.1.0.0",
+   "hash": "0x97687e0483c49ddb64fe1ee5f5244927"
+  },
+  {
+   "name": "mlbend-select",
+   "version": "0.1.0.0",
+   "hash": "0xf6594aa2392363c8ab774bc81fb20b9d"
+  },
+  {
+   "name": "mlbend-split",
+   "version": "0.1.1.0",
+   "hash": "0xe8b7953f71ec5b441a90a08e0961269b"
+  }
+ ],
+ "machine": {
+  "platform": "Linux-7.2.15-300.fc45.x86_64-x86_64-with-glibc2.44",
+  "machine": "x86_64",
+  "processor": "",
+  "cpu_count": 28,
+  "python": "3.15.0"
+ },
+ "run": {
+  "kind": "migration",
+  "source": "results/diffusion-unet/trained/run.json",
+  "gate": "reference/.venv/bin/python reference/test_unet_flowers_metric.py",
+  "gate_stdout": [
+   "record            results/diffusion-unet/trained/run.json",
+   "draws             64",
+   "legibility_held   0.547   (floor 0.058, ceiling 0.574)",
+   "span              94.9% of the floor-to-ceiling span",
+   "spectrum          0.002 0.001 0.000 0.034   (flat 1.0 = white)",
+   "ok   held above the floor",
+   "ok   held span",
+   "ok   held not above the ceiling",
+   "ok   high band not white",
+   "ok   low band not white",
+   "ok   can-fail white noise: held 0.041, span -3.3%, bands 0.989 1.016 0.995 1.002",
+   "ok   can-fail data mean: held 0.000, span -11.3%, bands 0.000 0.000 0.000 0.000",
+   "UNET METRIC PASS"
+  ],
+  "build_seconds": null,
+  "seconds_min": null,
+  "seconds_all": [],
+  "repeat": 0,
+  "fetch_seconds": 0.0,
+  "compute_seconds": null,
+  "speed_ratio": null
+ },
+ "stages": [],
+ "stages_source": {
+  "kind": "migration",
+  "note": "the original run predates the stage runner; no stage split is available"
+ },
+ "counts": {},
+ "peaks": {},
+ "bounds": {},
+ "notes": [
+  "migration of a prior run, not a fresh training: the model was trained 2026-11-08 and the 64 draws are committed in run.json",
+  "the numbers come from make unet-metric re-scoring those draws on the pinned flowers split; the gate's can-fail arms (white noise and the data mean) must fail",
+  "see examples/diffusion/unet/TRAINED.md for the six measured levers and the layer/twin gates; no checkpoint is committed, so sampling from the trained model is unavailable",
+  "legibility on the training images is 0.633, above the 0.574 ceiling: the draws memorise; only the held-out number is a result",
+  "unavailable timings are null, not zero"
+ ],
+ "seed_runs": [
+  {
+   "seed": 0,
+   "metrics": {
+    "params": {
+     "bend": 298439,
+     "reference": null,
+     "delta": null,
+     "tolerance": null,
+     "mode": "report",
+     "pass": true,
+     "bend_sd": null,
+     "reference_sd": null,
+     "delta_sd": null
+    },
+    "final_loss": {
+     "bend": 0.025900224,
+     "reference": null,
+     "delta": null,
+     "tolerance": null,
+     "mode": "report",
+     "pass": true,
+     "bend_sd": null,
+     "reference_sd": null,
+     "delta_sd": null
+    },
+    "draws": {
+     "bend": 64,
+     "reference": null,
+     "delta": null,
+     "tolerance": null,
+     "mode": "report",
+     "pass": true,
+     "bend_sd": null,
+     "reference_sd": null,
+     "delta_sd": null
+    },
+    "legibility_held": {
+     "bend": 0.5473475668018118,
+     "reference": 0.5737764835357666,
+     "delta": -0.026428916733954755,
+     "tolerance": null,
+     "mode": "report",
+     "pass": true,
+     "bend_sd": null,
+     "reference_sd": null,
+     "delta_sd": null
+    },
+    "legibility_ceiling": {
+     "bend": 0.5737764835357666,
+     "reference": null,
+     "delta": null,
+     "tolerance": null,
+     "mode": "report",
+     "pass": true,
+     "bend_sd": null,
+     "reference_sd": null,
+     "delta_sd": null
+    },
+    "legibility_floor": {
+     "bend": 0.058161016553640366,
+     "reference": null,
+     "delta": null,
+     "tolerance": null,
+     "mode": "report",
+     "pass": true,
+     "bend_sd": null,
+     "reference_sd": null,
+     "delta_sd": null
+    },
+    "span": {
+     "bend": 0.9487429782618839,
+     "reference": null,
+     "delta": null,
+     "tolerance": null,
+     "mode": "report",
+     "pass": true,
+     "bend_sd": null,
+     "reference_sd": null,
+     "delta_sd": null
+    },
+    "spectrum_high": {
+     "bend": 0.03447780892538705,
+     "reference": null,
+     "delta": null,
+     "tolerance": null,
+     "mode": "report",
+     "pass": true,
+     "bend_sd": null,
+     "reference_sd": null,
+     "delta_sd": null
+    },
+    "spectrum_low": {
+     "bend": 0.0017482625877843952,
+     "reference": null,
+     "delta": null,
+     "tolerance": null,
+     "mode": "report",
+     "pass": true,
+     "bend_sd": null,
+     "reference_sd": null,
+     "delta_sd": null
+    }
+   }
+  }
+ ],
+ "metrics": {
+  "params": {
+   "bend": 298439,
+   "reference": null,
+   "delta": null,
+   "tolerance": null,
+   "mode": "report",
+   "pass": true,
+   "bend_sd": null,
+   "reference_sd": null,
+   "delta_sd": null
+  },
+  "final_loss": {
+   "bend": 0.025900224,
+   "reference": null,
+   "delta": null,
+   "tolerance": null,
+   "mode": "report",
+   "pass": true,
+   "bend_sd": null,
+   "reference_sd": null,
+   "delta_sd": null
+  },
+  "draws": {
+   "bend": 64,
+   "reference": null,
+   "delta": null,
+   "tolerance": null,
+   "mode": "report",
+   "pass": true,
+   "bend_sd": null,
+   "reference_sd": null,
+   "delta_sd": null
+  },
+  "legibility_held": {
+   "bend": 0.5473475668018118,
+   "reference": 0.5737764835357666,
+   "delta": -0.026428916733954755,
+   "tolerance": null,
+   "mode": "report",
+   "pass": true,
+   "bend_sd": null,
+   "reference_sd": null,
+   "delta_sd": null
+  },
+  "legibility_ceiling": {
+   "bend": 0.5737764835357666,
+   "reference": null,
+   "delta": null,
+   "tolerance": null,
+   "mode": "report",
+   "pass": true,
+   "bend_sd": null,
+   "reference_sd": null,
+   "delta_sd": null
+  },
+  "legibility_floor": {
+   "bend": 0.058161016553640366,
+   "reference": null,
+   "delta": null,
+   "tolerance": null,
+   "mode": "report",
+   "pass": true,
+   "bend_sd": null,
+   "reference_sd": null,
+   "delta_sd": null
+  },
+  "span": {
+   "bend": 0.9487429782618839,
+   "reference": null,
+   "delta": null,
+   "tolerance": null,
+   "mode": "report",
+   "pass": true,
+   "bend_sd": null,
+   "reference_sd": null,
+   "delta_sd": null
+  },
+  "spectrum_high": {
+   "bend": 0.03447780892538705,
+   "reference": null,
+   "delta": null,
+   "tolerance": null,
+   "mode": "report",
+   "pass": true,
+   "bend_sd": null,
+   "reference_sd": null,
+   "delta_sd": null
+  },
+  "spectrum_low": {
+   "bend": 0.0017482625877843952,
+   "reference": null,
+   "delta": null,
+   "tolerance": null,
+   "mode": "report",
+   "pass": true,
+   "bend_sd": null,
+   "reference_sd": null,
+   "delta_sd": null
+  }
+ },
+ "passed": true
+}

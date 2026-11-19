@@ -84,11 +84,15 @@ def page(record, against=None):
         + (f" · dataset {dataset[:12]}" if dataset else ""))
     run = record.get("run", {})
     fetch = run.get("fetch_seconds", 0.0)
+
+    def sec(v):
+        return "unavailable" if v is None else f"{v:.3f} s"
+
     lines.append(
-        f"run      {run.get('seconds_min', 0.0):.3f} s for the task"
-        f" · build {run.get('build_seconds', 0.0):.3f} s"
-        f" · reference {run.get('reference_seconds', 0.0):.3f} s"
-        f" · fetch {fetch:.3f} s" + (" warm" if not fetch else ""))
+        f"run      {sec(run.get('seconds_min'))} for the task"
+        f" · build {sec(run.get('build_seconds'))}"
+        f" · reference {sec(run.get('reference_seconds'))}"
+        f" · fetch {sec(fetch)}" + (" warm" if not fetch else ""))
 
     stages = record.get("stages") or []
     source = record.get("stages_source")

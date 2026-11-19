@@ -4,7 +4,7 @@ One page per task, rendered with `reference/report_run.py --task <name>`
 from the committed `results/latest/<task>.json`. No run was made to
 produce these; regenerate with `make pages`.
 
-20 pages:
+21 pages:
 
 - [attention-parity](attention-parity.txt)
 - [cancer-knn](cancer-knn.txt)
@@ -23,6 +23,7 @@ produce these; regenerate with `make pages`.
 - [mamba3-tiny-lm](mamba3-tiny-lm.txt)
 - [transformer-periodic](transformer-periodic.txt)
 - [vit-first](vit-first.txt)
+- [unet-flowers](unet-flowers.txt)
 - [vit-step](vit-step.txt)
 - [wine-kmeans](wine-kmeans.txt)
 - [wine-pca](wine-pca.txt)
