@@ -2763,3 +2763,19 @@ steps.
 - Bend 2.0.40, installed that way, passes `F32.from_nat` and the model shape
   laws (`--verdict`). `bend version` alone is not an install check; the
   smoke test is.
+
+## 2026-11-19 — the record writer's promised variables were undefined
+
+- `c31dd1d` said `UNET_RUN` and `UNET_TASK` let any committed run be
+  registered, but `reference/unet_record.py` used `NAME` and `DEFAULT_RUN`
+  without defining them, and wrote to a fixed output path. A fresh
+  `make unet-record` after that commit failed with `NameError`. Fixed by
+  defining both from the environment with the original values as defaults,
+  naming the output after `UNET_TASK`, and adding
+  `reference/test_unet_record.py` to the automatic gate.
+- The rebuilt `--four` binary matters independently of the flag: the binary
+  used for the 21:23 run was built at 18:45, three minutes before the flag
+  landed in the source (18:48). Unknown flags are ignored, so that run was
+  k=1 with a different `--save` path; its checkpoint is byte-identical to
+  the k=1 one. The binary is now rebuilt under the memory guard and the
+  3,600-step run is registered as a dashboard session.

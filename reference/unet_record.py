@@ -27,7 +27,9 @@ from test_unet_flowers_metric import HOLD, RUN, TRAIN, metrics, passes  # noqa: 
 from unet_flowers_eval import FLOWERS, read_gray  # noqa: E402
 
 GATE = "reference/.venv/bin/python reference/test_unet_flowers_metric.py"
-OUT = os.path.join(ROOT, "results/latest/unet-flowers.json")
+DEFAULT_RUN = os.path.join(ROOT, "results", "diffusion-unet", "trained", "run.json")
+TASK = os.environ.get("UNET_TASK") or "unet-flowers"
+OUT = os.path.join(ROOT, "results", "latest", TASK + ".json")
 RECENT = os.path.join(ROOT, "results/latest/mamba3-tiny-lm.json")
 
 
@@ -93,7 +95,7 @@ def main():
         "schema": "mlbend.experiment/3",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "task": {
-            "name": NAME,
+            "name": TASK,
             "description": ("the trained 64x64 UNet denoiser on the pinned flowers "
                             "split: 298,439 parameters, 3,600 steps, 64 draws, "
                             "held-out legibility scored against a real held-out "

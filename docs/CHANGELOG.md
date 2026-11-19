@@ -4,6 +4,17 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The UNet record writer accepts a task name and a run path
+
+- `make unet-record-four UNET_RUN=<run.json> UNET_TASK=<name>` writes
+  `results/latest/<name>.json` and marks it `run.kind = four-pair`. The
+  default still writes `results/latest/unet-flowers.json` as a migration.
+- Commit `c31dd1d` had advertised both variables but left `NAME` and
+  `DEFAULT_RUN` undefined in `reference/unet_record.py`; every registration
+  died with `NameError`. `reference/test_unet_record.py` renders both forms
+  and checks that the default record is untouched.
+
+
 ### The UNet can accumulate four different pairs per flush
 
 - `examples/diffusion/unet/train.bend` takes `--four`: four micro-batches of
