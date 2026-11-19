@@ -89,7 +89,7 @@ lane-matrix:       ## the task/lane compliance page, from committed records only
 
 pages:             ## render every task's latest run page from its committed record
 	@mkdir -p results/pages
-	@for t in $(shell $(PY) -c 'import sys; sys.path.insert(0,"reference"); import experiment; print(" ".join(sorted(experiment.TASKS)))'); do \
+	@for f in results/latest/*.json; do t=$${f##*/}; t=$${t%.json}; \
 	  $(PY) reference/report_run.py --task $$t > results/pages/$$t.txt || exit 1; \
 	done
 	@echo "rendered results/pages/*.txt"
