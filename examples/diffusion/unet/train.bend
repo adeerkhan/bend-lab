@@ -326,16 +326,47 @@ def loss_of(tr: T.Train<ModelP()>) -> F32:
     case T.Train{p, g, st, c, q1, q2, +l}:
       l
 
+def mse4(y: OUT(), tgt: OUT()) -> T.LossOut<OUT()>:
+  T.LossOut.div(NN(), 1n, 4, mse(y, tgt))
+
+def accum_one(tr: T.Train<ModelP()>, r: RS) -> T.Train<ModelP()>:
+  match r:
+    case RS{inp, tgt, b, n}:
+      T.Train.accumulate(~ModelP(), ~IN(), ~OUT(), ~ModelS(), ~OUT(),
+        ~Model(), ~mse4, tr,
+        TA.Mat.from_list(NN(), INW(), inp), TA.Mat.from_list(NN(), 1n, tgt))
+
+# four different pairs per flush; the index wraps over the pinned training set
+def accum_four(+j: Nat, +s: Nat, tr: T.Train<ModelP()>,
+    +data: List<&2, U32>) -> T.Train<ModelP()>:
+  match j:
+    case 0n:
+      tr
+    case 1n+p:
+      +idx = Nat.mod(Nat.add(Nat.mul(s, 4n), Nat.sub(4n, j)), NIMG())
+      accum_four(p, s, accum_one(tr, pair_of(idx, data)), data)
+
+def step_four(+s: Nat, tr: T.Train<ModelP()>,
+    +data: List<&2, U32>) -> T.Train<ModelP()>:
+  T.Train.flush(~ModelP(), ~IN(), ~OUT(), ~ModelS(), ~Model(),
+    accum_four(4n, s, tr, data))
+
 def step_rs(tr: T.Train<ModelP()>, r: RS) -> T.Train<ModelP()>:
   match r:
     case RS{inp, tgt, b, n}:
       T.Train.step(~ModelP(), ~IN(), ~OUT(), ~ModelS(), ~OUT(), ~Model(), ~mse, tr,
         TA.Mat.from_list(NN(), INW(), inp), TA.Mat.from_list(NN(), 1n, tgt))
 
-def do_step(+s: Nat, tr: T.Train<ModelP()>, data: List<&2, U32>) -> T.Train<ModelP()>:
-  step_rs(tr, pair_of(s, data))
+def do_step(+s: Nat, tr: T.Train<ModelP()>, data: List<&2, U32>,
+    +four: Bool) -> T.Train<ModelP()>:
+  match four:
+    case True{}:
+      step_four(s, tr, data)
+    case False{}:
+      step_rs(tr, pair_of(s, data))
 
-def train_all(+steps: Nat, +start: Nat, +root: String, tr: T.Train<ModelP()>) -> IO(T.Train<ModelP()>):
+def train_all(+steps: Nat, +start: Nat, +root: String, +four: Bool,
+    tr: T.Train<ModelP()>) -> IO(T.Train<ModelP()>):
   match steps tr:
     case 0n T.Train{p, g, st, c, q1, q2, +l}:
       do IO<T.Train<ModelP()>>:
@@ -345,8 +376,9 @@ def train_all(+steps: Nat, +start: Nat, +root: String, tr: T.Train<ModelP()>) ->
       do IO<T.Train<ModelP()>>:
         data : List<&2, U32> <- read_batch(root, start)
         Unit <- print_or(should_print(start), l)
-        tr1 : T.Train<ModelP()> <- IO.pure(T.Train<ModelP()>, do_step(start, T.Train{p, g, st, c, q1, q2, l}, data))
-        train_all(rest, (1n + start : Nat), root, tr1)
+        tr1 : T.Train<ModelP()> <- IO.pure(T.Train<ModelP()>, do_step(start,
+          T.Train{p, g, st, c, q1, q2, l}, data, four))
+        train_all(rest, (1n + start : Nat), root, four, tr1)
 
 # ---- sampling: Euler from noise --------------------------------------------
 
@@ -502,10 +534,11 @@ def probe(d: T.PL<ModelP()>) -> IO(Unit):
 # ---- the flags -------------------------------------------------------------
 
 type Run is Data:
-  Run{start: Nat, steps: Nat, save: String, resume: String, sample: Bool, probe: Bool}
+  Run{start: Nat, steps: Nat, save: String, resume: String, sample: Bool,
+      probe: Bool, four: Bool}
 
 def run_default() -> Run:
-  Run{0n, STEPS(), "", "", True{}, False{}}
+  Run{0n, STEPS(), "", "", True{}, False{}, False{}}
 
 def nat_or(m: Maybe<&2, Nat>, d: Nat) -> Nat:
   match m:
@@ -522,44 +555,49 @@ def run_go(args: List<String>, r: Run) -> Run:
       match a:
         case "--no-sample":
           match r:
-            case Run{start, steps, save, resume, sample, probe}:
-              run_go(rest, Run{start, steps, save, resume, False{}, probe})
+            case Run{start, steps, save, resume, sample, probe, four}:
+              run_go(rest, Run{start, steps, save, resume, False{}, probe, four})
         case "--probe":
           match r:
-            case Run{start, steps, save, resume, sample, probe}:
-              run_go(rest, Run{start, steps, save, resume, False{}, True{}})
+            case Run{start, steps, save, resume, sample, probe, four}:
+              run_go(rest, Run{start, steps, save, resume, False{}, True{}, four})
         case "--save":
           match rest:
             case Nil{}:
               r
             case Con{b, more}:
               match r:
-                case Run{start, steps, save, resume, sample, probe}:
-                  run_go(more, Run{start, steps, b, resume, sample, probe})
+                case Run{start, steps, save, resume, sample, probe, four}:
+                  run_go(more, Run{start, steps, b, resume, sample, probe, four})
         case "--resume":
           match rest:
             case Nil{}:
               r
             case Con{b, more}:
               match r:
-                case Run{start, steps, save, resume, sample, probe}:
-                  run_go(more, Run{start, steps, save, b, sample, probe})
+                case Run{start, steps, save, resume, sample, probe, four}:
+                  run_go(more, Run{start, steps, save, b, sample, probe, four})
         case "--start":
           match rest:
             case Nil{}:
               r
             case Con{b, more}:
               match r:
-                case Run{start, steps, save, resume, sample, probe}:
-                  run_go(more, Run{nat_or(Nat.read(b), start), steps, save, resume, sample, probe})
+                case Run{start, steps, save, resume, sample, probe, four}:
+                  run_go(more, Run{nat_or(Nat.read(b), start), steps, save, resume, sample, probe, four})
         case "--steps":
           match rest:
             case Nil{}:
               r
             case Con{b, more}:
               match r:
-                case Run{start, steps, save, resume, sample, probe}:
-                  run_go(more, Run{start, nat_or(Nat.read(b), steps), save, resume, sample, probe})
+                case Run{start, steps, save, resume, sample, probe, four}:
+                  run_go(more, Run{start, nat_or(Nat.read(b), steps), save, resume, sample, probe, four})
+        case "--four":
+          match r:
+            case Run{start, steps, save, resume, sample, probe, four}:
+              run_go(rest, Run{start, steps, save, resume, sample, probe,
+                True{}})
         case _:
           run_go(rest, r)
 
@@ -602,7 +640,7 @@ def train_params(tr: T.Train<ModelP()>) -> ModelP():
 
 def run_with(root: String, r: Run) -> IO(Unit):
   match r:
-    case Run{start, +steps, +save, resume, sample, probe_on}:
+    case Run{start, +steps, +save, resume, sample, probe_on, four}:
       do IO<Unit>:
         Unit <- IO.print(String.append("images: ", Nat.show(B())))
         Unit <- IO.print(String.append("channels: ", Nat.show(CH())))
@@ -612,7 +650,7 @@ def run_with(root: String, r: Run) -> IO(Unit):
         T.OptCfg.check(cfg())
         tr0 : T.Train<ModelP()> <- start_tr(resume)
         tr1 : T.Train<ModelP()> <- save_if(save, tr0)
-        tr2 : T.Train<ModelP()> <- train_all(steps, start, root, tr1)
+        tr2 : T.Train<ModelP()> <- train_all(steps, start, root, four, tr1)
         tr3 : T.Train<ModelP()> <- save_if(save, tr2)
         p : ModelP() <- IO.pure(ModelP(), train_params(tr3))
         finish(p, probe_on, sample)

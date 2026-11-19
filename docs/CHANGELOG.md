@@ -4,6 +4,18 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The UNet can accumulate four different pairs per flush
+
+- `examples/diffusion/unet/train.bend` takes `--four`: four micro-batches of
+  B=2 images, each through `T.LossOut.div(...,4,...)` and
+  `T.Train.accumulate`, followed by one `T.Train.flush`. Micro-batch indices
+  are `4*step + j` modulo `NIMG()` (7,066), so a step sees eight images and
+  the file wraps; the protocol says so. The default k=1 path is unchanged.
+- 1-step smoke (load ~1.5): k=1 prints `final_loss: 15.326218`, matching the
+  committed record's first loss; --four prints 5.78343, the last
+  micro-batch's divided loss (the logged loss is not the accumulated mean).
+
+
 ### The trained UNet is a registered run record
 
 - `make unet-record` re-scores the committed 64 draws with `make unet-metric`

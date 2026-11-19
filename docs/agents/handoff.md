@@ -312,3 +312,13 @@ timeouts were not retried with any gate change).
 - Next UNet steps: save a checkpoint on a fresh run so sampling from the
   trained model is possible, then the B=2 four-pair run from BendTorch#36.
   No new architecture has a measured reason yet.
+
+## 2026-11-19 — four-pair UNet option
+
+- `train.bend --four` accumulates four different pairs per flush with
+  `LossOut.div` and `Train.flush`; k=1 stays the default and its 1-step loss
+  matches the record. Pair indices wrap modulo NIMG (8 images per flush over
+  3,600 steps, so the file is seen ~4 times).
+- A fresh 3,600-step run with `--save .scratch/unet_ckpt` is in flight for a
+  checkpoint; the four-pair run with sampling is next. The --four logged
+  loss is the last micro-batch's divided loss, not the accumulated mean.
