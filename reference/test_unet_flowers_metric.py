@@ -27,7 +27,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "reference"))
 from unet_flowers_eval import FLOWERS, legibility, read_gray, spectrum  # noqa: E402
 
-RUN = os.path.join(ROOT, "results", "diffusion-unet", "trained", "run.json")
+RUN = os.environ.get("UNET_RUN") or os.path.join(
+    ROOT, "results", "diffusion-unet", "trained", "run.json")
 TRAIN = os.path.join(FLOWERS, "flowers64-trainfull-gray.u8")
 HOLD = os.path.join(FLOWERS, "flowers64-hold-gray.u8")
 EDGE = 64

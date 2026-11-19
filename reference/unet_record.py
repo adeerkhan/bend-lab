@@ -51,7 +51,9 @@ def report(value, reference=None, delta=None):
 
 
 def main():
-    gate = subprocess.run(GATE.split(), cwd=ROOT, capture_output=True, text=True)
+    env = dict(os.environ, UNET_RUN=RUN)
+    gate = subprocess.run(GATE.split(), cwd=ROOT, env=env,
+                          capture_output=True, text=True)
     if gate.returncode != 0:
         sys.stderr.write(gate.stdout + gate.stderr)
         raise SystemExit("the unet gate failed; refusing to register it")
@@ -91,7 +93,7 @@ def main():
         "schema": "mlbend.experiment/3",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "task": {
-            "name": "unet-flowers",
+            "name": NAME,
             "description": ("the trained 64x64 UNet denoiser on the pinned flowers "
                             "split: 298,439 parameters, 3,600 steps, 64 draws, "
                             "held-out legibility scored against a real held-out "
@@ -116,7 +118,8 @@ def main():
         "machine": {"platform": platform.platform(), "machine": platform.machine(),
                     "processor": platform.processor(), "cpu_count": os.cpu_count(),
                     "python": platform.python_version()},
-        "run": {"kind": "migration", "source": os.path.relpath(RUN, ROOT),
+        "run": {"kind": ("four-pair" if RUN != DEFAULT_RUN else "migration"),
+                "source": os.path.relpath(RUN, ROOT),
                 "gate": GATE, "gate_stdout": gate.stdout.strip().splitlines(),
                 "build_seconds": None, "seconds_min": None, "seconds_all": [],
                 "repeat": 0, "fetch_seconds": 0.0, "compute_seconds": None,
