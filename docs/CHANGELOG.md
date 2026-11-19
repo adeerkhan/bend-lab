@@ -4,6 +4,23 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### Toolchain: install a release beside the pin, and check the install is whole
+
+- `scripts/bend-side.sh <version>` downloads a Bend release and installs
+  `bin/bend`, `bend2/` and `guide/` together under `~/.bend-side/<version>`,
+  with a wrapper. The pin's `~/.bend` is untouched; the compiler finds its
+  `bend2/` next to its own binary, so the wrapper needs no HOME change.
+- `scripts/bend_smoke.sh` compiles a live `F32.from_nat` and expects 3. It is
+  the check that catches the failure mode of a half-applied `bend update`
+  (a 2.0.40 `base.bend` under a 2.0.38 binary), which `bend version` alone
+  does not.
+- `scripts/bend-latest.sh` reads the pin from the Makefile and the latest
+  release from GitHub; `--install` installs it side by side and runs the
+  model shape laws with it. Bend 2.0.40 was installed this way and passes
+  them; the pin stays 2.0.38.
+- `make bend-smoke`, `make bend-side V=…`, `make bend-latest INSTALL=1`.
+
+
 ### The tiny-LM's shapes are named, and their invariants are laws
 
 - `mamba3_siso.bend` names the shapes it computes with (`n_heads`,

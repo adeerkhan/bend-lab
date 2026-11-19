@@ -2751,3 +2751,15 @@ steps.
   nothing in it answers Llama against Mamba at our budget. The closest arm
   we own is the GLM hybrid; the quality comparison is one pass each
   (3,200 steps) with one shared optimizer and schedule, hours not minutes.
+
+## 2026-11-19 — a side-by-side install is the version test
+
+- The Bend binary finds its `base.bend` and `guide/` next to its own path
+  (`BEND_DIR = dirname(execPath)/../bend2`), so a release can live under
+  `~/.bend-side/<version>/.bend/` with a plain wrapper and no `HOME` change.
+  Changing HOME breaks the machine's clang wrapper, which resolves
+  `~/opt/llvm-tree`; the first version of `scripts/bend-side.sh` did that and
+  failed the smoke test with "clang fails --version".
+- Bend 2.0.40, installed that way, passes `F32.from_nat` and the model shape
+  laws (`--verdict`). `bend version` alone is not an install check; the
+  smoke test is.

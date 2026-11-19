@@ -259,3 +259,12 @@ timeouts were not retried with any gate change).
   `check_all.py` runs it with the package laws.
 - The named constants are the old literals definitionally: the step gate
   prints the same loss and heads (4.838168, 327157.12, 9.758908).
+
+## 2026-11-19 — side-by-side Bend installs
+
+- `scripts/bend-side.sh <version>` installs a whole release under
+  `~/.bend-side/<version>`; `scripts/bend_smoke.sh` checks a live
+  `F32.from_nat` (the half-update failure); `scripts/bend-latest.sh` compares
+  the pin to GitHub's latest and `--install` runs the model laws with it.
+- Bend 2.0.40 is installed at `~/.bend-side/bend-2.0.40` and passes the
+  shape laws; the pin remains 2.0.38. Never `bend update` in place.
