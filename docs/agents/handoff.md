@@ -4,321 +4,90 @@ One file, overwritten at the end of every session. It is the literal memory
 context: a fresh agent reads this first, then the issue it names, then
 `AGENTS.md`.
 
-**Write it before you stop.** An agent that ends a session without writing this
-leaves the next one blind.
+## 2026-11-19 — the goal run: records, parity, proofs, and what is still owed
 
-## 2026-11-16 — numerical lanes, the correctness campaign, and the run-record v3
+### The three differential runs were already settled
 
-The goal was taken through every row. A1–A3, B1–B6, C1–C4 and D1 are green
-and committed, each row with its own gate, Makefile target, batch row,
-fresh session run, ROADMAP/CHANGELOG entry and commit; all pushed to
-`origin` (`adeerkhan/bend-lab`, `main`). `make check-fast` is **31/31** and
-`make validate QUICK=1` passes. The full `make check` did **not** complete
-in this session — two runs timed out on heavy gates under a loaded host;
-see "Not verified" below. No tolerance, timeout or gate was loosened to
-make a run fit. `.local/` was never committed; mimo and the architecture
-comparison remain untouched.
+- The 200-step Mamba/GLM pilot **completed** (`/tmp/opencode/arch200.log`,
+  `results/arch-72k-pilot.{md,json}`; Mamba 4.838168 -> 3.178023 in 7539.0 s,
+  GLM 5.563474 -> 1.789081 in 377.9 s, load 3.76 -> 1.98 and 2.10 -> 1.98).
+  It is wiring only, not a quality result. The report files were committed.
+- The k=1 checkpoint run **completed**: `/tmp/opencode/unet_ckpt4.log`, 3,600
+  steps, `final_loss: 0.025900224`, checkpoint `.scratch/unet_ckpt`.
+- The "four-pair" run was a duplicate k=1: its checkpoint is byte-identical
+  (md5 `87b64cfa21df975db396c5a216afdff6`) and the binary it used predates
+  the `--four` source by three minutes. A new binary was built under the
+  memory guard and a new session confirmed `--four` changes the trajectory
+  (step-25 loss 0.014468994 vs k=1's 0.13427661).
 
-### A. Numerical lanes (`docs/mamba3-lanes.md`)
+### What landed in bend-lab (commits `580be26`, `063b187`)
 
-- **A1** (`84d4c9f`): the SISO block at T = 1, 2, 4, 8, 16, 64 through the
-  F32 twin (oracle), the Triton kernel with IEEE dots, with TF32 dots,
-  and the public bf16 module. Forward, kernel backward and module
-  backward tables. `make mamba3-lanes`: ieee ≤ 1e-05 (measured 2.6e-06),
-  tf32 ≤ 5e-03 (measured 2.4e-03), module ≤ 5e-02 (measured 2.4e-02).
-  `MAMBA3 LANES PASS`.
-- **A2** (`43ed45a`): the byte-corpus tiny-LM for 20 steps in the CUDA F32
-  twin lane and the public bf16 module lane; per-step losses and grad
-  norms in `docs/mamba3-tiny-lanes.md`. bf16 stays within 5.7e-05 per
-  step; both lanes land 512/2540 train hits. A lane measurement, not a
-  verdict. `MAMBA3 BF16 CURVE PASS`.
-- **A3** (`ea655e3`): T = 1 skip, T = 2 state, T = 64 chunk; closed forms
-  match the twin exactly, IEEE kernel within 4.1e-07, DA_CS vs
-  `cumsum(ADT*log2 e)` at 8.5e-08, bf16 module within 6.5e-03.
-  `MAMBA3 CASES PASS`.
+- Fixed `reference/unet_record.py`: `c31dd1d` advertised `UNET_RUN`/
+  `UNET_TASK` but left `NAME` and `DEFAULT_RUN` undefined and a fixed output
+  path, so every registration died with `NameError`. Both are now defined
+  from the environment, the record is named after `UNET_TASK`, and
+  `reference/test_unet_record.py` gates both forms.
+- GLM arm parity: `--matched` in `train_h128.bend` sets CAdamW 0.9/0.999,
+  wd 0.01, c1 0.1, c2 0.001 and applies the Mamba warmup/cosine through
+  BendTorch's `Train.with_cfg`. A 12-step direct smoke at load ~5 printed
+  `5.5634737 -> 5.4061995` matched and `5.5634737 -> 5.344054` default.
+  `reference/arch_compare.py --matched` writes `results/arch-matched.*`;
+  `reference/test_arch_parity.py` checks the constants against the Mamba
+  source. Vocabulary, held-out slices and gradient clipping are banners.
+- Inference-only UNet task: `make unet-sample CKPT=<checkpoint>` resumes with
+  `--steps 0`, draws 64 samples and re-scores them through the metric gate.
+  The results parser now accepts an inference log with no loss lines;
+  `reference/test_unet_sample.py` gates it. No sampled number was produced:
+  the run reached 12/64 draws in 12 minutes at load ~7 and was stopped.
+- Gates after the changes: `make check-fast` **33/33**; the three new tests
+  pass individually. The full `make check` was still running at handoff
+  (see below), not claimed as green.
 
-### B. Correctness campaign
+### What landed upstream
 
-- **B1** (`f9df70f`): finite differences at seqlen 4, δ = 1e-2, worst rel
-  8.6e-05 vs the bumped-input twin, bound 1e-2. `MAMBA3 FD PASS`.
-- **B2** (`1628d0b`): the exact-step decoder's state round-trip: 30 steps
-  from fresh vs 10 + 20 resumed from the returned state, identical token
-  for token (31 tokens); first 16 == the `gen_tokens` golden. Driver
-  `probe_mamba3_state.bend` shares `S.layer_row`. `MAMBA3 STATE PASS`.
-- **B3** (`0826520`): the seeded golden input never crosses 2π (~0.22 rad
-  max), so a synthetic case fills `dt_bias` to 10.0 (~7 crossings/head,
-  ~44 rad). The exact loop matches the twin at angle 1.1e-06 / y 3.6e-07;
-  both decode paths emit the twin's 16 tokens exactly; wrap variants
-  agree. `MAMBA3 WRAP PASS`.
-- **B4** (`015f04d`): A at `-A_floor`, trap at exactly 0/1, softplus at
-  large/small dd_dt. The ladder found and fixed the port's `softplus`
-  overflow to `inf` past x ≈ 88.7 (torch's threshold=20 semantics);
-  `make mamba3` green after the change. The twin's `heavy_tail` has a
-  knife-edge nan gradient at `dd_A = 1.0` (torch `where` evaluates both
-  branches); recorded, never fired in a gated run. `MAMBA3 CLAMPS PASS`.
-- **B5** (`c13ac34`): three source corruptions built at run time — missing
-  `shifted` (y rel 3.2e-01), wrong rope sign (6.6e-02), zeroed `D`
-  (7.6e-01) — each blows the forward gate; the good program still
-  matches at 5.5e-07. `MAMBA3 CANFAIL PASS`.
-- **B6** (`3c0437e`): two separate builds print bitwise-identical seqlen-8
-  forward tags; sumsq identical to 1e-9. `MAMBA3 DET PASS`.
+- bend-ml **PR #39** (branch `feat/array-get-returns-array`, commit `21eafb5`):
+  `get_returns_array` proves `Pair.fst(Array.get(T, a, i)) == a` on top of
+  PR #38's `get_go_returns_array`, via `ArrayAt.fst` and `ASet.get_fst`
+  (ASet.Copy's `b == a` and size equation). `--check-only` and `--verdict`
+  (Lean 4.34.0) both `ALL PROOFS CHECK`; `list_laws.py --check-readme` says
+  43 laws, README ok. Opened on nuxyel/bend-ml, stacked on #38.
+- **PR #38** (`get.go` returns the array) remains OPEN, mergeable, CI
+  SUCCESS, zero reviews and zero comments. It needs the maintainer's review;
+  it was not merged by this session.
+- Both PRs are linked to this OpenChamber session.
 
-### C. Run record v3
+### Not verified — owed, with the reason
 
-- **C1** (`ebc6623`): the landed schema is `mlbend.experiment/3`, a
-  superset of the goal's "schema: 2"; `docs/agents/manifest.md` documents
-  it with an example. `iris-crossval` (live reference) and `vit-step`
-  (frozen) both write and PASS; the old `/1` records render.
-- **C2** (`26c43b8`): `make report TASK=vit-step` renders the full Burn
-  page — stages with floors, ladder (415 ms, 3 of 5 leaves), worklist,
-  totals, metrics, PASS; AGAINST a cpu record prints `mismatch lane:
-  cpu -> gpu` and `lane changed` in every delta row, never a percentage.
-- **C3** (`c99da7d`): fixture stage refused (existing `test_stages.py`),
-  a moved floor refused by `bounds_for` (new `test_bounds_for.py`:
-  sidecar wins per path, record covers the rest, stale path dropped with
-  a named refusal), and a mismatch banner gate (`test_against.py`:
-  banner, `lane changed`, `added`, `gone`). Existing floors unchanged.
-- **C4** (`8a15733`): the tiny-LM is an experiment task. One live run
-  (1965 s, build 6.7 s, reference 9.1 s) PASSES: final loss -9.9e-07,
-  bits/byte -1.6e-06, hits exact (1279, 512), w_sumsq -7.3e-04 abs vs
-  the twin. Reference frozen from that record. `make report` rendered
-  once into `results/mamba3-tiny-lm-page.txt`; ROADMAP §4 links the page,
-  the card and the record. The first run's parser missed `show_tag`'s
-  trailing space and the new task tripped the frozen-reference gate;
-  both were fixed by measuring, not by loosening anything.
-- **D1** (`a98cf97`, plus the generator follow-up): the card's variant
-  (`bend`/`cpu`/threads unavailable/Bend 2.0.38, batch 1, positions 128)
-  and `bounds: unavailable` (no stage split — never a zero or an
-  estimate) are generated from the record by `test_mamba3_tiny_lm_run.py`
-  so they survive regeneration. No new run, no architecture comparison.
+- **Four-pair legibility.** No trained --four checkpoint or draws exist. The
+  restarted 3,600-step session reached 8 loss lines in 25m45s (≈8 steps/min
+  at load 5.1), needs several hours, and was stopped before its final save.
+  Re-run the same `make session TASK=unet-four` command on a quiet machine,
+  then score and register with `make unet-record-four`.
+- **tiny-LM step record.** `make bench-mamba-tiny` refuses above load 1.0.
+  The host ran a game at ~162% CPU and a `diffusion world-train` job at
+  ~75%; no idle measurement was possible, so no new step number is quoted.
+- **Full `make check`.** Started as `make session TASK=check-full`; at handoff
+  it was at `reference/test_cifar_train.py` with a Bend CIFAR build running.
+  No completion or count is claimed until it finishes.
+- **Matched 3,200-step run.** Parity code and wiring are in place; a 4-step
+  `arch_compare.py --matched` attempt did not finish in 600 s under load 5-6.
+  The long run needs a quiet machine and a multi-hour window.
+- **Sampled legibility from the checkpoint.** Stopped at 12/64 draws, no
+  record written.
 
-### Not verified — the one honest delta
+### Local ledger
 
-`make check` (the full gate) did not complete in this session. Two runs
-each hit the **unchanged** 1800 s per-test timeout in
-`reference/check_all.py`: the first at `test_mamba_vit_train.py`, the
-second at `test_mamba3_tiny_lm_run.py` (141 ok checks before the second
-failure). The host was running Dota 2 at ~248% CPU across both windows;
-a timed-out gate also leaves its child Bend binary running (killed by
-hand; recorded in `.local/issues-hit.md`). `make validate` inherits the
-same failure at its `check` stage. No timeout, tolerance or gate was
-loosened; the earlier recorded `158/158` from 2026-11-15 was not
-re-verified in this session. `make check-fast` 31/31 and `make validate
-QUICK=1` are green.
+`bend-lab/.local/issues-hit.md` gained five 2026-11-19 entries: the undefined
+record-writer names, the stale binary, the multi-hour four-pair window, the
+load-bound jobs, and the missing sampled number. `make issues` renders it;
+`.local/` was never committed, pushed or quoted publicly.
 
-### Out of budget / blocked (unchanged)
+### Next, in order
 
-- mimo: no vendored MIMO kernel or TileLang on this lane; untouched.
-- Architecture comparison: no Bend Transformer, pinned flowers data or
-  equal-parameter arms; recorded out of budget, not estimated.
-- Full-corpus tiny-LM pass: `unavailable` at this budget; see the card.
-
-### What changed in the code
-
-- New gates: `reference/test_mamba3_{lanes,bf16_curve,cases,fd,state,wrap,
-  clamps,canfail,det,bounds_for,against}.py`, `reference/mamba3_lanes.py`,
-  `reference/mamba3_cases.py`, `reference/mamba3_wrap.py`.
-- New probes: `probe_mamba3_state.bend`, `probe_mamba3_clamps.bend`.
-- Behavior change: `mamba3_siso.bend`'s `softplus` uses torch's
-  threshold=20 semantics; `reference/bounds.py`'s `bounds_for` merges
-  per path and refuses a stale/moved floor.
-- `reference/experiment.py` gains the `mamba3-tiny-lm` task; the tiny-LM
-  card writer emits its variant/bounds from the record.
-- Full measurement ledgers: `docs/mamba3-lanes.md`,
-  `docs/mamba3-tiny-lanes.md`, `results/mamba3-tiny-lm.md`,
-  `results/mamba3-tiny-lm-page.txt`; `make issues` re-rendered (145
-  entries, `.local/` only).
-
-### Last fix after the handoff draft
-
-A full-check run saw a transient Triton `OutOfResources` in the lanes
-gate (autotune chose a config needing 122384 B of shared memory on a
-101376 B GPU). `reference/mamba3_lanes.py` now caps autotuned
-`num_stages` to <= 2 in the dump subprocess — a compile-resource cap,
-not a tolerance change. Fresh lane maxima: ieee 2.490e-06, tf32
-2.392e-03, module 2.396e-02; `MAMBA3 LANES PASS`, check-fast 31/31.
-The full `make check` delta above still stands (the two 1800 s
-timeouts were not retried with any gate change).
-
-## 2026-11-17 — follow-ups after the goal
-
-- **Upstream:** BendTorch PR #42 (our MaxPool2d) merged into devel
-  `8999c69`; #39 closed. nuxyel added the GPU twin (0 ulps at four
-  shapes), seven mutants and the docs. Our follow-up PR #44 guards
-  geometry by construction on both lanes (image as kernel + surplus,
-  stride minus one, Conv2d's convention); `check-maxpool2d` and
-  `check-gpu-layers` PASS. `make laws` reaches ALL PROOFS CHECK but its
-  `fast.bend` defs check fails on `Array.get_unchecked` — reproduced on
-  clean upstream devel, an environment/toolchain mismatch. PR #44 is
-  waiting on the maintainer.
-- **bend-lab #2:** the tiny-LM is instrumented. `make report
-  TASK=mamba3-tiny-lm` now shows stages and bounds from the fresh
-  2026-11-17 record: `run/step` 48,585 ms = forward 3,177 ms (6.5%) +
-  loss_backward_opt 45,408 ms (93.5%); the matmul floors are ~1-3 ms,
-  so overhead dominates this lane — the page's "a faster kernel" label
-  is a worklist default, not a diagnosis. The card generator reads
-  variant+bounds from the record, so regeneration cannot erase them.
-- **bend-lab #3:** `make oracle-boundary` (static run-path check) and
-  `make lane-matrix` (task/lane compliance page, 20/20) are committed;
-  `record-compat` still renders schema /1 and /3 records; check-fast
-  31/31.
-- The compiler issue bendlang/bend#1403 was closed as not worth fixing
-  (literal-Nat match memory; succ-pattern rows are the workaround).
-- **Not done:** the full `make check` was deferred by the user; no
-  full-gate number was recorded for this period. bend-ml#26's round-trip
-  proof and BendTorch#36's four-batch run remain outstanding upstream
-  promises; no ONNX work was added — the run path stays oracle-free.
-
-## 2026-11-17 — research and upstream follow-ups
-
-- The tiny-LM's step was decomposed with its own bench: optimizer walks
-  0.06 s/step, array add of the same 71,952 cells 0.02 s, forward 3.1-3.7 s,
-  scan ~7-8 s per two blocks, preprocessing weights ~14-80 s per two
-  blocks depending on machine load. A synthetic 128-iteration loop of the
-  per-token in_proj accumulation (outer + 19,456-cell flat add + transpose
-  matvec) took 52.9 s in one run, two thirds of that phase: the hot loop is
-  our flat-list gradient accumulation in `pw_fin2`, not the scan, the
-  optimizer or a library op. Absolute times vary ~3x with CPU contention;
-  within-run ratios only. `examples/language/mamba3/COMPARISON.md` has the
-  tables and caveats.
-- `make pages` rendered all 20 task pages from committed records into
-  `results/pages/`; no runs were made for them.
-- bend-ml#26: a one-cell round-trip law is proved on the fork branch
-  (`feat/mat-roundtrip` 66bb483); the general law needs counter bits,
-  `new_apart` and two-sided induction. BendTorch#36's four-batch UNet run
-  is blocked by the checker's 16,384-row ceiling; reported on both issues.
-- Full `make check` was not completed: resource-capped runs were stopped
-  externally twice and once timed out on test_cifar with a 4 GiB cap that
-  its 4.34 GiB peak could not fit. At 5 GiB that single gate passes in
-  1:53; the full run was then externally terminated at 171 ok / 0 errors,
-  only `test_vit_checkpoint.py` left unchecked. No gate or timeout was
-  loosened.
-
-## 2026-11-18 — #44 merged; #26 blocked on a design question
-
-- BendTorch PR #44 merged into devel `66a1e1e` (MaxPool2d geometry guards);
-  nuxyel folded its CHANGELOG into #42's entry and kept kernel 0 writable
-  (documented; Conv2d shares the shape).
-- `make laws` on the merged tree passes with **Bend 2.0.40** (EXIT=0,
-  2026-11-18). The earlier `Array.get_unchecked` failure was this lab's
-  2.0.38 pin, not the PR. The lab stays on 2.0.38; the version difference
-  is a banner.
-- bend-ml#26: one-cell law proved (`feat/mat-roundtrip`, 66bb483). The
-  get-returns-array piece was attempted and backed out: `Array.get` needs
-  size-returns-array first, and the parent congruence needs the child as a
-  term while recursion consumes it. The question (Get carrying the array as
-  data, or a rewrite order) is on the issue; no partial lemma committed.
-
-## 2026-11-18 — the tiny-LM backward's hot loop is fixed
-
-- `G2.dW_in` is an `Array<F32>` in `mamba3_siso.bend` (SISO and GQA):
-  `acc_outer` adds each token's `outer(dpre, u_t)` in place, `arr_dW`
-  converts once at `to_grad`. Bit-identical by construction (same cell
-  layout, same add order), checked cell by cell in
-  `bench/mamba_tiny_accum/main.bend` (`cells_diff: 0`), and byte-identical
-  on the real gradient: `probe_mamba3_grad.bend` built at `275f057` and
-  at `c7f533d` prints the same 26 lines (`cmp` clean).
-- Measured, one process, load average 3.4: the old accumulation loop alone
-  is 12.6 s and the whole new backward for two blocks 10.7 s; the step is
-  11.9 s against the recorded pre-change 48.6 s. The 3.4 load (a game on
-  2.3 cores) makes the before/after a banner; the within-run comparison is
-  the result. `COMPARISON.md` has the table.
-- Gates: `make mamba3` PASS, `make mamba3-gqa` PASS, `make mamba3-tiny-opt`
-  PASS (20-step curve and final weights against the twin, worst rel
-  7.9e-06). `mamba3` and `mamba3-gqa` were re-run on the final tree;
-  `tiny-opt` ran one multiply earlier, before the operand order was
-  made `scale_list`'s, which is bit-neutral for finite values and is
-  covered by the probe diff. The `mamba3-tiny-lm` record was re-made on
-  2026-11-19 at load 0.52 (`git` 7a6e04f): **11,163 ms/step** (forward
-  2,557, backward and optimizer 8,606) against 48,585 ms/step on
-  2026-11-17. `bench/history.md` has the row.
-- Toolchain: `bend update` had replaced `~/.bend/bend2/base.bend`,
-  `bendtt.lean` and `effs/` with 2.0.40's files while the 2.0.38 binary
-  stayed, which broke every live `F32.from_nat` call. All three were
-  restored from the `v2.0.38` tag in `../bend`; check ctimes, not only
-  `bend version`. `docs/NOTES.md` has the diagnosis.
-
-## 2026-11-19 — measurement integrity
-
-- `make bench-mamba-tiny` is the tiny-LM step's gate: one line from the
-  program's own clock, failing on any changed line in
-  `bench/expected-mamba-tiny.txt`. `make bench-ab A= B=` is the shuffled
-  two-build median, with the same output check. Both refuse above
-  `MAX_LOAD=1.0` unless `FORCE=1`; `bench/history.md` holds the protocol and
-  the first (forced, reference-only) row.
-- The 2026-11-18 number (10,860 ms/step) was measured at load 2.9; it is in
-  the history as a reference. An idle row is still owed before the step time
-  is quoted as this commit's benchmark.
-
-## 2026-11-19 — the model's shape laws
-
-- `examples/language/mamba3/mamba3_siso.bend` names its shapes and computes
-  the state offsets and the GQA group with them; `mamba3_laws.bend` proves
-  the GQA mapping, the state capacity (rows and head blocks) and the scan's
-  read length over every index the shapes have. `--verdict` passes and
-  `check_all.py` runs it with the package laws.
-- The named constants are the old literals definitionally: the step gate
-  prints the same loss and heads (4.838168, 327157.12, 9.758908).
-
-## 2026-11-19 — side-by-side Bend installs
-
-- `scripts/bend-side.sh <version>` installs a whole release under
-  `~/.bend-side/<version>`; `scripts/bend_smoke.sh` checks a live
-  `F32.from_nat` (the half-update failure); `scripts/bend-latest.sh` compares
-  the pin to GitHub's latest and `--install` runs the model laws with it.
-- Bend 2.0.40 is installed at `~/.bend-side/bend-2.0.40` and passes the
-  shape laws; the pin remains 2.0.38. Never `bend update` in place.
-
-## 2026-11-19 — the backward scan's state walk
-
-- `bw_go` / `bw_on_go` took `take_row(states, t*2048, 2048)` per position,
-  which drops `t*2048` cells each time: quadratic. The states are now
-  reversed once (minus the last state, which the backward never uses) and
-  each position takes 2,048 and drops 2,048. Same-process probe: 2,076 ms ->
-  79 ms per block at load 4.2. The gate's loss and heads are unchanged.
-- `dW_out` (1,070 ms per block in the first split) is an `Array<F32>` now,
-  added with `acc_outer` and converted once at `to_grad`: 789 -> 5 ms in one
-  process at load 4.8, and the real gradient probe is byte-identical. The
-  next pieces from the split are `scan_bw_all` (~407 ms) and the remaining
-  per-token slices; the `mamba3-tiny-lm` record still predates both fixes
-  and waits for a quiet machine (`make bench-mamba-tiny` refuses above 1.0).
-
-## 2026-11-19 — the 72k two-arm pilot
-
-- `reference/arch_compare.py` runs both arms on the same byte windows and
-  writes `results/arch-72k-pilot.{md,json}`. The 20-step pilot (load 1.4):
-  Mamba 4.838 -> 4.333 in 392.7 s, GLM hybrid 5.563 -> 3.722 in 31.5 s.
-  Not a verdict: vocab 127 vs 260, different optimizers, schedules and
-  held-out slices, all printed in the report.
-- The tiny-LM data file now holds 200 windows and 32 held-out examples;
-  the Mamba trainer already accepts `--steps`/`--lr-ppm`/`--data` and
-  adapts its schedule, and the runner passes `--steps`/`--lr-ppm` to it.
-- A matched run still needs the GLM arm on the Mamba optimizer with the
-  same warmup/cosine, and a 127-wide GLM head (or a restricted eval).
-
-## 2026-11-19 — the 200-step pilot is running
-
-- `reference/arch_compare.py --steps 200` was started in the background
-  after the data file was extended to 200 windows. Its report will land in
-  `results/arch-72k-pilot.{md,json}` with the banners that remain (the
-  GLM's optimizer, constant LR and 260-wide head).
-
-## 2026-11-19 — the UNet is a first-class record
-
-- `make unet-record` re-scores the committed draws with `make unet-metric`
-  and writes `results/latest/unet-flowers.json` (migration, with a manifest).
-  Held 0.5473, ceiling 0.5738, floor 0.0582, span 94.87%; timings are
-  `unavailable`, not zero; the page and `RESULTS.md` include it.
-- Next UNet steps: save a checkpoint on a fresh run so sampling from the
-  trained model is possible, then the B=2 four-pair run from BendTorch#36.
-  No new architecture has a measured reason yet.
-
-## 2026-11-19 — four-pair UNet option
-
-- `train.bend --four` accumulates four different pairs per flush with
-  `LossOut.div` and `Train.flush`; k=1 stays the default and its 1-step loss
-  matches the record. Pair indices wrap modulo NIMG (8 images per flush over
-  3,600 steps, so the file is seen ~4 times).
-- A fresh 3,600-step run with `--save .scratch/unet_ckpt` is in flight for a
-  checkpoint; the four-pair run with sampling is next. The --four logged
-  loss is the last micro-batch's divided loss, not the accumulated mean.
+1. On a quiet machine, one job at a time: full `make check`, then
+   `make bench-mamba-tiny`, then the 3,600-step --four run with sampling.
+2. Score the four-pair draws, `make unet-record-four`, `make results`.
+3. Launch the matched 3,200-step run with `--matched` and report it against
+   the banners; that is the only answer to "which is better".
+4. Re-run `make unet-sample` for the sampled legibility number.
+5. Wait for the maintainer's reviews on PRs #38 and #39.
