@@ -1,0 +1,11 @@
+# The plumbing bench's deterministic lines for this model and toolchain pin.
+#
+# scripts/bench_mamba_tiny.sh builds bench/plumbing_mamba_tiny/main.bend and
+# fails if any line below is missing from its output. A line here changes only
+# on a deliberate model or pin change: run the gate, read the new line, and
+# update this file in the same commit that changes the reason.
+params: 71952
+forward_loss: 4.838168
+full_step_loss: 4.838168
+back_head: 327157.12
+scan_head: 9.758908

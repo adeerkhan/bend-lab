@@ -8,7 +8,7 @@ BEND := $(or $(BEND_BIN),$(HOME)/.bend/bin/bend)
 BEND_VERSION := 2.0.38
 BEND_REF := ../bend-ref
 
-.PHONY: setup check laws sync-bend clean lint env env-check release experiment experiments results report trace dash dashboard session unet-metric mamba3-bench mamba3-layer mamba3-step mamba3-train-curve mamba3-varlen mamba3-gqa mamba3-outnorm mamba3-deep mamba3-lanes mamba-bf16-curve mamba3-cases mamba3-fd mamba3-state mamba3-wrap mamba3-clamps mamba3-canfail mamba3-det record-compat oracle-boundary lane-matrix pages mamba3-tiny-data mamba-vit-emb mamba-vit-fwd mamba-vit-bwd mamba-vit-train glm-step glm-block-step glm-lin-block glm-decode glm-h192-step batch peaks bounds bench plumbing flow flow64 doctor figures select plots sweep sweep-agent
+.PHONY: setup check laws sync-bend clean lint env env-check release experiment experiments results report trace dash dashboard session unet-metric mamba3-bench mamba3-layer mamba3-step mamba3-train-curve mamba3-varlen mamba3-gqa mamba3-outnorm mamba3-deep mamba3-lanes mamba-bf16-curve mamba3-cases mamba3-fd mamba3-state mamba3-wrap mamba3-clamps mamba3-canfail mamba3-det record-compat oracle-boundary lane-matrix pages mamba3-tiny-data mamba-vit-emb mamba-vit-fwd mamba-vit-bwd mamba-vit-train glm-step glm-block-step glm-lin-block glm-decode glm-h192-step batch peaks bounds bench plumbing bench-mamba-tiny bench-ab flow flow64 doctor figures select plots sweep sweep-agent
 
 setup:            ## Bend, Lean and the Python venv
 	scripts/setup.sh
@@ -235,6 +235,12 @@ bench:            ## a compute-only kernel benchmark, saved under results/
 
 plumbing:         ## the time split of one ViT training step, saved under results/
 	$(PY) reference/bench_plumbing.py
+
+bench-mamba-tiny: ## one line: ms per step by the program's own clock, failing on changed outputs
+	scripts/bench_mamba_tiny.sh
+
+bench-ab:         ## A/B two plumbing binaries, shuffled rounds, refused under load (A= B= ROUNDS=)
+	scripts/bench_ab.sh $(A) $(B) $(or $(ROUNDS),5)
 
 figures:          ## rebuild the README figures from results/, saved under docs/assets/figures/
 	$(PY) reference/make_readme_figures.py

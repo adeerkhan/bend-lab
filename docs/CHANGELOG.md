@@ -4,6 +4,23 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### Measurement integrity: a gate, a refusing A/B harness, a history
+
+- `make bench-mamba-tiny` builds `bench/plumbing_mamba_tiny/main.bend` and
+  prints one line, `ms_per_step=… loss=… load=… tokens=128 ok`, from the
+  program's own clock. It fails if any line of
+  `bench/expected-mamba-tiny.txt` is missing (the loss, the backward and scan
+  heads, the parameter count), so a change in what the model computes cannot
+  pass as a timing.
+- Both that gate and `make bench-ab A=<bin> B=<bin>` refuse to measure when
+  the one-minute load average is above `MAX_LOAD` (1.0) unless `FORCE=1`; the
+  A/B alternates the two builds in shuffled rounds, requires the same
+  `full_step_loss` on both, and prints medians with a `bench/history.md` row.
+- `bench/history.md` records the protocol and its first row: the array
+  accumulator's 10,860 ms/step, measured with `FORCE=1` at load 2.9 and
+  labelled a reference, not an idle measurement.
+
+
 ### The in_proj accumulator is an array: step 48.6 s to 11.9 s
 
 - `G2.dW_in` is an `Array<F32>` in both the SISO and the GQA backward:

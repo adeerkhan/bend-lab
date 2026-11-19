@@ -237,3 +237,15 @@ timeouts were not retried with any gate change).
   stayed, which broke every live `F32.from_nat` call. All three were
   restored from the `v2.0.38` tag in `../bend`; check ctimes, not only
   `bend version`. `docs/NOTES.md` has the diagnosis.
+
+## 2026-11-19 — measurement integrity
+
+- `make bench-mamba-tiny` is the tiny-LM step's gate: one line from the
+  program's own clock, failing on any changed line in
+  `bench/expected-mamba-tiny.txt`. `make bench-ab A= B=` is the shuffled
+  two-build median, with the same output check. Both refuse above
+  `MAX_LOAD=1.0` unless `FORCE=1`; `bench/history.md` holds the protocol and
+  the first (forced, reference-only) row.
+- The 2026-11-18 number (10,860 ms/step) was measured at load 2.9; it is in
+  the history as a reference. An idle row is still owed before the step time
+  is quoted as this commit's benchmark.
