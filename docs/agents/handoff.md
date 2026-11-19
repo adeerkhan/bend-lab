@@ -290,7 +290,15 @@ timeouts were not retried with any gate change).
   Mamba 4.838 -> 4.333 in 392.7 s, GLM hybrid 5.563 -> 3.722 in 31.5 s.
   Not a verdict: vocab 127 vs 260, different optimizers, schedules and
   held-out slices, all printed in the report.
-- A matched 200-step run needs, in this order: 200 windows in the Mamba
-  data file; `--steps`/`--lr`/`--data` on the Mamba trainer; the Mamba
-  optimizer plus warmup/cosine on the GLM arm; and a 127-wide GLM head (or
-  a restricted eval) so the losses are comparable.
+- The tiny-LM data file now holds 200 windows and 32 held-out examples;
+  the Mamba trainer already accepts `--steps`/`--lr-ppm`/`--data` and
+  adapts its schedule, and the runner passes `--steps`/`--lr-ppm` to it.
+- A matched run still needs the GLM arm on the Mamba optimizer with the
+  same warmup/cosine, and a 127-wide GLM head (or a restricted eval).
+
+## 2026-11-19 — the 200-step pilot is running
+
+- `reference/arch_compare.py --steps 200` was started in the background
+  after the data file was extended to 200 windows. Its report will land in
+  `results/arch-72k-pilot.{md,json}` with the banners that remain (the
+  GLM's optimizer, constant LR and 260-wide head).

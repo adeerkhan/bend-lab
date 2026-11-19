@@ -4,6 +4,21 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### 200 windows, and the runner passes the shared step budget to both arms
+
+- `reference/mamba3_tiny_data.py` was inconsistent with the trainer: it
+  wrote 200 train windows but an 8-example held-out file, while the trainer
+  reads 32 held-out examples. It now writes the corpus's full 32-example
+  validation split, and the generated files and manifest agree (200 train,
+  32 held-out, vocab 127). The first 20 windows are unchanged, so the
+  gated 20-step run sees the same data.
+- `reference/arch_compare.py` passes `--steps N --lr-ppm 300` to the Mamba
+  arm (the trainer already accepts `--steps`, `--lr-ppm` and `--data` and
+  adapts its warmup/cosine to N). Its report no longer claims the Mamba
+  needs flags; the remaining banners are the GLM's optimizer and constant
+  LR, and the GLM's 260-wide head.
+
+
 ### The first two-arm pilot: Mamba-3 and the GLM hybrid on one byte stream
 
 - `reference/arch_compare.py` builds and runs both trainers on the same
@@ -16,11 +31,10 @@ What changed for the people who run the lab. Internal refactors are not listed.
   report prints the four reasons: vocabulary 127 against 260 (133 classes
   the corpus never uses), different optimizers, different schedules, and
   different held-out slices.
-- The report lists what a matched 200-step run needs: 200 windows in the
-  Mamba data file (64 now), `--steps`/`--lr`/`--data` flags on the Mamba
-  trainer (its schedule is fixed at 20 steps), the Mamba optimizer and a
-  warmup/cosine on the GLM arm, and a 127-wide GLM head (or a restricted
-  eval) so the cross-entropies are one measurement.
+- The report lists what a matched 200-step run needs: the Mamba optimizer
+  and a warmup/cosine on the GLM arm (its LR is constant), and a 127-wide
+  GLM head (or a restricted eval) so the cross-entropies are one
+  measurement.
 
 
 ### The backward's dW_out accumulator is an array

@@ -67,9 +67,10 @@ def tag_floats(out, tag):
     return []
 
 
-def run_mamba(binary):
+def run_mamba(binary, steps):
     t0 = time.time()
-    p = subprocess.run([binary], cwd=ROOT, env=ENV, capture_output=True, text=True)
+    p = subprocess.run([binary, "--steps", str(steps), "--lr-ppm", "300"],
+                       cwd=ROOT, env=ENV, capture_output=True, text=True)
     wall = time.time() - t0
     if p.returncode != 0:
         sys.stderr.write(p.stdout + p.stderr)
@@ -120,7 +121,7 @@ def main():
     build(GLM_PROG, gbin)
     print("running Mamba-3")
     load0 = os.getloadavg()[0]
-    m = run_mamba(mbin)
+    m = run_mamba(mbin, steps)
     m["load"] = [load0, os.getloadavg()[0]]
     print("running the GLM hybrid")
     load0 = os.getloadavg()[0]
@@ -138,16 +139,14 @@ def main():
             "two cross-entropies are not one measurement",
             "optimizer: Mamba AdamW 0.9/0.999 wd 0.01 clip 1.0; GLM CAdamW "
             "0.9/0.95 wd 0.1 clip 0.05",
-            "schedule: Mamba warmup 5 + cosine 1e-3 to 1e-4 over 20 steps; "
-            "GLM constant 3e-4",
+            "schedule: for --steps N both peak at 3e-4, but Mamba warms up 5 "
+            "steps and cosines to 3e-5 over N while the GLM is constant",
             "held-out: Mamba's 4,096-byte split, GLM's val batch, different slices",
         ],
         "blockers_200": [
-            "Mamba train_tokens.bin holds 64 windows; 200 needs 200",
-            "Mamba trainer has no --steps/--lr/--data flags; its schedule is "
-            "fixed at 20 steps",
-            "the GLM arm needs the Mamba optimizer and a warmup/cosine over the "
-            "same budget",
+            "the GLM arm needs the Mamba optimizer (0.9/0.999, wd 0.01, "
+            "clip 1.0) and the same warmup/cosine over the shared budget "
+            "(its LR is constant today)",
             "the GLM head is 260 wide; a matched run needs 127 (or a restricted "
             "eval), which changes its parameter count and its gates",
         ],

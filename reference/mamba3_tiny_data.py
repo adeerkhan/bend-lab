@@ -6,11 +6,11 @@ Reads `examples/language/glm53_flash/data/corpus128-b32/` (4000 train
 examples, 8 held-out, 128 byte positions each, uint32 tokens) and writes the
 tiny-LM's own files to `.scratch/mamba3_tiny/`:
 
-  train_tokens.bin   64 examples x 128 positions = 8192 uint32 tokens
-  heldout_tokens.bin  8 examples x 128 positions = 1024 uint32 tokens
+  train_tokens.bin  200 examples x 128 positions = 25600 uint32 tokens
+  heldout_tokens.bin  32 examples x 128 positions = 4096 uint32 tokens
   manifest.json      source, hashes, shapes, vocab (max token + 1)
 
-The subset is the first 64 train examples and the whole held-out split: a
+The subset is the first 200 train examples and the whole held-out split: a
 real text stream, one named split, no shuffling that would leak the split.
 """
 from __future__ import annotations
@@ -25,7 +25,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "examples/language/glm53_flash/data/corpus128-b32")
 OUT = os.path.join(ROOT, ".scratch/mamba3_tiny")
 POSITIONS = 128
-TRAIN_EXAMPLES = 64
+TRAIN_EXAMPLES = 200
 
 
 def sha256(path):
@@ -39,7 +39,7 @@ def sha256(path):
 def main():
     os.makedirs(OUT, exist_ok=True)
     train = np.fromfile(os.path.join(SRC, "corpus128-train_batch.bin"), dtype=np.uint8)
-    held = np.fromfile(os.path.join(SRC, "corpus128-val_batch.bin"), dtype=np.uint8)
+    held = np.fromfile(os.path.join(SRC, "corpus128-val_batch.bin"), dtype=np.uint8)[: 32 * POSITIONS]
     train = train[: TRAIN_EXAMPLES * POSITIONS]
     train.astype(np.uint8).tofile(os.path.join(OUT, "train_tokens.bin"))
     held.astype(np.uint8).tofile(os.path.join(OUT, "heldout_tokens.bin"))
@@ -60,7 +60,7 @@ def main():
                            "positions": POSITIONS, "count": int(held.size),
                            "sha256": sha256(os.path.join(OUT, "heldout_tokens.bin"))},
         "vocab": vocab,
-        "split": "train = the first 64 corpus examples; heldout = the corpus's own val split",
+        "split": "train = the first 200 corpus examples; heldout = the corpus's own 32-example val split",
     }
     with open(os.path.join(OUT, "manifest.json"), "w") as f:
         json.dump(manifest, f, indent=2)
