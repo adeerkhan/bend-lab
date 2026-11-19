@@ -4,6 +4,19 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The backward's dW_out accumulator is an array
+
+- `BW.dW_out` and `G2.dW_out` are `Array<F32>`: `acc_outer` adds each
+  position's `outer(dy_t, yi_t)` in place, and `arr_dW(8192n, ...)` renders
+  the list once at `to_grad`. The same bench, one process at load 4.8:
+  **789 ms** per block as a list, **5 ms** as an array.
+- `probe_mamba3_grad` built at `1bc742b` and at this commit prints
+  byte-identical output, the 8,192 numbers of `dW_out` included;
+  `make mamba3` and `make mamba3-gqa` pass. The step gate at load 4.85 reads
+  16,080 ms/step; the idle record is still the 11,163 ms pre-change one and
+  waits for a quiet machine.
+
+
 ### The backward scan's state walk is linear
 
 - The split of `bw_go` (128 positions, one process, load 4.2): the state

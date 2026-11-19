@@ -1284,11 +1284,11 @@ type BW is Type:
      dqk: List<&2, F32>, dscale: List<&2, F32>,
      dADT: List<&2, F32>, dD: List<&2, F32>,
      dstate: List<&2, F32>, do_v: List<&2, F32>,
-     dz: List<&2, F32>, dW_out: List<&2, F32>,
+     dz: List<&2, F32>, dW_out: Array<F32>,
      du: List<&2, F32>}
 
 def bw_add(sb: SB, +do_v: List<&2, F32>, +dz: List<&2, F32>,
-    +dW_out: List<&2, F32>, +do_v0: List<&2, F32>,
+    dW_out: Array<F32>, +do_v0: List<&2, F32>,
     +dz0: List<&2, F32>, +dq: List<&2, F32>,
     +dk: List<&2, F32>, +dx: List<&2, F32>,
     +dqk: List<&2, F32>, +dscale: List<&2, F32>,
@@ -1349,7 +1349,7 @@ def bw_go(+left: Nat, +t: Nat, +z: List<&2, F32>,
       +dyi = matvec_t(w_out, dy_t, 64n, 128n)
       +do_v_t = mul_lists(dyi, silu_row(z_t))
       +dz_t = mul_lists(mul_lists(dyi, ov_t), silu_deriv_row(z_t))
-      +dW_out2 = add_lists(dW_out, outer(dy_t, yi_t))
+      dW_out2 = acc_outer(dy_t, yi_t, dW_out)
       sb : SB = scan_bw_all(S_t, dstate, do_v_t, q_t, k_t, x_t,
         qk_t, scale_t, ADT_t, D)
       bw_go(p, (t - 1n : Nat), z, x, ADT, q, k, qk, scale,
@@ -1369,7 +1369,8 @@ def bw_start(+z: List<&2, F32>, +x: List<&2, F32>,
     List.drop(&2, F32, List.reverse(&2, F32, states), all_state()),
     out_v, y_inner, D, w_out, dy,
     BW{Nil{}, Nil{}, Nil{}, Nil{}, Nil{}, Nil{}, zline(4n),
-      zline(all_state()), Nil{}, Nil{}, zline(8192n), Nil{}})
+      zline(all_state()), Nil{}, Nil{},
+      Array.new(F32, TA.cap_depth(8192n), 0.0), Nil{}})
 
 
 
@@ -1686,7 +1687,7 @@ type G2 is Type:
      dtrap: List<&2, F32>, ddd_dt: List<&2, F32>,
      ddd_A: List<&2, F32>, dBraw: List<&2, F32>,
      dCraw: List<&2, F32>, dD: List<&2, F32>,
-     dW_out: List<&2, F32>}
+     dW_out: Array<F32>}
 
 def cat2(+a: List<&2, F32>, +b: List<&2, F32>) -> List<&2, F32>:
   List.append(&2, F32, a, b)
@@ -1711,7 +1712,7 @@ def pw_fin2(ph: PHB, rb: RMSG, rc: RMSG,
     +dCraw_all: List<&2, F32>, +dz_t: List<&2, F32>,
     +dx_t: List<&2, F32>, +u_t: List<&2, F32>,
     +w_in: List<&2, F32>, +dD: List<&2, F32>,
-    +dW_out: List<&2, F32>) -> G2:
+    dW_out: Array<F32>) -> G2:
   match ph rb rc:
     case PHB{dDT, +dtrap, +ddd_dt, +ddd_A, +dang}
         RMSG{+dxb, dwb} RMSG{+dxc, dwc}:
@@ -1830,7 +1831,7 @@ def to_grad(g: G2, +do_v: List<&2, F32>, +dz: List<&2, F32>,
         +dBraw, +dCraw, dD, dW_out}:
       GRAD{rev_rows(Nat.div(List.length(&2, F32, du), 64n), du, 64n, Nil{}),
         arr_dW(19456n, dW_in), ddt_bias, dB_bias, dC_bias, dBw, dCw, dD,
-        dW_out, do_v, dq, dk, dz, dx, dqk, dscale, dADT,
+        arr_dW(8192n, dW_out), do_v, dq, dk, dz, dx, dqk, dscale, dADT,
         rev_rows(Nat.div(List.length(&2, F32, dBn), 16n), dBn, 16n, Nil{}),
         rev_rows(Nat.div(List.length(&2, F32, dCn), 16n), dCn, 16n, Nil{}),
         rev_rows(Nat.div(List.length(&2, F32, dDT), 4n), dDT, 4n, Nil{}),
@@ -2084,7 +2085,7 @@ def pw_fin2_gqa(ph: PHB, rb: RMSG, rc: RMSG,
     +dCraw_all: List<&2, F32>, +dz_t: List<&2, F32>,
     +dx_t: List<&2, F32>, +u_t: List<&2, F32>,
     +w_in: List<&2, F32>, +dD: List<&2, F32>,
-    +dW_out: List<&2, F32>) -> G2:
+    dW_out: Array<F32>) -> G2:
   match ph rb rc:
     case PHB{dDT, +dtrap, +ddd_dt, +ddd_A, +dang}
         RMSG{+dxb, dwb} RMSG{+dxc, dwc}:
@@ -2189,7 +2190,7 @@ def to_grad_gqa(g: G2, +do_v: List<&2, F32>, +dz: List<&2, F32>,
         +dBraw, +dCraw, dD, dW_out}:
       GRAD{rev_rows(Nat.div(List.length(&2, F32, du), 64n), du, 64n, Nil{}),
         arr_dW(21760n, dW_in), ddt_bias, dB_bias, dC_bias, dBw, dCw, dD,
-        dW_out, do_v, dq, dk, dz, dx, dqk, dscale, dADT,
+        arr_dW(8192n, dW_out), do_v, dq, dk, dz, dx, dqk, dscale, dADT,
         rev_rows(Nat.div(List.length(&2, F32, dBn), 32n), dBn, 32n, Nil{}),
         rev_rows(Nat.div(List.length(&2, F32, dCn), 32n), dCn, 32n, Nil{}),
         rev_rows(Nat.div(List.length(&2, F32, dDT), 4n), dDT, 4n, Nil{}),
@@ -2389,7 +2390,7 @@ type BWON is Type:
        dqk: List<&2, F32>, dscale: List<&2, F32>,
        dADT: List<&2, F32>, dD: List<&2, F32>,
        dstate: List<&2, F32>, do_v: List<&2, F32>,
-       dz: List<&2, F32>, dW_out: List<&2, F32>,
+       dz: List<&2, F32>, dW_out: Array<F32>,
        dW_on: List<&2, F32>, du: List<&2, F32>}
 
 def rb_dx(r: RMSG) -> List<&2, F32>:
@@ -2403,7 +2404,7 @@ def rb_dw(r: RMSG) -> List<&2, F32>:
       dw
 
 def bw_on_add(sb: SB, +do_v: List<&2, F32>, +dz: List<&2, F32>,
-    +dW_out: List<&2, F32>, +dW_on: List<&2, F32>,
+    dW_out: Array<F32>, +dW_on: List<&2, F32>,
     +do_v0: List<&2, F32>, +dz0: List<&2, F32>,
     +dq: List<&2, F32>, +dk: List<&2, F32>,
     +dx: List<&2, F32>, +dqk: List<&2, F32>,
@@ -2467,7 +2468,7 @@ def bw_on_go(+left: Nat, +t: Nat, +z: List<&2, F32>,
       +dxv = rb_dx(rms4_bwd(ov_t, won, do_n))
       +dwo = rb_dw(rms4_bwd(ov_t, won, do_n))
       +dz_t = mul_lists(mul_lists(dyi, yn_t), silu_deriv_row(z_t))
-      +dW_out2 = add_lists(dW_out, outer(dy_t, yi_t))
+      dW_out2 = acc_outer(dy_t, yi_t, dW_out)
       sb : SB = scan_bw_all(S_t, dstate, dxv, q_t, k_t, x_t,
         qk_t, scale_t, ADT_t, D)
       bw_on_go(p, (t - 1n : Nat), z, x, ADT, q, k, qk, scale,
@@ -2487,7 +2488,8 @@ def bw_on_start(+z: List<&2, F32>, +x: List<&2, F32>,
     List.drop(&2, F32, List.reverse(&2, F32, states), all_state()),
     out_v, y_inner, D, w_out, won, dy,
     BWON{Nil{}, Nil{}, Nil{}, Nil{}, Nil{}, Nil{}, zline(4n),
-      zline(all_state()), Nil{}, Nil{}, zline(8192n), zline(128n), Nil{}})
+      zline(all_state()), Nil{}, Nil{},
+      Array.new(F32, TA.cap_depth(8192n), 0.0), zline(128n), Nil{}})
 
 type GRADON is Type:
   GRADON{g: GRAD, dW_on: List<&2, F32>}

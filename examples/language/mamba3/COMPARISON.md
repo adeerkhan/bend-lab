@@ -420,3 +420,18 @@ same loss and heads (4.838168, 327157.12, 9.758908), and `make mamba3` and
 The second row is the next target: the per-token outer product plus flat add
 into the 8,192-cell `dW_out` accumulator is the same shape as `pw_fin2`
 before the array accumulator, and the fix is the same one.
+
+### The `dW_out` accumulator as an array (2026-11-19)
+
+`BW.dW_out` (and `G2.dW_out` after it) is an `Array<F32>` now: `acc_outer`
+adds each position's `outer(dy_t, yi_t)` in place, and `arr_dW(8192n, ...)`
+renders the list once at `to_grad`. The same bench, one process at load 4.8:
+
+| the 8,192-cell accumulation, 128 positions | per block |
+|---|---|
+| list `outer` + `add_lists` | **789 ms** |
+| array `acc_outer` + one conversion | **5 ms** |
+
+`probe_mamba3_grad` built at `1bc742b` and at this commit prints
+byte-identical output, the 8,192 numbers of `dW_out` included, so the
+in-place order is the list's. `make mamba3` and `make mamba3-gqa` pass.

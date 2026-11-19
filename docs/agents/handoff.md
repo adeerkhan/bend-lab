@@ -276,7 +276,9 @@ timeouts were not retried with any gate change).
   reversed once (minus the last state, which the backward never uses) and
   each position takes 2,048 and drops 2,048. Same-process probe: 2,076 ms ->
   79 ms per block at load 4.2. The gate's loss and heads are unchanged.
-- Next target from the same split: `dW_out`'s per-token `outer` + flat add
-  into 8,192 cells (1,070 ms per block), the array accumulator's next job.
-  The `mamba3-tiny-lm` record still predates this change; re-record on a
-  quiet machine (`make bench-mamba-tiny` refuses above load 1.0).
+- `dW_out` (1,070 ms per block in the first split) is an `Array<F32>` now,
+  added with `acc_outer` and converted once at `to_grad`: 789 -> 5 ms in one
+  process at load 4.8, and the real gradient probe is byte-identical. The
+  next pieces from the split are `scan_bw_all` (~407 ms) and the remaining
+  per-token slices; the `mamba3-tiny-lm` record still predates both fixes
+  and waits for a quiet machine (`make bench-mamba-tiny` refuses above 1.0).

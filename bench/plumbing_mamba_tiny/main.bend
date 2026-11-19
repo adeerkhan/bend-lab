@@ -136,7 +136,8 @@ def two_backs(+ps: List<&2, F32>, +toks: List<&2, Nat>,
 def bw_dq(b: S.BW) -> F32:
   match b:
     case S.BW{+dq, +dk, +dx, +dqk, +dscale, +dADT, +dD, +dstate,
-        +do_v, +dz, +dW_out, +du}:
+        +do_v, +dz, dW_out, +du}:
+      +drop = S.sumsq(S.arr_dW(8192n, dW_out))
       S.sumsq(dq)
 
 def fwd_bw(f: S.FWD, +D: List<&2, F32>, +wo: List<&2, F32>,
@@ -239,13 +240,23 @@ def scan_tok(+left: Nat, +S_t: List<&2, F32>,
         (acc + sb_head(S.scan_bw_all(S_t, dstate, do_t, q_t, k_t, x_t,
           qk_t, scale_t, ADT_t, D)) : F32))
 
-def dwout_tok(+left: Nat, +dy_t: List<&2, F32>,
+# the old dW_out accumulator: one 8,192-cell list built and added per position
+def dwout_list_tok(+left: Nat, +dy_t: List<&2, F32>,
     +yi_t: List<&2, F32>, acc: List<&2, F32>) -> F32:
   match left:
     case 0n:
       S.sumsq(acc)
     case 1n+p:
-      dwout_tok(p, dy_t, yi_t, S.add_lists(acc, S.outer(dy_t, yi_t)))
+      dwout_list_tok(p, dy_t, yi_t, S.add_lists(acc, S.outer(dy_t, yi_t)))
+
+# the new one: acc_outer in place, one arr_dW at the end
+def dwout_arr_tok(+left: Nat, +dy_t: List<&2, F32>,
+    +yi_t: List<&2, F32>, a: Array<F32>) -> F32:
+  match left:
+    case 0n:
+      S.sumsq(S.arr_dW(8192n, a))
+    case 1n+p:
+      dwout_arr_tok(p, dy_t, yi_t, S.acc_outer(dy_t, yi_t, a))
 
 # the old walk: one take_row from the flat list per position, O(t) each
 def slice_take_tok(+left: Nat, +t: Nat, +states: List<&2, F32>,
@@ -377,10 +388,10 @@ def main() -> IO(Unit):
 
     t20 : Nat <- IO.now()
     +dwv : F32 <- IO.pure(F32,
-      dwout_tok(128n, dy64, yi128, ones_row(8192n, Nil{})))
+      dwout_list_tok(128n, dy64, yi128, ones_row(8192n, Nil{})))
     t21 : Nat <- IO.now()
-    Unit <- show_ms("dwout_x128", Nat.sub(t21, t20))
-    Unit <- show_f32("dwout_head: ", dwv)
+    Unit <- show_ms("dwout_list_x128", Nat.sub(t21, t20))
+    Unit <- show_f32("dwout_list_head: ", dwv)
 
     t22 : Nat <- IO.now()
     +slv : F32 <- IO.pure(F32, slice_take_tok(128n, 0n, states262, 0.0))
@@ -401,4 +412,11 @@ def main() -> IO(Unit):
     t25 : Nat <- IO.now()
     Unit <- show_ms("mv_out_x128", Nat.sub(t25, t24))
     Unit <- show_f32("mv_out_head: ", mvv2)
+
+    t28 : Nat <- IO.now()
+    +dwa : F32 <- IO.pure(F32,
+      dwout_arr_tok(128n, dy64, yi128, Array.new(F32, 13n, 0.0)))
+    t29 : Nat <- IO.now()
+    Unit <- show_ms("dwout_arr_x128", Nat.sub(t29, t28))
+    Unit <- show_f32("dwout_arr_head: ", dwa)
     return Unit{}
