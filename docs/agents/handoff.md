@@ -268,3 +268,15 @@ timeouts were not retried with any gate change).
   the pin to GitHub's latest and `--install` runs the model laws with it.
 - Bend 2.0.40 is installed at `~/.bend-side/bend-2.0.40` and passes the
   shape laws; the pin remains 2.0.38. Never `bend update` in place.
+
+## 2026-11-19 — the backward scan's state walk
+
+- `bw_go` / `bw_on_go` took `take_row(states, t*2048, 2048)` per position,
+  which drops `t*2048` cells each time: quadratic. The states are now
+  reversed once (minus the last state, which the backward never uses) and
+  each position takes 2,048 and drops 2,048. Same-process probe: 2,076 ms ->
+  79 ms per block at load 4.2. The gate's loss and heads are unchanged.
+- Next target from the same split: `dW_out`'s per-token `outer` + flat add
+  into 8,192 cells (1,070 ms per block), the array accumulator's next job.
+  The `mamba3-tiny-lm` record still predates this change; re-record on a
+  quiet machine (`make bench-mamba-tiny` refuses above load 1.0).

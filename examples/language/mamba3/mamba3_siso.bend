@@ -1305,7 +1305,7 @@ def bw_go(+left: Nat, +t: Nat, +z: List<&2, F32>,
     +x: List<&2, F32>, +ADT: List<&2, F32>,
     +q: List<&2, F32>, +k: List<&2, F32>,
     +qk: List<&2, F32>, +scale: List<&2, F32>,
-    +states: List<&2, F32>, +out_v: List<&2, F32>,
+    +srest: List<&2, F32>, +out_v: List<&2, F32>,
     +y_inner: List<&2, F32>, +D: List<&2, F32>,
     +w_out: List<&2, F32>, +dy: List<&2, F32>,
     bw: BW) -> BW:
@@ -1342,15 +1342,19 @@ def bw_go(+left: Nat, +t: Nat, +z: List<&2, F32>,
       +qk_t = take_row(qk, Nat.mul(t, 4n), 4n)
       +scale_t = take_row(scale, Nat.mul(t, 4n), 4n)
       +ADT_t = take_row(ADT, Nat.mul(t, 4n), 4n)
-      +S_t = take_row(states, Nat.mul(t, all_state()), all_state())
+      # srest is the states reversed once, minus the final state the backward
+      # never uses: the current position is its first all_state() cells (the row
+      # itself reversed), so the walk is linear
+      +S_t = List.reverse(&2, F32, take_row(srest, 0n, all_state()))
       +dyi = matvec_t(w_out, dy_t, 64n, 128n)
       +do_v_t = mul_lists(dyi, silu_row(z_t))
       +dz_t = mul_lists(mul_lists(dyi, ov_t), silu_deriv_row(z_t))
       +dW_out2 = add_lists(dW_out, outer(dy_t, yi_t))
       sb : SB = scan_bw_all(S_t, dstate, do_v_t, q_t, k_t, x_t,
         qk_t, scale_t, ADT_t, D)
-      bw_go(p, (t - 1n : Nat), z, x, ADT, q, k, qk, scale, states,
-        out_v, y_inner, D, w_out, dy,
+      bw_go(p, (t - 1n : Nat), z, x, ADT, q, k, qk, scale,
+        List.drop(&2, F32, srest, all_state()), out_v, y_inner, D,
+        w_out, dy,
         bw_add(sb, do_v_t, dz_t, dW_out2, do_v, dz, dq, dk, dx,
           dqk, dscale, dADT, dD, du))
 
@@ -1361,7 +1365,8 @@ def bw_start(+z: List<&2, F32>, +x: List<&2, F32>,
     +out_v: List<&2, F32>, +y_inner: List<&2, F32>,
     +D: List<&2, F32>, +w_out: List<&2, F32>,
     +dy: List<&2, F32>, +n: Nat) -> BW:
-  bw_go(n, (n - 1n : Nat), z, x, ADT, q, k, qk, scale, states,
+  bw_go(n, (n - 1n : Nat), z, x, ADT, q, k, qk, scale,
+    List.drop(&2, F32, List.reverse(&2, F32, states), all_state()),
     out_v, y_inner, D, w_out, dy,
     BW{Nil{}, Nil{}, Nil{}, Nil{}, Nil{}, Nil{}, zline(4n),
       zline(all_state()), Nil{}, Nil{}, zline(8192n), Nil{}})
@@ -2415,7 +2420,7 @@ def bw_on_go(+left: Nat, +t: Nat, +z: List<&2, F32>,
     +x: List<&2, F32>, +ADT: List<&2, F32>,
     +q: List<&2, F32>, +k: List<&2, F32>,
     +qk: List<&2, F32>, +scale: List<&2, F32>,
-    +states: List<&2, F32>, +out_v: List<&2, F32>,
+    +srest: List<&2, F32>, +out_v: List<&2, F32>,
     +y_inner: List<&2, F32>, +D: List<&2, F32>,
     +w_out: List<&2, F32>, +won: List<&2, F32>,
     +dy: List<&2, F32>, bw: BWON) -> BWON:
@@ -2452,7 +2457,10 @@ def bw_on_go(+left: Nat, +t: Nat, +z: List<&2, F32>,
       +qk_t = take_row(qk, Nat.mul(t, 4n), 4n)
       +scale_t = take_row(scale, Nat.mul(t, 4n), 4n)
       +ADT_t = take_row(ADT, Nat.mul(t, 4n), 4n)
-      +S_t = take_row(states, Nat.mul(t, all_state()), all_state())
+      # srest is the states reversed once, minus the final state the backward
+      # never uses: the current position is its first all_state() cells (the row
+      # itself reversed), so the walk is linear
+      +S_t = List.reverse(&2, F32, take_row(srest, 0n, all_state()))
       +dyi = matvec_t(w_out, dy_t, 64n, 128n)
       +do_n = mul_lists(dyi, silu_row(z_t))
       +yn_t = rms4(ov_t, won)
@@ -2463,7 +2471,8 @@ def bw_on_go(+left: Nat, +t: Nat, +z: List<&2, F32>,
       sb : SB = scan_bw_all(S_t, dstate, dxv, q_t, k_t, x_t,
         qk_t, scale_t, ADT_t, D)
       bw_on_go(p, (t - 1n : Nat), z, x, ADT, q, k, qk, scale,
-        states, out_v, y_inner, D, w_out, won, dy,
+        List.drop(&2, F32, srest, all_state()), out_v, y_inner, D,
+        w_out, won, dy,
         bw_on_add(sb, dxv, dz_t, dW_out2, add_lists(dW_on, dwo),
           do_v, dz, dq, dk, dx, dqk, dscale, dADT, dD, du))
 
@@ -2474,7 +2483,8 @@ def bw_on_start(+z: List<&2, F32>, +x: List<&2, F32>,
     +out_v: List<&2, F32>, +y_inner: List<&2, F32>,
     +D: List<&2, F32>, +w_out: List<&2, F32>,
     +won: List<&2, F32>, +dy: List<&2, F32>, +n: Nat) -> BWON:
-  bw_on_go(n, (n - 1n : Nat), z, x, ADT, q, k, qk, scale, states,
+  bw_on_go(n, (n - 1n : Nat), z, x, ADT, q, k, qk, scale,
+    List.drop(&2, F32, List.reverse(&2, F32, states), all_state()),
     out_v, y_inner, D, w_out, won, dy,
     BWON{Nil{}, Nil{}, Nil{}, Nil{}, Nil{}, Nil{}, zline(4n),
       zline(all_state()), Nil{}, Nil{}, zline(8192n), zline(128n), Nil{}})

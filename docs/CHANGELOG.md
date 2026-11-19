@@ -4,6 +4,22 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The backward scan's state walk is linear
+
+- The split of `bw_go` (128 positions, one process, load 4.2): the state
+  slice `take_row(states, t*2048, 2048)` cost **2,076 ms** per block, the
+  `dW_out` outer-product accumulator 1,070 ms, `scan_bw_all` 514 ms and the
+  `dyi` matvec 114 ms. The first was a walk: `take_row` drops `t*2048` cells
+  per position, so the block was quadratic.
+- `bw_start` and `bw_on_start` now reverse the states once (minus the final
+  state the backward never uses) and each position takes 2,048 cells and
+  drops 2,048. The same-process probe reads **79 ms** against 2,076 ms.
+- The gate prints the same loss and heads (4.838168, 327157.12, 9.758908)
+  and `make mamba3` / `make mamba3-gqa` pass, so the change is
+  behaviour-preserving. A step number waits for a quiet machine; the record
+  in `results/latest` is still the pre-change 11,163 ms one.
+
+
 ### Toolchain: install a release beside the pin, and check the install is whole
 
 - `scripts/bend-side.sh <version>` downloads a Bend release and installs

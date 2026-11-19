@@ -210,6 +210,72 @@ def pw_hot_x128(+w_in: List<&2, F32>, +dpre: List<&2, F32>,
     +u_t: List<&2, F32>, +dw: List<&2, F32>) -> F32:
   pw_hot_go(128n, w_in, dpre, u_t, dw, 0.0)
 
+
+# ---- the scan's own split: what one position of bw_go costs ----
+#
+# bw_go does four things per position: slice that position's 2,048-cell state,
+# a 64x128 matvec for dyi, scan_bw_all (the four head scans and their combine),
+# and outer(dy_t, yi_t) into the 8,192-cell dW_out accumulator. Each probe runs
+# one of them 128 times with the shapes the trainer uses, so the numbers can be
+# read against back_x2_with_fwd - scan_x2_with_fwd.
+
+def sb_head(sb: S.SB) -> F32:
+  match sb:
+    case S.SB{+dq, dk, dx, dS, dqk, dscale, dADT, dD}:
+      S.sumsq(dq)
+
+def scan_tok(+left: Nat, +S_t: List<&2, F32>,
+    +dstate: List<&2, F32>, +do_t: List<&2, F32>,
+    +q_t: List<&2, F32>, +k_t: List<&2, F32>,
+    +x_t: List<&2, F32>, +qk_t: List<&2, F32>,
+    +scale_t: List<&2, F32>, +ADT_t: List<&2, F32>,
+    +D: List<&2, F32>, +acc: F32) -> F32:
+  match left:
+    case 0n:
+      acc
+    case 1n+p:
+      scan_tok(p, S_t, dstate, do_t, q_t, k_t, x_t, qk_t, scale_t,
+        ADT_t, D,
+        (acc + sb_head(S.scan_bw_all(S_t, dstate, do_t, q_t, k_t, x_t,
+          qk_t, scale_t, ADT_t, D)) : F32))
+
+def dwout_tok(+left: Nat, +dy_t: List<&2, F32>,
+    +yi_t: List<&2, F32>, acc: List<&2, F32>) -> F32:
+  match left:
+    case 0n:
+      S.sumsq(acc)
+    case 1n+p:
+      dwout_tok(p, dy_t, yi_t, S.add_lists(acc, S.outer(dy_t, yi_t)))
+
+# the old walk: one take_row from the flat list per position, O(t) each
+def slice_take_tok(+left: Nat, +t: Nat, +states: List<&2, F32>,
+    +acc: F32) -> F32:
+  match left:
+    case 0n:
+      acc
+    case 1n+p:
+      slice_take_tok(p, Nat.add(t, 1n), states,
+        (acc + S.sumsq(S.take_row(states, Nat.mul(t, 2048n), 2048n)) : F32))
+
+# the new walk: the states reversed once, minus the final unused state, then
+# the first 2,048 cells and a drop of 2,048 per position
+def slice_rev_tok(+left: Nat, +srest: List<&2, F32>, +acc: F32) -> F32:
+  match left:
+    case 0n:
+      acc
+    case 1n+p:
+      slice_rev_tok(p, List.drop(&2, F32, srest, 2048n),
+        (acc + S.sumsq(List.reverse(&2, F32, S.take_row(srest, 0n, 2048n))) : F32))
+
+def mv_tok(+left: Nat, +w_out: List<&2, F32>,
+    +dy_t: List<&2, F32>, +acc: F32) -> F32:
+  match left:
+    case 0n:
+      acc
+    case 1n+p:
+      mv_tok(p, w_out, dy_t,
+        (acc + S.sumsq(S.matvec_t(w_out, dy_t, 64n, 128n)) : F32))
+
 def main() -> IO(Unit):
   do IO<Unit>:
     wf : TA.Mat<71952n, 1n> <- T.Mat.load(71952n, 1n,
@@ -288,4 +354,51 @@ def main() -> IO(Unit):
     t17 : Nat <- IO.now()
     Unit <- show_ms("pw_hot_x128", Nat.sub(t17, t16))
     Unit <- show_f32("pw_hot_head: ", hk)
+
+    # the scan's pieces, per block: 128 positions of the trainer's shapes
+    +states262 : List<&2, F32> <- IO.pure(List<&2, F32>,
+      ones_row(262144n, Nil{}))
+    +St2048 : List<&2, F32> <- IO.pure(List<&2, F32>,
+      S.take_row(states262, 0n, 2048n))
+    +ds2048 : List<&2, F32> <- IO.pure(List<&2, F32>, ones_row(2048n, Nil{}))
+    +dv128 : List<&2, F32> <- IO.pure(List<&2, F32>, ones_row(128n, Nil{}))
+    +q64 : List<&2, F32> <- IO.pure(List<&2, F32>, ones_row(64n, Nil{}))
+    +qk4 : List<&2, F32> <- IO.pure(List<&2, F32>, ones_row(4n, Nil{}))
+    +dy64 : List<&2, F32> <- IO.pure(List<&2, F32>, ones_row(64n, Nil{}))
+    +yi128 : List<&2, F32> <- IO.pure(List<&2, F32>, ones_row(128n, Nil{}))
+    +w8192 : List<&2, F32> <- IO.pure(List<&2, F32>, ones_row(8192n, Nil{}))
+
+    t18 : Nat <- IO.now()
+    +scv : F32 <- IO.pure(F32, scan_tok(128n, St2048, ds2048, dv128,
+      q64, q64, dv128, qk4, qk4, qk4, qk4, 0.0))
+    t19 : Nat <- IO.now()
+    Unit <- show_ms("scan_bw_tok_x128", Nat.sub(t19, t18))
+    Unit <- show_f32("scan_bw_tok_head: ", scv)
+
+    t20 : Nat <- IO.now()
+    +dwv : F32 <- IO.pure(F32,
+      dwout_tok(128n, dy64, yi128, ones_row(8192n, Nil{})))
+    t21 : Nat <- IO.now()
+    Unit <- show_ms("dwout_x128", Nat.sub(t21, t20))
+    Unit <- show_f32("dwout_head: ", dwv)
+
+    t22 : Nat <- IO.now()
+    +slv : F32 <- IO.pure(F32, slice_take_tok(128n, 0n, states262, 0.0))
+    t23 : Nat <- IO.now()
+    Unit <- show_ms("slice_take_x128", Nat.sub(t23, t22))
+    Unit <- show_f32("slice_take_head: ", slv)
+
+    t26 : Nat <- IO.now()
+    +srv : F32 <- IO.pure(F32,
+      slice_rev_tok(128n,
+        List.drop(&2, F32, List.reverse(&2, F32, states262), 2048n), 0.0))
+    t27 : Nat <- IO.now()
+    Unit <- show_ms("slice_rev_x128", Nat.sub(t27, t26))
+    Unit <- show_f32("slice_rev_head: ", srv)
+
+    t24 : Nat <- IO.now()
+    +mvv2 : F32 <- IO.pure(F32, mv_tok(128n, w8192, dy64, 0.0))
+    t25 : Nat <- IO.now()
+    Unit <- show_ms("mv_out_x128", Nat.sub(t25, t24))
+    Unit <- show_f32("mv_out_head: ", mvv2)
     return Unit{}

@@ -395,3 +395,28 @@ was re-made on 2026-11-19 at load 0.52: **11,163 ms per step** (forward
 2,557 ms, backward and optimizer 8,606 ms) against the 2026-11-17
 record's 48,585 ms per step, 4.3x. Both records are in `results/raw/`;
 `bench/history.md` has the rows.
+
+### The scan's own split (2026-11-19)
+
+Four probes of one position of `bw_go`, 128 positions, one process at load
+average 4.2 (the probes ran back to back, so their ratios are the result):
+
+| piece of one position | per block |
+|---|---|
+| `take_row(states, t*2048, 2048)`, the old walk | **2,076 ms** |
+| the same slice after reversing the states once | **79 ms** |
+| `outer(dy_t, yi_t)` + `add_lists` into 8,192 cells (`dW_out`) | 1,070 ms |
+| `scan_bw_all`, the four head scans and their combine | 514 ms |
+| `matvec_t(w_out, dy_t, 64, 128)` for `dyi` | 114 ms |
+
+The largest single piece was a walk, not arithmetic: `take_row` drops
+`t * 2048` cells before taking the row, so the block was quadratic in the
+number of positions. `bw_start` now reverses the states once (minus the final
+state the backward never uses) and each position takes 2,048 cells and drops
+2,048: 79 ms against 2,076 ms in the same process. The step gate prints the
+same loss and heads (4.838168, 327157.12, 9.758908), and `make mamba3` and
+`make mamba3-gqa` pass, so the numbers did not move.
+
+The second row is the next target: the per-token outer product plus flat add
+into the 8,192-cell `dW_out` accumulator is the same shape as `pw_fin2`
+before the array accumulator, and the fix is the same one.
