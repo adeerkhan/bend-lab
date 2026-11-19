@@ -4,6 +4,27 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The GLM arm can run on the Mamba optimizer and schedule
+
+- `--matched` in `examples/language/glm53_flash/train_h128.bend` sets
+  CAdamW to 0.9/0.999, wd 0.01, c1 0.1, c2 0.001 and applies the Mamba
+  warmup/cosine over the shared step budget with BendTorch's
+  `Train.with_cfg`, which keeps the moments and the correction counters.
+  The default path is unchanged.
+- `reference/arch_compare.py --matched` runs both arms with the shared
+  budget and writes `results/arch-matched.{md,json}`. Vocabulary (127 vs
+  260), held-out slices and gradient clipping remain banners, so a matched
+  run is not yet a quality verdict. `reference/test_arch_parity.py` checks
+  the settings agree with the Mamba source.
+
+### Inference from a UNet checkpoint is a gated task
+
+- `make unet-sample CKPT=<checkpoint>` restores a checkpoint with `--steps 0`,
+  draws 64 Euler samples and re-scores them on the pinned flowers split.
+  It never updates a weight. `reference/unet_flowers_results.py` accepts a
+  log with `final_loss` and draws but no training loss lines.
+- `reference/test_unet_sample.py` gates the inference-only invocation.
+
 ### The UNet record writer accepts a task name and a run path
 
 - `make unet-record-four UNET_RUN=<run.json> UNET_TASK=<name>` writes

@@ -40,7 +40,9 @@ def parse(text):
     for line in re.findall(r"^sample: (.*)$", text, re.M):
         vals = np.array([float(v) for v in line.split()], dtype=np.float32)
         draws.extend(vals.reshape(-1, RES, RES))
-    if not losses or not draws:
+    # A sampling-only invocation resumes a checkpoint with --steps 0: it has
+    # no training loss lines, only final_loss, and 64 Euler draws.
+    if not draws or (not losses and final is None):
         raise SystemExit("no loss lines or no sample lines: is the run finished?")
     return conf, losses, final, np.array(draws)
 

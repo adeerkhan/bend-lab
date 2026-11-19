@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """arch_compare.py — the 72k two-arm pilot: Mamba-3 and the GLM hybrid.
 
-  reference/.venv/bin/python reference/arch_compare.py [--steps 20]
+  reference/.venv/bin/python reference/arch_compare.py [--steps 20] [--matched]
 
 Both arms read the same byte stream (corpus128-b32); the Mamba trainer's
 `train_tokens.bin` and the corpus's `corpus128-train_batch.bin` are asserted
@@ -32,6 +32,8 @@ GLM_PROG = "examples/language/glm53_flash/train_h128.bend"
 MAMBA_TOKENS = os.path.join(ROOT, ".scratch/mamba3_tiny/train_tokens.bin")
 OUT = os.path.join(ROOT, "results/arch-72k-pilot.md")
 OUT_JSON = os.path.join(ROOT, "results/arch-72k-pilot.json")
+MATCHED_MD = os.path.join(ROOT, "results/arch-matched.md")
+MATCHED_JSON = os.path.join(ROOT, "results/arch-matched.json")
 
 ENV = dict(os.environ, BEND_NO_TELEMETRY="1")
 ENV["PATH"] = os.pathsep.join([os.path.expanduser("~/.bend/bin"),
@@ -82,10 +84,13 @@ def run_mamba(binary, steps):
             "heldout_acc": acc[0] if acc else None, "wall": wall}
 
 
-def run_glm(binary, steps, tmp):
+def run_glm(binary, steps, tmp, matched=False):
     t0 = time.time()
-    p = subprocess.run([binary, "--steps", str(steps), "--no-val", "--no-save",
-                        "--trace", "--out", tmp], cwd=ROOT, env=ENV,
+    cmd = [binary, "--steps", str(steps), "--lr-ppm", "300", "--no-val", "--no-save",
+           "--trace", "--out", tmp]
+    if matched:
+        cmd.append("--matched")
+    p = subprocess.run(cmd, cwd=ROOT, env=ENV,
                        capture_output=True, text=True)
     wall = time.time() - t0
     if p.returncode != 0:
@@ -99,8 +104,13 @@ def run_glm(binary, steps, tmp):
     return {"losses": losses, "wall": wall}
 
 
+def matched_arg():
+    return "--matched" in sys.argv[1:]
+
+
 def main():
     steps = steps_arg()
+    matched = matched_arg()
     need = steps * 128
     corpus = open(os.path.join(DATA, "corpus128-train_batch.bin"), "rb").read(need)
     if not os.path.exists(MAMBA_TOKENS):
@@ -125,37 +135,52 @@ def main():
     m["load"] = [load0, os.getloadavg()[0]]
     print("running the GLM hybrid")
     load0 = os.getloadavg()[0]
-    g = run_glm(gbin, steps, tmp)
+    g = run_glm(gbin, steps, tmp, matched)
     g["load"] = [load0, os.getloadavg()[0]]
 
+    banners = [
+        "vocabulary: Mamba 127, GLM 260 (133 classes never used), so the "
+        "two cross-entropies are not one measurement",
+        "held-out: Mamba's 4,096-byte split, GLM's val batch, different slices",
+    ]
+    blockers = [
+        "the GLM head is 260 wide; a 127-wide head or a restricted eval is "
+        "still needed for a like-for-like cross-entropy",
+    ]
+    if matched:
+        banners.insert(1, "gradient clipping: Mamba clips the global norm at "
+                       "1.0; BendTorch's CAdamW has no clipping field, so the "
+                       "GLM arm is unclipped")
+    else:
+        banners.insert(1, "optimizer: Mamba AdamW 0.9/0.999 wd 0.01 clip 1.0; "
+                       "GLM CAdamW 0.9/0.95 wd 0.1 clip 0.05")
+        banners.insert(2, "schedule: for --steps N both peak at 3e-4, but Mamba "
+                       "warms up 5 steps and cosines to 3e-5 over N while the "
+                       "GLM is constant")
+        blockers.insert(0, "the GLM arm needs the Mamba optimizer (0.9/0.999, "
+                        "wd 0.01) and the same warmup/cosine over the shared "
+                        "budget; pass --matched to enable both")
     report = {
+        "matched": matched,
         "steps": steps,
         "tokens_seen": steps * 128,
         "same_bytes": aligned,
         "mamba": {"params": 71952, **m},
         "glm": {"params": 74144, **g},
-        "banners": [
-            "vocabulary: Mamba 127, GLM 260 (133 classes never used), so the "
-            "two cross-entropies are not one measurement",
-            "optimizer: Mamba AdamW 0.9/0.999 wd 0.01 clip 1.0; GLM CAdamW "
-            "0.9/0.95 wd 0.1 clip 0.05",
-            "schedule: for --steps N both peak at 3e-4, but Mamba warms up 5 "
-            "steps and cosines to 3e-5 over N while the GLM is constant",
-            "held-out: Mamba's 4,096-byte split, GLM's val batch, different slices",
-        ],
-        "blockers_200": [
-            "the GLM arm needs the Mamba optimizer (0.9/0.999, wd 0.01, "
-            "clip 1.0) and the same warmup/cosine over the shared budget "
-            "(its LR is constant today)",
-            "the GLM head is 260 wide; a matched run needs 127 (or a restricted "
-            "eval), which changes its parameter count and its gates",
-        ],
+        "banners": banners,
+        "blockers": blockers,
     }
-    with open(OUT_JSON, "w") as f:
+    out_json, out_md = (MATCHED_JSON, MATCHED_MD) if matched else (OUT_JSON, OUT)
+    with open(out_json, "w") as f:
         json.dump(report, f, indent=1)
-    with open(OUT, "w") as f:
-        f.write("# The 72k two-arm pilot\n\n")
-        f.write(f"`reference/arch_compare.py --steps {steps}`; {steps * 128} "
+    with open(out_md, "w") as f:
+        f.write("# The 72k two-arm pilot" if not matched
+                else "# The 72k matched two-arm run")
+        f.write("\n\n")
+        cmd = f"reference/arch_compare.py --steps {steps}"
+        if matched:
+            cmd += " --matched"
+        f.write(f"`{cmd}`; {steps * 128} "
                 f"tokens per arm, the first {steps} windows of corpus128-b32, "
                 f"byte-identical for both (checked).\n\n")
         f.write("| arm | params | steps | first loss | last loss | wall | load |\n")
@@ -168,12 +193,18 @@ def main():
         f.write("\n## Banners\n\n")
         for b in report["banners"]:
             f.write(f"- {b}\n")
-        f.write("\n## What a 200-step matched run needs\n\n")
-        for b in report["blockers_200"]:
+        f.write("\n## Remaining match gaps\n\n")
+        for b in report["blockers"]:
             f.write(f"- {b}\n")
-        f.write("\nThe pilot validates the wiring and the data alignment only; "
-                "no quality verdict is read from it.\n")
-    print(f"wrote {OUT} and {OUT_JSON}")
+        if matched:
+            f.write("\nOptimizer and schedule parity are on: the GLM arm uses "
+                    "CAdamW 0.9/0.999, wd 0.01, c1 0.1, c2 0.001 and the Mamba "
+                    "warmup/cosine over the same budget. Vocabulary and clipping "
+                    "remain bannered; this is not yet a quality verdict.\n")
+        else:
+            f.write("\nThe pilot validates the wiring and the data alignment "
+                    "only; no quality verdict is read from it.\n")
+    print(f"wrote {out_md} and {out_json}")
     for name, a in (("Mamba-3", report["mamba"]), ("GLM hybrid", report["glm"])):
         ls = a["losses"]
         print(f"  {name:10s} params {a['params']}  steps {len(ls)}  "

@@ -2779,3 +2779,24 @@ steps.
   k=1 with a different `--save` path; its checkpoint is byte-identical to
   the k=1 one. The binary is now rebuilt under the memory guard and the
   3,600-step run is registered as a dashboard session.
+
+## 2026-11-19 — GLM optimizer and schedule parity, and a sampling-only UNet task
+
+- `train_h128.bend` gains `--matched`: CAdamW 0.9/0.999, wd 0.01, c1 0.1,
+  c2 0.001, eps 1e-8, with the Mamba warmup (5 steps to 3e-4) and cosine
+  (to 3e-5 at the shared budget) applied through `T.Train.with_cfg`. A
+  12-step smoke at load ~5 printed `5.5634737 -> 5.4061995` with --matched
+  and `5.5634737 -> 5.344054` without it; the first step agrees, the rest
+  differ, so the flag changes the trajectory. Gradient clipping (Mamba 1.0)
+  has no BendTorch field and stays a banner in the matched report.
+- `reference/arch_compare.py --matched` writes `results/arch-matched.{md,json}`
+  instead of overwriting the pilot. A 4-step matched run did not finish in
+  600 s under load 5-6 while the UNet run was still alive; the wiring is
+  validated by the 12-step direct smoke and the source-level parity gate.
+- `make unet-sample CKPT=<checkpoint>` resumes with `--steps 0` and scores
+  64 Euler draws through the existing metric gate. The results parser now
+  accepts an inference log with no training loss lines. A full 64-draw
+  sample takes tens of minutes on this loaded host, so no sampled
+  legibility number is quoted here.
+- The rebuilt 3,600-step --four run was stopped before completion (see the
+  local ledger); no four-pair legibility result exists yet.
