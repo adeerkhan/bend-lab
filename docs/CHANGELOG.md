@@ -4,6 +4,25 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The first two-arm pilot: Mamba-3 and the GLM hybrid on one byte stream
+
+- `reference/arch_compare.py` builds and runs both trainers on the same
+  first windows of `corpus128-b32` (the Mamba's `train_tokens.bin` and the
+  corpus file are asserted byte-identical over the range), parses both
+  traces and writes `results/arch-72k-pilot.md` and `.json`.
+- Pilot, 20 steps each, load 1.4 to 1.6: Mamba-3 (71,952 parameters)
+  4.838168 to 4.333053 in 392.7 s; the GLM hybrid (74,144) 5.563474 to
+  3.722496 in 31.5 s. The numbers are **not** a quality verdict, and the
+  report prints the four reasons: vocabulary 127 against 260 (133 classes
+  the corpus never uses), different optimizers, different schedules, and
+  different held-out slices.
+- The report lists what a matched 200-step run needs: 200 windows in the
+  Mamba data file (64 now), `--steps`/`--lr`/`--data` flags on the Mamba
+  trainer (its schedule is fixed at 20 steps), the Mamba optimizer and a
+  warmup/cosine on the GLM arm, and a 127-wide GLM head (or a restricted
+  eval) so the cross-entropies are one measurement.
+
+
 ### The backward's dW_out accumulator is an array
 
 - `BW.dW_out` and `G2.dW_out` are `Array<F32>`: `acc_outer` adds each

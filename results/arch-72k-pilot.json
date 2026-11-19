@@ -1,0 +1,79 @@
+{
+ "steps": 20,
+ "tokens_seen": 2560,
+ "same_bytes": true,
+ "mamba": {
+  "params": 71952,
+  "losses": [
+   4.838168,
+   4.8497887,
+   4.797368,
+   4.7698417,
+   4.775183,
+   4.7134123,
+   4.6799965,
+   4.6077147,
+   4.5817556,
+   4.567844,
+   4.462537,
+   4.444793,
+   4.4528604,
+   4.464232,
+   4.4697394,
+   4.318073,
+   4.344018,
+   4.355887,
+   4.370821,
+   4.3330526
+  ],
+  "bits_per_byte": 6.2476482,
+  "heldout_acc": 0.31471458,
+  "wall": 392.65704917907715,
+  "load": [
+   2.11865234375,
+   1.48779296875
+  ]
+ },
+ "glm": {
+  "params": 74144,
+  "losses": [
+   5.5634737,
+   5.4144096,
+   5.275995,
+   5.1847005,
+   5.071947,
+   4.9477887,
+   4.890261,
+   4.7422843,
+   4.6183605,
+   4.552055,
+   4.405714,
+   4.29521,
+   4.197952,
+   4.1990433,
+   4.0884457,
+   3.9963443,
+   3.89412,
+   3.8316438,
+   3.8173456,
+   3.7224956
+  ],
+  "wall": 31.464051008224487,
+  "load": [
+   1.48779296875,
+   1.5673828125
+  ]
+ },
+ "banners": [
+  "vocabulary: Mamba 127, GLM 260 (133 classes never used), so the two cross-entropies are not one measurement",
+  "optimizer: Mamba AdamW 0.9/0.999 wd 0.01 clip 1.0; GLM CAdamW 0.9/0.95 wd 0.1 clip 0.05",
+  "schedule: Mamba warmup 5 + cosine 1e-3 to 1e-4 over 20 steps; GLM constant 3e-4",
+  "held-out: Mamba's 4,096-byte split, GLM's val batch, different slices"
+ ],
+ "blockers_200": [
+  "Mamba train_tokens.bin holds 64 windows; 200 needs 200",
+  "Mamba trainer has no --steps/--lr/--data flags; its schedule is fixed at 20 steps",
+  "the GLM arm needs the Mamba optimizer and a warmup/cosine over the same budget",
+  "the GLM head is 260 wide; a matched run needs 127 (or a restricted eval), which changes its parameter count and its gates"
+ ]
+}

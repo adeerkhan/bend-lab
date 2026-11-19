@@ -282,3 +282,15 @@ timeouts were not retried with any gate change).
   next pieces from the split are `scan_bw_all` (~407 ms) and the remaining
   per-token slices; the `mamba3-tiny-lm` record still predates both fixes
   and waits for a quiet machine (`make bench-mamba-tiny` refuses above 1.0).
+
+## 2026-11-19 — the 72k two-arm pilot
+
+- `reference/arch_compare.py` runs both arms on the same byte windows and
+  writes `results/arch-72k-pilot.{md,json}`. The 20-step pilot (load 1.4):
+  Mamba 4.838 -> 4.333 in 392.7 s, GLM hybrid 5.563 -> 3.722 in 31.5 s.
+  Not a verdict: vocab 127 vs 260, different optimizers, schedules and
+  held-out slices, all printed in the report.
+- A matched 200-step run needs, in this order: 200 windows in the Mamba
+  data file; `--steps`/`--lr`/`--data` on the Mamba trainer; the Mamba
+  optimizer plus warmup/cosine on the GLM arm; and a 127-wide GLM head (or
+  a restricted eval) so the losses are comparable.
