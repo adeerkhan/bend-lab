@@ -20,6 +20,34 @@ import Base
 import bendtorch@2.1.0.0/main.bend as T
 import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 
+
+# ---- the shapes, named ----
+#
+# The laws in mamba3_laws.bend read these, and the offsets below compute
+# with them, so a change here either keeps the laws true or fails them. One
+# head's state is 32 rows of 16; four heads make 2048; the GQA has two groups.
+
+def n_heads() -> Nat:
+  4n
+
+def n_groups() -> Nat:
+  2n
+
+def d_state_w() -> Nat:
+  16n
+
+def state_rows() -> Nat:
+  32n
+
+def head_state() -> Nat:
+  512n
+
+def all_state() -> Nat:
+  2048n
+
+def seq_len() -> Nat:
+  8n
+
 # ---------------------------------------------------------------------------
 # list helpers, flat row-major
 
@@ -554,12 +582,12 @@ def scan_rows_arr(+left: Nat, +p: Nat, arr: Array<F32>,
     case 0n:
       Tuple{arr, acc_o}
     case 1n+pr:
-      +base = U32.from_nat(Nat.mul(p, 16n))
-      +row = take_row(state_h, Nat.mul(p, 16n), 16n)
+      +base = U32.from_nat(Nat.mul(p, d_state_w()))
+      +row = take_row(state_h, Nat.mul(p, d_state_w()), d_state_w())
       +qs = dot(row, q_h)
       +xv = nth(p, x_h)
       +o = ((a * qs : F32) + (skip * xv : F32) : F32)
-      ar2 = row_set(16n, base, a, (sc * xv : F32), k_h,
+      ar2 = row_set(d_state_w(), base, a, (sc * xv : F32), k_h,
         Array.get(F32, arr, base))
       scan_rows_arr(pr, (p + 1n : Nat), ar2, state_h, q_h, k_h, x_h,
         a, skip, sc, push_row(acc_o, Con{o, Nil{}}))
@@ -574,14 +602,14 @@ def head_done_arr(r: Array<F32> & (List<&2, F32>),
     +acc_s: List<&2, F32>) -> SH:
   match r:
     case Tuple{ar, out}:
-      sh_of_arr(arr_read(512n, U32.from_nat(0n), Nil{},
+      sh_of_arr(arr_read(head_state(), U32.from_nat(0n), Nil{},
         Array.get(F32, ar, 0)), acc_s, out)
 
 def scan_head(+state_h: List<&2, F32>, +q_h: List<&2, F32>,
     +k_h: List<&2, F32>, +x_h: List<&2, F32>, +a: F32, +skip: F32,
     +sc: F32, +acc_s: List<&2, F32>,
     +acc_o: List<&2, F32>) -> SH:
-  head_done_arr(scan_rows_arr(32n, 0n, arr_of(512n, state_h),
+  head_done_arr(scan_rows_arr(state_rows(), 0n, arr_of(head_state(), state_h),
     state_h, q_h, k_h, x_h, a, skip, sc, acc_o), acc_s)
 
 # ---- a chunked pass: one 2048-float array across all tokens ----
@@ -617,22 +645,22 @@ def scan_rows_st(+left: Nat, +p: Nat, +off: U32,
     case 1n+pr:
       match cur:
         case Tuple{arr, qs}:
-          +base = U32.add(off, U32.from_nat(Nat.mul(p, 16n)))
+          +base = U32.add(off, U32.from_nat(Nat.mul(p, d_state_w())))
           +xv = nth(p, x_h)
           +o = ((a * qs : F32) + (skip * xv : F32) : F32)
-          arr2 = row_set(16n, base, a, (sc * xv : F32), k_h,
+          arr2 = row_set(d_state_w(), base, a, (sc * xv : F32), k_h,
             Array.get(F32, arr, base))
           +nbase = U32.add(off,
-            U32.from_nat(Nat.mul((p + 1n : Nat), 16n)))
+            U32.from_nat(Nat.mul((p + 1n : Nat), d_state_w())))
           scan_rows_st(pr, (p + 1n : Nat), off, q_h, k_h, x_h, a,
             skip, sc, push_row(acc_o, Con{o, Nil{}}),
-            dot_arr(16n, nbase, q_h, 0.0, Array.get(F32, arr2, nbase)))
+            dot_arr(d_state_w(), nbase, q_h, 0.0, Array.get(F32, arr2, nbase)))
 
 def scan_head_st(state: Array<F32>, +off: U32, +q_h: List<&2, F32>,
     +k_h: List<&2, F32>, +x_h: List<&2, F32>, +a: F32, +skip: F32,
     +sc: F32, +acc_o: List<&2, F32>) -> SA:
-  scan_rows_st(32n, 0n, off, q_h, k_h, x_h, a, skip, sc, acc_o,
-    dot_arr(16n, off, q_h, 0.0, Array.get(F32, state, off)))
+  scan_rows_st(state_rows(), 0n, off, q_h, k_h, x_h, a, skip, sc, acc_o,
+    dot_arr(d_state_w(), off, q_h, 0.0, Array.get(F32, state, off)))
 
 def head_next(r: SA, +h: Nat, +q_t: List<&2, F32>,
     +k_t: List<&2, F32>, +x_t: List<&2, F32>,
@@ -640,7 +668,7 @@ def head_next(r: SA, +h: Nat, +q_t: List<&2, F32>,
     +ADT_t: List<&2, F32>, +D: List<&2, F32>) -> SA:
   match r:
     case SA{arr, out}:
-      scan_head_st(arr, U32.from_nat(Nat.mul(h, 512n)),
+      scan_head_st(arr, U32.from_nat(Nat.mul(h, head_state())),
         take_row(q_t, Nat.mul(h, 16n), 16n),
         take_row(k_t, Nat.mul(h, 16n), 16n),
         take_row(x_t, Nat.mul(h, 32n), 32n),
@@ -675,7 +703,7 @@ def sc_finish_read(sc: SC, +out: List<&2, F32>,
 def sc_finish_st(sc: SC, arr: Array<F32>, +out: List<&2, F32>,
     +z_t: List<&2, F32>, +w_out: List<&2, F32>) -> STA:
   sc_finish_read(sc, out, z_t, w_out,
-    arr_read(2048n, U32.from_nat(0n), Nil{}, Array.get(F32, arr, 0)))
+    arr_read(all_state(), U32.from_nat(0n), Nil{}, Array.get(F32, arr, 0)))
 
 def sc_step_done(sc: SC, +z_t: List<&2, F32>,
     +w_out: List<&2, F32>, r: SA) -> STA:
@@ -718,7 +746,7 @@ def scan_one(sh: SH, +h: Nat, +state: List<&2, F32>,
     +D: List<&2, F32>) -> SH:
   match sh:
     case SH{acc_s, acc_o}:
-      scan_head(take_row(state, Nat.mul(h, 512n), 512n),
+      scan_head(take_row(state, Nat.mul(h, head_state()), head_state()),
         take_row(q_t, Nat.mul(h, 16n), 16n),
         take_row(k_t, Nat.mul(h, 16n), 16n),
         take_row(x_t, Nat.mul(h, 32n), 32n),
@@ -729,7 +757,7 @@ def scan_all(+state: List<&2, F32>, +q_t: List<&2, F32>,
     +k_t: List<&2, F32>, +x_t: List<&2, F32>,
     +qk_t: List<&2, F32>, +scale_t: List<&2, F32>,
     +ADT_t: List<&2, F32>, +D: List<&2, F32>) -> SH:
-  sh0 : SH = scan_head(take_row(state, 0n, 512n),
+  sh0 : SH = scan_head(take_row(state, 0n, head_state()),
     take_row(q_t, 0n, 16n), take_row(k_t, 0n, 16n),
     take_row(x_t, 0n, 32n), F32.exp(nth(0n, ADT_t)),
     (nth(0n, D) + nth(0n, qk_t) : F32), nth(0n, scale_t),
@@ -785,8 +813,8 @@ def pass_c(+x: List<&2, F32>, +z: List<&2, F32>,
     +ADT: List<&2, F32>, +q: List<&2, F32>, +k: List<&2, F32>,
     +qk: List<&2, F32>, +scale: List<&2, F32>,
     +D: List<&2, F32>, +w_out: List<&2, F32>, +n: Nat) -> SC:
-  +state0 = zline(2048n)
-  arr0 = arr_of(2048n, state0)
+  +state0 = zline(all_state())
+  arr0 = arr_of(all_state(), state0)
   sc_go_st(n, 0n, x, z, ADT, q, k, qk, scale, D, w_out,
     STA{arr0, SC{state0, Nil{}, Nil{}, Nil{}}})
 
@@ -1007,7 +1035,7 @@ def pbg_heads(+left: Nat, +h: Nat, +angle_prev: List<&2, F32>,
     case 0n:
       PBR{angle_t, QB{gamma0, shift0, scale0, angle0, q0, k0, qk0}}
     case 1n+p:
-      +g = Nat.div(h, 2n)
+      +g = Nat.div(h, n_groups())
       +cb = take_row(C_bias, Nat.mul(h, 16n), 16n)
       +bb = take_row(B_bias, Nat.mul(h, 16n), 16n)
       +qpre = add_lists(take_row(Cn_t, Nat.mul(g, 16n), 16n), cb)
@@ -1185,8 +1213,8 @@ def head_bw(+left: Nat, +p: Nat, +S: List<&2, F32>,
     case 0n:
       HG{dq, dk, dx, dS, dqk, dscale, dADT, dD}
     case 1n+pr:
-      +Srow = take_row(S, Nat.mul(p, 16n), 16n)
-      +Nrow = take_row(dS_next, Nat.mul(p, 16n), 16n)
+      +Srow = take_row(S, Nat.mul(p, d_state_w()), 16n)
+      +Nrow = take_row(dS_next, Nat.mul(p, d_state_w()), 16n)
       +qs = dot(Srow, q)
       +dp = nth(p, dov)
       +xv = nth(p, x)
@@ -1216,8 +1244,8 @@ def scan_bw_head(+h: Nat, +S_t: List<&2, F32>,
     +x_t: List<&2, F32>, +qk_t: List<&2, F32>,
     +scale_t: List<&2, F32>, +ADT_t: List<&2, F32>,
     +D: List<&2, F32>) -> HG:
-  head_bw(32n, 0n, take_row(S_t, Nat.mul(h, 512n), 512n),
-    take_row(dstate, Nat.mul(h, 512n), 512n),
+  head_bw(state_rows(), 0n, take_row(S_t, Nat.mul(h, head_state()), head_state()),
+    take_row(dstate, Nat.mul(h, head_state()), head_state()),
     take_row(q_t, Nat.mul(h, 16n), 16n),
     take_row(k_t, Nat.mul(h, 16n), 16n),
     take_row(x_t, Nat.mul(h, 32n), 32n),
@@ -1314,7 +1342,7 @@ def bw_go(+left: Nat, +t: Nat, +z: List<&2, F32>,
       +qk_t = take_row(qk, Nat.mul(t, 4n), 4n)
       +scale_t = take_row(scale, Nat.mul(t, 4n), 4n)
       +ADT_t = take_row(ADT, Nat.mul(t, 4n), 4n)
-      +S_t = take_row(states, Nat.mul(t, 2048n), 2048n)
+      +S_t = take_row(states, Nat.mul(t, all_state()), all_state())
       +dyi = matvec_t(w_out, dy_t, 64n, 128n)
       +do_v_t = mul_lists(dyi, silu_row(z_t))
       +dz_t = mul_lists(mul_lists(dyi, ov_t), silu_deriv_row(z_t))
@@ -1336,7 +1364,7 @@ def bw_start(+z: List<&2, F32>, +x: List<&2, F32>,
   bw_go(n, (n - 1n : Nat), z, x, ADT, q, k, qk, scale, states,
     out_v, y_inner, D, w_out, dy,
     BW{Nil{}, Nil{}, Nil{}, Nil{}, Nil{}, Nil{}, zline(4n),
-      zline(2048n), Nil{}, Nil{}, zline(8192n), Nil{}})
+      zline(all_state()), Nil{}, Nil{}, zline(8192n), Nil{}})
 
 
 
@@ -1921,7 +1949,7 @@ def head_pre_bw_gqa(+h: Nat, +Cn_t: List<&2, F32>,
     +k_t: List<&2, F32>, +qk_t: List<&2, F32>,
     +gamma_t: List<&2, F32>, +dqk_t: List<&2, F32>,
     +dscale_t: List<&2, F32>, +angle_t: List<&2, F32>) -> HPB:
-  +g = Nat.div(h, 2n)
+  +g = Nat.div(h, n_groups())
   +cb = take_row(C_bias, Nat.mul(h, 16n), 16n)
   +bb = take_row(B_bias, Nat.mul(h, 16n), 16n)
   +qpre = add_lists(take_row(Cn_t, Nat.mul(g, 16n), 16n), cb)
@@ -2263,7 +2291,7 @@ def sc_finish_st_on(sc: SC, arr: Array<F32>, +out: List<&2, F32>,
     +z_t: List<&2, F32>, +w_out: List<&2, F32>,
     +won: List<&2, F32>) -> STA:
   sc_finish_read_on(sc, out, z_t, w_out, won,
-    arr_read(2048n, U32.from_nat(0n), Nil{}, Array.get(F32, arr, 0)))
+    arr_read(all_state(), U32.from_nat(0n), Nil{}, Array.get(F32, arr, 0)))
 
 def sc_step_done_on(sc: SC, +z_t: List<&2, F32>,
     +w_out: List<&2, F32>, +won: List<&2, F32>, r: SA) -> STA:
@@ -2306,8 +2334,8 @@ def pass_c_on(+x: List<&2, F32>, +z: List<&2, F32>,
     +qk: List<&2, F32>, +scale: List<&2, F32>,
     +D: List<&2, F32>, +w_out: List<&2, F32>,
     +won: List<&2, F32>, +n: Nat) -> SC:
-  +state0 = zline(2048n)
-  arr0 = arr_of(2048n, state0)
+  +state0 = zline(all_state())
+  arr0 = arr_of(all_state(), state0)
   sc_go_st_on(n, 0n, x, z, ADT, q, k, qk, scale, D, w_out, won,
     STA{arr0, SC{state0, Nil{}, Nil{}, Nil{}}})
 
@@ -2424,7 +2452,7 @@ def bw_on_go(+left: Nat, +t: Nat, +z: List<&2, F32>,
       +qk_t = take_row(qk, Nat.mul(t, 4n), 4n)
       +scale_t = take_row(scale, Nat.mul(t, 4n), 4n)
       +ADT_t = take_row(ADT, Nat.mul(t, 4n), 4n)
-      +S_t = take_row(states, Nat.mul(t, 2048n), 2048n)
+      +S_t = take_row(states, Nat.mul(t, all_state()), all_state())
       +dyi = matvec_t(w_out, dy_t, 64n, 128n)
       +do_n = mul_lists(dyi, silu_row(z_t))
       +yn_t = rms4(ov_t, won)
@@ -2449,7 +2477,7 @@ def bw_on_start(+z: List<&2, F32>, +x: List<&2, F32>,
   bw_on_go(n, (n - 1n : Nat), z, x, ADT, q, k, qk, scale, states,
     out_v, y_inner, D, w_out, won, dy,
     BWON{Nil{}, Nil{}, Nil{}, Nil{}, Nil{}, Nil{}, zline(4n),
-      zline(2048n), Nil{}, Nil{}, zline(8192n), zline(128n), Nil{}})
+      zline(all_state()), Nil{}, Nil{}, zline(8192n), zline(128n), Nil{}})
 
 type GRADON is Type:
   GRADON{g: GRAD, dW_on: List<&2, F32>}

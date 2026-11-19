@@ -4,6 +4,23 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The tiny-LM's shapes are named, and their invariants are laws
+
+- `mamba3_siso.bend` names the shapes it computes with (`n_heads`,
+  `n_groups`, `d_state_w`, `state_rows`, `head_state`, `all_state`,
+  `seq_len`) and uses them for the state offsets and the GQA group index.
+- `mamba3_laws.bend` proves the three invariants a wrong offset would
+  break, over every index the shapes have: the GQA mapping (`h/2 < 2` for
+  the four heads), the state capacity (`p*16 + 16 <= 512` for the 32 rows;
+  `h*512 + 512 <= 2048` for the four head blocks), and the scan's read
+  (`t + 1 <= positions` for the layer's 8 and the tiny-LM's 128).
+  `--check-only` and `--verdict` pass; `make check-fast` runs both.
+- These are finite checks by computation: they catch a constant or an offset
+  that drifts, and they are not general arithmetic lemmas. The gate's printed
+  loss and heads are unchanged, so the named constants are definitionally
+  the old literals.
+
+
 ### Measurement integrity: a gate, a refusing A/B harness, a history
 
 - `make bench-mamba-tiny` builds `bench/plumbing_mamba_tiny/main.bend` and

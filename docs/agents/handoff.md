@@ -249,3 +249,13 @@ timeouts were not retried with any gate change).
 - The 2026-11-18 number (10,860 ms/step) was measured at load 2.9; it is in
   the history as a reference. An idle row is still owed before the step time
   is quoted as this commit's benchmark.
+
+## 2026-11-19 — the model's shape laws
+
+- `examples/language/mamba3/mamba3_siso.bend` names its shapes and computes
+  the state offsets and the GQA group with them; `mamba3_laws.bend` proves
+  the GQA mapping, the state capacity (rows and head blocks) and the scan's
+  read length over every index the shapes have. `--verdict` passes and
+  `check_all.py` runs it with the package laws.
+- The named constants are the old literals definitionally: the step gate
+  prints the same loss and heads (4.838168, 327157.12, 9.758908).

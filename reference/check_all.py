@@ -150,6 +150,15 @@ def main():
         else:
             print(f"skip {f} --verdict (no Lean 4.34.0 on this machine; CI runs it)", flush=True)
 
+    # 1b. the model's shape laws, checked and proved like the packages
+    for f in ("examples/language/mamba3/mamba3_laws.bend",):
+        run(f"{f}: ALL PROOFS CHECK", BEND.split() + [f], verdict_ok)
+        if lean_here():
+            run(f"{f} --verdict (the kernel, as Lean)", BEND.split() + [f, "--verdict"],
+                verdict_ok, env=ENV)
+        else:
+            print(f"skip {f} --verdict (no Lean 4.34.0 on this machine; CI runs it)", flush=True)
+
     # 2. the packages with laws carry no @unsafe and no ?TODO
     for pkg in packages:
         f = os.path.join(ROOT, pkg, "main.bend")
