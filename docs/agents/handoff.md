@@ -91,3 +91,23 @@ load-bound jobs, and the missing sampled number. `make issues` renders it;
    the banners; that is the only answer to "which is better".
 4. Re-run `make unet-sample` for the sampled legibility number.
 5. Wait for the maintainer's reviews on PRs #38 and #39.
+
+## 2026-11-20 — local cleanup and the current blockers
+
+- Unknown CLI flags now fail loudly in all three trainers (commit `febe298`);
+  `--bogus` exits 1 with the flag named. No upstream issue was filed: a
+  minimal Bend 2.0.38 program proved the runtime passes unknown flags
+  through, so the wildcard in our own parsers was the whole cause.
+- Full `make check` is still not green. The MambaViT parity test exceeds the
+  unchanged 1800 s gate. Build is only 5 s; the binary is the cost. A reduced
+  config (96 train + 64 held-out, 3 steps) runs in 1283 s when measured
+  alone, but the whole test timed out at 1700 s while the host was under
+  load 7 from a forge3d rustc build. The reduction is currently applied and
+  unverified in the full gate.
+- `make bench-mamba-tiny` refuses at load 1.40–7; no idle record was made.
+- Upstream: PR #38 and #39 remain open with green CI and no reviews; PR #40
+  (one-cell round trip) was opened and linked this pass.
+- Paper ideas #1 and #3 are not documented anywhere in the workspace; their
+  descriptions came from the user's status message only and must be supplied
+  before any related-work pass can start.
+
