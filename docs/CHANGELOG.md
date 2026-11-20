@@ -4,6 +4,12 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### Every UNet record now declares its reference time
+
+- `reference/unet_record.py` times the NumPy gate and writes it to
+  `run.reference_seconds`; the record passes the oracle-boundary gate that
+  requires reference time to be charged separately from the Bend run.
+
 ### The tiny-LM plumbing bench type-checks again
 
 - `bench/plumbing_mamba_tiny/main.bend` was still calling the one-argument

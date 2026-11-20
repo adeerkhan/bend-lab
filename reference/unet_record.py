@@ -18,6 +18,7 @@ import os
 import platform
 import subprocess
 import sys
+import time
 from datetime import datetime, timezone
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -54,8 +55,10 @@ def report(value, reference=None, delta=None):
 
 def main():
     env = dict(os.environ, UNET_RUN=RUN)
+    gate_start = time.time()
     gate = subprocess.run(GATE.split(), cwd=ROOT, env=env,
                           capture_output=True, text=True)
+    reference_seconds = round(time.time() - gate_start, 3)
     if gate.returncode != 0:
         sys.stderr.write(gate.stdout + gate.stderr)
         raise SystemExit("the unet gate failed; refusing to register it")
@@ -123,6 +126,7 @@ def main():
         "run": {"kind": ("four-pair" if RUN != DEFAULT_RUN else "migration"),
                 "source": os.path.relpath(RUN, ROOT),
                 "gate": GATE, "gate_stdout": gate.stdout.strip().splitlines(),
+                "reference_seconds": reference_seconds,
                 "build_seconds": None, "seconds_min": None, "seconds_all": [],
                 "repeat": 0, "fetch_seconds": 0.0, "compute_seconds": None,
                 "speed_ratio": None},

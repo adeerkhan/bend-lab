@@ -2809,3 +2809,10 @@ steps.
   0.001 peak, 1e-4 floor). Type-check passes and the pinned lines are
   unchanged. Found by the full `make check`, which had been stopped twice
   before reaching a final count.
+
+## 2026-11-20 — the second full-gate failure: a missing reference timing
+
+- `test_oracle_boundary.py` found `unet-flowers.json` without
+  `run.reference_seconds`. The writer now times the gate subprocess and
+  records the measured wall time (0.76 s in the regenerated record); the
+  oracle-boundary gate reports 13 records, 0 missing.

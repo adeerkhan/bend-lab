@@ -66,6 +66,7 @@ def main():
         assert rec["task"]["name"] == name, rec["task"]["name"]
         assert rec["run"]["kind"] == "migration", rec["run"]["kind"]
         assert rec["passed"] is True, rec["passed"]
+        assert isinstance(rec["run"].get("reference_seconds"), (int, float)), rec["run"]
         assert "0.5" in stdout
         if before is not None:
             assert open(original, "rb").read() == before, "the default record moved"
