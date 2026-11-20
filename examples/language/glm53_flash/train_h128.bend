@@ -222,16 +222,16 @@ def nat_or(m: Maybe<&2, Nat>, d: Nat) -> Nat:
     case None{}:
       d
 
-def run_go(args: List<String>, r: Run) -> Run:
+def run_go(args: List<String>, r: Run) -> IO(Run):
   match args:
     case Nil{}:
-      r
+      IO.pure(Run, r)
     case Con{a, rest}:
       match a:
         case "--steps":
           match rest:
             case Nil{}:
-              r
+              IO.pure(Run, r)
             case Con{b, more}:
               match r:
                 case Run{steps, lrppm, data, out, weights, val, trace, save, se, matched}:
@@ -239,7 +239,7 @@ def run_go(args: List<String>, r: Run) -> Run:
         case "--lr-ppm":
           match rest:
             case Nil{}:
-              r
+              IO.pure(Run, r)
             case Con{b, more}:
               match r:
                 case Run{steps, lrppm, data, out, weights, val, trace, save, se, matched}:
@@ -247,7 +247,7 @@ def run_go(args: List<String>, r: Run) -> Run:
         case "--data":
           match rest:
             case Nil{}:
-              r
+              IO.pure(Run, r)
             case Con{b, more}:
               match r:
                 case Run{steps, lrppm, data, out, weights, val, trace, save, se, matched}:
@@ -255,7 +255,7 @@ def run_go(args: List<String>, r: Run) -> Run:
         case "--out":
           match rest:
             case Nil{}:
-              r
+              IO.pure(Run, r)
             case Con{b, more}:
               match r:
                 case Run{steps, lrppm, data, out, weights, val, trace, save, se, matched}:
@@ -279,7 +279,7 @@ def run_go(args: List<String>, r: Run) -> Run:
         case "--save-every":
           match rest:
             case Nil{}:
-              r
+              IO.pure(Run, r)
             case Con{b, more}:
               match r:
                 case Run{steps, lrppm, data, out, weights, val, trace, save, se, matched}:
@@ -290,12 +290,12 @@ def run_go(args: List<String>, r: Run) -> Run:
             case Run{steps, lrppm, data, out, weights, val, trace, save, se, matched}:
               run_go(rest, Run{steps, lrppm, data, out, weights, val, trace, save, se, True{}})
         case _:
-          run_go(rest, r)
+          IO.die(Run, 1, String.append("unknown flag: ", a))
 
-def run_of(args: List<String>) -> Run:
+def run_of(args: List<String>) -> IO(Run):
   match args:
     case Nil{}:
-      run_default()
+      IO.pure(Run, run_default())
     case Con{program, rest}:
       run_go(rest, run_default())
 
@@ -353,4 +353,5 @@ def run_io(r: Run) -> IO(Unit):
 def main() -> IO(Unit):
   do IO<Unit>:
     args : List<String> <- IO.args()
-    run_io(run_of(args))
+    r : Run <- run_of(args)
+    run_io(r)

@@ -4,6 +4,17 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### Unknown command-line flags now fail loudly
+
+- The UNet, GLM and Mamba trainers used to ignore any unrecognised flag. A
+  binary built before `--four` existed therefore trained as k=1 while the
+  command line said `--four`, and only a byte-identical checkpoint exposed
+  it. Each parser now returns `IO(Run)` and calls `IO.die` on an unknown
+  flag with the flag named in the message.
+- `reference/test_flag_parsers.py` guards the source shape. Built binaries
+  were checked by hand: each exits 1 with `unknown flag: --bogus`, while
+  known flags still train.
+
 ### Every UNet record now declares its reference time
 
 - `reference/unet_record.py` times the NumPy gate and writes it to

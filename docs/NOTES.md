@@ -2816,3 +2816,15 @@ steps.
   `run.reference_seconds`. The writer now times the gate subprocess and
   records the measured wall time (0.76 s in the regenerated record); the
   oracle-boundary gate reports 13 records, 0 missing.
+
+## 2026-11-20 — unknown flags are no longer silently ignored
+
+- Verified with Bend 2.0.38 that the runtime passes unknown flags through to
+  `IO.args()` intact (`./argflag_repro.bin --four --bogus` printed both). The
+  fault was ours: `run_go`'s wildcard case ignored every unrecognised flag.
+  No upstream issue was opened; the evidence did not support one.
+- The three trainers' parsers now return `IO(Run)` and die with
+  `unknown flag: <name>` and exit 1. `run_of` drops argv[0] explicitly (the
+  Mamba parser had relied on the tolerant wildcard for that). All three
+  type-check, and built binaries were run with `--bogus` to confirm the
+  failure and with known flags to confirm training still starts.

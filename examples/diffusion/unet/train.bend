@@ -547,10 +547,10 @@ def nat_or(m: Maybe<&2, Nat>, d: Nat) -> Nat:
     case None{}:
       d
 
-def run_go(args: List<String>, r: Run) -> Run:
+def run_go(args: List<String>, r: Run) -> IO(Run):
   match args:
     case Nil{}:
-      r
+      IO.pure(Run, r)
     case Con{a, rest}:
       match a:
         case "--no-sample":
@@ -564,7 +564,7 @@ def run_go(args: List<String>, r: Run) -> Run:
         case "--save":
           match rest:
             case Nil{}:
-              r
+              IO.pure(Run, r)
             case Con{b, more}:
               match r:
                 case Run{start, steps, save, resume, sample, probe, four}:
@@ -572,7 +572,7 @@ def run_go(args: List<String>, r: Run) -> Run:
         case "--resume":
           match rest:
             case Nil{}:
-              r
+              IO.pure(Run, r)
             case Con{b, more}:
               match r:
                 case Run{start, steps, save, resume, sample, probe, four}:
@@ -580,7 +580,7 @@ def run_go(args: List<String>, r: Run) -> Run:
         case "--start":
           match rest:
             case Nil{}:
-              r
+              IO.pure(Run, r)
             case Con{b, more}:
               match r:
                 case Run{start, steps, save, resume, sample, probe, four}:
@@ -588,7 +588,7 @@ def run_go(args: List<String>, r: Run) -> Run:
         case "--steps":
           match rest:
             case Nil{}:
-              r
+              IO.pure(Run, r)
             case Con{b, more}:
               match r:
                 case Run{start, steps, save, resume, sample, probe, four}:
@@ -599,12 +599,12 @@ def run_go(args: List<String>, r: Run) -> Run:
               run_go(rest, Run{start, steps, save, resume, sample, probe,
                 True{}})
         case _:
-          run_go(rest, r)
+          IO.die(Run, 1, String.append("unknown flag: ", a))
 
-def run_of(args: List<String>) -> Run:
+def run_of(args: List<String>) -> IO(Run):
   match args:
     case Nil{}:
-      run_default()
+      IO.pure(Run, run_default())
     case Con{program, rest}:
       run_go(rest, run_default())
 
@@ -659,4 +659,5 @@ def main() -> IO(Unit):
   do IO<Unit>:
     args : List<String> <- IO.args()
     root : String <- export_dir()
-    run_with(root, run_of(args))
+    r : Run <- run_of(args)
+    run_with(root, r)

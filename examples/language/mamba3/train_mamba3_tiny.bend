@@ -59,16 +59,16 @@ def nat_or(m: Maybe<&2, Nat>, d: Nat) -> Nat:
     case None{}:
       d
 
-def run_go(args: List<String>, r: Run) -> Run:
+def run_go(args: List<String>, r: Run) -> IO(Run):
   match args:
     case Nil{}:
-      r
+      IO.pure(Run, r)
     case Con{a, rest}:
       match a:
         case "--steps":
           match rest:
             case Nil{}:
-              r
+              IO.pure(Run, r)
             case Con{b, more}:
               match r:
                 case Run{+steps, lrppm, +data}:
@@ -76,7 +76,7 @@ def run_go(args: List<String>, r: Run) -> Run:
         case "--lr-ppm":
           match rest:
             case Nil{}:
-              r
+              IO.pure(Run, r)
             case Con{b, more}:
               match r:
                 case Run{+steps, lrppm, +data}:
@@ -84,16 +84,20 @@ def run_go(args: List<String>, r: Run) -> Run:
         case "--data":
           match rest:
             case Nil{}:
-              r
+              IO.pure(Run, r)
             case Con{b, more}:
               match r:
                 case Run{+steps, lrppm, +data}:
                   run_go(more, Run{steps, lrppm, b})
         case _:
-          run_go(rest, r)
+          IO.die(Run, 1, String.append("unknown flag: ", a))
 
-def run_of(args: List<String>) -> Run:
-  run_go(args, run_default())
+def run_of(args: List<String>) -> IO(Run):
+  match args:
+    case Nil{}:
+      IO.pure(Run, run_default())
+    case Con{program, rest}:
+      run_go(rest, run_default())
 
 def pos_n() -> Nat:
   128n
@@ -716,4 +720,5 @@ def run_io(r: Run) -> IO(Unit):
 def main() -> IO(Unit):
   do IO<Unit>:
     args : List<String> <- IO.args()
-    run_io(run_of(args))
+    r : Run <- run_of(args)
+    run_io(r)
