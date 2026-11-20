@@ -111,3 +111,17 @@ load-bound jobs, and the missing sampled number. `make issues` renders it;
   descriptions came from the user's status message only and must be supplied
   before any related-work pass can start.
 
+
+## 2026-11-20 — BendTorch PR #45 reviewed and approved
+
+- tryingET's general Conv1d (#43's first layer) was reviewed and approved.
+  Verified locally on the PR head with Bend 2.0.40: `make laws` passed
+  (ALL PROOFS CHECK, verdict, FAST_DEFS/GPU_DEFS pins, all bad programs
+  rejected) and `make check-conv1d` passed all five cuts at 0.000e+00 for
+  y/dx/dW/db, including grouped, stride, dilation and depthwise.
+- Two non-blocking questions were left on the PR: whether the padded-surplus
+  encoding `t = eff_k + ts - 2p` rejects over-large padding or truncates via
+  Nat.sub, and whether the caller establishes the round-trip law's
+  hypotheses. This is the #44 geometry-guard lens applied to 1-D.
+- #43 is therefore unblocked and moving upstream; we do not write TTS layers.
+  CUDA device execution was not run locally.
