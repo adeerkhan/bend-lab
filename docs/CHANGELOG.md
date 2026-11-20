@@ -4,6 +4,14 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The tiny-LM plumbing bench type-checks again
+
+- `bench/plumbing_mamba_tiny/main.bend` was still calling the one-argument
+  `M.tiny_lr` removed by the configurable schedule; the full gate recorded it
+  as an ERROR. It now passes the 20-step budget and 1e-3 peak explicitly.
+  The five pinned output lines are unchanged, so the step record is not
+  affected.
+
 ### The GLM arm can run on the Mamba optimizer and schedule
 
 - `--matched` in `examples/language/glm53_flash/train_h128.bend` sets

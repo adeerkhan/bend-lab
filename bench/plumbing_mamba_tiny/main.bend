@@ -46,7 +46,7 @@ def forward_loss(toks: List<&2, Nat>, ps: List<&2, F32>) -> F32:
 
 def one_step_loss(+ps: List<&2, F32>, +toks: List<&2, Nat>, +t: Nat) -> F32:
   ts_loss(M.tiny_io_example(ps, S.zline(M.params_n()),
-    S.zline(M.params_n()), toks, t, M.tiny_lr(t)))
+    S.zline(M.params_n()), toks, t, M.tiny_lr(t, M.steps_n(), M.peak_of(1000n))))
 
 
 def head_or_one(xs: List<&2, F32>) -> F32:
@@ -326,9 +326,9 @@ def main() -> IO(Unit):
     # the optimizer's three list walks alone, three times, on the same weights
     +grad : List<&2, F32> <- IO.pure(List<&2, F32>, ones_row(M.params_n(), Nil{}))
     t8 : Nat <- IO.now()
-    +o1 : F32 <- IO.pure(F32, opt_walk(ps0, grad, M.tiny_lr(0n)))
-    +o2 : F32 <- IO.pure(F32, opt_walk(ps0, grad, M.tiny_lr(0n)))
-    +o3 : F32 <- IO.pure(F32, opt_walk(ps0, grad, M.tiny_lr(0n)))
+    +o1 : F32 <- IO.pure(F32, opt_walk(ps0, grad, M.tiny_lr(0n, M.steps_n(), M.peak_of(1000n))))
+    +o2 : F32 <- IO.pure(F32, opt_walk(ps0, grad, M.tiny_lr(0n, M.steps_n(), M.peak_of(1000n))))
+    +o3 : F32 <- IO.pure(F32, opt_walk(ps0, grad, M.tiny_lr(0n, M.steps_n(), M.peak_of(1000n))))
     t9 : Nat <- IO.now()
     Unit <- show_ms("opt_walk_x3", Nat.sub(t9, t8))
     Unit <- show_f32("opt_walk_head: ", o3)

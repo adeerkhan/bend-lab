@@ -2800,3 +2800,12 @@ steps.
   legibility number is quoted here.
 - The rebuilt 3,600-step --four run was stopped before completion (see the
   local ledger); no four-pair legibility result exists yet.
+
+## 2026-11-20 — the full gate caught a stale bench call
+
+- `bench/plumbing_mamba_tiny/main.bend` had four calls to the old
+  `M.tiny_lr(s)`. The schedule now takes the shared budget and peak; passing
+  `M.steps_n()` and `M.peak_of(1000n)` restores the old values (20 steps,
+  0.001 peak, 1e-4 floor). Type-check passes and the pinned lines are
+  unchanged. Found by the full `make check`, which had been stopped twice
+  before reaching a final count.
