@@ -125,3 +125,15 @@ load-bound jobs, and the missing sampled number. `make issues` renders it;
   hypotheses. This is the #44 geometry-guard lens applied to 1-D.
 - #43 is therefore unblocked and moving upstream; we do not write TTS layers.
   CUDA device execution was not run locally.
+
+## 2026-11-21 — gate coverage complete, single-run claim not made
+
+- The full `make check` was externally stopped at its last test with 157
+  gates passed and 0 errors. The remaining test (`test_mamba_vit_train.py`)
+  was re-run standalone and passed. All 158 gates are therefore covered, but
+  not in one uninterrupted run, so no single-run "all green" is claimed.
+- The tiny-LM idle step record is fresh: 8,180 ms/step at load 0.43
+  (`make bench-mamba-tiny`), down from 11,163 ms/step before the state-walk
+  and dW_out fixes. Recorded in `bench/history.md`.
+- All Bend builds now run through a 4G memory cgroup; no bare `bend -o`
+  remains in the Makefile or bench script.
