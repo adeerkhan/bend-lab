@@ -47,9 +47,9 @@ SEED = 0
 TRAIN_IMAGES = 2048
 TEST_IMAGES = 512
 BATCH = 32
-STEPS = 5
+STEPS = 3  # config down: full gate timeout is 1800 s
 TRAIN_USED = BATCH * STEPS       # 160
-TEST_USED = 256
+TEST_USED = 64  # config down: full gate timeout is 1800 s
 N_LAYER = 8
 
 

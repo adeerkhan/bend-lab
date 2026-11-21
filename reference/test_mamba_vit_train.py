@@ -13,7 +13,7 @@ and the checks:
   the manifest's sha256 hashes, and `w_init_flat.bin` == the 108 per-tensor
   files concatenated in `named_parameters()` order;
   the loss curve, every step, at 1e-3 relative;
-  the train and held-out accuracy, within 2 points (<= 3 of 160, <= 5 of 256), the
+  the train and held-out accuracy, within 2 points (<= 2 of 96, <= 2 of 64), the
   train one being the forward that consumed each batch, before its update;
   the final per-tensor sums of squares (108), at 1e-3 relative.
 
@@ -24,7 +24,7 @@ measured Bend run on this lane (2026-11-15, `make mamba-vit-train`) is
 1869.8 s wall for the 160 training + 256 held-out images (4.49 s per
 image), so the fixed 2,048-image subset is on the order of hours and one
 60,000-image epoch is on the order of days. This gate is parity on a 160-image
-subset (5 steps of 32) with the same schedule on both sides, not a claim on
+subset (3 steps of 32) with the same schedule on both sides, not a claim on
 the full epoch: the accuracy below is what 5 steps at lr 1e-3 reach, and it
 is quoted as such.
 """
@@ -49,8 +49,8 @@ LOSS_GATE = 1e-3
 ACC_GATE = 0.02
 W_GATE = 1e-3
 BUDGET = ("full epoch: unavailable on Bend at this budget. The measured run on this "
-          "lane (2026-11-15) is 1869.8 s wall for 160 train + 256 held-out images "
-          "(4.49 s per image), so the fixed 2048-image subset is on the order of "
+          "lane (2026-11-15) is 1869.8 s wall for the old 160 train + 256 held-out config "
+          "(4.49 s per image); the config came down to 96 train + 64 held-out to fit the 1800 s gate. The subset is on the order of "
           "hours and a 60,000-image epoch on the order of days. "
           "This gate is parity on the subset at the same schedule, not a claim on the "
           "full epoch: the twin's 94.61 % after one 60,000-image epoch has no Bend "

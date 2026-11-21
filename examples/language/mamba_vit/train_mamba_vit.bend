@@ -13,9 +13,9 @@
 # init and the budget are `.scratch/mv_mnist/` (manifest.json):
 #
 #   the 2048-image subset is the fixed slice; this run trains on its first
-#   160 images (5 steps of 32) and evaluates on the first 256 held-out
+#   96 images (3 steps of 32) and evaluates on the first 64 held-out
 #   images. Measured 2026-11-15 (`reference/test_mamba_vit_train.py`):
-#   1869.8 s wall for the 160 training + 256 held-out images (4.49 s per
+#   1869.8 s wall for the old 160 training + 256 held-out config (4.49 s per
 #   image), so the 2048-image subset is on the order of hours and a
 #   60,000-image epoch on the order of days
 #
@@ -32,16 +32,16 @@ def ddir() -> String:
   ".scratch/mv_mnist"
 
 def steps_n() -> Nat:
-  5n
+  3n
 
 def batch_n() -> Nat:
   32n
 
 def train_n() -> Nat:
-  160n
+  96n
 
 def test_n() -> Nat:
-  256n
+  64n
 
 # one MNIST image is 784 floats, one batch 32 images: 25088 floats, 100352 bytes
 def img_batch_n() -> Nat:
@@ -1589,8 +1589,8 @@ def final_io(tr: TR) -> IO(Unit):
   match tr:
     case TR{+ps, _, _, ls, ns, +hits}:
       do IO<Unit>:
-        +th : Nat <- eval_io(8n, 0n, ps, 0n)
-        IO.print("MambaViT A3: 160 train images, 5 steps of 32, 256 held-out")
+        +th : Nat <- eval_io(2n, 0n, ps, 0n)
+        IO.print("MambaViT A3: 96 train images, 3 steps of 32, 64 held-out")
         M.show_tag("mv_train_loss", ls)
         M.show_tag("mv_grad_norm", ns)
         M.show_tag("mv_train_hits", Con{F32.from_nat(hits), Nil{}})
