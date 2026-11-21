@@ -4,6 +4,12 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### A fresh idle tiny-LM step record
+
+- `make bench-mamba-tiny` at load 0.43 measures 8,180 ms/step, down from the
+  11,163 ms/step idle record before the backward state-walk and `dW_out`
+  fixes. Both are idle measurements under the gate's 1.0 load ceiling.
+
 ### Unknown command-line flags now fail loudly
 
 - The UNet, GLM and Mamba trainers used to ignore any unrecognised flag. A

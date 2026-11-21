@@ -2828,3 +2828,12 @@ steps.
   Mamba parser had relied on the tolerant wildcard for that). All three
   type-check, and built binaries were run with `--bogus` to confirm the
   failure and with known flags to confirm training still starts.
+
+## 2026-11-21 — fresh idle tiny-LM step record
+
+- `make bench-mamba-tiny` at load 0.43 (Bend 2.0.38) printed
+  `ms_per_step=8180.0 loss=4.838168 load=0.43 tokens=128 ok`. The prior idle
+  record was 11163 ms/step at load 0.52 (2026-11-19), before the backward
+  state-walk and `dW_out` array fixes, so the ~3.0 s/step drop is a
+  within-lane comparison of those fixes. Both rows are idle (load well under
+  the gate's 1.0). Recorded in `bench/history.md`.

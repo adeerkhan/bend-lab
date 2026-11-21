@@ -16,3 +16,4 @@ and scan heads moved.
 |---|---|---|---|---|---|
 | 2026-11-18 | list accumulator → array accumulator (FORCE=1, reference) | 10860 | — | 1 | 2.9 |
 | 2026-11-19 | array accumulator, first idle record | 11163 | — | 1 | 0.52 |
+| 2026-11-21 | state-walk + dW_out array fixes, idle record | 8180 | — | 1 | 0.43 |
