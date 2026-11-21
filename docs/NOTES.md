@@ -2837,3 +2837,11 @@ steps.
   state-walk and `dW_out` array fixes, so the ~3.0 s/step drop is a
   within-lane comparison of those fixes. Both rows are idle (load well under
   the gate's 1.0). Recorded in `bench/history.md`.
+
+## 2026-11-21 — cap every build at 4G
+
+- The machine has 15 GiB RAM with roughly 11 GiB held by the desktop; a bare
+  `bend -o` can want 9 GB and freeze it. The guard default is now 4G and no
+  Makefile or bench-script build bypasses it. Verified with a real guarded
+  build and run (`guard-ok`). The compiler and its memory growth are upstream
+  (`bendlang/bend`); this only bounds what we run here.

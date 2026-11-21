@@ -27,7 +27,7 @@ mamba3:           ## the Mamba-3 SISO gates: forward, backward, training, genera
 
 mamba3-bench:     ## twenty forward passes at seqlen 8: the scan benchmark
 	@mkdir -p .scratch
-	$(BEND) -o .scratch/mamba3_fwd.bin examples/language/mamba3/bench_mamba3_fwd_n.bend
+	scripts/bend-guard.sh $(BEND) -o .scratch/mamba3_fwd.bin examples/language/mamba3/bench_mamba3_fwd_n.bend
 	/usr/bin/time -f "bench mamba3: %e s wall, %U s user" .scratch/mamba3_fwd.bin
 
 mamba3-layer:     ## the SISO block as a BendTorch T.Layer, trained with T.Train
@@ -130,25 +130,25 @@ mamba-vit-train:   ## MambaViT A3: subset training parity, Bend vs the twin (~31
 
 glm-step:         ## the 192-position attention step: state and cache against the full prefix
 	@mkdir -p .scratch
-	$(BEND) -o .scratch/glm_step.bin examples/language/glm53_flash/probe_glm_step.bend
+	scripts/bend-guard.sh $(BEND) -o .scratch/glm_step.bin examples/language/glm53_flash/probe_glm_step.bend
 	@.scratch/glm_step.bin | tee .scratch/glm_step.log
 	@grep -q "GLM STEP PASS" .scratch/glm_step.log
 
 glm-block-step:   ## the fourth block's step (attention and MLP) on the trained weights
 	@mkdir -p .scratch
-	$(BEND) -o .scratch/glm_block.bin examples/language/glm53_flash/probe_glm_block.bend
+	scripts/bend-guard.sh $(BEND) -o .scratch/glm_block.bin examples/language/glm53_flash/probe_glm_block.bend
 	@.scratch/glm_block.bin | tee .scratch/glm_block.log
 	@grep -q "GLM BLOCK STEP PASS" .scratch/glm_block.log
 
 glm-lin-block:    ## the linear block's step (attention and MLP) on the trained weights
 	@mkdir -p .scratch
-	$(BEND) -o .scratch/glm_lin_block.bin examples/language/glm53_flash/probe_glm_block_lin.bend
+	scripts/bend-guard.sh $(BEND) -o .scratch/glm_lin_block.bin examples/language/glm53_flash/probe_glm_block_lin.bend
 	@.scratch/glm_lin_block.bin | tee .scratch/glm_lin_block.log
 	@grep -q "GLM LIN BLOCK PASS" .scratch/glm_lin_block.log
 
 glm-decode:       ## the four-block step decoder: episode 0 tokens against the full prefix
 	@mkdir -p .scratch
-	$(BEND) -o .scratch/step_h192.bin examples/language/glm53_flash/step_h192.bend
+	scripts/bend-guard.sh $(BEND) -o .scratch/step_h192.bin examples/language/glm53_flash/step_h192.bend
 	@.scratch/step_h192.bin --episodes 1 | tee .scratch/step_h192.log
 	@$(PY) reference/glm53_step_gen_check.py .scratch/step_h192.log
 
@@ -157,7 +157,7 @@ batch:            ## the streamlined matrix: scripts/batch.sh (ROWS=... for a su
 
 glm-h192-step:    ## the full hybrid 192 dev and confirm evaluation with the step decoder
 	@mkdir -p .scratch
-	$(BEND) -o .scratch/step_h192.bin examples/language/glm53_flash/step_h192.bend
+	scripts/bend-guard.sh $(BEND) -o .scratch/step_h192.bin examples/language/glm53_flash/step_h192.bend
 	$(PY) reference/glm53_dense_eval.py --weights results/glm53-hybrid128/weights/final_weights.bin --out results/glm53-hybrid192-step --splits dev,confirm --episodes 64 --layout hybrid --binary .scratch/step_h192.bin --golden ''
 
 unet-metric:      ## the UNet held-out gate: legibility and spectrum, with can-fail arms
@@ -229,7 +229,7 @@ matrix:           ## run the declared cells (task, lane, seed), one record each,
 
 call-cost:        ## what a small matmul costs, and what its call costs, at the ViT's shapes
 	@mkdir -p .scratch
-	BEND_MEM=$(or $(MEM),6G) scripts/bend-guard.sh $(BEND) -o .scratch/call_cost bench/call_cost/main.bend
+	BEND_MEM=$(or $(MEM),4G) scripts/bend-guard.sh $(BEND) -o .scratch/call_cost bench/call_cost/main.bend
 	.scratch/call_cost
 
 peaks:            ## the machine's measured ceilings (read, write, copy, flops), saved under results/
@@ -265,7 +265,7 @@ figures:          ## rebuild the README figures from results/, saved under docs/
 
 flow:             ## train the 2D flow matching example, saved under results/flow-matching/
 	@mkdir -p .scratch
-	BEND_LIB=$(CURDIR)/.bend/env $(BEND) -o .scratch/flow.bin examples/diffusion/flow_matching/main.bend
+	scripts/bend-guard.sh env BEND_LIB=$(CURDIR)/.bend/env $(BEND) -o .scratch/flow.bin examples/diffusion/flow_matching/main.bend
 	.scratch/flow.bin > .scratch/flow.log
 	$(PY) reference/flow_results.py .scratch/flow.log
 
@@ -278,7 +278,7 @@ doctor:           ## what this machine can compile: RAM, cores, GPU, build budge
 flow64:           ## build and run the 64x64 flow (PRESET=tiny MEM=6G)
 	@mkdir -p .scratch
 	$(PY) scripts/flow-config.py --preset $(or $(PRESET),tiny)
-	BEND_MEM=$(or $(MEM),6G) scripts/bend-guard.sh env BEND_LIB=$(CURDIR)/.bend/env $(BEND) -o .scratch/flow64 examples/diffusion/flowers_flow/main.bend
+	BEND_MEM=$(or $(MEM),4G) scripts/bend-guard.sh env BEND_LIB=$(CURDIR)/.bend/env $(BEND) -o .scratch/flow64 examples/diffusion/flowers_flow/main.bend
 	.scratch/flow64 > .scratch/flow64.log
 	$(PY) reference/flowers_report.py .scratch/flow64.log
 

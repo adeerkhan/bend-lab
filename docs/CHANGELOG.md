@@ -4,6 +4,13 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### Every Bend build is now memory-capped at 4G by default
+
+- `scripts/bend-guard.sh` defaults to `BEND_MEM=4G`, and all Makefile targets
+  and `scripts/bench_mamba_tiny.sh` that call `bend -o` now go through it.
+  A build that needs more dies inside the cgroup instead of freezing the
+  desktop. Use `MEM=8G <target>` to raise the cap deliberately.
+
 ### A fresh idle tiny-LM step record
 
 - `make bench-mamba-tiny` at load 0.43 measures 8,180 ms/step, down from the

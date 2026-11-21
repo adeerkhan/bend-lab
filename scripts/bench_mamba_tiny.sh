@@ -46,7 +46,7 @@ export MLBEND_DATA="$PWD/reference/.cache/datasets"
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
-if ! "$BEND" bench/plumbing_mamba_tiny/main.bend -o "$tmp/bench" >"$tmp/build.log" 2>&1; then
+if ! scripts/bend-guard.sh "$BEND" bench/plumbing_mamba_tiny/main.bend -o "$tmp/bench" >"$tmp/build.log" 2>&1; then
   cat "$tmp/build.log"
   echo "build failed"
   exit 2
