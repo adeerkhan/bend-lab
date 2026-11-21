@@ -39,7 +39,8 @@ result, not a quality verdict.
 
 ## Learned groups (Figure-4 analogue)
 
-`group_maps.png` shows three flowers at t=0.75. The top row overlays group
+`group_maps.png` shows three flowers at t=0.75 (groups4.json, thresholds
+recalibrated on the trained model at the visualization timestep, then frozen). The top row overlays group
 boundaries on the clean image; the bottom row is the hard group map with one
 spatially scattered group highlighted in gold. On flowers 1 and 2 the gold
 group collects the **background** — disconnected patches that share appearance
