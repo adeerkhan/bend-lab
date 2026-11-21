@@ -29,7 +29,7 @@ count (10/11) at λ=0.01, Tr=0.05, Tb=0.1.
 | held-out legibility | **0.220** | 0.210 | noise floor 0.051, real held-out flower 0.521 |
 | legibility vs training set | 0.249 | 0.259 | — |
 | final training loss | 0.132 | 0.099 | — |
-| wall (300 steps) | 44.2 s | 5.6 s | CPU torch 2.15 |
+| wall (300 steps) | 44.2 s | 5.6 s | CPU torch 2.15 — **see banner 6** |
 
 HiT is **+0.010 held-out legibility** over the matched ViT at the same step
 budget and slightly fewer parameters, but is ~8× slower per step because the
@@ -49,6 +49,36 @@ reported behaviour (object region / background / nonlocal similarity) emerging
 from denoising alone, without segmentation labels. The small reference only
 has 8×8 patches, so the "object part" detail is limited by resolution.
 
+## Correction: the wall-time number is not an architecture result
+
+I first wrote "HiT is ~8× slower per step". That was **wrong to state as an
+architecture comparison**. Profiling on this reference (`hit_ref.py`, batch 8):
+
+| component | time |
+|---|---|
+| HiT forward | 32.9 ms |
+| ViT forward | 3.5 ms |
+| scipy linkage alone | 0.8 ms |
+| my Python tree + merge replay | 11.8 ms |
+| full HiT grouping stage | 16.9 ms |
+
+The official release (`Nicholas0228/HiT-Released`, `hnet/linkage.py`,
+`hnet/runtime/affinity.py`) runs the same exact average linkage through
+**numba JIT** (`njit`, parallel, outside the GIL) and the soft-mean/readback
+through fused **Triton** segmented sums. My reference does the merge replay as
+hundreds of small Python/torch ops, so its wall time measures my implementation,
+not HiT. The architecture-level cost is token-blocks at matched 10 blocks:
+
+| | token-blocks (K1=31, K2=16) | relative |
+|---|---:|---:|
+| HiT (2×64 + 2×31 + 2×16 + 2×31 + 2×64) | 412 | **0.64×** |
+| ViT (10×64) | 640 | 1.00× |
+
+This agrees with the paper's HiT-B 22.2 GFLOPs vs JiT-B 25.2 GFLOPs. So the
+honest statement is: **HiT is structurally cheaper, my reference is slower
+only because it is a Python prototype.** Any real efficiency claim needs the
+numba/Triton implementation or a FLOP count, not this wall time.
+
 ## Banners — do not read past these
 
 - This is a **CPU torch reference**, not a Bendlang implementation. No Bend
@@ -58,6 +88,8 @@ has 8×8 patches, so the "object part" detail is limited by resolution.
   width and block count, not that program recompiled on flowers.
 - The paper's FID/ImageNet numbers (1.48 FID, 40% JiT FLOPs) are **not our results**
   and are not claimed here.
+- The 44 s vs 6 s wall time is a prototype artifact (see correction above),
+  not evidence that ViT is the more efficient architecture.
 - 300 steps and 1,024 training flowers are far short of the paper's 80–600
   epochs on ImageNet; group quality and legibility should be expected to change
   with a longer run.

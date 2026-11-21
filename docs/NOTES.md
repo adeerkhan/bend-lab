@@ -2861,3 +2861,15 @@ steps.
 - `results/hit-reference/{hit,vit}` records, `group_maps.png` (the paper's
   Figure 4 analogue: gold collects disconnected background) and
   `comparison.png` are generated from the committed records.
+
+## 2026-11-21 — correcting the HiT-vs-ViT efficiency claim
+
+- I had reported HiT as ~8x slower than ViT from wall time (44 s vs 6 s for
+  300 steps). Profiling the reference showed 11.8 ms of a 16.9 ms HiT grouping
+  stage was my Python merge-affinity replay, while scipy linkage itself was
+  0.8 ms. The official HiT release (Nicholas0228/HiT-Released) runs the same
+  linkage through numba JIT and the soft means through Triton kernels.
+- The architecture-level cost is token-blocks: HiT 412 vs ViT 640 at matched
+  10 blocks (0.64x), agreeing with the paper's 22.2 vs 25.2 GFLOPs. The
+  comparison report and chart now state that the wall-time gap is a prototype
+  artifact, and the gate refuses a report without that correction.

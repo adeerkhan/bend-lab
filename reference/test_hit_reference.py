@@ -34,6 +34,8 @@ def main():
     assert "CPU torch reference" in report and "not a Bendlang" in report
     assert "0.010 held-out legibility" in report
     assert "1.48 FID" in report and "not our results" in report
+    assert "prototype artifact" in report and "0.64" in report
+    assert "not an architecture result" in report
     print("HIT REFERENCE PASS")
 
 

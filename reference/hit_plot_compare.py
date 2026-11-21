@@ -29,7 +29,7 @@ ax[1].annotate(f"{v['wall_seconds']:.1f}s", (v['wall_seconds'], v['legibility_he
 ax[1].annotate(f"{h['wall_seconds']:.1f}s", (h['wall_seconds'], h['legibility_held']),
                textcoords="offset points", xytext=(8, -4), fontsize=9)
 ax[1].set_xlabel("wall seconds for 300 steps (log)"); ax[1].set_ylabel("held-out legibility")
-ax[1].set_xscale("log"); ax[1].set_title("Efficiency: ViT ~8x faster"); ax[1].legend()
+ax[1].set_xscale("log"); ax[1].set_title("Prototype wall time — NOT architecture efficiency"); ax[1].legend()
 
 # 3. loss curves
 ax[2].plot(h["losses"], alpha=0.85, color="#2f5d94", label="HiT")
@@ -49,7 +49,8 @@ ax[3].set_ylabel("radial power (1.0 = white noise)"); ax[3].set_title("Draw spec
 fig.suptitle("HiT vs matched ViT on flowers64 — small reference models, 300 steps",
              fontsize=13, fontweight="bold")
 fig.text(0.5, 0.012,
-         "BANNERS: CPU torch reference, not Bendlang; ViT is a matched flowers twin "
+         "BANNERS: CPU torch prototype — wall time is implementation, not architecture. "
+         "HiT does 0.64x the token-blocks of ViT at matched blocks. ViT is a flowers twin; "
          "(our Bend ViT is 8x8 digits). At 300 steps neither reaches the real-flower "
          "ceiling. No paper FID / ImageNet result is claimed here.",
          ha="center", fontsize=8.5, color="#8b2f2f")
