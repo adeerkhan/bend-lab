@@ -2845,3 +2845,19 @@ steps.
   Makefile or bench-script build bypasses it. Verified with a real guarded
   build and run (`guard-ok`). The compiler and its memory growth are upstream
   (`bendlang/bend`); this only bounds what we run here.
+
+## 2026-11-21 — HiT reference on flowers
+
+- Built a small faithful HiT (arXiv:2611.22962) in `reference/hit_ref.py`:
+  symmetric affinity, scipy average-linkage hard groups, softmax soft weights,
+  column-normalized pooling, ungroup with skip, sigmoid soft group count and
+  the ratio compression loss, plus the paper's velocity loss. tau is calibrated
+  once on fixed noisy examples and frozen (a per-batch tau collapsed grouping
+  at high t).
+- Matched plain-ViT arm at the same patch/width/blocks. 300 steps on 1,024
+  flowers: HiT 0.220 held-out legibility vs ViT 0.210, with 368k vs 343k
+  params; HiT is ~8x slower per step (tree rebuilt each forward). Neither
+  reaches the 0.521 real-flower ceiling. No FID or ImageNet claim is imported.
+- `results/hit-reference/{hit,vit}` records, `group_maps.png` (the paper's
+  Figure 4 analogue: gold collects disconnected background) and
+  `comparison.png` are generated from the committed records.

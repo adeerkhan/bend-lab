@@ -4,6 +4,17 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### A small HiT reference on flowers, with a matched ViT arm
+
+- `reference/hit_ref.py` implements the HiT mechanism of arXiv:2611.22962 at
+  flowers64 scale (patch 8, 64 tokens, two 2x grouping stages) plus a matched
+  plain-ViT arm. Both train 300 steps on 1,024 flowers with the same velocity
+  loss; HiT gets 0.220 held-out legibility vs the ViT's 0.210 (noise 0.051,
+  real-flower ceiling 0.521).
+- `results/hit-reference/` holds the records, Figure-4-style learned group
+  maps and the comparison chart. This is a CPU reference, not a Bendlang
+  result; the report states that banner.
+
 ### Every Bend build is now memory-capped at 4G by default
 
 - `scripts/bend-guard.sh` defaults to `BEND_MEM=4G`, and all Makefile targets
