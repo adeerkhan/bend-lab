@@ -26,12 +26,12 @@ loss, 1200 steps, batch 16, 2,048 flowers, seed 0.
 | | ViT | JiT/DiT | HiT |
 |---|---:|---:|---:|
 | params | 805,824 | 1,400,256 | 1,498,560 |
-| held-out legibility | 0.213 | 0.215 | **0.221** |
-| final loss | 0.085 | 0.091 | 0.082 |
+| held-out legibility | 0.213 | 0.213 | **0.221** |
+| final loss | 0.085 | 0.092 | 0.082 |
 | wall (1200 steps) | 92 s | 84 s | 109 s |
 
 So at this scale **HiT is best on held-out legibility**, by +0.006 over JiT/DiT
-and +0.008 over ViT, with more parameters. The earlier v1 result (HiT worse)
+and +0.008 over ViT, with more parameters. JiT/DiT and ViT are tied at this scale. The earlier v1 result (HiT worse)
 was caused by a stale one-batch threshold calibration and too-high LR — this
 version follows the release recipe and adds one mid-run threshold retune.
 
