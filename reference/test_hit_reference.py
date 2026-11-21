@@ -33,7 +33,7 @@ def main():
     report = open(os.path.join(HERE, "COMPARISON.md")).read()
     assert "CPU torch reference" in report and "not a Bendlang" in report
     assert "0.010 held-out legibility" in report
-    assert "1.48 FID" in report and "not our" in report
+    assert "1.48 FID" in report and "not our results" in report
     print("HIT REFERENCE PASS")
 
 

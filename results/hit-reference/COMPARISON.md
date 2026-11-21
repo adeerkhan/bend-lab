@@ -55,8 +55,8 @@ has 8×8 patches, so the "object part" detail is limited by resolution.
 - Our committed Bend ViT (`examples/diffusion/vit`) is an **8×8 digits**
   denoiser; the ViT arm here is a **matched flowers twin** at the same patch,
   width and block count, not that program recompiled on flowers.
-- The paper's FID/ImageNet numbers (1.48 FID, 40% JiT FLOPs) are **not** our
-  results and are not claimed here.
+- The paper's FID/ImageNet numbers (1.48 FID, 40% JiT FLOPs) are **not our results**
+  and are not claimed here.
 - 300 steps and 1,024 training flowers are far short of the paper's 80–600
   epochs on ImageNet; group quality and legibility should be expected to change
   with a longer run.
