@@ -51,6 +51,10 @@ the hierarchy on 2,048 small flowers with 64 tokens.
   causal-only (ISSUE-011) and adaLN is not a BendTorch layer, so a faithful
   DiT/HiT port needs upstream work first.
 
+## What the samples actually show (samples.png, distributions.png)
+
+The legibility numbers above are real and measured, but the sample grid tells a more important story: **none of the three arms produces flower-like images at 1200 steps.** All three are smooth blobs. The per-sample box plot shows medians near or above the 0.536 "real flower ceiling" for ViT and JiT/DiT, because legibility is best absolute correlation with a training image — a blurred, low-frequency blob correlates with a blurred flower. The radial spectrum (overview.png) confirms the missing high-frequency content. So the ranking JiT/DiT > ViT > HiT is sound relative evidence, but none of these models is good in absolute terms at this budget. A better quality claim needs more data, finer patches, and a metric less gameable by smoothness.
+
 ## Conclusive statement
 
 On the flowers64 task at the scale this machine can train: **JiT/DiT > ViT >

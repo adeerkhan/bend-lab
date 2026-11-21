@@ -5,7 +5,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HERE = os.path.join(ROOT, "results", "hit-v3")
 
 def main():
-    for f in ("overview.png", "convergence.png", "efficiency.png"):
+    for f in ("overview.png", "convergence.png", "efficiency.png", "samples.png", "distributions.png"):
         p = os.path.join(HERE, f)
         assert os.path.getsize(p) > 10_000, f
         with open(p, "rb") as fh:
@@ -17,6 +17,7 @@ def main():
     rep = open(os.path.join(HERE, "COMPARISON.md")).read()
     assert "6.62M" in rep and "6.53M" in rep and "4.74M" in rep
     assert "JiT/DiT > ViT >" in rep and "HiT" in rep
+    assert "none of the three arms produces flower-like images" in rep
     print("HIT V3 PLOTS PASS")
 
 if __name__ == "__main__":
