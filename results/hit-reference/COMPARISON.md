@@ -26,15 +26,15 @@ count (10/11) at λ=0.01, Tr=0.05, Tb=0.1.
 
 | metric | HiT | ViT | reference points |
 |---|---|---|---|
-| held-out legibility | **0.220** | 0.210 | noise floor 0.051, real held-out flower 0.521 |
+| test-set legibility | **0.220** | 0.210 | negative control 0.051, real test flower 0.521 |
 | legibility vs training set | 0.249 | 0.259 | — |
 | final training loss | 0.132 | 0.099 | — |
 | wall (300 steps) | 44.2 s | 5.6 s | CPU torch 2.15 — **see banner 6** |
 
-HiT is **+0.010 held-out legibility** over the matched ViT at the same step
+HiT is **+0.010 test-set legibility** over the matched ViT at the same step
 budget and slightly fewer parameters, but is ~8× slower per step because the
 average-linkage tree is rebuilt every forward pass. At 300 steps neither arm
-is close to the real-flower ceiling (0.521), so this is a wiring-and-direction
+is close to the real-flower positive control (0.521), so this is a wiring-and-direction
 result, not a quality verdict.
 
 ## Learned groups (Figure-4 analogue)

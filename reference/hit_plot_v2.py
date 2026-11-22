@@ -11,17 +11,17 @@ R = {a: json.load(open(os.path.join(root, a, "run.json"))) for a in ("vit", "jit
 colors = {"ViT": "#888888", "JiT/DiT": "#c07736", "HiT": "#2f5d94"}
 fig, ax = plt.subplots(1, 3, figsize=(14, 4.2))
 
-# 1. held-out legibility
+# 1. test-set legibility
 
-keys = [(None, R["hit"]["noise_floor"]), ("vit", R["vit"]["legibility_held"]),
-        ("jit", R["jit"]["legibility_held"]), ("hit", R["hit"]["legibility_held"])]
+keys = [(None, R["hit"]["negative_control"]), ("vit", R["vit"]["legibility_test"]),
+        ("jit", R["jit"]["legibility_test"]), ("hit", R["hit"]["legibility_test"])]
 names = ["noise\nfloor", "ViT\n0.213", "JiT/DiT\n0.215", "HiT\n0.221"]
 vals = [v for _, v in keys]
 ax[0].bar(names, vals, color=["#cccccc", colors["ViT"], colors["JiT/DiT"], colors["HiT"]])
-ax[0].axhline(R["hit"]["ceiling"], color="#7e9a5e", ls="--", lw=1, label=f"real flower ceiling {R['hit']['ceiling']:.3f}")
+ax[0].axhline(R["hit"]["positive_control"], color="#7e9a5e", ls="--", lw=1, label=f"real flower positive_control {R['hit']['positive_control']:.3f}")
 for i, v in enumerate(vals):
     ax[0].text(i, v + 0.01, f"{v:.3f}", ha="center", fontsize=9)
-ax[0].set_ylabel("held-out legibility"); ax[0].set_ylim(0, 0.62); ax[0].legend(fontsize=8)
+ax[0].set_ylabel("test-set legibility"); ax[0].set_ylim(0, 0.62); ax[0].legend(fontsize=8)
 ax[0].set_title("Quality: HiT > JiT/DiT > ViT")
 
 # 2. loss curves

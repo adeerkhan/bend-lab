@@ -29,7 +29,7 @@ clean-image velocity loss, AdamW 2e-4 betas (0.9,0.95), 2,048 flowers, seed 0.
 | JiT/DiT | 2400 | 6.53M | **0.503** | 0.569 | 1,235 s |
 | HiT | 2400 | 6.62M | 0.405 | 0.471 | 1,133 s |
 
-Real-flower ceiling 0.536, noise floor 0.053. **The dense JiT/DiT arm wins at
+Real-flower positive control 0.536, negative control 0.053. **The dense JiT/DiT arm wins at
 this scale, and the gap grows with training** — the opposite of the paper's
 ImageNet result. This is now a well-controlled negative result, not a bug:
 the architecture is faithfully ported, grouping is active (64→45→35 tokens
@@ -53,7 +53,7 @@ the hierarchy on 2,048 small flowers with 64 tokens.
 
 ## What the samples actually show (samples.png, distributions.png)
 
-The legibility numbers above are real and measured, but the sample grid tells a more important story: **none of the three arms produces flower-like images at 1200 steps.** All three are smooth blobs. The per-sample box plot shows medians near or above the 0.536 "real flower ceiling" for ViT and JiT/DiT, because legibility is best absolute correlation with a training image — a blurred, low-frequency blob correlates with a blurred flower. The radial spectrum (overview.png) confirms the missing high-frequency content. So the ranking JiT/DiT > ViT > HiT is sound relative evidence, but none of these models is good in absolute terms at this budget. A better quality claim needs more data, finer patches, and a metric less gameable by smoothness.
+The legibility numbers above are real and measured, but the sample grid tells a more important story: **none of the three arms produces flower-like images at 1200 steps.** All three are smooth blobs. The per-sample box plot shows medians near or above the 0.536 "real flower positive control" for ViT and JiT/DiT, because legibility is best absolute correlation with a training image — a blurred, low-frequency blob correlates with a blurred flower. The radial spectrum (overview.png) confirms the missing high-frequency content. So the ranking JiT/DiT > ViT > HiT is sound relative evidence, but none of these models is good in absolute terms at this budget. A better quality claim needs more data, finer patches, and a metric less gameable by smoothness.
 
 ## Conclusive statement
 

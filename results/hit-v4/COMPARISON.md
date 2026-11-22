@@ -29,12 +29,12 @@ that had silently poisoned one "result" — that number was withdrawn.
 | HiT | 6.62M | 0.573 | 0.120 | 536 s |
 | JiT/DiT | 6.53M | **0.607** | 0.070 | 549 s |
 
-Real-flower ceiling 0.536, noise floor 0.053. **Corrected conclusion: JiT/DiT
+Real-flower positive control 0.536, negative control 0.053. **Corrected conclusion: JiT/DiT
 > HiT > ViT.** The earlier v3 claim "HiT is worst" was wrong — an artifact of
 the missing architectural pieces and a NaN run. Once the hierarchy is actually
 built, HiT beats the plain ViT by +0.059, but still trails JiT/DiT by 0.034.
 
-All three exceed the real-flower ceiling on held-out legibility (0.514–0.607
+All three exceed the real-flower positive control on test-set legibility (0.514–0.607
 vs 0.536): legibility measures correlation with a training flower and is
 gameable by smooth blobs, so none of these models genuinely generates flowers
 at this budget. `samples.png` shows this directly.

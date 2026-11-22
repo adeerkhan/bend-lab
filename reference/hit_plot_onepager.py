@@ -3,7 +3,7 @@
 
   python3 reference/hit_plot_onepager.py
 
-Reads the four committed run.json files. No ceiling lines, no spectrum panels.
+Reads the four committed run.json files. No positive_control lines, no spectrum panels.
 Training data size and setup are shown as the fourth panel.
 """
 import json
@@ -26,13 +26,13 @@ fig, ax = plt.subplots(2, 2, figsize=(13, 9))
 
 # 1. legibility
 a = ax[0, 0]
-vals = [r["legibility_held"] for _, r, _ in R]
+vals = [r["legibility_test"] for _, r, _ in R]
 bars = a.bar(names, vals, color=cols, width=0.58)
 for b, v in zip(bars, vals):
     a.text(b.get_x()+b.get_width()/2, v+0.012, f"{v:.3f}", ha="center", fontweight="bold")
 a.set_ylim(0, 0.72)
-a.set_ylabel("held-out legibility")
-a.set_title("Quality — same held-out flowers")
+a.set_ylabel("test-set legibility")
+a.set_title("Quality — same test flowers")
 
 # 2. capacity
 a = ax[0, 1]
@@ -55,10 +55,10 @@ a.legend(fontsize=8, loc="upper right")
 # 4. training data / setup as a table
 a = ax[1, 1]
 a.axis("off")
-a.set_title("Training data and setup")
+a.set_title("Training set and setup")
 cells = [
     ["Training flowers", "2,048"],
-    ["Held-out flowers", "102"],
+    ["Test flowers", "102"],
     ["Image", "64x64 grayscale"],
     ["Patch / tokens", "8x8 / 64"],
     ["Steps x batch", "1,200 x 16"],

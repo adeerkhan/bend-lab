@@ -7,7 +7,7 @@ HERE = os.path.join(ROOT, "results", "hit-v4")
 def main():
     r = {a: json.load(open(os.path.join(HERE, a, "run.json"))) for a in ("vit", "jit", "hit")}
     assert all(r[a]["steps"] == 1200 and len(r[a]["losses"]) == 1200 for a in r)
-    assert r["jit"]["legibility_held"] > r["hit"]["legibility_held"] > r["vit"]["legibility_held"]
+    assert r["jit"]["legibility_test"] > r["hit"]["legibility_test"] > r["vit"]["legibility_test"]
     assert all(np_ok(v) for v in [x["final_loss"] for x in r.values()])
     for f in ("overview.png", "convergence.png", "efficiency.png", "samples.png",
               "distributions.png", "hit/group_maps.png", "hit/groups4.json"):

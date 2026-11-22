@@ -13,22 +13,22 @@ v = json.load(open(os.path.join(root, "vit/run.json")))
 fig, ax = plt.subplots(1, 4, figsize=(17, 4.2))
 
 # 1. legibility with reference points
-ax[0].bar(["noise", "ViT", "HiT", "real flower\n(ceiling)"],
-          [h["noise_floor"], v["legibility_held"], h["legibility_held"], h["ceiling"]],
+ax[0].bar(["noise", "ViT", "HiT", "real flower\n(positive_control)"],
+          [h["negative_control"], v["legibility_test"], h["legibility_test"], h["positive_control"]],
           color=["#cccccc", "#c07736", "#2f5d94", "#7e9a5e"])
-for i, x in enumerate([h["noise_floor"], v["legibility_held"], h["legibility_held"], h["ceiling"]]):
+for i, x in enumerate([h["negative_control"], v["legibility_test"], h["legibility_test"], h["positive_control"]]):
     ax[0].text(i, x + 0.012, f"{x:.3f}", ha="center", fontsize=9)
-ax[0].set_ylabel("held-out legibility"); ax[0].set_ylim(0, 0.62)
+ax[0].set_ylabel("test-set legibility"); ax[0].set_ylim(0, 0.62)
 ax[0].set_title("Quality: HiT +0.010 over ViT")
 
 # 2. sample efficiency: legibility vs wall seconds
-ax[1].scatter([v["wall_seconds"]], [v["legibility_held"]], s=120, color="#c07736", label="ViT")
-ax[1].scatter([h["wall_seconds"]], [h["legibility_held"]], s=120, color="#2f5d94", label="HiT")
-ax[1].annotate(f"{v['wall_seconds']:.1f}s", (v['wall_seconds'], v['legibility_held']),
+ax[1].scatter([v["wall_seconds"]], [v["legibility_test"]], s=120, color="#c07736", label="ViT")
+ax[1].scatter([h["wall_seconds"]], [h["legibility_test"]], s=120, color="#2f5d94", label="HiT")
+ax[1].annotate(f"{v['wall_seconds']:.1f}s", (v['wall_seconds'], v['legibility_test']),
                textcoords="offset points", xytext=(8, -4), fontsize=9)
-ax[1].annotate(f"{h['wall_seconds']:.1f}s", (h['wall_seconds'], h['legibility_held']),
+ax[1].annotate(f"{h['wall_seconds']:.1f}s", (h['wall_seconds'], h['legibility_test']),
                textcoords="offset points", xytext=(8, -4), fontsize=9)
-ax[1].set_xlabel("wall seconds for 300 steps (log)"); ax[1].set_ylabel("held-out legibility")
+ax[1].set_xlabel("wall seconds for 300 steps (log)"); ax[1].set_ylabel("test-set legibility")
 ax[1].set_xscale("log"); ax[1].set_title("Prototype wall time — NOT architecture efficiency"); ax[1].legend()
 
 # 3. loss curves
@@ -52,7 +52,7 @@ fig.text(0.5, 0.012,
          "BANNERS: CPU torch prototype — wall time is implementation, not architecture. "
          "HiT does 0.64x the token-blocks of ViT at matched blocks. ViT is a flowers twin; "
          "(our Bend ViT is 8x8 digits). At 300 steps neither reaches the real-flower "
-         "ceiling. No paper FID / ImageNet result is claimed here.",
+         "positive_control. No paper FID / ImageNet result is claimed here.",
          ha="center", fontsize=8.5, color="#8b2f2f")
 plt.tight_layout(rect=(0, 0.05, 1, 0.94))
 out = os.path.join(root, "comparison.png")

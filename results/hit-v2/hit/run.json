@@ -1211,10 +1211,6 @@
  ],
  "first_loss": 1.536152958869934,
  "final_loss": 0.08157970756292343,
- "legibility_held": 0.22061346471309662,
- "legibility_train": 0.27711915969848633,
- "ceiling": 0.5355469584465027,
- "noise_floor": 0.05305730178952217,
  "spectrum": [
   0.01086416281759739,
   0.012676212005317211,
@@ -1222,5 +1218,9 @@
   0.13485249876976013
  ],
  "wall_seconds": 109.13370084762573,
- "draws": 32
+ "legibility_test": 0.22061346471309662,
+ "legibility_training": 0.27711915969848633,
+ "negative_control": 0.05305730178952217,
+ "positive_control": 0.5355469584465027,
+ "generated_samples": 32
 }

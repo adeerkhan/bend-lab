@@ -22,7 +22,7 @@ loss and the same training harness as the ViT / JiT(DiT) / HiT arms. It is
 | HiT | 6.62M | 0.573 | 0.120 | 536 s |
 | **Dimba-style hybrid** | 7.57M | **0.622** | 0.075 | 1,705 s |
 
-The hybrid is best on held-out legibility (+0.015 over JiT/DiT) and has the
+The hybrid is best on test-set legibility (+0.015 over JiT/DiT) and has the
 lowest final loss of the conditional arms. It is also ~3× slower: the Mamba
 scan is a Python loop over 64 tokens, where the released model uses a fused
 CUDA selective scan. No FID is claimed.

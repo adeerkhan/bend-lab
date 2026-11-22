@@ -6,15 +6,15 @@
     "url": "https://github.com/adeerkhan/bend-lab/tree/main/results/dimba"
   },
   "posts": [
-    "Four small diffusion models, same flowers, same 1,200 steps. The plain transformer scored 0.514. The best hybrid scored 0.622. The difference is not the parameter count.",
-    "Here is the catch: the hybrid took 1,705 seconds; the others took about 500. Remove its Mamba blocks and the score drops back to exactly the plain model's. One recurrent layer did all the work.",
-    "The full comparison, one image and every number: https://github.com/adeerkhan/bend-lab/tree/main/results/dimba 🌐 These are small CPU reference models, not a reproduction of the paper's image quality."
+    "Four small diffusion models, same flowers, same 1,200 training steps. On the test set, the plain transformer scored 0.514. The best hybrid scored 0.622. The difference is not the parameter count.",
+    "Here is the catch: the hybrid took 1,705 seconds; the others took about 500. Remove its Mamba blocks and the test-set score drops back to exactly the plain model's. One recurrent layer did all the work.",
+    "The full comparison, one image and every number: https://github.com/adeerkhan/bend-lab/tree/main/results/dimba \ud83c\udf10 Small CPU reference models; the test set was reused for model selection, so these are validation scores."
   ],
   "media": {
     "kind": "image",
     "src": "outputs/dimba-hybrid-media.png",
-    "alt": "One-page comparison: held-out legibility, parameter counts, training loss curves and training setup for ViT, JiT/DiT, HiT and a Dimba-style hybrid.",
-    "caption": "Four models, same flowers, same 1,200 steps — quality, capacity, loss and setup.",
+    "alt": "One-page comparison: test-set legibility, parameter counts, training loss curves and training setup for ViT, JiT/DiT, HiT and a Dimba-style hybrid.",
+    "caption": "Four models, same flowers, same 1,200 steps \u2014 quality, capacity, loss and setup.",
     "credit": "bend-lab reference runs, adeerkhan",
     "license": "CC0-1.0",
     "licenseChecked": true,

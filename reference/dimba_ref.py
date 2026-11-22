@@ -124,7 +124,7 @@ def main():
     ap.add_argument("--steps", type=int, default=1200)
     ap.add_argument("--batch", type=int, default=16)
     ap.add_argument("--n-train", type=int, default=2048)
-    ap.add_argument("--draws", type=int, default=32)
+    ap.add_argument("--generated_samples", type=int, default=32)
     ap.add_argument("--lr", type=float, default=2e-4)
     ap.add_argument("--out", required=True)
     ap.add_argument("--no-mamba", action="store_true")
@@ -151,21 +151,21 @@ def main():
         losses.append(float(loss.item()))
         if (step+1) % max(1,args.steps//8) == 0:
             print(f"step {step+1}/{args.steps} loss {losses[-1]:.5f} ({time.time()-t0:.0f}s)", flush=True)
-    draws = sample(model, torch.randn(args.draws, EDGE, EDGE)).numpy()
-    held = legibility(draws.reshape(args.draws,-1), ho.reshape(-1,EDGE*EDGE))
-    trleg = legibility(draws.reshape(args.draws,-1), tr.reshape(-1,EDGE*EDGE))
+    generated_samples = sample(model, torch.randn(args.generated_samples, EDGE, EDGE)).numpy()
+    held = legibility(generated_samples.reshape(args.generated_samples,-1), ho.reshape(-1,EDGE*EDGE))
+    trleg = legibility(generated_samples.reshape(args.generated_samples,-1), tr.reshape(-1,EDGE*EDGE))
     ceil = legibility(ho.reshape(-1,EDGE*EDGE), tr.reshape(-1,EDGE*EDGE))
-    floor = legibility(np.random.randn(args.draws,EDGE*EDGE).astype(np.float32), tr.reshape(-1,EDGE*EDGE))
+    floor = legibility(np.random.randn(args.generated_samples,EDGE*EDGE).astype(np.float32), tr.reshape(-1,EDGE*EDGE))
     rec = dict(arm=("dimba-no-mamba" if args.no_mamba else "dimba-hybrid"), paper="arXiv:2406.01159 / feizc/Dimba", params=npar,
                steps=args.steps, batch=args.batch, depth=DEPTH, mamba_blocks=model.mamba_depth,
                gap=model.gap, losses=losses, first_loss=losses[0], final_loss=losses[-1],
-               legibility_held=float(held.mean()), legibility_train=float(trleg.mean()),
-               ceiling=float(ceil.mean()), noise_floor=float(floor.mean()),
-               spectrum=[float(v) for v in spectrum(draws)],
-               wall_seconds=time.time()-t0, draws=args.draws)
+               legibility_test=float(held.mean()), legibility_training=float(trleg.mean()),
+               positive_control=float(ceil.mean()), negative_control=float(floor.mean()),
+               spectrum=[float(v) for v in spectrum(generated_samples)],
+               wall_seconds=time.time()-t0, generated_samples=args.generated_samples)
     torch.save(model.state_dict(), os.path.join(args.out,"model.pt"))
     json.dump(rec, open(os.path.join(args.out,"run.json"),"w"), indent=1)
-    np.save(os.path.join(args.out,"draws.npy"), draws)
+    np.save(os.path.join(args.out,"generated_samples.npy"), generated_samples)
     print(json.dumps({k:(round(v,5) if isinstance(v,float) else v) for k,v in rec.items() if k!="losses"},indent=1), flush=True)
 
 

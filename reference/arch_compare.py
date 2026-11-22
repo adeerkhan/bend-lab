@@ -11,7 +11,7 @@ parameters, the GLM-5.3-Flash hybrid 74,144, both at 128 positions, batch 1.
 This is a pilot, and the report says so: the arms differ in vocabulary (127
 against 260, 133 classes the corpus never uses), optimizer and schedule
 (Mamba AdamW 0.9/0.999, wd 0.01, clip 1.0 with warmup + cosine; GLM
-CAdamW 0.9/0.95, wd 0.1, clip 0.05 at a constant LR), and held-out slice
+CAdamW 0.9/0.95, wd 0.1, clip 0.05 at a constant LR), and test split
 (the Mamba's 4,096-byte split against the GLM's val batch). It validates the
 wiring, the data alignment and the parsers, and it prints the changes a
 matched 3,200-step run needs.
@@ -141,7 +141,7 @@ def main():
     banners = [
         "vocabulary: Mamba 127, GLM 260 (133 classes never used), so the "
         "two cross-entropies are not one measurement",
-        "held-out: Mamba's 4,096-byte split, GLM's val batch, different slices",
+        "test split: Mamba's 4,096-byte split, GLM's val batch, different slices",
     ]
     blockers = [
         "the GLM head is 260 wide; a 127-wide head or a restricted eval is "

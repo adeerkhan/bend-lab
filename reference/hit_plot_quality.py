@@ -3,10 +3,10 @@
 
   python3 reference/hit_plot_quality.py
 
-Uses the committed draws.npy from each v3 arm. Two figures:
-  samples.png       16 draws per arm next to 16 real held-out flowers
+Uses the committed generated_samples.npy from each v3 arm. Two figures:
+  samples.png       16 generated_samples per arm next to 16 real test flowers
   distributions.png per-sample legibility (not just the mean), with the
-                    noise floor and real-flower ceiling as reference bands
+                    negative control and real-flower positive_control as reference bands
 """
 import json
 import os
@@ -31,7 +31,7 @@ tr, ho = read_gray(os.path.expanduser("~/.cache/bend-lab/flowers/flowers64-train
 # ------------------------------------------------------------------ samples
 n = 16
 fig, axes = plt.subplots(4, n, figsize=(18, 5.2))
-rows = [("real held-out flower", ho[:n].reshape(-1, 64, 64))] + [(NAME[a], np.load(f"{ROOT}/{a}/draws.npy")[:n]) for a in ARMS]
+rows = [("real held-out flower", ho[:n].reshape(-1, 64, 64))] + [(NAME[a], np.load(f"{ROOT}/{a}/generated_samples.npy")[:n]) for a in ARMS]
 for r, (label, imgs) in enumerate(rows):
     for c in range(n):
         ax = axes[r, c]
@@ -39,7 +39,7 @@ for r, (label, imgs) in enumerate(rows):
         ax.set_xticks([]); ax.set_yticks([])
         if c == 0:
             ax.set_ylabel(label, fontsize=11, fontweight="bold", labelpad=8)
-fig.suptitle("What the models actually drew — 16 samples per arm vs 16 real held-out flowers",
+fig.suptitle("What the models actually drew — 16 samples per arm vs 16 real test flowers",
              fontsize=14, fontweight="bold")
 fig.text(0.5, 0.012,
          "Same starting-noise distribution, same 32-step sampler, 1200 training steps. "
@@ -54,7 +54,7 @@ fig, ax = plt.subplots(1, 2, figsize=(13, 4.6))
 a = ax[0]
 data = []
 for arm in ARMS:
-    d = np.load(f"{ROOT}/{arm}/draws.npy").reshape(-1, 64 * 64)
+    d = np.load(f"{ROOT}/{arm}/generated_samples.npy").reshape(-1, 64 * 64)
     data.append(legibility(d, tr))
 bp = a.boxplot(data, positions=[1, 2, 3], widths=0.55, patch_artist=True,
                medianprops=dict(color="black", lw=1.5))
@@ -63,11 +63,11 @@ for patch, arm in zip(bp["boxes"], ARMS):
 for i, arm in enumerate(ARMS):
     a.scatter(np.random.default_rng(i).normal(i + 1, 0.06, len(data[i])), data[i],
               s=16, color=COL[arm], zorder=3, alpha=0.8)
-a.axhline(runs["hit"]["noise_floor"], color="#aaaaaa", ls=":", lw=1.2, label="noise floor")
-a.axhline(runs["hit"]["ceiling"], color="#7e9a5e", ls="--", lw=1.2, label="real flower ceiling")
+a.axhline(runs["hit"]["negative_control"], color="#aaaaaa", ls=":", lw=1.2, label="negative control")
+a.axhline(runs["hit"]["positive_control"], color="#7e9a5e", ls="--", lw=1.2, label="real flower positive_control")
 a.set_xticks([1, 2, 3], [NAME[a] for a in ARMS])
 a.set_ylabel("best |corr| to a training flower")
-a.set_title("Per-sample legibility (32 draws each)")
+a.set_title("Per-sample legibility (32 generated_samples each)")
 a.legend(fontsize=8)
 
 a = ax[1]

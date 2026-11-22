@@ -15,11 +15,11 @@ names = list(R)
 
 fig, ax = plt.subplots(1, 3, figsize=(15, 4.4))
 a = ax[0]
-vals = [R[n]["legibility_held"] for n in names]
+vals = [R[n]["legibility_test"] for n in names]
 bars = a.bar(names, vals, color=[C[n] for n in names], width=0.55)
 for b, v in zip(bars, vals):
     a.text(b.get_x()+b.get_width()/2, v+0.008, f"{v:.3f}", ha="center", fontweight="bold")
-a.set_ylim(0, 0.72); a.set_ylabel("held-out legibility"); a.set_title("Quality: hybrid leads")
+a.set_ylim(0, 0.72); a.set_ylabel("test-set legibility"); a.set_title("Quality: hybrid leads")
 
 a = ax[1]
 for n in names:

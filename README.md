@@ -44,7 +44,7 @@ standard deviation are 0.2957 / 0.3395 against the data's 0.3076 / 0.3767, and
 4087 of 4096 pixels land in [0, 1].
 
 The gap closed in the training loop, not in the architecture. Bend drew one
-timestep per batch while the reference draws one per image, worth +0.36
+timestep per batch while the reference generated samples one per image, worth +0.36
 legibility. The evidence is in `results/diffusion-vit/`, and the three-arm
 comparison is `results/compare/index.html`.
 
@@ -169,7 +169,7 @@ button in the header switches between light and dark; the choice is saved in
 the browser. `?theme=dark` (or `?theme=light`) is a shareable override.
 
 Training runs register through `make trace` (the GLM trace now also records the
-final held-out `val_loss`), tests through `make session TASK=... CMD="..."`,
+final test `val_loss`), tests through `make session TASK=... CMD="..."`,
 and `make experiment` registers itself. A run that is not in the store is not
 in the page.
 
@@ -195,7 +195,7 @@ trace is standard library only: no library support is needed to time our runs.
 | `transformers/periodic` | periodic 0…7, 32 × 8 | loss and next-token accuracy | 2.359 → 0.002, accuracy 1.00 |
 | `transformers/attention` | synthetic 4 × 8 | every output against NumPy | checksum 1.76295, delta 3.3e-9 |
 | `language/mamba_vit` | MNIST, 160 × 28×28, seed 0 | five training steps against the float64 twin | loss and clipped gradient norm per step at 1e-3, final weights (108 sums of squares) at 1e-3 |
-| `language/mamba3-tiny-lm` | byte corpus, 20 train examples × 128 positions, seed 101/102/20261115, 20 steps | AdamW vs the float32 twin | loss per step at 1e-3, weights at 1e-3, held-out bits/byte 6.2476 == 6.2476, accuracy 0.3147 == 0.3147 |
+| `language/mamba3-tiny-lm` | byte corpus, 20 train examples × 128 positions, seed 101/102/20261115, 20 steps | AdamW vs the float32 twin | loss per step at 1e-3, weights at 1e-3, test bits/byte 6.2476 == 6.2476, accuracy 0.3147 == 0.3147 |
 | `classification/crossval` | iris, 150 × 4 | five stratified folds, no leakage | 0.9307 ± 0.006 (sklearn 0.9307) |
 | `classification/knn` | breast cancer, 683 × 9 | accuracy on the same split | 0.978102 (sklearn 0.978102) |
 | `classification/naive_bayes` | breast cancer, 683 × 9 | accuracy on the same split | 0.985401 (sklearn 0.985401) |
@@ -258,12 +258,12 @@ adaLN. Paper numbers are never presented as reproduced.
 ## Denoiser comparison: ViT, JiT(DiT), HiT, Dimba-style hybrid
 
 Four small denoisers were trained on the pinned flowers64 split under one
-protocol: 2,048 training images, 102 held-out, 64x64 grayscale, patch 8 (64
+protocol: 2,048 training images, 102 test, 64x64 grayscale, patch 8 (64
 tokens), 1,200 steps at batch 16, seed 0, the same clean-image velocity loss
 and the same 32-step sampler. Every number below comes from a committed
 `run.json`; `results/dimba/one_page.png` is the single-page chart.
 
-| arm | params | held-out legibility | final loss | source |
+| arm | params | test-set legibility | final loss | source |
 |---|---:|---:|---:|---|
 | ViT, plain blocks | 4.74M | 0.514 | 0.074 | `reference/hit_v4.py`, `results/hit-v4/vit/` |
 | JiT / DiT, adaLN + context | 6.53M | 0.607 | 0.070 | `reference/hit_v4.py`, `results/hit-v4/jit/` |
@@ -282,7 +282,7 @@ models.** No Bend port exists for any of the four. BendTorch now has
 `FullAttention` and the adaLN composition, but no Mamba/SSM layer, and
 bendlang#2146/#2147 affect the router records and the recursive hierarchy;
 `AGENTS.md` and the upstream section below carry the details. All four exceed
-the 0.536 real-flower ceiling on legibility, a metric smooth blobs can game,
+the 0.536 real-flower positive control on legibility, a metric smooth blobs can game,
 so the ranking is relative evidence, not a claim of image quality or FID.
 
 ## Upstream
@@ -346,7 +346,7 @@ has a measured 2D example and its frozen gate (`test_flow2d.py`, six gates). CIF
 3072-output DDPM: 256 images, 40 steps, build 50.8 s and run 65.4 s, first loss
 and data mean gated against the NumPy twin and `RESULTS.md` carrying the rows. The
 flowers U-Net is at five levels (64 -> 32 -> 16 -> 8 -> 4 -> 2 -> 4 -> ... -> 64),
-298,439 parameters, held-out legibility 0.547, gated against NumPy and PyTorch. The
+298,439 parameters, test-set legibility 0.547, gated against NumPy and PyTorch. The
 rectified-flow port's layers are gated whole-array against a NumPy twin
 (`test_rectified_flow_layers.py`, fourteen gates). The GLM Stage A harness is
 now a trainable dense baseline: 74,144 parameters, a 20-step AdamW twin gate,
@@ -371,3 +371,17 @@ machine, reaches **64/64** seen; with `reverse` removed from pretraining it is *
 ## Licence
 
 MIT. See `LICENSE`.
+
+### Terminology
+
+These runs use the standard machine-learning split: a **training set** of
+2,048 flowers and a **test set** of 102 flowers never seen during training.
+The reported legibility is an **evaluation metric** on the test set; the
+random-noise **negative control** is 0.053 and a real flower's **positive
+control** is 0.536. Higher test-set legibility with lower training-set
+legibility would indicate **generalization**; the reverse indicates
+**overfitting**. One caveat, stated plainly: the same 102 flowers were used
+while choosing configurations, so under strict ML definitions they are a
+**validation set** and no unbiased test-set estimate has been measured. A
+fresh, untouched test set is needed before calling any number a final test
+score.

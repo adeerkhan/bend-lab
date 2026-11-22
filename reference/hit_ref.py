@@ -314,7 +314,7 @@ def main():
     ap.add_argument("--batch", type=int, default=8)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--n-train", type=int, default=1024)
-    ap.add_argument("--draws", type=int, default=16)
+    ap.add_argument("--generated_samples", type=int, default=16)
     ap.add_argument("--lr", type=float, default=1e-3)
     ap.add_argument("--out", required=True)
     ap.add_argument("--groups-at", type=float, default=0.75)
@@ -352,24 +352,24 @@ def main():
             print(f"step {step+1}/{args.steps} loss {losses[-1]:.5f}", flush=True)
 
     # sample from noise on held-out-shaped starting clouds
-    B = args.draws
+    B = args.generated_samples
     x0 = torch.randn(B, EDGE, EDGE)
-    draws = sample(model, x0).numpy()
-    held = legibility(draws.reshape(B, -1), ho.reshape(-1, EDGE * EDGE))
-    train_leg = legibility(draws.reshape(B, -1), tr.reshape(-1, EDGE * EDGE))
-    ceiling = legibility(ho.reshape(-1, EDGE * EDGE), tr.reshape(-1, EDGE * EDGE))
+    generated_samples = sample(model, x0).numpy()
+    held = legibility(generated_samples.reshape(B, -1), ho.reshape(-1, EDGE * EDGE))
+    train_leg = legibility(generated_samples.reshape(B, -1), tr.reshape(-1, EDGE * EDGE))
+    positive_control = legibility(ho.reshape(-1, EDGE * EDGE), tr.reshape(-1, EDGE * EDGE))
     noise_leg = legibility(np.random.randn(B, EDGE * EDGE).astype(np.float32),
                            tr.reshape(-1, EDGE * EDGE))
-    sp = spectrum(draws)
+    sp = spectrum(generated_samples)
     rec = {
         "arm": args.arm, "paper": "arXiv:2611.22962", "params": params,
         "steps": args.steps, "batch": args.batch, "seed": args.seed,
         "patch": PATCH, "tokens": TOKENS, "width": 64,
         "losses": losses, "first_loss": losses[0], "final_loss": losses[-1],
-        "legibility_held": float(held.mean()), "legibility_train": float(train_leg.mean()),
-        "ceiling": float(ceiling.mean()), "noise_floor": float(noise_leg.mean()),
+        "legibility_test": float(held.mean()), "legibility_training": float(train_leg.mean()),
+        "positive_control": float(positive_control.mean()), "negative_control": float(noise_leg.mean()),
         "spectrum": [float(x) for x in sp], "wall_seconds": time.time() - t0,
-        "draws": B,
+        "generated_samples": B,
     }
 
     group_data = None
@@ -393,7 +393,7 @@ def main():
     json.dump(rec, open(os.path.join(args.out, "run.json"), "w"), indent=1)
     if group_data:
         json.dump(group_data, open(os.path.join(args.out, "groups.json"), "w"))
-    np.save(os.path.join(args.out, "draws.npy"), draws)
+    np.save(os.path.join(args.out, "generated_samples.npy"), generated_samples)
     print(json.dumps({k: (round(v, 5) if isinstance(v, float) else v)
                       for k, v in rec.items() if k != "losses"}, indent=1), flush=True)
     print(f"wrote {args.out}/run.json", flush=True)

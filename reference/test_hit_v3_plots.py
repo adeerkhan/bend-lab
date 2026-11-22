@@ -12,8 +12,8 @@ def main():
             assert fh.read(8) == b"\x89PNG\r\n\x1a\n", f
     r = {d: json.load(open(os.path.join(HERE, d, "run.json")))
          for d in ("vit", "jit", "hit", "jit-long", "hit-long")}
-    assert r["jit"]["legibility_held"] > r["vit"]["legibility_held"] > r["hit"]["legibility_held"]
-    assert r["jit-long"]["legibility_held"] > r["hit-long"]["legibility_held"]
+    assert r["jit"]["legibility_test"] > r["vit"]["legibility_test"] > r["hit"]["legibility_test"]
+    assert r["jit-long"]["legibility_test"] > r["hit-long"]["legibility_test"]
     rep = open(os.path.join(HERE, "COMPARISON.md")).read()
     assert "6.62M" in rep and "6.53M" in rep and "4.74M" in rep
     assert "JiT/DiT > ViT >" in rep and "HiT" in rep
