@@ -2873,3 +2873,23 @@ steps.
   10 blocks (0.64x), agreeing with the paper's 22.2 vs 25.2 GFLOPs. The
   comparison report and chart now state that the wall-time gap is a prototype
   artifact, and the gate refuses a report without that correction.
+
+## 2026-11-22 — final plots, visual organization, and the speed question
+
+- Rebuilt `hit_plot_final.py`: no ceiling references, no spectrum panel, and a
+  3x3 grid (three model columns x three samples) from IDENTICAL starting noise
+  using saved v4 checkpoints. `visual_organization.png` shows level-1 outlines
+  on clean flowers and level-2 hard maps with gold highlights, from the
+  model's own forward.
+- Added `hit_linkage.py` (numba, from the release). Verified exact merge
+  heights against scipy and 12x speedup. After fixing an input inversion,
+  steady-state forward is HiT 1.28 s, ViT 1.03 s, JiT 2.42 s per 16 images:
+  HiT is not faster than ViT here. The paper's comparison is against JiT and
+  measures cumulative training FLOPs to a target FID, not per-step wall time.
+- HiT's genuine advantages: ~0.58x JiT's token-block work per forward, learned
+  adaptive groups (object/background/nonlocal without labels), and a compute
+  bottleneck at ~12 group tokens. Where it helps most is any setting where
+  content is sparse/irregular and resolution is high — 3D volumes, video,
+  large 2D maps — because grouping can allocate tokens to relevant regions
+  instead of a fixed grid. This is reasoning from the mechanism, not a
+  measured result on those domains.
