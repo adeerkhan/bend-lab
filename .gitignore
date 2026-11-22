@@ -73,3 +73,6 @@ results/glm53-hybrid192-step/
 
 # External reference checkout (HiT-Released) — never commit
 ref/
+
+# External reference checkout (Dimba)
+ref/Dimba/
