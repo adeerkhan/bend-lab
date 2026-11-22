@@ -2903,3 +2903,14 @@ happen and 64 tokens stay as 55 near-singleton groups. Measured at t=0.25,
 use 250k+ updates, EMA 0.99995 and a 16x16 token grid; ours is 1200 steps at
 8x8. The contour drawing itself is correct. Capability gaps in BendTorch /
 bendlang are real but did not cause this artifact.
+
+## 2026-11-22 — precise Bendlang/BendTorch blockers for HiT
+
+Re-checked the installed libraries. FullAttention (PR #20) is bidirectional,
+and RMSNorm/RoPE/SiLU/GroupNorm/Mul2/Add2 exist; the causal-Attention blocker
+is stale. Runtime Nat dims also type-check, so dynamic group counts are not
+the problem. What actually blocks a faithful port: (1) no row-wise scale+shift
+adaLN layer with backward; (2) no scatter_add / average-linkage / affinity
+argsort / masked group-mean primitives; (3) bendlang#2146 and #2147
+ergonomics for router records and the recursive hierarchy; (4) compiler
+memory (#2038, mitigated locally by the 4G build cap).
