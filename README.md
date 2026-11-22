@@ -262,12 +262,18 @@ Everything this repository found in Bend, filed at
 issue carries the program that found it; every pull request was tested against
 the programs in `examples/` and `reference/` here.
 
-**Open**
+**Open — filed from here**
 
 | Issue | What it found |
 |---|---|
+| [#2150](https://github.com/bendlang/bend/issues/2150) | No sanctioned encoding for evolving state across an online loop; the Mamba-3 work unrolled it by hand. |
+| [#2147](https://github.com/bendlang/bend/issues/2147) | No forward references or mutual recursion. Re-confirmed on 2.0.38 with `mutual.bend` ("an unfilled law is a dead claim"); commented with the HiT recursive-hierarchy case. |
+| [#2146](https://github.com/bendlang/bend/issues/2146) | No record field projection, no match on a local binder, no Data-shared records. Re-confirmed all three on 2.0.38; commented with the HiT router-record case. |
 | [#2059](https://github.com/bendlang/bend/issues/2059) | Base states no bit facts about `U32` (mask, halving, the branch bit, the subtraction bound), so the value round-trip law for `Mat` stays "tested, not proved". Six lemmas are proved in the meantime and offered with the program inline. |
-| [#1998](https://github.com/bendlang/bend/issues/1998) | A match binder that shadows a parameter is reported with the name printed twice and no scope. |
+
+**Open elsewhere, relevant to the HiT/DiT port (not filed from here)**
+
+[#1991](https://github.com/bendlang/bend/issues/1991) `Array.to_list` copies both halves per level (~190 instructions/cell); [#2182](https://github.com/bendlang/bend/issues/2182) `@unsafe` closure reused twice fail-stops on the native lane; [#2038](https://github.com/bendlang/bend/issues/2038) compiler memory at large application scale; [#1623](https://github.com/bendlang/bend/issues/1623) verdict rejects a reused proof with a function field. BendTorch: [#43](https://github.com/nuxyel/BendTorch/issues/43) TTS layers and [#29](https://github.com/nuxyel/BendTorch/issues/29) the Conv2d adjoint law. Locally, BendTorch's causal-only `Attention` and the absence of adaLN are the two blockers for a Bendlang DiT/HiT; both were filed earlier as BendTorch issues and are closed.
 
 **Closed**
 
@@ -284,6 +290,8 @@ the programs in `examples/` and `reference/` here.
 | [#1716](https://github.com/bendlang/bend/issues/1716) | A bare constructor name as a match pattern silently became a catch-all when the datatype was imported. Fixed by [#1738](https://github.com/bendlang/bend/pull/1738), after [#1717](https://github.com/bendlang/bend/pull/1717). |
 
 **Pull requests opened from here**
+
+Open, awaiting maintainer review: [bend-ml#40](https://github.com/nuxyel/bend-ml/pull/40) the one-cell `to_list`/`from_list` round trip; [#39](https://github.com/nuxyel/bend-ml/pull/39) `Array.get` returns the array it read; [#38](https://github.com/nuxyel/bend-ml/pull/38) the `Array.get.go` law (opened from this work and still under review). All three pass `--check-only` and `--verdict`, with green CI and no reviews as of 2026-11-22. [BendTorch#45](https://github.com/nuxyel/BendTorch/pull/45) (tryingET's general Conv1d) was reviewed and approved from here; it was not opened by us.
 
 Merged: [#1880](https://github.com/bendlang/bend/pull/1880) `Array.get_unchecked`, an `@unsafe` read without the
 wrap mask; [#1845](https://github.com/bendlang/bend/pull/1845) `File.read` fills its buffer instead of answering one
