@@ -285,6 +285,20 @@ bendlang#2146/#2147 affect the router records and the recursive hierarchy;
 the 0.536 real-flower positive control on legibility, a metric smooth blobs can game,
 so the ranking is relative evidence, not a claim of image quality or FID.
 
+### Terminology
+
+These runs use the standard machine-learning split: a **training set** of
+2,048 flowers and a **test set** of 102 flowers never seen during training.
+The reported legibility is an **evaluation metric** on the test set; the
+random-noise **negative control** is 0.053 and a real flower's **positive
+control** is 0.536. Higher test-set legibility with lower training-set
+legibility would indicate **generalization**; the reverse indicates
+**overfitting**. One caveat, stated plainly: the same 102 flowers were used
+while choosing configurations, so under strict ML definitions they are a
+**validation set** and no unbiased test-set estimate has been measured. A
+fresh, untouched test set is needed before calling any number a final test
+score.
+
 ## Upstream
 
 Everything this repository found in Bend, filed at
@@ -303,7 +317,7 @@ the programs in `examples/` and `reference/` here.
 
 **Open elsewhere, relevant to the HiT/DiT port (not filed from here)**
 
-[#1991](https://github.com/bendlang/bend/issues/1991) `Array.to_list` copies both halves per level (~190 instructions/cell); [#2182](https://github.com/bendlang/bend/issues/2182) `@unsafe` closure reused twice fail-stops on the native lane; [#2038](https://github.com/bendlang/bend/issues/2038) compiler memory at large application scale; [#1623](https://github.com/bendlang/bend/issues/1623) verdict rejects a reused proof with a function field. BendTorch: [#43](https://github.com/nuxyel/BendTorch/issues/43) TTS layers and [#29](https://github.com/nuxyel/BendTorch/issues/29) the Conv2d adjoint law. Locally, BendTorch's causal-only `Attention` and the absence of adaLN are the two blockers for a Bendlang DiT/HiT; both were filed earlier as BendTorch issues and are closed.
+[#1991](https://github.com/bendlang/bend/issues/1991) `Array.to_list` copies both halves per level (~190 instructions/cell); [#2182](https://github.com/bendlang/bend/issues/2182) `@unsafe` closure reused twice fail-stops on the native lane; [#2038](https://github.com/bendlang/bend/issues/2038) compiler memory at large application scale; [#1623](https://github.com/bendlang/bend/issues/1623) verdict rejects a reused proof with a function field. BendTorch: [#43](https://github.com/nuxyel/BendTorch/issues/43) TTS layers and [#29](https://github.com/nuxyel/BendTorch/issues/29) the Conv2d adjoint law. The old causal-only `Attention` and missing-adaLN blockers for a Bendlang DiT are **resolved**: `FullAttention` is in BendTorch (#20) and the per-image row-wise modulation is built as a `Tile`/`Fork`/`Both`/`Mul2`/`Add2` composition (#19, `demo/adaln_probe.bend`). What remains for a Bendlang **HiT** is a grouped/segmented reduction primitive (masked scatter-add, affinity average linkage, masked group-mean read and the reverse scatter for gradients) — proposed as a bend-ml issue, not yet filed; the hybrid additionally needs a Mamba/SSM selective-scan layer. CPU reference arms are in `reference/`.
 
 **Closed**
 
@@ -340,7 +354,12 @@ lane, and the seven diagnostic prototypes
 
 ## Status
 
-`make check` is 138/138. Diffusion is complete through the ViT, with the gate at
+A recorded full-gate log
+(`results/check-full/runs/20261121-160919-57372.log`) shows 155 ok with 0
+failures, and `make check-fast` is 33/33. Gate coverage across runs is
+documented as 158 in `docs/agents/handoff.md`, but no single uninterrupted
+green run of the full gate over the latest commits is claimed. Diffusion is
+complete through the ViT, with the gate at
 0.75 and the Bend model measured at 0.795 (DDIM) and 0.807 (DDPM). Flow matching
 has a measured 2D example and its frozen gate (`test_flow2d.py`, six gates). CIFAR-10 has its
 3072-output DDPM: 256 images, 40 steps, build 50.8 s and run 65.4 s, first loss
@@ -371,17 +390,3 @@ machine, reaches **64/64** seen; with `reverse` removed from pretraining it is *
 ## Licence
 
 MIT. See `LICENSE`.
-
-### Terminology
-
-These runs use the standard machine-learning split: a **training set** of
-2,048 flowers and a **test set** of 102 flowers never seen during training.
-The reported legibility is an **evaluation metric** on the test set; the
-random-noise **negative control** is 0.053 and a real flower's **positive
-control** is 0.536. Higher test-set legibility with lower training-set
-legibility would indicate **generalization**; the reverse indicates
-**overfitting**. One caveat, stated plainly: the same 102 flowers were used
-while choosing configurations, so under strict ML definitions they are a
-**validation set** and no unbiased test-set estimate has been measured. A
-fresh, untouched test set is needed before calling any number a final test
-score.

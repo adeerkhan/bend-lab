@@ -76,3 +76,6 @@ ref/
 
 # External reference checkout (Dimba)
 ref/Dimba/
+
+# Understand-Anything knowledge graph (local analysis artifact, like .ua/)
+.understand-anything/
