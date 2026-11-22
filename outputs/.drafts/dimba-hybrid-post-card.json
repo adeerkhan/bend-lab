@@ -1,0 +1,24 @@
+{
+  "slug": "dimba-hybrid",
+  "title": "Four diffusion models, one small dataset",
+  "source": {
+    "citation": "bend-lab results/dimba: ViT vs JiT(DiT) vs HiT vs Dimba-style hybrid on flowers64",
+    "url": "https://github.com/adeerkhan/bend-lab/tree/main/results/dimba"
+  },
+  "posts": [
+    "Four small diffusion models, same flowers, same 1,200 steps. The plain transformer scored 0.514. The best hybrid scored 0.622. The difference is not the parameter count.",
+    "Here is the catch: the hybrid took 1,705 seconds; the others took about 500. Remove its Mamba blocks and the score drops back to exactly the plain model's. One recurrent layer did all the work.",
+    "The full comparison, one image and every number: https://github.com/adeerkhan/bend-lab/tree/main/results/dimba 🌐 These are small CPU reference models, not a reproduction of the paper's image quality."
+  ],
+  "media": {
+    "kind": "image",
+    "src": "outputs/dimba-hybrid-media.png",
+    "alt": "One-page comparison: held-out legibility, parameter counts, training loss curves and training setup for ViT, JiT/DiT, HiT and a Dimba-style hybrid.",
+    "caption": "Four models, same flowers, same 1,200 steps — quality, capacity, loss and setup.",
+    "credit": "bend-lab reference runs, adeerkhan",
+    "license": "CC0-1.0",
+    "licenseChecked": true,
+    "sourceUrl": "https://github.com/adeerkhan/bend-lab/tree/main/results/dimba"
+  },
+  "limit": 280
+}

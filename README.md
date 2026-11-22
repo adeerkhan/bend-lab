@@ -255,6 +255,36 @@ constant energy, the denoising variants move toward the data but need far more
 compute, and the Bend port is blocked by the missing full attention, RoPE and
 adaLN. Paper numbers are never presented as reproduced.
 
+## Denoiser comparison: ViT, JiT(DiT), HiT, Dimba-style hybrid
+
+Four small denoisers were trained on the pinned flowers64 split under one
+protocol: 2,048 training images, 102 held-out, 64x64 grayscale, patch 8 (64
+tokens), 1,200 steps at batch 16, seed 0, the same clean-image velocity loss
+and the same 32-step sampler. Every number below comes from a committed
+`run.json`; `results/dimba/one_page.png` is the single-page chart.
+
+| arm | params | held-out legibility | final loss | source |
+|---|---:|---:|---:|---|
+| ViT, plain blocks | 4.74M | 0.514 | 0.074 | `reference/hit_v4.py`, `results/hit-v4/vit/` |
+| JiT / DiT, adaLN + context | 6.53M | 0.607 | 0.070 | `reference/hit_v4.py`, `results/hit-v4/jit/` |
+| HiT, two learned grouping levels | 6.62M | 0.573 | 0.120 | `reference/hit_v4.py`, `results/hit-v4/hit/` |
+| Dimba-style Transformer-Mamba hybrid | 7.57M | **0.622** | 0.075 | `reference/dimba_ref.py`, `results/dimba/hybrid/` |
+
+The hybrid result is attributable to its Mamba blocks: the same code with
+`mamba_ratio=0` scores 0.6071 with exactly the JiT parameter count
+(`results/dimba/ablation-no-mamba/`). HiT's earlier lower numbers were traced
+to missing architecture pieces and a NaN in the budget loss; the corrected
+v4 model is 0.573, still below JiT/DiT at this scale. The hybrid costs 1,705 s
+against about 500 s for the others because its Mamba scan is a Python loop.
+
+**These are CPU torch reference implementations in `reference/`, not Bendlang
+models.** No Bend port exists for any of the four. BendTorch now has
+`FullAttention` and the adaLN composition, but no Mamba/SSM layer, and
+bendlang#2146/#2147 affect the router records and the recursive hierarchy;
+`AGENTS.md` and the upstream section below carry the details. All four exceed
+the 0.536 real-flower ceiling on legibility, a metric smooth blobs can game,
+so the ranking is relative evidence, not a claim of image quality or FID.
+
 ## Upstream
 
 Everything this repository found in Bend, filed at

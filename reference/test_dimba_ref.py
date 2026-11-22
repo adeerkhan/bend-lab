@@ -10,7 +10,7 @@ def main():
     assert d["mamba_blocks"] == 18 and d["gap"] == 1
     assert len(d["losses"]) == 1200
     assert d["legibility_held"] > j["legibility_held"]
-    for f in ("comparison.png", "hybrid/model.pt", "hybrid/draws.npy", "COMPARISON.md"):
+    for f in ("comparison.png", "one_page.png", "hybrid/model.pt", "hybrid/draws.npy", "COMPARISON.md"):
         assert os.path.getsize(os.path.join(HERE, f)) > 100, f
     ab = json.load(open(os.path.join(HERE, "ablation-no-mamba/run.json")))
     assert ab["arm"] == "dimba-no-mamba" and ab["mamba_blocks"] == 0
