@@ -70,3 +70,6 @@ results/glm53-hybrid192-step-*/model-400/
 
 # the batch target writes the combined eval here
 results/glm53-hybrid192-step/
+
+# External reference checkout (HiT-Released) — never commit
+ref/
