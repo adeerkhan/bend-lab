@@ -2893,3 +2893,13 @@ steps.
   large 2D maps — because grouping can allocate tokens to relevant regions
   instead of a fixed grid. This is reasoning from the mechanism, not a
   measured result on those domains.
+
+## 2026-11-22 — why the level-1 flower outlines look like a grid
+
+The frozen router threshold (0.662 from init) is stale after 1200 steps: at
+t=0.75 the merge scores require tau=0.880 for 32 groups, so only ~9 merges
+happen and 64 tokens stay as 55 near-singleton groups. Measured at t=0.25,
+0.5, 0.75, 1.0: required tau 0.687, 0.771, 0.880, 0.918. The paper's figures
+use 250k+ updates, EMA 0.99995 and a 16x16 token grid; ours is 1200 steps at
+8x8. The contour drawing itself is correct. Capability gaps in BendTorch /
+bendlang are real but did not cause this artifact.
