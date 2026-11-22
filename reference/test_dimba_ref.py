@@ -12,8 +12,12 @@ def main():
     assert d["legibility_held"] > j["legibility_held"]
     for f in ("comparison.png", "hybrid/model.pt", "hybrid/draws.npy", "COMPARISON.md"):
         assert os.path.getsize(os.path.join(HERE, f)) > 100, f
+    ab = json.load(open(os.path.join(HERE, "ablation-no-mamba/run.json")))
+    assert ab["arm"] == "dimba-no-mamba" and ab["mamba_blocks"] == 0
+    assert abs(ab["legibility_held"] - 0.6071) < 0.001
+    assert d["legibility_held"] - ab["legibility_held"] > 0.01
     rep = open(os.path.join(HERE, "COMPARISON.md")).read()
-    for s in ("not** the released Dimba", "No FID", "no VAE, T5", "ignored by git"):
+    for s in ("not** the released Dimba", "No FID", "no VAE, T5", "ignored by git", "Ablation: where the gain comes from"):
         assert s in rep, s
     print("DIMBA REF PASS")
 if __name__ == "__main__":

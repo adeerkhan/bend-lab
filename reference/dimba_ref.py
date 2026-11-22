@@ -82,8 +82,8 @@ class Hybrid(nn.Module):
         self.register_buffer('ctx_pos', torch.randn(1, ctx, d) * 0.02)
         self.register_buffer('time_pos', torch.randn(1, 1, d) * 0.02)
         self.blocks = nn.ModuleList([Block(d, 2, adaln=True, rope=None) for _ in range(depth)])
-        self.mamba_depth = max(1, int(mamba_ratio * depth))
-        self.gap = max(1, int(depth // self.mamba_depth))
+        self.mamba_depth = int(mamba_ratio * depth)
+        self.gap = max(1, int(depth // max(1, self.mamba_depth)))
         self.mambas = nn.ModuleList([MambaBlock(d) for _ in range(self.mamba_depth)])
         self.mamba_norms = nn.ModuleList([RMSNorm(d) for _ in range(self.mamba_depth)])
         self.head = nn.Linear(d, PDIM)
@@ -98,7 +98,7 @@ class Hybrid(nn.Module):
         mi = 0
         for i in range(len(self.blocks)):
             H = self.blocks[i](H, cond)
-            if self.gap == 1 or i % self.gap == 1:
+            if self.mamba_depth > 0 and (self.gap == 1 or i % self.gap == 1):
                 if mi < len(self.mambas):
                     img, c = H[:, self.ctx_n:], H[:, :self.ctx_n]
                     res = self.mambas[mi](img if residual is None else img + residual)
@@ -127,10 +127,11 @@ def main():
     ap.add_argument("--draws", type=int, default=32)
     ap.add_argument("--lr", type=float, default=2e-4)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--no-mamba", action="store_true")
     args = ap.parse_args()
     torch.manual_seed(0); np.random.seed(0)
     tr, ho = load(args.n_train)
-    model = Hybrid()
+    model = Hybrid(mamba_ratio=0.0 if args.no_mamba else MAMBA_RATIO)
     npar = sum(p.numel() for p in model.parameters())
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr, betas=(0.9, 0.95), weight_decay=0.0)
     os.makedirs(args.out, exist_ok=True)
@@ -155,7 +156,7 @@ def main():
     trleg = legibility(draws.reshape(args.draws,-1), tr.reshape(-1,EDGE*EDGE))
     ceil = legibility(ho.reshape(-1,EDGE*EDGE), tr.reshape(-1,EDGE*EDGE))
     floor = legibility(np.random.randn(args.draws,EDGE*EDGE).astype(np.float32), tr.reshape(-1,EDGE*EDGE))
-    rec = dict(arm="dimba-hybrid", paper="arXiv:2406.01159 / feizc/Dimba", params=npar,
+    rec = dict(arm=("dimba-no-mamba" if args.no_mamba else "dimba-hybrid"), paper="arXiv:2406.01159 / feizc/Dimba", params=npar,
                steps=args.steps, batch=args.batch, depth=DEPTH, mamba_blocks=model.mamba_depth,
                gap=model.gap, losses=losses, first_loss=losses[0], final_loss=losses[-1],
                legibility_held=float(held.mean()), legibility_train=float(trleg.mean()),

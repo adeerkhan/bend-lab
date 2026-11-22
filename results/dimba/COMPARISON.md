@@ -36,6 +36,23 @@ CUDA selective scan. No FID is claimed.
 - This is one seed, one budget, one metric that smooth blobs can game — the
   ranking is evidence, not a final verdict.
 
+## Ablation: where the gain comes from
+
+The same hybrid code was re-run with `mamba_ratio=0` (no Mamba blocks), same
+data, seed, steps and metric (`results/dimba/ablation-no-mamba/run.json`):
+
+| arm | params | held legibility | final loss | wall |
+|---|---:|---:|---:|---:|
+| JiT/DiT (hit_v4) | 6.53M | 0.6071 | 0.0700 | 549 s |
+| Dimba code, no Mamba | 6.53M | 0.6071 | 0.0700 | 344 s |
+| Dimba hybrid, 18 Mamba blocks | 7.57M | **0.6225** | 0.0752 | 1,705 s |
+
+The no-Mamba control is numerically identical to JiT/DiT (same 6,525,888
+params and 0.6071 legibility), so the code path itself adds nothing. The
+**+0.015 legibility is attributable to the 18 interleaved Mamba blocks**, at
+the cost of ~1.04M extra params and 5× the wall time (Python scan; the release
+uses a fused CUDA selective scan).
+
 ## Banners
 
 - CPU torch reference, not Bendlang; no VAE, T5, captions, cross-attention,
