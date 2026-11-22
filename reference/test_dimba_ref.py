@@ -13,7 +13,7 @@ def main():
     for f in ("comparison.png", "hybrid/model.pt", "hybrid/draws.npy", "COMPARISON.md"):
         assert os.path.getsize(os.path.join(HERE, f)) > 100, f
     rep = open(os.path.join(HERE, "COMPARISON.md")).read()
-    for s in ("not the released Dimba", "No FID", "no VAE, T5", "ignored by git"):
+    for s in ("not** the released Dimba", "No FID", "no VAE, T5", "ignored by git"):
         assert s in rep, s
     print("DIMBA REF PASS")
 if __name__ == "__main__":
