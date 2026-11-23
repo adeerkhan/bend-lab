@@ -46,6 +46,16 @@ AdamW steps run on real digits; loss is stochastic (per-step timestep/chunk)
 and not gated numerically. Dims stay tiny (2 images, 3 of 16 patches each) —
 a wiring proof, not a quality result. No sampler.
 
+**Full width** (`make check-dit-full`): `full_block.bend` + `full_main.bend`
+scale the DiT to the ViT's configuration — 64 images x 16 patches = 1024
+tokens, width 64, 4 heads of 16, 0.1-scaled init. The binary builds under the
+2.5 GB guard (the earlier build failures were the HTTP/dataset imports, not the
+block). Six steps on the pinned CSV: first loss 1.059 (the unscaled tiny init
+gave 2e8), final 1.051. Gate verifies data integrity and loss scale; it does
+**not** gate a legibility number — sampling and the held-out metric are not
+built. Free RAM is ~2 GB (an unrelated meshgpt process holds 1.36 GB), so the
+heavy sampler stack cannot be imported yet.
+
 **Fixed-input training** (`make check-dit-denoiser`, 6 AdamW steps, lr 3e-3, 496 params):
 the first real loss is 1286.68 — identical to the torch twin — and the
 trajectory falls to 781.19. The torch twin over the same 6 steps is
