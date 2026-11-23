@@ -206,6 +206,40 @@ def cfg() -> T.OptCfg:
 def new_train() -> T.Train<ModelP>:
   T.Train.new(~ModelP(), ~X(), ~Y(), ~ModelS(), ~Model(), cfg(), params)
 
+# ---- checkpoint: Train.save / Train.restore ----
+
+def floats_at(+path: String) -> IO(List<&2, F32>):
+  do IO<List<&2, F32>>:
+    bs : List<&2, U32> <- T.read_all(path)
+    return T.f32s(bs)
+
+def floats_count() -> Nat:
+  Nat.add(Nat.mul(3n, U32.to_nat(T.Layer.count(ModelP(), X, Y, ModelS(), Model()))), 2n)
+
+def restore_arr(xs: List<&2, F32>) -> T.Train<ModelP>:
+  T.Train.restore(~ModelP(), ~X(), ~Y(), ~ModelS(), ~Model(), new_train(),
+    fill_go(floats_count(), xs, U32.from_nat(0n),
+      Array.new(F32, T.depth(floats_count()), 0.0)))
+
+def restored(+path: String) -> IO(T.Train<ModelP>):
+  do IO<T.Train<ModelP>>:
+    xs : List<&2, F32> <- floats_at(path)
+    return restore_arr(xs)
+
+def train_params(tr: T.Train<ModelP>) -> ModelP:
+  match tr:
+    case T.Train{p, g, st, c, p1, p2, l}:
+      p
+
+def restore_params(xs: List<&2, F32>) -> ModelP:
+  train_params(restore_arr(xs))
+
+def save_tr(+path: String, tr: T.Train<ModelP>) -> IO(T.Train<ModelP>):
+  do IO<T.Train<ModelP>>:
+    kept : T.Train<ModelP> <- T.Train.save(~ModelP(), ~X(), ~Y(), ~ModelS(), ~Model(), path, tr)
+    return kept
+
+
 def loss_of(tr: T.Train<ModelP>) -> F32:
   match tr:
     case T.Train{p, g, st, c, p1, p2, +l}:
@@ -282,11 +316,80 @@ def sum8(+xs: List<&2, F32>, +left: Nat, +i: Nat, +acc: F32) -> F32:
     case 1n+q:
       sum8(xs, q, (1n + i : Nat), (acc + at(xs, i) : F32))
 
+# ---- CLI: --steps N --save PATH --resume PATH ----
+
+type Run is Data:
+  Run{steps: Nat, save: String, resume: String}
+
+def run_default() -> Run:
+  Run{6n, "", ""}
+
+def nat_or(m: Maybe<&2, Nat>, d: Nat) -> Nat:
+  match m:
+    case Some{x}:
+      x
+    case None{}:
+      d
+
+def run_go(args: List<String>, r: Run) -> Run:
+  match args:
+    case Nil{}:
+      r
+    case Con{a, rest}:
+      match a:
+        case "--steps":
+          match rest:
+            case Con{b, more}:
+              match r:
+                case Run{steps, save, resume}:
+                  run_go(more, Run{nat_or(Nat.read(b), steps), save, resume})
+            case Nil{}:
+              r
+        case "--save":
+          match rest:
+            case Con{b, more}:
+              match r:
+                case Run{steps, save, resume}:
+                  run_go(more, Run{steps, b, resume})
+            case Nil{}:
+              r
+        case "--resume":
+          match rest:
+            case Con{b, more}:
+              match r:
+                case Run{steps, save, resume}:
+                  run_go(more, Run{steps, save, b})
+            case Nil{}:
+              r
+        case _:
+          run_go(rest, r)
+
+def start_tr(resume: String) -> IO(T.Train<ModelP>):
+  match resume:
+    case SNil{}:
+      IO.pure(T.Train<ModelP>, new_train())
+    case SCon{h, t}:
+      restored(resume)
+
+def save_if(save: String, tr: T.Train<ModelP>) -> IO(T.Train<ModelP>):
+  match save:
+    case SNil{}:
+      IO.pure(T.Train<ModelP>, tr)
+    case SCon{h, t}:
+      save_tr(save, tr)
+
+def run_main(r: Run) -> IO(Unit):
+  match r:
+    case Run{steps, save, resume}:
+      do IO<Unit>:
+        tr0 : T.Train<ModelP> <- start_tr(resume)
+        data : List<&2, F32> <- load_digits()
+        tr1 : T.Train<ModelP> <- train_go(steps, 0n, tr0, data)
+        tr2 : T.Train<ModelP> <- save_if(save, tr1)
+        IO.print(String.append("final_loss: ", F32.show(loss_of(tr2))))
+
 def main() -> IO(Unit):
   do IO<Unit>:
-    +x0 : List<&2, F32> <- load_digits()
-    Unit <- IO.print(String.append("data_len: ", Nat.show(List.length(&2, F32, x0))))
-    Unit <- IO.print(String.append("data_first: ", F32.show(at(x0, 0n))))
-    Unit <- IO.print(String.append("data_sum8: ", F32.show(sum8(x0, 8n, 0n, 0.0))))
-    tr : T.Train<ModelP> <- train_go(6n, 0n, new_train(), x0)
-    IO.print(String.append("final_loss: ", F32.show(loss_of(tr))))
+    args : List<&1, String> <- IO.args()
+    r : Run = run_go(args, run_default())
+    run_main(r)
