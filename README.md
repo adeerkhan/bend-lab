@@ -313,7 +313,6 @@ the programs in `examples/` and `reference/` here.
 | [#2150](https://github.com/bendlang/bend/issues/2150) | No sanctioned encoding for evolving state across an online loop; the Mamba-3 work unrolled it by hand. |
 | [#2147](https://github.com/bendlang/bend/issues/2147) | No forward references or mutual recursion. Re-confirmed on 2.0.38 with `mutual.bend` ("an unfilled law is a dead claim"); commented with the HiT recursive-hierarchy case. |
 | [#2146](https://github.com/bendlang/bend/issues/2146) | No record field projection, no match on a local binder, no Data-shared records. Re-confirmed all three on 2.0.38; commented with the HiT router-record case. |
-| [#2059](https://github.com/bendlang/bend/issues/2059) | Base states no bit facts about `U32` (mask, halving, the branch bit, the subtraction bound), so the value round-trip law for `Mat` stays "tested, not proved". Six lemmas are proved in the meantime and offered with the program inline. |
 
 Filed from here: [bend-ml#41](https://github.com/nuxyel/bend-ml/issues/41) asks
 `tensor-array` for a masked scatter-add / segment-mean primitive with forward
@@ -330,6 +329,7 @@ public measurement.
 
 | Issue | Outcome |
 |---|---|
+| [#2059](https://github.com/bendlang/bend/issues/2059) | Base states no bit facts about `U32` (mask, halving, the branch bit, the subtraction bound). Closed as completed: [#2213](https://github.com/bendlang/bend/pull/2213) merged `tests/proof/array_perfect_tree.bend`, proving the four facts and `Array.get`/`set` on perfect trees of Nat, all under `--verdict`. The laws live in `tests/proof`, not `Base`; whether Base should own Array laws stays open in [#1934](https://github.com/bendlang/bend/issues/1934). |
 | [#1980](https://github.com/bendlang/bend/issues/1980) | `Array<T>` accepts a mixed-depth `ANode` the compiled runtime cannot represent. Closed as a duplicate. |
 | [#1962](https://github.com/bendlang/bend/issues/1962) | `Array.new`'s depth argument was undocumented, and a length gave "an array past the deepest block class 31". Fixed by [#1963](https://github.com/bendlang/bend/pull/1963) and [#1970](https://github.com/bendlang/bend/pull/1970). |
 | [#1961](https://github.com/bendlang/bend/issues/1961) | `import` refused a path segment starting with a digit while the error said digits are allowed. Fixed by [#1964](https://github.com/bendlang/bend/pull/1964). |
