@@ -315,6 +315,13 @@ the programs in `examples/` and `reference/` here.
 | [#2146](https://github.com/bendlang/bend/issues/2146) | No record field projection, no match on a local binder, no Data-shared records. Re-confirmed all three on 2.0.38; commented with the HiT router-record case. |
 | [#2059](https://github.com/bendlang/bend/issues/2059) | Base states no bit facts about `U32` (mask, halving, the branch bit, the subtraction bound), so the value round-trip law for `Mat` stays "tested, not proved". Six lemmas are proved in the meantime and offered with the program inline. |
 
+Filed from here: [bend-ml#41](https://github.com/nuxyel/bend-ml/issues/41) asks
+`tensor-array` for a masked scatter-add / segment-mean primitive with forward
+and backward laws. It is a convenience-and-law request, not a blocker: the
+reduction is expressible today by hand in the Mamba-3 embedding gradient, the
+rectified-flow max-pool backward, and the HiT CPU reference. It carries no
+public measurement.
+
 **Open elsewhere, relevant to the HiT/DiT port (not filed from here)**
 
 [#1991](https://github.com/bendlang/bend/issues/1991) `Array.to_list` copies both halves per level (~190 instructions/cell); [#2182](https://github.com/bendlang/bend/issues/2182) `@unsafe` closure reused twice fail-stops on the native lane; [#2038](https://github.com/bendlang/bend/issues/2038) compiler memory at large application scale; [#1623](https://github.com/bendlang/bend/issues/1623) verdict rejects a reused proof with a function field. BendTorch: [#43](https://github.com/nuxyel/BendTorch/issues/43) TTS layers and [#29](https://github.com/nuxyel/BendTorch/issues/29) the Conv2d adjoint law. The old causal-only `Attention` and missing-adaLN blockers for a Bendlang DiT are **resolved**: `FullAttention` is in BendTorch (#20) and the per-image row-wise modulation is built as a `Tile`/`Fork`/`Both`/`Mul2`/`Add2` composition (#19, `demo/adaln_probe.bend`). What remains for a Bendlang **HiT** is a grouped/segmented reduction primitive (masked scatter-add, affinity average linkage, masked group-mean read and the reverse scatter for gradients) — proposed as a bend-ml issue, not yet filed; the hybrid additionally needs a Mamba/SSM selective-scan layer. CPU reference arms are in `reference/`.
