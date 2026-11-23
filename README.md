@@ -361,38 +361,21 @@ lane, and the seven diagnostic prototypes
 
 ## Status
 
-A recorded full-gate log
-(`results/check-full/runs/20261121-160919-57372.log`) shows 155 ok with 0
-failures, and `make check-fast` is 33/33. Gate coverage across runs is
-documented as 158 in `docs/agents/handoff.md`, but no single uninterrupted
-green run of the full gate over the latest commits is claimed. Diffusion is
-complete through the ViT, with the gate at
-0.75 and the Bend model measured at 0.795 (DDIM) and 0.807 (DDPM). Flow matching
-has a measured 2D example and its frozen gate (`test_flow2d.py`, six gates). CIFAR-10 has its
-3072-output DDPM: 256 images, 40 steps, build 50.8 s and run 65.4 s, first loss
-and data mean gated against the NumPy twin and `RESULTS.md` carrying the rows. The
-flowers U-Net is at five levels (64 -> 32 -> 16 -> 8 -> 4 -> 2 -> 4 -> ... -> 64),
-298,439 parameters, test-set legibility 0.547, gated against NumPy and PyTorch. The
-rectified-flow port's layers are gated whole-array against a NumPy twin
-(`test_rectified_flow_layers.py`, fourteen gates). The GLM Stage A harness is
-now a trainable dense baseline: 74,144 parameters, a 20-step AdamW twin gate,
-a 400-step record, and a frozen greedy dev/confirm manifest (`test_glm53_dense.py`);
-its Stage B linear-attention backward is gated at t=2 and 64 and has a prefix-state fast core (`test_glm53_bwd.py`), and
-Stage C integrates linear + sparse attention in a 4,168-parameter model gated at 20 steps
-(`test_glm53_c.py`), with the ignored-label branch and a 16-label learning canary
-(`test_glm53_mask.py`, `results/glm53-c/canary-16.json`). A corpus-trained dense baseline at
-128 positions solves **61/64 dev and 60/64 confirm** at 409,600 tokens and **64/64 / 64/64** at
-1,638,400 tokens (`results/glm53-corpus128{,-b32}`). With `reverse` held out of pretraining it is
-**56/64** on both splits, with `reverse` at **0/8** and every seen family at **8/8**
-(`results/glm53-corpus128-holdout-reverse`). The 4-block/4-head hybrid is implemented and its N=8
-forward matches the reference attention modules at 1e-7; one training iteration measures **1.14 s**
-in the stage record (median **1.9 s** over 1,398 run steps) with forward **45.0%** and backward
-**63.8%**, and a 192-position evaluation is **5.6 h per split** at 6.48 s a forward, so the
-vectorized attention comes first; see `results/glm53-hybrid128/run.json` and
-`training-partial.json`. `make trace` and `make dash` render a run's steps live. The reference itself, run on this
-machine, reaches **64/64** seen; with `reverse` removed from pretraining it is **56/64** and
-**0/8** on that family, the same pattern as the 74k port
-(`results/glm53-reference/run.json`).
+`make check-fast` is 33/33. A recorded full-gate log shows 155 ok with 0
+failures; coverage across runs is documented in `docs/agents/handoff.md`, but
+no single uninterrupted green run of the full gate over the latest commits is
+claimed.
+
+Each track keeps its own record under `results/`: the diffusion ViT, flow
+matching, CIFAR-10, the flowers U-Net, rectified flow, Mamba-3, MambaViT and
+the GLM stages. `make validate` runs the environment check, the cheap gate,
+the full gate and the smoke. `make report TASK=<task>` prints a task's latest
+record and `make trace` / `make dash` render a run's steps live.
+
+The four-arm flowers denoiser comparison (ViT, JiT/DiT, HiT, Dimba-style
+hybrid) and the Bendlang DiT block are described in their own sections above;
+their measurements live in `results/hit-v4/`, `results/dimba/` and
+`results/dit/`.
 
 ## Licence
 
