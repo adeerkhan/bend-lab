@@ -34,6 +34,7 @@ compared with `../bendtorch/reference/oracle.py` (ATOL 1e-6, RTOL 1e-5).
 | `wide_attn.bend` — attention at w=8, 2 heads | 10 | 0.418 | PASS |
 | `wide_block.bend` — full conditioned block at w=8 | 1 (forward) | 0.336 | PASS |
 | `wide_block.bend` — its gradients | 5 | 14.203 | FAIL |
+| `main.bend` — denoiser model (embed + block + head) | 1 (forward) | 0.225 | PASS |
 
 For the full block: forward `y` matches at 0.07, `dcond` 0.13, `dh` 0.96, and
 the v/o gradients 0.02–0.06. The excess is on q/k weights (q.dw 4.42, k.dw
@@ -62,6 +63,10 @@ withdrawn. Forward parity at 0.07 means the computation itself is correct.
 ## Banners
 
 - CPU torch reference twin; no CUDA check of these probes.
+- A first denoiser model (`examples/diffusion/dit/main.bend`, 496 params)
+  wraps the block with a token-feature embedding and an output head, taking a
+  separate per-image condition vector. Its forward matches PyTorch at 0.225x;
+  it does not yet include the dataset adapter, training loop or sampler.
 - The original block probe is tiny (b=2, t=3, w=4). Both the attention
   branch (`wide_attn.bend`, 0.418x) and the full conditioned block
   (`wide_block.bend`, forward 0.336x) were generalised to width 8 with two kv
