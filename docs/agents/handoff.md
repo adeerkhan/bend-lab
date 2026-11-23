@@ -137,3 +137,35 @@ load-bound jobs, and the missing sampled number. `make issues` renders it;
   and dW_out fixes. Recorded in `bench/history.md`.
 - All Bend builds now run through a 4G memory cgroup; no bare `bend -o`
   remains in the Makefile or bench script.
+
+## 2026-11-23 — Bendlang DiT denoiser, upstream issue, and toolchain state
+
+**The first Bendlang DiT denoiser now trains.** `examples/diffusion/dit/main.bend`
+(496 params) imports the verified conditioned block (`wide_block.bend`, width 8,
+two kv heads) and wraps it with a token-feature embedding and output head,
+taking a separate per-image condition vector. Gates:
+`make check-dit` — attention 0.076x, LN+attention 0.954x, full tiny block 5.454x
+frozen FAIL (gap isolated, tolerance not loosened); `make check-dit-denoiser` —
+forward 0.225x, six AdamW losses 1286.7 -> 781.2, first matches torch exactly,
+PASS. Registered as dashboard runs 245 (dit-gate) and 246 (dit-denoiser).
+The full conditioned block's gradients drift (14.203x at width 8) — documented
+in `results/dit/COMPARISON.md`, not gated. Not yet built: real dataset adapter,
+noise schedule and sampler. Dims are illustrative (b=2, t=3, C=8).
+
+**Upstream.** bend-ml#41 filed (masked scatter-add / segment-mean primitive with
+forward/backward laws), linked to this session, after an audit found no
+duplicate. BendTorch#45 (Conv1d, 715bcb9) was fully re-verified including the
+device lane `make gpu` (exit 0 on an RTX 5060) and the existing comment edited
+to report it. No BendTorch#43 comment was added. PRs bend-ml#38/#39/#40 and
+BendTorch#45 remain OPEN with no reviews.
+
+**Toolchain (traps paid for).** Bend drifted to 2.0.40 during PR verification;
+restored to the pinned 2.0.38 via `scripts/setup.sh`, and `make check-fast`
+is 33/33 again. clang 22 needs
+`LD_LIBRARY_PATH=$HOME/.local/lib/llvm22` to build any Bend binary here.
+CUDA_HOME must be exported for the device lane. The knowledge graph was
+updated incrementally at HEAD 33cfcf4 (3,322 nodes / 4,565 edges, 13 tour steps)
+in `.understand-anything/`; the older `.ua/` graph is unused.
+
+**Repo hygiene.** README Status wall was replaced with a short pointer section.
+All findings are in `.local/issues-hit.md` (37 entries, rendered by `make issues`).
