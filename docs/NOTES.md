@@ -2909,8 +2909,21 @@ bendlang are real but did not cause this artifact.
 Re-checked the installed libraries. FullAttention (PR #20) is bidirectional,
 and RMSNorm/RoPE/SiLU/GroupNorm/Mul2/Add2 exist; the causal-Attention blocker
 is stale. Runtime Nat dims also type-check, so dynamic group counts are not
-the problem. What actually blocks a faithful port: (1) no row-wise scale+shift
-adaLN layer with backward; (2) no scatter_add / average-linkage / affinity
-argsort / masked group-mean primitives; (3) bendlang#2146 and #2147
-ergonomics for router records and the recursive hierarchy; (4) compiler
-memory (#2038, mitigated locally by the 4G build cap).
+the problem.
+
+Correction (2026-11-23): item (1), the missing row-wise adaLN layer, is no
+longer a blocker. BendTorch #19 closed by building the per-image scale/shift
+modulation as a composition of `Tile`/`Fork`/`Both`/`Mul2`/`Add2`; a Bendlang
+DiT block in `examples/diffusion/dit/block.bend` implements
+`h + Tile(g) * f(LayerNorm(h) * Tile(m) + Tile(sh))` with `f` a QKV +
+FullAttention branch, and its forward matches PyTorch at 0.07 of the fixed
+oracle tolerance (`results/dit/COMPARISON.md`). The conditioned block's
+gradient gate does not pass at the oracle's 1e-6 atol (worst 5.454 of
+tolerance); that gap is isolated and recorded, not accepted as a pass.
+
+What still blocks a faithful HiT port: (1) no scatter_add / average-linkage /
+affinity argsort / masked group-mean primitives — filed as bend-ml#41 for the
+tensor-array primitive; (2) bendlang#2146 and #2147 ergonomics for router
+records and the recursive hierarchy; (3) compiler memory (#2038, mitigated
+locally by the capped build guard). A full-width conditioned denoiser and a
+training task are not yet built.
