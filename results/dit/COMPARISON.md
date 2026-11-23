@@ -31,6 +31,7 @@ compared with `../bendtorch/reference/oracle.py` (ATOL 1e-6, RTOL 1e-5).
 | `attn_probe.bend` — attention branch | 10 | 0.076 | PASS |
 | `ln_attn_probe.bend` — LN → attention → `T.Residual` | 12 | 0.954 | PASS |
 | `block.bend` — full conditioned block | 19 | **5.454** | **FAIL** |
+| `wide_attn.bend` — attention at w=8, 2 heads | 10 | 0.418 | PASS |
 
 For the full block: forward `y` matches at 0.07, `dcond` 0.13, `dh` 0.96, and
 the v/o gradients 0.02–0.06. The excess is on q/k weights (q.dw 4.42, k.dw
@@ -59,7 +60,10 @@ withdrawn. Forward parity at 0.07 means the computation itself is correct.
 ## Banners
 
 - CPU torch reference twin; no CUDA check of these probes.
-- Tiny shapes (b=2, t=3, w=4). A full-width denoiser task is not built.
+- The block probe is tiny (b=2, t=3, w=4). The attention branch was then
+  generalised via top-level Nat constants and verified at b=2, t=4, w=8 with
+  two heads (`wide_attn.bend`, 0.418x). A full-width conditioned block and a
+  denoiser task are not built.
 - The gradient gate FAILS. The 5.454 value is frozen in `test_dit_ref.py` as a
   known-limitation reference, not accepted as a pass.
 - Environment: Bend must be pinned at 2.0.38 (`make check-fast` enforces it),
