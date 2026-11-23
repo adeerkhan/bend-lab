@@ -90,10 +90,7 @@ def load_p(p0: ModelP(), arr: Array<F32>) -> ModelP():
   un_pa(T.Layer.load(ModelP(), X, Y, ModelS(), Model(), p0, arr, U32.from_nat(0n)))
 
 def params() -> ModelP:
-  +n = T.Layer.count(ModelP(), X, Y, ModelS(), Model())
-  +nn = U32.to_nat(n)
-  arr = fill_go(nn, scale_go(G.noise_of(1n, nn), Nil{}), U32.from_nat(0n), Array.new(F32, T.depth(nn), 0.0))
-  load_p(T.Layer.zeros(ModelP(), X, Y, ModelS(), Model()), arr)
+  T.Two{T.Two{T.Two{Unit{}, mat(W.C(), FE(), 3n)}, W.block_p()}, mat(PX(), W.C(), 97n)}
 
 # ---- real-data input builders ----
 
@@ -127,6 +124,26 @@ def t_of(+s: Nat) -> Nat:
 
 def chunk_of(+s: Nat) -> Nat:
   Nat.mod(Nat.div(Nat.mul(s, 2246822519n), 1048576n), 16n)
+
+# the per-image condition: first CD=3 values of the time embedding, tiled B times
+def take3(xs: List<&2, F32>) -> List<&2, F32>:
+  match xs:
+    case Con{a, Con{b, Con{c, t}}}:
+      Con{a, Con{b, Con{c, Nil{}}}}
+    case _:
+      Nil{}
+
+def repeat_list(left: Nat, +xs: List<&2, F32>, +acc: List<&2, F32>) -> List<&2, F32>:
+  match left:
+    case 0n:
+      acc
+    case 1n+q:
+      repeat_list(q, xs, List.append(&2, F32, acc, xs))
+
+def cond_of(+s: Nat) -> List<&2, F32>:
+  +c = take3(G.temb_of(t_of(s), 64n, 4n))
+  repeat_list(W.B(), c, Nil{})
+
 
 def abar_of(+s: Nat) -> F32:
   at(G.lin_alphas(64n), Nat.sub(t_of(s), 1n))
@@ -183,13 +200,13 @@ def rows_mix(mixed: List<&2, F32>, +te: List<&2, F32>, +k: Nat, +acc: List<&2, F
       acc
 
 def step_in(+s: Nat, +x0: List<&2, F32>) -> X:
-  +batch = take_n(4096n, x0, Nil{})
+  +batch = take_n(4096n, drop_go(Nat.mul(chunk_of(s), 4096n), x0), Nil{})
   +noise = G.noise_of(s, 4096n)
   +a = F32.sqrt(abar_of(s))
   +b = F32.sqrt((1.0 - abar_of(s) : F32))
   +mixed = mix2(batch, noise, a, b, Nil{})
   +te = G.temb_of(t_of(s), 64n, 4n)
-  T.Two{TA.Mat.from_list(W.B(), W.CD(), pairs(W.B(), 0.25, Nil{})),
+  T.Two{TA.Mat.from_list(W.B(), W.CD(), cond_of(s)),
     TA.Mat.from_list(W.N(), FE(), rows_mix(mixed, te, 0n, Nil{}))}
 
 def step_tgt(+s: Nat) -> Y:

@@ -269,7 +269,9 @@ def show_cloud(xs: List<&2, F32>) -> String:
 
 def arg1(args: List<&1, String>) -> String:
   match args:
-    case Con{h, t}:
+    case Con{h, Con{p, t}}:
+      p
+    case Con{h, Nil{}}:
       h
     case Nil{}:
       ""
@@ -288,10 +290,13 @@ def show_vs(st: VS) -> IO(Unit):
 def from_params(p: M.ModelP) -> IO(Unit):
   show_vs(ddim_sample(p))
 
-def after_load(xs: List<&2, F32>) -> IO(Unit):
-  from_params(M.restore_params(xs))
+def after_load(+xs: List<&2, F32>) -> IO(Unit):
+  do IO<Unit>:
+    Unit <- IO.print(String.append("loaded_floats: ", Nat.show(List.length(&2, F32, xs))))
+    Unit <- IO.print(String.append("first_float: ", F32.show(at(xs, 0n))))
+    from_params(M.restore_params(xs))
 
-def run(path: String) -> IO(Unit):
+def run(+path: String) -> IO(Unit):
   do IO<Unit>:
     xs : List<&2, F32> <- M.floats_at(path)
     after_load(xs)
