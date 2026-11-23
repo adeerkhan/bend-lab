@@ -8,7 +8,7 @@ BEND := $(or $(BEND_BIN),$(HOME)/.bend/bin/bend)
 BEND_VERSION := 2.0.38
 BEND_REF := ../bend-ref
 
-.PHONY: setup check check-dit laws sync-bend clean lint env env-check release experiment experiments results report trace dash dashboard session unet-metric unet-record unet-record-four unet-sample mamba3-bench mamba3-layer mamba3-step mamba3-train-curve mamba3-varlen mamba3-gqa mamba3-outnorm mamba3-deep mamba3-lanes mamba-bf16-curve mamba3-cases mamba3-fd mamba3-state mamba3-wrap mamba3-clamps mamba3-canfail mamba3-det record-compat oracle-boundary lane-matrix pages mamba3-tiny-data mamba-vit-emb mamba-vit-fwd mamba-vit-bwd mamba-vit-train glm-step glm-block-step glm-lin-block glm-decode glm-h192-step batch peaks bounds bench plumbing bench-mamba-tiny bench-ab bend-smoke bend-side bend-latest flow flow64 doctor figures select plots sweep sweep-agent
+.PHONY: setup check check-dit check-dit-denoiser laws sync-bend clean lint env env-check release experiment experiments results report trace dash dashboard session unet-metric unet-record unet-record-four unet-sample mamba3-bench mamba3-layer mamba3-step mamba3-train-curve mamba3-varlen mamba3-gqa mamba3-outnorm mamba3-deep mamba3-lanes mamba-bf16-curve mamba3-cases mamba3-fd mamba3-state mamba3-wrap mamba3-clamps mamba3-canfail mamba3-det record-compat oracle-boundary lane-matrix pages mamba3-tiny-data mamba-vit-emb mamba-vit-fwd mamba-vit-bwd mamba-vit-train glm-step glm-block-step glm-lin-block glm-decode glm-h192-step batch peaks bounds bench plumbing bench-mamba-tiny bench-ab bend-smoke bend-side bend-latest flow flow64 doctor figures select plots sweep sweep-agent
 
 setup:            ## Bend, Lean and the Python venv
 	scripts/setup.sh
@@ -21,6 +21,9 @@ check-fast:       ## the proofs and the frozen references only: the cheap gate, 
 
 check-dit:        ## the Bendlang DiT block: attention and LN parity, frozen full-block gap (minutes)
 	$(PY) reference/test_dit_ref.py
+
+check-dit-denoiser: ## the Bendlang DiT denoiser trains: loss trajectory against the torch twin
+	$(PY) reference/test_dit_denoiser.py
 
 versions:         ## the Bend pin, bend.toml, .bend/env and the imports, side by side
 	$(PY) reference/versions.py

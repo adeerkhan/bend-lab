@@ -36,6 +36,13 @@ compared with `../bendtorch/reference/oracle.py` (ATOL 1e-6, RTOL 1e-5).
 | `wide_block.bend` — its gradients | 5 | 14.203 | FAIL |
 | `main.bend` — denoiser model (embed + block + head) | 1 (forward) | 0.225 | PASS |
 
+**Training** (`make check-dit-denoiser`, 6 AdamW steps, lr 3e-3, 496 params):
+the first real loss is 1286.68 — identical to the torch twin — and the
+trajectory falls to 781.19. The torch twin over the same 6 steps is
+1286.68 → 1161.70 → 1048.34 → 945.77 → 853.07 → 769.30; the 1.5% gap at the
+last step is the documented f32 gradient drift of the composed block, not a
+wiring error (step 1 matches exactly).
+
 For the full block: forward `y` matches at 0.07, `dcond` 0.13, `dh` 0.96, and
 the v/o gradients 0.02–0.06. The excess is on q/k weights (q.dw 4.42, k.dw
 5.45, k.db 1.89) and m/sh (m.db 1.94). The oracle was **not** loosened; the
@@ -66,7 +73,8 @@ withdrawn. Forward parity at 0.07 means the computation itself is correct.
 - A first denoiser model (`examples/diffusion/dit/main.bend`, 496 params)
   wraps the block with a token-feature embedding and an output head, taking a
   separate per-image condition vector. Its forward matches PyTorch at 0.225x;
-  it does not yet include the dataset adapter, training loop or sampler.
+  The denoiser now includes an AdamW training loop (6 steps verified); a
+  real dataset adapter and sampler are not yet added.
 - The original block probe is tiny (b=2, t=3, w=4). Both the attention
   branch (`wide_attn.bend`, 0.418x) and the full conditioned block
   (`wide_block.bend`, forward 0.336x) were generalised to width 8 with two kv

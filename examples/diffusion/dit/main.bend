@@ -84,7 +84,35 @@ def Model() -> T.Layer<ModelP, X(), Y, ModelS>:
 def params() -> ModelP:
   T.Two{T.Two{T.Two{Unit{}, mat(W.C(), FE(), 3n)}, W.block_p()}, mat(PX(), W.C(), 97n)}
 
-# ---- display ----
+# ---- training: MSE against target noise, AdamW ----
+
+def mse(y: Y, tgt: Y) -> T.LossOut<Y>:
+  T.MSE(W.N(), PX(), y, tgt)
+
+def cfg() -> T.OptCfg:
+  T.CAdam{0.003, 0.9, 0.999, 0.00000001, 0.0, 0.1, 0.001}
+
+def new_train() -> T.Train<ModelP>:
+  T.Train.new(~ModelP(), ~X(), ~Y(), ~ModelS(), ~Model(), cfg(), params)
+
+def step_once(tr: T.Train<ModelP>, x: X, tgt: Y) -> T.Train<ModelP>:
+  T.Train.step(~ModelP(), ~X(), ~Y(), ~ModelS(), ~Y(), ~Model(), ~mse, tr, x, tgt)
+
+def loss_of(tr: T.Train<ModelP>) -> F32:
+  match tr:
+    case T.Train{p, g, st, c, p1, p2, +l}:
+      l
+
+def train_go(left: Nat, +i: Nat, tr: T.Train<ModelP>) -> IO(T.Train<ModelP>):
+  match left tr:
+    case 0n T.Train{p, g, st, c, p1, p2, l}:
+      IO.pure(T.Train<ModelP>, T.Train{p, g, st, c, p1, p2, l})
+    case 1n+rest T.Train{p, g, st, c, p1, p2, +l}:
+      do IO<T.Train<ModelP>>:
+        Unit <- IO.print(String.append("loss: ", F32.show(l)))
+        x : X = T.Two{mat2(W.B(), W.CD(), 23n), mat(W.N(), FE(), 33n)}
+        tgt : Y = mat(W.N(), PX(), 97n)
+        train_go(rest, (1n + i : Nat), step_once(T.Train{p, g, st, c, p1, p2, l}, x, tgt))
 
 def show_y(r: T.Fwd<ModelP, Y, ModelS>) -> IO(Unit):
   match r:
@@ -94,5 +122,8 @@ def show_y(r: T.Fwd<ModelP, Y, ModelS>) -> IO(Unit):
         IO.print(String.append("params ", U32.show(T.Layer.count(ModelP(), X(), Y, ModelS(), Model()))))
 
 def main() -> IO(Unit):
-  show_y(T.Layer.fwd(ModelP(), X(), Y, ModelS(), Model(), params,
-    T.Two{mat2(W.B(), W.CD(), 23n), mat(W.N(), FE(), 33n)}), )
+  do IO<Unit>:
+    Unit <- show_y(T.Layer.fwd(ModelP(), X(), Y, ModelS(), Model(), params,
+      T.Two{mat2(W.B(), W.CD(), 23n), mat(W.N(), FE(), 33n)}))
+    tr : T.Train<ModelP> <- train_go(6n, 0n, new_train())
+    IO.print(String.append("final_loss: ", F32.show(loss_of(tr))))
