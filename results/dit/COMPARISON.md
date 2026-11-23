@@ -36,7 +36,17 @@ compared with `../bendtorch/reference/oracle.py` (ATOL 1e-6, RTOL 1e-5).
 | `wide_block.bend` — its gradients | 5 | 14.203 | FAIL |
 | `main.bend` — denoiser model (embed + block + head) | 1 (forward) | 0.225 | PASS |
 
-**Training** (`make check-dit-denoiser`, 6 AdamW steps, lr 3e-3, 496 params):
+**Real data** (`make check-dit-real`): `examples/diffusion/dit/real_main.bend`
+trains the same 496-param model on the **pinned optdigits CSV** (read directly
+from `reference/.cache/datasets/mstz/optdigits/optdigits.data` with Base
+`File`, not through the HTTP dataset stack — that binary does not fit the
+machine's free RAM). The gate verifies 65536 values load and the first row's
+first 8 scaled pixels match the CSV (2.1875), so a wrong loader fails. Six
+AdamW steps run on real digits; loss is stochastic (per-step timestep/chunk)
+and not gated numerically. Dims stay tiny (2 images, 3 of 16 patches each) —
+a wiring proof, not a quality result. No sampler.
+
+**Fixed-input training** (`make check-dit-denoiser`, 6 AdamW steps, lr 3e-3, 496 params):
 the first real loss is 1286.68 — identical to the torch twin — and the
 trajectory falls to 781.19. The torch twin over the same 6 steps is
 1286.68 → 1161.70 → 1048.34 → 945.77 → 853.07 → 769.30; the 1.5% gap at the

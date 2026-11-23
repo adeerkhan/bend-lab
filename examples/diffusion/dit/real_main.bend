@@ -1,0 +1,236 @@
+# DiT denoiser on the pinned optdigits dataset.
+#
+# Same 496-param model as examples/diffusion/dit/main.bend (embed -> verified
+# conditioned DiT block -> head), trained on REAL digits from the pinned
+# `mstz/optdigits` dataset instead of fixed tensors. Tiny dims: 2 images per
+# batch, 3 of each image's 16 patches, width 8, two kv heads. The patch
+# subsample is a banner: this is a wiring proof, not a quality result.
+import Base
+import bend-ml-tensor-array@0.1.20.0/main.bend as TA
+import bendtorch@2.1.0.0/main.bend as T
+import mlbend-generative@0.1.1.0/main.bend as G
+import ./wide_block.bend as W
+
+def FE() -> Nat:
+  8n
+
+def PX() -> Nat:
+  4n
+
+def M(r: Nat, c: Nat) -> Type:
+  TA.Mat<r, c>
+
+def vals(+left: Nat, +i: Nat) -> List<&2, F32>:
+  match left:
+    case 0n:
+      Nil{}
+    case 1n+rest:
+      Con{((F32.from_nat(Nat.mod(Nat.mul(i, 7n), 13n)) - 6.0 : F32) / 4.0 : F32), vals(rest, Nat.add(i, 1n))}
+
+def mat(+r: Nat, +c: Nat, +s: Nat) -> TA.Mat<r, c>:
+  TA.Mat.from_list(r, c, vals(Nat.mul(r, c), s))
+
+def X() -> Type:
+  T.Two<M(W.B(), W.CD()), M(W.N(), FE())>
+
+def Y() -> Type:
+  M(W.N(), PX())
+
+# ---- model (identical structure to main.bend) ----
+
+def ModelP() -> Type:
+  T.Two<T.Two<T.Two<Unit, M(W.C(), FE())>, W.BP>, M(PX(), W.C())>
+
+def ModelS() -> Type:
+  T.Two<T.Two<T.Two<Unit, M(W.N(), FE())>, W.BS>, M(W.N(), W.C())>
+
+def Embed() -> T.Layer<M(W.C(), FE()), M(W.N(), FE()), M(W.N(), W.C()), M(W.N(), FE())>:
+  T.LinearNB(W.N(), FE(), W.C(), 0n)
+
+def Pre() -> T.Layer<T.Two<Unit, M(W.C(), FE())>, X(), W.BX, T.Two<Unit, M(W.N(), FE())>>:
+  T.Both(~Unit, ~M(W.C(), FE()), ~M(W.B(), W.CD()), ~M(W.N(), FE()), ~M(W.B(), W.CD()), ~M(W.N(), W.C()),
+    ~Unit, ~M(W.N(), FE()), ~T.Id(~M(W.B(), W.CD())), ~Embed())
+
+def Body() -> T.Layer<T.Two<T.Two<Unit, M(W.C(), FE())>, W.BP>, X(), M(W.N(), W.C()), T.Two<T.Two<Unit, M(W.N(), FE())>, W.BS>>:
+  T.Seq(~T.Two<Unit, M(W.C(), FE())>, ~W.BP, ~X(), ~W.BX, ~M(W.N(), W.C()),
+    ~T.Two<Unit, M(W.N(), FE())>, ~W.BS, ~Pre(), ~W.Block())
+
+def Head() -> T.Layer<M(PX(), W.C()), M(W.N(), W.C()), Y, M(W.N(), W.C())>:
+  T.LinearNB(W.N(), W.C(), PX(), 0n)
+
+def Model() -> T.Layer<ModelP, X(), Y, ModelS>:
+  T.Seq(~T.Two<T.Two<Unit, M(W.C(), FE())>, W.BP>, ~M(PX(), W.C()), ~X(), ~M(W.N(), W.C()), ~Y,
+    ~T.Two<T.Two<Unit, M(W.N(), FE())>, W.BS>, ~M(W.N(), W.C()), ~Body(), ~Head())
+
+def params() -> ModelP:
+  T.Two{T.Two{T.Two{Unit{}, mat(W.C(), FE(), 3n)}, W.block_p()}, mat(PX(), W.C(), 97n)}
+
+# ---- real-data input builders ----
+
+def at(xs: List<&2, F32>, +k: Nat) -> F32:
+  match xs:
+    case Nil{}:
+      0.0
+    case Con{h, t}:
+      Bool.pick(F32, Nat.is_eq(k, 0n), h, at(t, Nat.sub(k, 1n)))
+
+def take_go(left: Nat, xs: List<&2, F32>, +acc: List<&2, F32>) -> List<&2, F32>:
+  match left xs:
+    case 0n _:
+      acc
+    case 1n+q Con{h, t}:
+      take_go(q, t, Con{h, acc})
+    case _ _:
+      acc
+
+def drop_go(left: Nat, xs: List<&2, F32>) -> List<&2, F32>:
+  match left xs:
+    case 0n _:
+      xs
+    case 1n+q Con{h, t}:
+      drop_go(q, t)
+    case _ _:
+      Nil{}
+
+def t_of(+s: Nat) -> Nat:
+  (1n + Nat.mod(Nat.div(Nat.mul(s, 2654435761n), 67108864n), 64n) : Nat)
+
+def chunk_of(+s: Nat) -> Nat:
+  Nat.mod(Nat.div(Nat.mul(s, 2246822519n), 1048576n), 16n)
+
+def abar_of(+s: Nat) -> F32:
+  at(G.lin_alphas(64n), Nat.sub(t_of(s), 1n))
+
+def mix2(xs: List<&2, F32>, ys: List<&2, F32>, +a: F32, +b: F32, +acc: List<&2, F32>) -> List<&2, F32>:
+  match xs ys:
+    case Con{h, t} Con{e, u}:
+      mix2(t, u, a, b, List.append(&2, F32, acc, Con{((a * h : F32) + (b * e : F32) : F32), Nil{}}))
+    case _ _:
+      acc
+
+def pairs(+left: Nat, +v: F32, +acc: List<&2, F32>) -> List<&2, F32>:
+  match left:
+    case 0n:
+      acc
+    case 1n+q:
+      pairs(q, v, Con{v, acc})
+
+# 6 rows of (4 noised digit pixels + 4 time features) = FE=8
+def rows_of(px: List<&2, F32>, +te: List<&2, F32>, +acc: List<&2, F32>) -> List<&2, F32>:
+  match px:
+    case Nil{}:
+      acc
+    case Con{a, Con{b, Con{c, Con{d, t}}}}:
+      rows_of(t, te, List.append(&2, F32, acc,
+        Con{a, Con{b, Con{c, Con{d, take_go(4n, te, Nil{})}}}}))
+    case _:
+      acc
+
+def step_in(+s: Nat, +x0: List<&2, F32>) -> X:
+  +batch = take_go(24n, drop_go(Nat.mul(chunk_of(s), 64n), x0), Nil{})
+  +noise = G.noise_of(s, 24n)
+  +a = F32.sqrt(abar_of(s))
+  +b = F32.sqrt((1.0 - abar_of(s) : F32))
+  +mixed = mix2(batch, noise, a, b, Nil{})
+  +te = G.temb_of(t_of(s), 64n, 4n)
+  T.Two{TA.Mat.from_list(W.B(), W.CD(), pairs(W.B(), 0.25, Nil{})),
+    TA.Mat.from_list(W.N(), FE(), rows_of(mixed, te, Nil{}))}
+
+def step_tgt(+s: Nat) -> Y:
+  TA.Mat.from_list(W.N(), PX(), G.noise_of(s, 24n))
+
+# ---- training ----
+
+def mse(y: Y, tgt: Y) -> T.LossOut<Y>:
+  T.MSE(W.N(), PX(), y, tgt)
+
+def cfg() -> T.OptCfg:
+  T.CAdam{0.003, 0.9, 0.999, 0.00000001, 0.0, 0.1, 0.001}
+
+def new_train() -> T.Train<ModelP>:
+  T.Train.new(~ModelP(), ~X(), ~Y(), ~ModelS(), ~Model(), cfg(), params)
+
+def loss_of(tr: T.Train<ModelP>) -> F32:
+  match tr:
+    case T.Train{p, g, st, c, p1, p2, +l}:
+      l
+
+def train_go(left: Nat, +i: Nat, tr: T.Train<ModelP>, +x0: List<&2, F32>) -> IO(T.Train<ModelP>):
+  match left tr:
+    case 0n T.Train{p, g, st, c, p1, p2, l}:
+      IO.pure(T.Train<ModelP>, T.Train{p, g, st, c, p1, p2, l})
+    case 1n+rest T.Train{p, g, st, c, p1, p2, +l}:
+      x : X = step_in(i, x0)
+      tgt : Y = step_tgt(i)
+      tr2 = T.Train.step(~ModelP(), ~X(), ~Y(), ~ModelS(), ~Y(), ~Model(), ~mse,
+        T.Train{p, g, st, c, p1, p2, l}, x, tgt)
+      do IO<T.Train<ModelP>>:
+        Unit <- IO.print(String.append("loss: ", F32.show(l)))
+        train_go(rest, (1n + i : Nat), tr2, x0)
+
+# ---- local CSV load: no dataset/HTTP stack (the binary must fit in RAM) ----
+
+def maybe_cell(m: Maybe<&2, F32>) -> F32:
+  match m:
+    case Some{v}:
+      v
+    case None{}:
+      0.0
+
+def cell(+text: String) -> F32:
+  maybe_cell(F32.read(text))
+
+def cells_rev(+xs: List<&2, String>, +acc: List<&2, F32>) -> List<&2, F32>:
+  match xs:
+    case Nil{}:
+      acc
+    case Con{h, t}:
+      cells_rev(t, Con{(cell(h) / 16.0 : F32), acc})
+
+def cells_of(+xs: List<&2, String>) -> List<&2, F32>:
+  List.reverse(&2, F32, cells_rev(xs, Nil{}))
+
+def first_fields(+xs: List<&2, String>) -> List<&2, String>:
+  List.take(&2, String, xs, 64n)
+
+def row_of_csv(+line: String) -> List<&2, F32>:
+  cells_of(first_fields(String.split(line, Chr{44})))
+
+def rows_of_csv(+left: Nat, lines: List<&2, String>, +acc: List<&2, F32>) -> List<&2, F32>:
+  match left lines:
+    case 0n _:
+      acc
+    case 1n+q Con{h, t}:
+      rows_of_csv(q, t, List.append(&2, F32, acc, row_of_csv(h)))
+    case _ _:
+      acc
+
+def rd_done(m: File & Result<&1, &1, U32 & String, String>) -> IO(List<&2, F32>):
+  match m:
+    case Tuple{f, r}:
+      do IO<List<&2, F32>>:
+        text : String <- IO.pass(String, r)
+        Unit <- File.close(f)
+        return rows_of_csv(1024n, String.split(text, Chr{10}), Nil{})
+
+def load_digits() -> IO(List<&2, F32>):
+  do IO<List<&2, F32>>:
+    f : File <- IO.try(File, File.open("reference/.cache/datasets/mstz/optdigits/optdigits.data", "r"))
+    m : File & Result<&1, &1, U32 & String, String> <- File.read(f, U32.from_nat(600000n))
+    rd_done(m)
+
+def sum8(+xs: List<&2, F32>, +left: Nat, +i: Nat, +acc: F32) -> F32:
+  match left:
+    case 0n:
+      acc
+    case 1n+q:
+      sum8(xs, q, (1n + i : Nat), (acc + at(xs, i) : F32))
+
+def main() -> IO(Unit):
+  do IO<Unit>:
+    +x0 : List<&2, F32> <- load_digits()
+    Unit <- IO.print(String.append("data_len: ", Nat.show(List.length(&2, F32, x0))))
+    Unit <- IO.print(String.append("data_first: ", F32.show(at(x0, 0n))))
+    Unit <- IO.print(String.append("data_sum8: ", F32.show(sum8(x0, 8n, 0n, 0.0))))
+    tr : T.Train<ModelP> <- train_go(6n, 0n, new_train(), x0)
+    IO.print(String.append("final_loss: ", F32.show(loss_of(tr))))
