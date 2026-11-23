@@ -1,0 +1,8 @@
+FAIL block.m.dw[6]: bend np.float64(-0.3728887140750885), torch np.float64(-0.3728955388069153) (1.44x the tolerance)
+FAIL block.m.db[2]: bend np.float64(0.4879075288772583), torch np.float64(0.4878961443901062) (1.94x the tolerance)
+FAIL block.sh.dw[7]: bend np.float64(0.2576809823513031), torch np.float64(0.2576850950717926) (1.15x the tolerance)
+FAIL block.f.q.dw[15]: bend np.float64(-0.026002656668424606), torch np.float64(-0.025997085496783257) (4.42x the tolerance)
+FAIL block.f.q.db[3]: bend np.float64(-0.017319828271865845), torch np.float64(-0.017321884632110596) (1.75x the tolerance)
+FAIL block.f.k.dw[7]: bend np.float64(7.361173629760742e-06), torch np.float64(1.9073486328125e-06) (5.45x the tolerance)
+FAIL block.f.k.db[1]: bend np.float64(-2.6673078536987305e-06), torch np.float64(-7.7858567237854e-07) (1.89x the tolerance)
+dit-block: 19 tensors, worst error 5.454 of the tolerance; FAIL
