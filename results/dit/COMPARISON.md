@@ -32,6 +32,8 @@ compared with `../bendtorch/reference/oracle.py` (ATOL 1e-6, RTOL 1e-5).
 | `ln_attn_probe.bend` — LN → attention → `T.Residual` | 12 | 0.954 | PASS |
 | `block.bend` — full conditioned block | 19 | **5.454** | **FAIL** |
 | `wide_attn.bend` — attention at w=8, 2 heads | 10 | 0.418 | PASS |
+| `wide_block.bend` — full conditioned block at w=8 | 1 (forward) | 0.336 | PASS |
+| `wide_block.bend` — its gradients | 5 | 14.203 | FAIL |
 
 For the full block: forward `y` matches at 0.07, `dcond` 0.13, `dh` 0.96, and
 the v/o gradients 0.02–0.06. The excess is on q/k weights (q.dw 4.42, k.dw
@@ -60,10 +62,12 @@ withdrawn. Forward parity at 0.07 means the computation itself is correct.
 ## Banners
 
 - CPU torch reference twin; no CUDA check of these probes.
-- The block probe is tiny (b=2, t=3, w=4). The attention branch was then
-  generalised via top-level Nat constants and verified at b=2, t=4, w=8 with
-  two heads (`wide_attn.bend`, 0.418x). A full-width conditioned block and a
-  denoiser task are not built.
+- The original block probe is tiny (b=2, t=3, w=4). Both the attention
+  branch (`wide_attn.bend`, 0.418x) and the full conditioned block
+  (`wide_block.bend`, forward 0.336x) were generalised to width 8 with two kv
+  heads via top-level Nat constants. The wide block's gradients fail at 14.203x
+  the oracle — worse than the tiny block's 5.454x, consistent with accumulated
+  f32 drift at larger width. A denoiser task is not built.
 - The gradient gate FAILS. The 5.454 value is frozen in `test_dit_ref.py` as a
   known-limitation reference, not accepted as a pass.
 - Environment: Bend must be pinned at 2.0.38 (`make check-fast` enforces it),
