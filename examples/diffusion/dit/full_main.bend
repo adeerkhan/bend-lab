@@ -90,7 +90,7 @@ def load_p(p0: ModelP(), arr: Array<F32>) -> ModelP():
   un_pa(T.Layer.load(ModelP(), X, Y, ModelS(), Model(), p0, arr, U32.from_nat(0n)))
 
 def params() -> ModelP:
-  T.Two{T.Two{T.Two{Unit{}, mat(W.C(), FE(), 3n)}, W.block_p()}, mat(PX(), W.C(), 97n)}
+  T.Two{T.Two{T.Two{Unit{}, W.smat(W.C(), FE(), 3n)}, W.block_p()}, W.smat(PX(), W.C(), 97n)}
 
 # ---- real-data input builders ----
 

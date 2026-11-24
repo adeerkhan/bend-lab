@@ -38,6 +38,16 @@ def vals2(+left: Nat, +i: Nat) -> List<&2, F32>:
 def mat(+r: Nat, +c: Nat, +s: Nat) -> TA.Mat<r, c>:
   TA.Mat.from_list(r, c, vals(Nat.mul(r, c), s))
 
+def svals(+left: Nat, +i: Nat) -> List<&2, F32>:
+  match left:
+    case 0n:
+      Nil{}
+    case 1n+rest:
+      Con{((F32.from_nat(Nat.mod(Nat.mul(i, 7n), 13n)) - 6.0 : F32) / 40.0 : F32), svals(rest, Nat.add(i, 1n))}
+
+def smat(+r: Nat, +c: Nat, +s: Nat) -> TA.Mat<r, c>:
+  TA.Mat.from_list(r, c, svals(Nat.mul(r, c), s))
+
 def mat2(+r: Nat, +c: Nat, +s: Nat) -> TA.Mat<r, c>:
   TA.Mat.from_list(r, c, vals2(Nat.mul(r, c), s))
 
@@ -45,7 +55,7 @@ def tag(+t: String, +name: String) -> String:
   String.append(t, String.append(".", name))
 
 def lin(+i: Nat, +o: Nat, +s: Nat) -> T.Lin<i, o>:
-  T.Lin{mat(o, i, s), mat(1n, o, Nat.add(s, 40n))}
+  T.Lin{smat(o, i, s), smat(1n, o, Nat.add(s, 40n))}
 
 def ones(+left: Nat) -> List<&2, F32>:
   match left:
@@ -55,7 +65,7 @@ def ones(+left: Nat) -> List<&2, F32>:
       Con{1.0, ones(rest)}
 
 def lin_gate(+i: Nat, +o: Nat, +s: Nat) -> T.Lin<i, o>:
-  T.Lin{mat(o, i, s), TA.Mat.from_list(1n, o, ones(o))}
+  T.Lin{smat(o, i, s), TA.Mat.from_list(1n, o, ones(o))}
 
 def show_lin(+i: Nat, +o: Nat, +t: String, l: T.Lin<i, o>) -> IO(Unit):
   match l:
@@ -224,7 +234,7 @@ def Mod() -> T.Layer<MP, MX, M(N(), C()), MS>:
   T.Seq(~M1P, ~FmaP, ~MX, ~X3(), ~M(N(), C()), ~M1S, ~FmaS(), ~M1, ~Fma())
 
 def mod_p() -> MP:
-  T.Two{T.Two{Unit{}, T.Two{Unit{}, T.LN{mat(1n, C(), 61n), mat(1n, C(), 67n)}}}, unitsF}
+  T.Two{T.Two{Unit{}, T.Two{Unit{}, T.LN{smat(1n, C(), 61n), smat(1n, C(), 67n)}}}, unitsF}
 
 # ---- block: (cond, h) -> h + Tile(g) * f(mod) ----
 
