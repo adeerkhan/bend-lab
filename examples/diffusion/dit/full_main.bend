@@ -39,10 +39,10 @@ def Y() -> Type:
 # ---- model (identical structure to main.bend) ----
 
 def ModelP() -> Type:
-  T.Two<T.Two<T.Two<Unit, M(W.C(), FE())>, W.BP>, M(PX(), W.C())>
+  T.Two<T.Two<T.Two<Unit, M(W.C(), FE())>, W.BP>, HeadP>
 
 def ModelS() -> Type:
-  T.Two<T.Two<T.Two<Unit, M(W.N(), FE())>, W.BS>, M(W.N(), W.C())>
+  T.Two<T.Two<T.Two<Unit, M(W.N(), FE())>, W.BS>, HeadS>
 
 def Embed() -> T.Layer<M(W.C(), FE()), M(W.N(), FE()), M(W.N(), W.C()), M(W.N(), FE())>:
   T.LinearNB(W.N(), FE(), W.C(), 0n)
@@ -55,12 +55,20 @@ def Body() -> T.Layer<T.Two<T.Two<Unit, M(W.C(), FE())>, W.BP>, X(), M(W.N(), W.
   T.Seq(~T.Two<Unit, M(W.C(), FE())>, ~W.BP, ~X(), ~W.BX, ~M(W.N(), W.C()),
     ~T.Two<Unit, M(W.N(), FE())>, ~W.BS, ~Pre(), ~W.Block())
 
-def Head() -> T.Layer<M(PX(), W.C()), M(W.N(), W.C()), Y, M(W.N(), W.C())>:
-  T.LinearNB(W.N(), W.C(), PX(), 0n)
+def HeadP() -> Type:
+  T.Two<T.LN<W.C()>, M(PX(), W.C())>
+
+def HeadS() -> Type:
+  T.Two<M(W.N(), W.C()), M(W.N(), W.C())>
+
+def Head() -> T.Layer<HeadP, M(W.N(), W.C()), Y, HeadS>:
+  T.Seq(~T.LN<W.C()>, ~M(PX(), W.C()), ~M(W.N(), W.C()), ~M(W.N(), W.C()), ~Y,
+    ~M(W.N(), W.C()), ~M(W.N(), W.C()), ~T.LayerNorm(W.N(), W.C(), 0.00001),
+    ~T.LinearNB(W.N(), W.C(), PX(), 0n))
 
 def Model() -> T.Layer<ModelP, X(), Y, ModelS>:
-  T.Seq(~T.Two<T.Two<Unit, M(W.C(), FE())>, W.BP>, ~M(PX(), W.C()), ~X(), ~M(W.N(), W.C()), ~Y,
-    ~T.Two<T.Two<Unit, M(W.N(), FE())>, W.BS>, ~M(W.N(), W.C()), ~Body(), ~Head())
+  T.Seq(~T.Two<T.Two<Unit, M(W.C(), FE())>, W.BP>, ~HeadP, ~X(), ~M(W.N(), W.C()), ~Y,
+    ~T.Two<T.Two<Unit, M(W.N(), FE())>, W.BS>, ~HeadS, ~Body(), ~Head())
 
 def scale_rev(xs: List<&2, F32>, +acc: List<&2, F32>) -> List<&2, F32>:
   match xs:
@@ -90,7 +98,7 @@ def load_p(p0: ModelP(), arr: Array<F32>) -> ModelP():
   un_pa(T.Layer.load(ModelP(), X, Y, ModelS(), Model(), p0, arr, U32.from_nat(0n)))
 
 def params() -> ModelP:
-  T.Two{T.Two{T.Two{Unit{}, W.smat(W.C(), FE(), 3n)}, W.block_p()}, W.smat(PX(), W.C(), 97n)}
+  T.Two{T.Two{T.Two{Unit{}, W.smat(W.C(), FE(), 3n)}, W.block_p()}, T.Two{T.LN{mat(1n, W.C(), 61n), mat(1n, W.C(), 67n)}, W.smat(PX(), W.C(), 97n)}}
 
 # ---- real-data input builders ----
 

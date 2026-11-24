@@ -66,6 +66,19 @@ def ones(+left: Nat) -> List<&2, F32>:
 
 def lin_gate(+i: Nat, +o: Nat, +s: Nat) -> T.Lin<i, o>:
   T.Lin{smat(o, i, s), TA.Mat.from_list(1n, o, ones(o))}
+def zeros(+left: Nat) -> List<&2, F32>:
+  match left:
+    case 0n:
+      Nil{}
+    case 1n+rest:
+      Con{0.0, zeros(rest)}
+
+# adaLN-Zero: scale m starts at 1 (identity), shift sh at 0
+def lin_m(+i: Nat, +o: Nat, +s: Nat) -> T.Lin<i, o>:
+  T.Lin{smat(o, i, s), TA.Mat.from_list(1n, o, ones(o))}
+
+def lin_sh(+i: Nat, +o: Nat, +s: Nat) -> T.Lin<i, o>:
+  T.Lin{smat(o, i, s), TA.Mat.from_list(1n, o, zeros(o))}
 
 def show_lin(+i: Nat, +o: Nat, +t: String, l: T.Lin<i, o>) -> IO(Unit):
   match l:
@@ -355,7 +368,7 @@ def Block() -> T.Layer<BP, BX, M(N(), C()), BS>:
   T.Seq(~B1P, ~B4P, ~BX, ~B1Y, ~M(N(), C()), ~B1S, ~B4S, ~B1, ~B4)
 
 def block_p() -> BP:
-  T.Two{T.Two{T.Two{Unit{}, T.Two{lin_gate(CD(), C(), 7n), T.Two{lin(CD(), C(), 9n), lin(CD(), C(), 11n)}}}, T.Two{Unit{}, Unit{}}},
+  T.Two{T.Two{T.Two{Unit{}, T.Two{lin_gate(CD(), C(), 7n), T.Two{lin_m(CD(), C(), 9n), lin_sh(CD(), C(), 11n)}}}, T.Two{Unit{}, Unit{}}},
     T.Two{Unit{}, T.Two{T.Two{Unit{}, T.Two{Unit{}, T.Two{mod_p, attn_p()}}}, unitsF}}}
 
 def show_grads(g: BP) -> IO(Unit):
