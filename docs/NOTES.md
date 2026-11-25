@@ -2927,3 +2927,45 @@ tensor-array primitive; (2) bendlang#2146 and #2147 ergonomics for router
 records and the recursive hierarchy; (3) compiler memory (#2038, mitigated
 locally by the capped build guard). A full-width conditioned denoiser and a
 training task are not yet built.
+
+## 2026-11-25 — BendTorch #46/#47 review fixes and exact gates
+
+Applied nuxyel's review requests to both open PRs; no new issue or PR comment
+was posted.
+
+- **BendTorch#46:** `Conv2d` and `Conv2dNB` now carry the two erased guards
+  `2p < k + hs` and `2p < k + ws` in `main.bend` and `gpu.bend`. The local
+  `.gitignore` hunk was removed, the law comment now explains that the shared
+  `cimg` makes the height law cover the width, and the CHANGELOG records the
+  source-level migration from nine arguments to eleven. Independent height-only
+  and width-only bad geometries are refused. The limitations, API, design and
+  law docs were updated; the badge is 57 laws including `dtype.bend`'s
+  `unpair_pair`. The review head is `c6fa78e`; its mutation run reports 230
+  mutants, 227 as expected and 3 skipped for the absent SmolLM2 safetensors.
+  Its selected CI job passed in 1h1m45s.
+- **BendTorch#47:** review head `13d0d95` is pushed. Both adaLN and AdaIN probes
+  use package `T.Rewire`; the duplicated `sw`/`sw2` helpers are replaced by one
+  descriptive `two_swap`.
+  The package comment and docs say that the caller supplies the inverse
+  backward and nothing checks it. A direct exact case in the native and
+  JavaScript ops suites routes three differently shaped matrices through the
+  pair involution and back. Its random draws were placed after the existing
+  cases so their seeded inputs did not move.
+- **Measured on Bend 2.0.40 / Lean 4.34.0 under a 2.5 GB memory guard:** both
+  branches pass `make check` and `make check-js`. #46's Conv2d and Conv2dNB
+  probes are `0.000e+00`; all 26 GPU-layer cases match `main.bend` on 1 and 16
+  CPU threads; `bad_conv2d.bend` is refused with `expected True{}` / `observed
+  False{}`. #47's ops suite is 65,980 numbers, 57,696 bit-identical, worst
+  0.427 of tolerance; adaLN is 390 / 235 / 0.381; AdaIN is 406 / 270 / 0.163,
+  and 0.087 against StyleTTS2's AdaIN1d. `make affected-check` passes on both.
+  #47's `make mutate` was cancelled by the user before completion, so no
+  mutation result is claimed; the selected CI workflow runs the affected set.
+- **Toolchain traps:** the global Bend is 2.0.38, while BendTorch pins 2.0.40;
+  the side install must be passed through `make PATH=...`. The mutation runner
+  prepends `$HOME/.bend/bin`, so it needs a temporary HOME pointing at 2.0.40.
+  Its GPU exactness script replaces `LD_LIBRARY_PATH`, so the local clang
+  wrapper needs absolute LLVM and CUDA library paths. The first JavaScript run
+  failed only because the worktree lacked `data/mnist`; linking the existing
+  local dataset fixed it. `make lint` fetched an incompatible newer bend-lint;
+  the pinned 0.2.2 CLI reports 0 findings and 36 suppressed fact-dependent
+  checks. All of this is in `.local/issues-hit.md`; `.local/` stays local.

@@ -169,3 +169,35 @@ in `.understand-anything/`; the older `.ua/` graph is unused.
 
 **Repo hygiene.** README Status wall was replaced with a short pointer section.
 All findings are in `.local/issues-hit.md` (37 entries, rendered by `make issues`).
+
+## 2026-11-25 — BendTorch #46/#47 review fixes
+
+**BendTorch#46 is pushed at `c6fa78e`.** `Conv2d` and `Conv2dNB` now require
+`2p < k + hs` and `2p < k + ws`; callers append `{==}, {==}`. The review's
+`.gitignore`, law-comment, limitations and CHANGELOG requests are done. Two
+negative fixtures reject height-only and width-only violations independently.
+On Bend 2.0.40 / Lean 4.34.0 under the 2.5 GB guard: `make check`,
+`make check-js`, `make affected-check`, both Conv2d probes and all 26 GPU-layer
+CPU-thread cases pass. `make mutate` reports 230 mutants, 227 as expected, 3
+skipped for the absent SmolLM2 safetensors. PR body rewritten with exact
+commands/output. Selected CI passed in 1h1m45s; no comment was posted.
+
+**BendTorch#47 is pushed at `13d0d95`.** Both probes use `T.Rewire`; one
+descriptive `two_swap` replaces `sw`/`sw2`; the caller-supplied unchecked
+inverse is documented. A direct exact pair-routing case joins native and
+JavaScript ops. `make check`, `make check-js`, `make affected-check` and focused
+gates pass: ops 65,980 numbers / 57,696 exact / 0.427 worst; adaLN 390 / 235 /
+0.381; AdaIN 406 / 270 / 0.163 (0.087 against StyleTTS2). Local `make mutate`
+was cancelled by the user with no result claimed. The cancellation left one GPU
+`Add2` mutant applied; it was reverted and the focused gates rerun. The PR body
+is rewritten; selected CI was pending at the last check. No extra issue or
+comment is authorized.
+
+**Toolchain and local-only evidence.** The global Bend is 2.0.38; BendTorch
+verification uses the 2.0.40 side install through `make PATH=...`. Mutation
+needs a temporary HOME pointing at that install and an absolute clang wrapper
+because `gpu_expcr.sh` replaces `LD_LIBRARY_PATH`. Worktree symlinks are in
+`bendtorch/.git/info/exclude`. Findings are in `.local/issues-hit.md` (50
+entries, rendered by `make issues`); `.local/` is never committed or quoted
+publicly. The lab's `docs/NOTES.md` and `docs/agents/upstream.md` record the
+public summary.
