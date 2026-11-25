@@ -222,6 +222,14 @@ needs an explicit size bound. The general proof also still needs a single-pass
 multi-write affine lemma, U32 associativity/carry facts, list-order laws and the
 induction. No review was requested and the PR stays draft.
 
+**Baseline freeze is still owed.** A registered default `make validate` attempt
+completed `env-check` and `check-fast` (44s), then was interrupted before the
+full `make check`; no process survived and no green result is claimed. The
+machine became busy again (`train_transformer.py`, GPU 76%, load 1.37).
+`make doctor` also reports no `flow64` preset fits, so `LONG=1` cannot be called
+green here. Rerun the default gate on an idle machine and record its exact log;
+long-only stages stay `unavailable`.
+
 **Toolchain and local-only evidence.** The global Bend is 2.0.38; BendTorch
 verification uses the 2.0.40 side install through `make PATH=...`. Mutation
 needs a temporary HOME pointing at that install and an absolute clang wrapper
