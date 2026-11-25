@@ -215,9 +215,12 @@ ten losses and tokens. The curve and plumbing generators now query
 `4d07592`; the conflict was the expected append after `apart_set`. The tree
 passes `--check-only`, `--verdict` and the 44-law README check. The owner asked
 for the one-cell result to be folded into the general `Mat.to_list/from_list`
-round trip, not listed as its own law. The general proof still needs the
-`fill_list`/`read_l` counter facts and a two-sided list induction; no review was
-requested and the PR stays draft.
+round trip, not listed as its own law. A proof-development attempt found the
+previously sketched general law is false for `r*c > 2^31` (`cap_depth = 32`,
+`U32.shln(1,32) = 0`, one leaf receives every write); the corrected statement
+needs an explicit size bound. The general proof also still needs a single-pass
+multi-write affine lemma, U32 associativity/carry facts, list-order laws and the
+induction. No review was requested and the PR stays draft.
 
 **Toolchain and local-only evidence.** The global Bend is 2.0.38; BendTorch
 verification uses the 2.0.40 side install through `make PATH=...`. Mutation

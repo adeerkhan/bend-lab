@@ -2982,8 +2982,11 @@ was posted.
   `devel` `c2b6cd1` and pushed `4d07592`. The rebased package passes
   `--check-only`, `--verdict` and the 44-law README check. It remains a draft:
   the owner asked for the one-cell case to be folded into the general law, and
-  that still needs the `fill_list`/`read_l` counter facts and a two-sided list
-  induction. No review was requested.
+  a proof-development attempt found that the previously sketched law is false
+  for `r*c > 2^31` (`cap_depth = 32`, `U32.shln(1,32) = 0`, so all writes and
+  reads reach one leaf). The corrected statement needs an explicit size bound.
+  A single-pass multi-write lemma, U32 associativity/carry facts, list-order
+  laws and the induction remain. No review was requested.
 - **Toolchain traps:** the global Bend is 2.0.38, while BendTorch pins 2.0.40;
   the side install must be passed through `make PATH=...`. The mutation runner
   prepends `$HOME/.bend/bin`, so it needs a temporary HOME pointing at 2.0.40.
