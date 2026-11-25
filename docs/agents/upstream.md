@@ -56,7 +56,8 @@ last entry in the ledger. Corrections to the older table:
 | [bendlang/bend#1980](https://github.com/bendlang/bend/issues/1980) | `Array<T>` accepts a mixed-depth `ANode` the compiled runtime cannot represent. |
 | [bend-ml#35](https://github.com/nuxyel/bend-ml/issues/35) | **Closed (completed)** 2026-11-11 by `Mat.reshape` in #36 (`6b6b343`); flat `Array.get`/`Array.set` covers cell reads. `Mat.rows/cols` stay out until content laws land. |
 | [bend-ml#36](https://github.com/nuxyel/bend-ml/pull/36) | Merged into devel `6b6b343`: `Mat.reshape`, the same array under a new shape with `r1*c1 == r2*c2`, and the law `reshape_len`. |
-| [bend-ml#26](https://github.com/nuxyel/bend-ml/issues/26) | The value law for `Array.set`/`Array.get`. nuxyel proved `size_set`, `get_after_set`, `get_other_set` and `ASet.Apart` in tensor-array devel `f882c77`; the remaining `Mat.to_list (Mat.of_list rs cs xs) == xs` corollary is ours, with a 64x64 NumPy round-trip test. Open until that PR lands. |
+| [bend-ml#26](https://github.com/nuxyel/bend-ml/issues/26) | The value law for `Array.set`/`Array.get`. nuxyel proved `size_set`, `get_after_set`, `get_other_set` and `ASet.Apart` in tensor-array devel `f882c77`; `get_go_returns_array`/`get_returns_array` landed in 0.1.22.0. The remaining `Mat.to_list (Mat.of_list rs cs xs) == xs` corollary is ours, with a 64x64 NumPy round-trip test. Open until that PR lands. |
+| [bend-ml#40](https://github.com/nuxyel/bend-ml/pull/40) | **Draft, rebased to `4d07592`** (2026-11-25): the one-cell base case `roundtrip_one`. Owner asked it to be folded into the general round trip rather than listed as its own law. The rebased tree passes `--check-only`, `--verdict` and the 44-law README check. Still missing: the `fill_list`/`read_l` counter facts and the two-sided list induction; no review requested yet. |
 
 ## Closed
 

@@ -210,6 +210,15 @@ one recursive loop each instead of the unrolled `rest1..rest10` chains;
 ten losses and tokens. The curve and plumbing generators now query
 `bend version` instead of hardcoding 2.0.38.
 
+**bend-ml#40 is rebased but remains draft.** The old one-cell law
+`roundtrip_one` was rebased from `66bb483` onto `devel` `c2b6cd1` and pushed as
+`4d07592`; the conflict was the expected append after `apart_set`. The tree
+passes `--check-only`, `--verdict` and the 44-law README check. The owner asked
+for the one-cell result to be folded into the general `Mat.to_list/from_list`
+round trip, not listed as its own law. The general proof still needs the
+`fill_list`/`read_l` counter facts and a two-sided list induction; no review was
+requested and the PR stays draft.
+
 **Toolchain and local-only evidence.** The global Bend is 2.0.38; BendTorch
 verification uses the 2.0.40 side install through `make PATH=...`. Mutation
 needs a temporary HOME pointing at that install and an absolute clang wrapper

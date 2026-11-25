@@ -2978,6 +2978,12 @@ was posted.
   2.0.40; the curve keeps the same ten losses and tokens. The committed curve
   is regenerated on the lab pin, 2.0.38. The curve and plumbing generators now
   query `bend version` instead of hardcoding 2.0.38.
+- **bend-ml#40:** rebased the one-cell round-trip branch from `66bb483` onto
+  `devel` `c2b6cd1` and pushed `4d07592`. The rebased package passes
+  `--check-only`, `--verdict` and the 44-law README check. It remains a draft:
+  the owner asked for the one-cell case to be folded into the general law, and
+  that still needs the `fill_list`/`read_l` counter facts and a two-sided list
+  induction. No review was requested.
 - **Toolchain traps:** the global Bend is 2.0.38, while BendTorch pins 2.0.40;
   the side install must be passed through `make PATH=...`. The mutation runner
   prepends `$HOME/.bend/bin`, so it needs a temporary HOME pointing at 2.0.40.
