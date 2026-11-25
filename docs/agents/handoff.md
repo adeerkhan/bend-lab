@@ -227,8 +227,12 @@ completed `env-check` and `check-fast` (44s), then was interrupted before the
 full `make check`; no process survived and no green result is claimed. The
 machine became busy again (`train_transformer.py`, GPU 76%, load 1.37).
 `make doctor` also reports no `flow64` preset fits, so `LONG=1` cannot be called
-green here. Rerun the default gate on an idle machine and record its exact log;
-long-only stages stay `unavailable`.
+green here. A second registered run passed `env-check` and `check-fast`, then reached
+188/190 before `test_vit_checkpoint.py` hit the unchanged 1800s timeout. The
+same test previously passed in 105-181s; external GPU jobs were active during
+this run, so it is not a code-regression result or an idle baseline. Rerun the
+full default gate on an idle machine and record its exact log; long-only stages
+stay `unavailable`.
 
 **Toolchain and local-only evidence.** The global Bend is 2.0.38; BendTorch
 verification uses the 2.0.40 side install through `make PATH=...`. Mutation
