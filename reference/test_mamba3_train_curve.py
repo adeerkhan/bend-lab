@@ -57,6 +57,10 @@ def main():
         env["LD_LIBRARY_PATH"] = llvm + (":" + env["LD_LIBRARY_PATH"]
                                          if env.get("LD_LIBRARY_PATH") else "")
 
+    version = subprocess.run([BEND, "version"], cwd=ROOT, env=env,
+                             check=True, capture_output=True, text=True).stdout.strip()
+    version = version.removeprefix("bend ")
+
     t0 = time.monotonic()
     subprocess.run([BEND, "-o", BIN,
                     os.path.join(ROOT, "examples/language/mamba3/mamba3_layer.bend")],
@@ -120,7 +124,7 @@ def main():
         "Recorded by `reference/test_mamba3_train_curve.py` (regenerated on every run).",
         "",
         "Command: `reference/.venv/bin/python reference/test_mamba3_train_curve.py`",
-        f"Build {build:.1f} s, run {seconds:.2f} s wall. Bend 2.0.38, reference/.venv.",
+        f"Build {build:.1f} s, run {seconds:.2f} s wall. Bend {version}, reference/.venv.",
         "",
         "Custom trainer (ten steps, lr 1e-3), ten losses:",
         "",

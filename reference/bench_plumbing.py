@@ -35,6 +35,13 @@ REPEATS = 3
 LINE = re.compile(r"^([a-z_0-9]+): ([0-9.eE+-]+)$")
 
 
+def bend_version():
+    out = subprocess.run([BEND, "version"], capture_output=True, text=True, env=ENV)
+    if out.returncode != 0:
+        raise SystemExit("bend version failed:\n" + out.stdout + out.stderr)
+    return out.stdout.strip().removeprefix("bend ")
+
+
 def run_once(binary):
     out = subprocess.run([binary], capture_output=True, text=True, env=ENV, cwd=ROOT)
     if out.returncode != 0:
@@ -100,7 +107,7 @@ def main():
         "derived_ms": derived,
         "machine": platform.platform(),
         "cpus": os.cpu_count(),
-        "bend": "2.0.38",
+        "bend": bend_version(),
     }
     machine_path = os.path.join(ROOT, "results", f"plumbing-{slug()}.json")
     with open(machine_path, "w") as f:
@@ -123,7 +130,7 @@ def main():
 keeps the median of each phase. It imports the real example (`examples/diffusion/vit`)
 and calls its own functions, so these are the numbers the model actually pays.
 
-Machine: {platform.platform()} · {os.cpu_count()} CPUs · Bend 2.0.38
+Machine: {platform.platform()} · {os.cpu_count()} CPUs · Bend {bend_version()}
 
 | phase | ms |
 |---|---:|

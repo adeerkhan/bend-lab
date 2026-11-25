@@ -2722,59 +2722,27 @@ def last_f(f: FWD, +Wh: List<&2, F32>,
       TR{push_row(losses, Con{loss_go(8n, 0n, y, Wh, 0.0), Nil{}}),
         tok_go(8n, 0n, y, Wh, Nil{})}
 
-def rest10(p: TP, +losses: List<&2, F32>) -> TR:
-  match p:
-    case TP{w_in, dt_bias, B_bias, C_bias, Bw, Cw, D, w_out, E, Wh}:
-      last_f(forward(E, w_in, dt_bias, B_bias, C_bias, Bw, Cw, D,
-        w_out, 8n), Wh, losses)
-
-def rest9(sl: SL, +losses: List<&2, F32>) -> TR:
+def train_last(sl: SL, +losses: List<&2, F32>) -> TR:
   match sl:
     case SL{loss, p}:
-      rest10(p, push_row(losses, Con{loss, Nil{}}))
+      match p:
+        case TP{w_in, dt_bias, B_bias, C_bias, Bw, Cw, D, w_out, E, Wh}:
+          last_f(forward(E, w_in, dt_bias, B_bias, C_bias, Bw, Cw, D,
+            w_out, 8n), Wh, push_row(losses, Con{loss, Nil{}}))
 
-def rest8(sl: SL, +lr: F32, +losses: List<&2, F32>) -> TR:
-  match sl:
-    case SL{loss, p}:
-      rest9(step(p, lr), push_row(losses, Con{loss, Nil{}}))
-
-def rest7(sl: SL, +lr: F32, +losses: List<&2, F32>) -> TR:
-  match sl:
-    case SL{loss, p}:
-      rest8(step(p, lr), lr, push_row(losses, Con{loss, Nil{}}))
-
-def rest6(sl: SL, +lr: F32, +losses: List<&2, F32>) -> TR:
-  match sl:
-    case SL{loss, p}:
-      rest7(step(p, lr), lr, push_row(losses, Con{loss, Nil{}}))
-
-def rest5(sl: SL, +lr: F32, +losses: List<&2, F32>) -> TR:
-  match sl:
-    case SL{loss, p}:
-      rest6(step(p, lr), lr, push_row(losses, Con{loss, Nil{}}))
-
-def rest4(sl: SL, +lr: F32, +losses: List<&2, F32>) -> TR:
-  match sl:
-    case SL{loss, p}:
-      rest5(step(p, lr), lr, push_row(losses, Con{loss, Nil{}}))
-
-def rest3(sl: SL, +lr: F32, +losses: List<&2, F32>) -> TR:
-  match sl:
-    case SL{loss, p}:
-      rest4(step(p, lr), lr, push_row(losses, Con{loss, Nil{}}))
-
-def rest2(sl: SL, +lr: F32, +losses: List<&2, F32>) -> TR:
-  match sl:
-    case SL{loss, p}:
-      rest3(step(p, lr), lr, push_row(losses, Con{loss, Nil{}}))
-
-def rest1(sl: SL, +lr: F32, +losses: List<&2, F32>) -> TR:
-  match sl:
-    case SL{loss, p}:
-      rest2(step(p, lr), lr, push_row(losses, Con{loss, Nil{}}))
+def train_loop(fuel: Nat, sl: SL, +lr: F32,
+    +losses: List<&2, F32>) -> TR:
+  match fuel:
+    case 0n:
+      train_last(sl, losses)
+    case 1n+rest:
+      match sl:
+        case SL{loss, p}:
+          train_loop(rest, step(p, lr), lr,
+            push_row(losses, Con{loss, Nil{}}))
 
 def train10(p: TP, +lr: F32) -> TR:
-  rest1(step(p, lr), lr, Nil{})
+  train_loop(8n, step(p, lr), lr, Nil{})
 
 type TR is Type:
   TR{losses: List<&2, F32>, tokens: List<&2, F32>}
@@ -3155,67 +3123,24 @@ def lm_step(p: LM, +lr: F32) -> SLM:
 type TRL is Type:
   TRL{losses: List<&2, F32>, p: LM}
 
-def lm_rest10(sl: SLM, +losses: List<&2, F32>) -> TRL:
+def lm_train_last(sl: SLM, +losses: List<&2, F32>) -> TRL:
   match sl:
     case SLM{loss, p}:
       TRL{push_row(losses, Con{loss, Nil{}}), p}
 
-def lm_rest9(sl: SLM, +lr: F32,
+def lm_train_loop(fuel: Nat, sl: SLM, +lr: F32,
     +losses: List<&2, F32>) -> TRL:
-  match sl:
-    case SLM{loss, p}:
-      lm_rest10(lm_step(p, lr), push_row(losses, Con{loss, Nil{}}))
-
-def lm_rest8(sl: SLM, +lr: F32,
-    +losses: List<&2, F32>) -> TRL:
-  match sl:
-    case SLM{loss, p}:
-      lm_rest9(lm_step(p, lr), lr, push_row(losses, Con{loss, Nil{}}))
-
-def lm_rest7(sl: SLM, +lr: F32,
-    +losses: List<&2, F32>) -> TRL:
-  match sl:
-    case SLM{loss, p}:
-      lm_rest8(lm_step(p, lr), lr, push_row(losses, Con{loss, Nil{}}))
-
-def lm_rest6(sl: SLM, +lr: F32,
-    +losses: List<&2, F32>) -> TRL:
-  match sl:
-    case SLM{loss, p}:
-      lm_rest7(lm_step(p, lr), lr, push_row(losses, Con{loss, Nil{}}))
-
-def lm_rest5(sl: SLM, +lr: F32,
-    +losses: List<&2, F32>) -> TRL:
-  match sl:
-    case SLM{loss, p}:
-      lm_rest6(lm_step(p, lr), lr, push_row(losses, Con{loss, Nil{}}))
-
-def lm_rest4(sl: SLM, +lr: F32,
-    +losses: List<&2, F32>) -> TRL:
-  match sl:
-    case SLM{loss, p}:
-      lm_rest5(lm_step(p, lr), lr, push_row(losses, Con{loss, Nil{}}))
-
-def lm_rest3(sl: SLM, +lr: F32,
-    +losses: List<&2, F32>) -> TRL:
-  match sl:
-    case SLM{loss, p}:
-      lm_rest4(lm_step(p, lr), lr, push_row(losses, Con{loss, Nil{}}))
-
-def lm_rest2(sl: SLM, +lr: F32,
-    +losses: List<&2, F32>) -> TRL:
-  match sl:
-    case SLM{loss, p}:
-      lm_rest3(lm_step(p, lr), lr, push_row(losses, Con{loss, Nil{}}))
-
-def lm_rest1(sl: SLM, +lr: F32,
-    +losses: List<&2, F32>) -> TRL:
-  match sl:
-    case SLM{loss, p}:
-      lm_rest2(lm_step(p, lr), lr, push_row(losses, Con{loss, Nil{}}))
+  match fuel:
+    case 0n:
+      lm_train_last(sl, losses)
+    case 1n+rest:
+      match sl:
+        case SLM{loss, p}:
+          lm_train_loop(rest, lm_step(p, lr), lr,
+            push_row(losses, Con{loss, Nil{}}))
 
 def lm_train10(p: LM, +lr: F32) -> TRL:
-  lm_rest1(lm_step(p, lr), lr, Nil{})
+  lm_train_loop(9n, lm_step(p, lr), lr, Nil{})
 
 def lm_tokens_fields(+u: List<&2, F32>, +w1: List<&2, F32>,
     +dt1: List<&2, F32>, +bb1: List<&2, F32>,

@@ -116,6 +116,74 @@ Error:
 Write `def broken() -> F32:`. The error names the reason, which is why the
 `--fast` gate is a useful first stop: it fails in a second with this text.
 
+## A `Data` record may hold only `Data` fields
+
+A record with scalar fields can be marked reusable:
+
+```bend
+type R is Data:
+  R{a: F32, b: F32}
+
+def left(r: R) -> F32:
+  match r:
+    case R{a, b}: a
+
+def right(r: R) -> F32:
+  match r:
+    case R{a, b}: b
+
+def sum(+r: R) -> F32:
+  F32.add(left(r), right(r))
+```
+
+`sum(R{1.0, 2.0})` prints `3` on Bend 2.0.38 and 2.0.40. This removes the
+rebuild-per-use cost for small scalar records.
+
+It does not extend to an affine field: changing `a` to `Array<F32>` makes the
+declaration itself fail on both versions:
+
+```
+SOME PROOFS FAIL
+Error:
+- expected : Data
+- observed : Type
+Location: R
+3 | type R is Data:
+4>|   R{a: Array<F32>, b: F32}
+  |        ^^^^^^^^^
+```
+
+There is still no `r.a` projection and no `match` on a local record binder.
+Use the scalar-only form where possible; array-carrying records keep the
+destructure/rebuild pattern (`bendlang/bend#2146`).
+
+## A bounded phase loop is one recursive def
+
+Mutual recursion is not accepted, but a bounded loop that alternates phases is
+one self-recursive def. Put the decreasing counter first, then the phase and
+the state; the counter counts transitions:
+
+```bend
+type Phase is Data:
+  Encode{}
+  Decode{}
+
+def step(fuel: Nat, phase: Phase, value: U32) -> U32:
+  match fuel:
+    case 0n:
+      value
+    case 1n+rest:
+      match phase:
+        case Encode{}:
+          step(rest, Decode{}, (value + 2 : U32))
+        case Decode{}:
+          step(rest, Encode{}, (value * 3 : U32))
+```
+
+`step(4n, Encode{}, 1)` prints `33` on both versions. This replaces an unrolled
+chain of phase-specific defs; it does not add forward references or mutual
+recursion (`bendlang/bend#2147`).
+
 ## A build must run under the guard
 
 `bend -o` builds the C program in one pass and its memory grows with the model.

@@ -190,14 +190,31 @@ gates pass: ops 65,980 numbers / 57,696 exact / 0.427 worst; adaLN 390 / 235 /
 0.381; AdaIN 406 / 270 / 0.163 (0.087 against StyleTTS2). Local `make mutate`
 was cancelled by the user with no result claimed. The cancellation left one GPU
 `Add2` mutant applied; it was reverted and the focused gates rerun. The PR body
-is rewritten; selected CI was pending at the last check. No extra issue or
-comment is authorized.
+is rewritten; selected CI passed in 39m27s. No extra issue or comment is
+authorized.
+
+**Tensor-array 0.1.22.0 compatibility.** Detached copies of both review heads
+were repinned only to tensor-array 0.1.22.0, tensor-gpu 0.1.5.4 and
+tensor-fork 0.1.7.3. Both full `make check` runs pass; #46's Conv2d cases stay
+`0.000e+00` and #47's ops/adaLN/AdaIN numbers are unchanged. No PR source change
+was needed for the release. The 0.1.22.0 source differs from 0.1.21.0 by 150
+added lines plus the version header; its `--check-only` and `--verdict` pass on
+2.0.40, and `reference/test_published.py` passes for every published package.
+
+**bendlang #2146/#2147.** The two comments were reproduced on Bend 2.0.38 and
+2.0.40: scalar-only `Data` records print 3, array-carrying ones fail `expected
+Data / observed Type`, and the phase loop prints 33. `docs/TRAPS.md` now carries
+the exact snippets and boundaries. Mamba3's `train10` and `lm_train10` now use
+one recursive loop each instead of the unrolled `rest1..rest10` chains;
+`make mamba3` and `make mamba3-train-curve` pass on both versions, with the same
+ten losses and tokens. The curve and plumbing generators now query
+`bend version` instead of hardcoding 2.0.38.
 
 **Toolchain and local-only evidence.** The global Bend is 2.0.38; BendTorch
 verification uses the 2.0.40 side install through `make PATH=...`. Mutation
 needs a temporary HOME pointing at that install and an absolute clang wrapper
 because `gpu_expcr.sh` replaces `LD_LIBRARY_PATH`. Worktree symlinks are in
-`bendtorch/.git/info/exclude`. Findings are in `.local/issues-hit.md` (50
+`bendtorch/.git/info/exclude`. Findings are in `.local/issues-hit.md` (51
 entries, rendered by `make issues`); `.local/` is never committed or quoted
 publicly. The lab's `docs/NOTES.md` and `docs/agents/upstream.md` record the
 public summary.

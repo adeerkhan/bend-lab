@@ -2959,7 +2959,25 @@ was posted.
   0.427 of tolerance; adaLN is 390 / 235 / 0.381; AdaIN is 406 / 270 / 0.163,
   and 0.087 against StyleTTS2's AdaIN1d. `make affected-check` passes on both.
   #47's `make mutate` was cancelled by the user before completion, so no
-  mutation result is claimed; the selected CI workflow runs the affected set.
+  mutation result is claimed; its selected CI passed in 39m27s.
+- **Tensor-array 0.1.22.0 compatibility:** detached copies of `c6fa78e` and
+  `13d0d95` repinned to tensor-array 0.1.22.0, tensor-gpu 0.1.5.4 and
+  tensor-fork 0.1.7.3 pass the full `make check`. #47's exact results are
+  unchanged: ops 65,980 numbers / 57,696 exact / 0.427 worst; adaLN 390 / 235 /
+  0.381; AdaIN 406 / 270 / 0.163. The release's two new laws are present in the
+  package source; its delta from 0.1.21.0 is 150 added lines and the version
+  header only. `tensor-array/main.bend` passes `--check-only` and `--verdict` on
+  Bend 2.0.40, and `reference/test_published.py` passes for tensor-array
+  0.1.22.0, tensor-fork 0.1.7.3 and tensor-gpu 0.1.5.4.
+- **bendlang #2146/#2147 checked:** the scalar-only `Data` record prints 3 on
+  Bend 2.0.38 and 2.0.40, while an `Array<F32>` field fails `expected Data /
+  observed Type`; the phase-loop sketch prints 33 on both. The boundary and
+  workaround are in `docs/TRAPS.md`. Mamba3's `train10` and `lm_train10` now use
+  one recursive loop each instead of the unrolled `rest1..rest10`/`lm_rest1..lm_rest10`
+  chains. `make mamba3` and `make mamba3-train-curve` pass on Bend 2.0.38 and
+  2.0.40; the curve keeps the same ten losses and tokens. The committed curve
+  is regenerated on the lab pin, 2.0.38. The curve and plumbing generators now
+  query `bend version` instead of hardcoding 2.0.38.
 - **Toolchain traps:** the global Bend is 2.0.38, while BendTorch pins 2.0.40;
   the side install must be passed through `make PATH=...`. The mutation runner
   prepends `$HOME/.bend/bin`, so it needs a temporary HOME pointing at 2.0.40.
