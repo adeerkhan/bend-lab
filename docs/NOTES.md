@@ -3063,3 +3063,27 @@ with every product, and finishes with `(a0 + a1) + (a2 + a3)`. The twin now uses
 that exact order. A synthetic check over `k = 45, 576, 577` matches a scalar
 four-partial-sum implementation bit for bit. Neither the tolerance nor any gate
 was changed; the next CI run must confirm the gate.
+
+## 2026-11-27 — first Bend looped transformer on the chain puzzle
+
+`examples/looped_transformer/` is the first Bend arm of the
+[loop transformer](https://www.k-a.in/loop-transformer.html). The model has one
+prelude block, two shared middle blocks and one coda block. A local `Repeat`
+layer threads the same parameter record through a runtime number of passes and
+accumulates each pass's gradient; the first pass starts from the prelude output
+and later passes use `start + RMSNorm(previous middle output)`.
+
+The v0 is deliberately smaller than `burn-lab/looped`: no learned
+`keep`/`let_in` gate, no four-token depthwise K/V convolution, `d=32`, batch 8,
+answer-only loss. Burn-lab's recorded 2,000-step 16-note result is plain 35.4%,
+looped 34.8%, deep 37.3% over 128 puzzles per hop, with the loop showing no
+advantage. The Bend run is not yet that comparison.
+
+Build run 320 (82.6 s, memory-guarded) and the exact commands are in
+`results/looped-transformer/REPORT.md`. At 2,000 steps on 8 hop-1 puzzles, plain
+scores 25.0% and the four-pass loop 12.5%; the run 318/319 logs are in
+`results/looped-plain-2k-fix/` and `results/looped-loop4-2k-fix/`. The loss falls
+from `3.66` (`log 39`) to about `1.7` (plain) and `2.4` (looped), so the shared
+training path is live; the 8-puzzle sample is too small and the model too reduced
+to separate the arms. The next fidelity step is the short convolution and the
+learned gate, then a 128-puzzle eval matching burn-lab.

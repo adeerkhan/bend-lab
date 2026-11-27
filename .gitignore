@@ -71,6 +71,9 @@ results/glm53-hybrid192-step-*/model-400/
 # the batch target writes the combined eval here
 results/glm53-hybrid192-step/
 
+# the looped transformer's generated puzzle batches
+examples/looped_transformer/data/
+
 # External reference checkout (HiT-Released) — never commit
 ref/
 

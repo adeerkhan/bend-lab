@@ -4,6 +4,22 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### A Bend looped transformer trains on the chain puzzle
+
+- `examples/looped_transformer/` adds the first Bend arm of the
+  [loop transformer](https://www.k-a.in/loop-transformer.html): one prelude
+  block, two shared middle blocks, one coda block, and a runtime `passes`
+  argument. The shared middle is trained by a new local `Repeat` layer that
+  walks the same parameters forward and accumulates every pass's gradient.
+- `reference/make_data.py` generates the deterministic 16-note chains and a
+  next-token batch format. `train_eval <steps> <passes> <train> <eval>` trains
+  and evaluates without a checkpoint.
+- v0 banner: the learned `keep`/`let_in` gate and the four-token depthwise K/V
+  convolution are not in the Bend arm yet. It uses `d=32`, batch 8 and an
+  answer-only loss. The recorded 2,000-step hop-1 result is plain 25.0% and
+  looped 12.5% on 8 puzzles; that sample cannot separate the arms. The exact
+  commands, build and caveat are in `results/looped-transformer/REPORT.md`.
+
 ### Clean CI setup generates the pinned Oxford Flowers fixture
 
 - `scripts/setup.sh` runs `reference/flowers_export.py --setup`, which downloads
