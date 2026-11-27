@@ -106,17 +106,23 @@ def im2col(x, k=3, p=1, s=1):
 
 
 def dot_rows(rows, w):
-    """rows (n, i) times w (o, i), summed left to right in float32.
+    """rows (n, k) times w (o, k), with BendTorch's four-partial-sum order.
 
-    BendTorch's sdot adds the k products in order from +0.0. A BLAS matmul picks
-    its own order and SIMD width, so the same weights and inputs round
-    differently on different CPUs. Cumsum keeps the order and is still one
-    NumPy loop per output channel.
+    tensor-array's dotr keeps a0..a3 and rotates them: product k goes to
+    a(k mod 4), then the four sums are added as (a0 + a1) + (a2 + a3). A BLAS
+    matmul picks its own order and SIMD width, so the same weights and inputs
+    round differently on different CPUs.
     """
-    out = np.empty((rows.shape[0], w.shape[0]), dtype=F)
-    for j in range(w.shape[0]):
-        out[:, j] = np.cumsum(rows * w[j], axis=1, dtype=F)[:, -1]
-    return out
+    n, k = rows.shape
+    o = w.shape[0]
+    a0 = np.zeros((n, o), dtype=F)
+    a1 = np.zeros((n, o), dtype=F)
+    a2 = np.zeros((n, o), dtype=F)
+    a3 = np.zeros((n, o), dtype=F)
+    for t in range(k):
+        prod = rows[:, t, None] * w[None, :, t]
+        a0, a1, a2, a3 = a1, a2, a3, a0 + prod
+    return (a0 + a1) + (a2 + a3)
 
 
 def conv(x, w, b, k=3, p=1, s=1):

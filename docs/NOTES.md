@@ -3054,10 +3054,12 @@ CI for `dc8ed36` then reached the full check and failed only
 `reference/test_unet_flowers.py`: `maxabs 2.146e-05` against the unchanged
 `2e-05` gate. The checkpoint, metric and record gates passed. The frozen weights
 and fixture hashes were correct; the twin's convolution used NumPy's BLAS
-matmul, whose accumulation order and SIMD width depend on the CPU. BendTorch's
-`sdot` adds every product left to right from `+0.0`. The twin now sums each
-output channel with a float32 `cumsum`, preserving that order without a
-per-element Python loop. A synthetic 8192x576 by 64 product measured
-`1.144e-04` between BLAS and the ordered sum here, so this is the same class of
-CPU-dependent rounding as the Rec.601 export. Neither the tolerance nor any
-gate was changed; the next CI run must confirm the gate.
+matmul, whose accumulation order and SIMD width depend on the CPU.
+
+The first correction, a float32 `cumsum` per output channel, still failed CI
+(`f77f3ed`, `maxabs 2.384e-05`). Reading the pinned tensor-array source showed
+why: `dotr` is not one running sum. It keeps four partial sums, rotates them
+with every product, and finishes with `(a0 + a1) + (a2 + a3)`. The twin now uses
+that exact order. A synthetic check over `k = 45, 576, 577` matches a scalar
+four-partial-sum implementation bit for bit. Neither the tolerance nor any gate
+was changed; the next CI run must confirm the gate.
