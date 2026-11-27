@@ -10,9 +10,11 @@ What changed for the people who run the lab. Internal refactors are not listed.
   the hash-pinned Oxford parquet and writes the three grayscale files used by
   the full gate. Pillow is pinned to 12.3.0 because it reproduces the committed
   NPZ RGB bytes; later Pillow releases change some decoded/resized images.
-- The exporter verifies every output hash and is idempotent. Registered clean
-  setup run 279 reproduces `1ff86747…` (3,874 flow images), `f08730fe…` (102
-  held-out images), and `87ee501c…` (7,067 UNet training images). Run 281 passes
+- The UNet conversion uses explicit elementwise float32 operations rather than
+  a dot product, whose rounding differed on the CI CPU. The exporter verifies
+  every output hash and is idempotent. Registered clean setup run 282 reproduces
+  `1ff86747…` (3,874 flow images), `f08730fe…` (102 held-out images), and
+  `87ee501c…` (7,067 UNet training images). Run 281 passes
   `test_unet_flowers_metric.py` and `test_unet_record.py` against that clean
   fixture.
 

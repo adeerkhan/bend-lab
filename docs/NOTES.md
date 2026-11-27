@@ -3036,9 +3036,11 @@ the existing cache: one held-out image per class, all remaining images in
 Rec.601 weights `[0.299, 0.587, 0.114]`, round-to-nearest. Pillow 12.3.0 is
 required to reproduce the pinned 64x64 RGB array; Pillow 13 changes some images.
 `flowers_export.py --setup` now fetches the pinned parquet, writes all three
-grayscale fixtures, verifies their hashes, and reuses matching files.
-Registered clean setup run 279 verifies `1ff86747…`, `f08730fe…`, and
-`87ee501c…`; run 281 passes both formerly failing gates.
+grayscale fixtures, verifies their hashes, and reuses matching files. The
+Rec.601 conversion uses explicit elementwise float32 operations: a dot product
+matched locally but produced `e409a796…` on the CI CPU. Registered clean setup
+run 282 verifies `1ff86747…`, `f08730fe…`, and `87ee501c…`; run 281 passes both
+formerly failing gates.
 
 CI for `20010d1` then reached `env-check` and reported all 37 locked packages
 missing. `.bend/env` is ignored and setup had never materialized it. Setup now

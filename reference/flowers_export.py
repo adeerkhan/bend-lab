@@ -152,8 +152,8 @@ def setup():
         return out
 
     def rec601(rgb):
-        weights = np.array([0.299, 0.587, 0.114], dtype=np.float32)
-        return np.rint(rgb.astype(np.float32) @ weights).astype(np.uint8)
+        f = rgb.astype(np.float32)
+        return np.rint(0.299 * f[..., 0] + 0.587 * f[..., 1] + 0.114 * f[..., 2]).astype(np.uint8)
 
     arrays = {
         "flowers64-train-gray.u8": decode(train40, luma),

@@ -246,8 +246,10 @@ only the two UNet flowers gates because the clean runner had no cached full
 split. Setup now runs `flowers_export.py --setup`: it fetches the pinned
 parquet, uses Pillow 12.3.0 to reproduce the pinned RGB bytes, writes the
 40-per-class flow split, the 102-image holdout and the 7,067-image UNet split,
-and verifies all three hashes. Registered clean setup run 279 reproduces
-`1ff86747…`, `f08730fe…` and `87ee501c…`; run 281 passes both UNet gates.
+and verifies all three hashes. The Rec.601 conversion is explicit elementwise
+float32, not a CPU-sensitive dot product. Registered clean setup run 282
+reproduces `1ff86747…`, `f08730fe…` and `87ee501c…`; run 281 passes both UNet
+gates.
 
 **CI setup repair (2026-11-27).** CI for `0e087c8` failed at `env-check`
 because its restored cache had Bend but no `bendenv`; setup had never installed
