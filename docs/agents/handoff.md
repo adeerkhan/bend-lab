@@ -245,8 +245,11 @@ Run 260 (`make check-fast`) is 33/33. No tolerance or timeout changed.
 because its restored cache had Bend but no `bendenv`; setup had never installed
 that binary. `setup.sh` now installs pinned bend-env commit `f750578` with
 Cargo's lockfile and a commit marker, forcing replacement when the marker is
-missing or stale. Registered proof run 261 covers fresh install, idempotence
-and stale-cache repair; `bendenv check` verifies 37 packages each time.
+missing or stale. Setup also checks the lock, runs `sync --locked`, and verifies
+`.bend/env`; the ignored environment was the next CI failure. Registered proof
+run 263 covers a clean project with no `.bend/env` and an idempotent second run;
+`bendenv check` verifies 37 packages each time. Run 261 covers fresh install,
+idempotence and stale-cache repair.
 
 **Toolchain and local-only evidence.** The global Bend is 2.0.38; BendTorch
 verification uses the 2.0.40 side install through `make PATH=...`. Mutation

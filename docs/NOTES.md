@@ -3026,3 +3026,11 @@ and records the commit beside the binary. Registered proof run 261
 (`results/bendenv-setup-proof/runs/20261127-114027-78978.log`) verifies fresh
 install, idempotent reuse and stale-marker repair; `bendenv check` reports 37
 packages in all three environments.
+
+CI for `20010d1` then reached `env-check` and reported all 37 locked packages
+missing. `.bend/env` is ignored and setup had never materialized it. Setup now
+runs `bendenv lock --check`, `bendenv sync --locked` and `bendenv check`.
+Registered clean-project proof run 263
+(`results/bendenv-clean-setup-proof-2/runs/20261127-115846-106383.log`) starts
+without `.bend/env`, creates a 37-package environment, and passes a second setup
+with all 73 files already linked.

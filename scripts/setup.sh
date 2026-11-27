@@ -58,6 +58,11 @@ fi
 have_bendenv || { echo "ERROR: bendenv $BENDENV_COMMIT not found after install"; exit 1; }
 "$HOME_BEND/bin/bendenv" --help >/dev/null
 
+say "Bend environment"
+"$HOME_BEND/bin/bendenv" lock --check
+"$HOME_BEND/bin/bendenv" sync --locked
+"$HOME_BEND/bin/bendenv" check
+
 # --- 3. Lean (the kernel behind --verdict) -----------------------------------------------
 say "Lean $LEAN_VERSION"
 if have_lean; then

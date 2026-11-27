@@ -10,10 +10,14 @@ What changed for the people who run the lab. Internal refactors are not listed.
   `f750578f677c89689900ef29f07c2c2f67bf0ee3` with Cargo's lockfile and writes a
   commit marker beside the binary. A restored cache without that marker is
   repaired automatically; a matching installation is reused.
+- Setup also checks `bend.lock`, runs `bendenv sync --locked`, and verifies the
+  materialized `.bend/env`. The directory is ignored, so a clean CI checkout
+  previously reached `env-check` with all 37 packages absent.
 - The previous setup installed Bend but not `bendenv`, so CI's `env-check`
   failed with exit 127 whenever the toolchain cache lacked the binary. The
-  registered isolated proof covers fresh install, idempotence and stale-cache
-  repair, with `bendenv check` verifying 37 packages each time.
+  registered isolated proofs cover fresh install, idempotence, stale-cache
+  repair and a clean project with no `.bend/env`; `bendenv check` verifies 37
+  packages in each environment.
 
 ### The full-width DiT gate checks its data contract again
 
