@@ -3027,6 +3027,19 @@ and records the commit beside the binary. Registered proof run 261
 install, idempotent reuse and stale-marker repair; `bendenv check` reports 37
 packages in all three environments.
 
+CI for `20010d1` then reached the full check and failed only
+`test_unet_flowers_metric.py` and `test_unet_record.py`: the clean runner had no
+`~/.cache/bend-lab/flowers/flowers64-trainfull-gray.u8`. The full export was
+not reproducible by the current script. Its pinned bytes were recovered from
+the existing cache: one held-out image per class, all remaining images in
+`numpy.default_rng(0).permutation(7067)` order, 64x64 BICUBIC RGB, float32
+Rec.601 weights `[0.299, 0.587, 0.114]`, round-to-nearest. Pillow 12.3.0 is
+required to reproduce the pinned 64x64 RGB array; Pillow 13 changes some images.
+`flowers_export.py --setup` now fetches the pinned parquet, writes all three
+grayscale fixtures, verifies their hashes, and reuses matching files.
+Registered clean setup run 279 verifies `1ff86747…`, `f08730fe…`, and
+`87ee501c…`; run 281 passes both formerly failing gates.
+
 CI for `20010d1` then reached `env-check` and reported all 37 locked packages
 missing. `.bend/env` is ignored and setup had never materialized it. Setup now
 runs `bendenv lock --check`, `bendenv sync --locked` and `bendenv check`.

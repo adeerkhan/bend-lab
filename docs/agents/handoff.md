@@ -241,6 +241,14 @@ loss 11.8269005. Registered run 259
 prints checksum 2.1875, first loss 5.020 and final loss 1.5133939: PASS.
 Run 260 (`make check-fast`) is 33/33. No tolerance or timeout changed.
 
+**Clean flowers fixture (2026-11-27).** CI reached the full check and failed
+only the two UNet flowers gates because the clean runner had no cached full
+split. Setup now runs `flowers_export.py --setup`: it fetches the pinned
+parquet, uses Pillow 12.3.0 to reproduce the pinned RGB bytes, writes the
+40-per-class flow split, the 102-image holdout and the 7,067-image UNet split,
+and verifies all three hashes. Registered clean setup run 279 reproduces
+`1ff86747…`, `f08730fe…` and `87ee501c…`; run 281 passes both UNet gates.
+
 **CI setup repair (2026-11-27).** CI for `0e087c8` failed at `env-check`
 because its restored cache had Bend but no `bendenv`; setup had never installed
 that binary. `setup.sh` now installs pinned bend-env commit `f750578` with

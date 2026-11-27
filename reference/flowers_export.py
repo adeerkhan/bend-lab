@@ -7,6 +7,12 @@
 64x64x3 interleaved) to luma. The flow's tokeniser reads one byte per pixel and
 one row per token, so RGB would have had it reading a scrambled raster.
 
+`--setup` fetches the pinned Oxford parquet and writes the three grayscale
+files the full gate needs: the 40-per-class flow split, its 102-image holdout,
+and the 7,067-image UNet training split in a fixed `default_rng(0)` order.
+The UNet split uses float32 Rec.601 with round-to-nearest; the flow split keeps
+the integer BT.601 conversion. Every output is checked against its pinned hash.
+
 256: decodes the first 512 images of the pinned Oxford Flowers parquet at
 256x256. This is the source the 64x64 export was reduced from, so the two data
 sets are the same images at two resolutions, not one upscaled.
@@ -18,6 +24,7 @@ import hashlib
 import io
 import os
 import sys
+import urllib.request
 
 import numpy as np
 
@@ -28,6 +35,13 @@ SRC64_SHA = "02385f3ae6c9aa9c0cbe294b45e9758e347cb04abda529352952cd8b7b7075a8"
 
 PQ = os.path.join(CACHE, "train-00000-of-00001-12de94e121bdbead.parquet")
 PQ_SHA = "f53b6c9f81c492a0b897006d794bcb485f10022e9cc953a11632d2f91a61482e"
+PQ_URL = "https://huggingface.co/datasets/nelorth/oxford-flowers/resolve/main/data/train-00000-of-00001-12de94e121bdbead.parquet"
+
+SETUP_SHA = {
+    "flowers64-train-gray.u8": "1ff86747f9b070c3ed7b2058dd0c1f88317dfea931ed883379513f121385566e",
+    "flowers64-hold-gray.u8": "f08730fe6730aacf440526420dfd645cd78f2ed1ef3fa82dacb1d90f2b978cf8",
+    "flowers64-trainfull-gray.u8": "87ee501ca70989502e9c668da46b72c79ab90054265b89488e3567d396918184",
+}
 
 N = 512
 
@@ -106,7 +120,68 @@ def split():
     gray_of(hold, "flowers64-hold-gray.u8")
 
 
+def setup():
+    import pyarrow.parquet as pq
+    from PIL import Image
+
+    os.makedirs(CACHE, exist_ok=True)
+    if not os.path.exists(PQ):
+        print("fetching", os.path.basename(PQ))
+        urllib.request.urlretrieve(PQ_URL, PQ)
+    blob = open(PQ, "rb").read()
+    got = hashlib.sha256(blob).hexdigest()
+    if got != PQ_SHA:
+        raise SystemExit(f"{PQ} is {got}, not the pinned {PQ_SHA}")
+
+    rows = pq.read_table(PQ, columns=["image", "label"]).to_pylist()
+    by_class = {}
+    for row in rows:
+        by_class.setdefault(row["label"], []).append(row["image"]["bytes"])
+    hold = [imgs[0] for _, imgs in sorted(by_class.items())]
+    train40 = [b for _, imgs in sorted(by_class.items()) for b in imgs[1:41]]
+    trainfull = [b for _, imgs in sorted(by_class.items()) for b in imgs[1:]]
+    if (len(hold), len(train40), len(trainfull)) != (102, 3874, 7067):
+        raise SystemExit("unexpected Oxford Flowers split sizes")
+
+    def decode(jpegs, convert):
+        out = np.empty((len(jpegs), 64, 64), dtype=np.uint8)
+        for i, data in enumerate(jpegs):
+            im = Image.open(io.BytesIO(data)).convert("RGB")
+            rgb = np.asarray(im.resize((64, 64), Image.Resampling.BICUBIC))
+            out[i] = convert(rgb)
+        return out
+
+    def rec601(rgb):
+        weights = np.array([0.299, 0.587, 0.114], dtype=np.float32)
+        return np.rint(rgb.astype(np.float32) @ weights).astype(np.uint8)
+
+    arrays = {
+        "flowers64-train-gray.u8": decode(train40, luma),
+        "flowers64-hold-gray.u8": decode(hold, luma),
+        "flowers64-trainfull-gray.u8": decode(trainfull, rec601),
+    }
+    order = np.random.default_rng(0).permutation(len(trainfull))
+    arrays["flowers64-trainfull-gray.u8"] = arrays["flowers64-trainfull-gray.u8"][order]
+    for name, array in arrays.items():
+        path = os.path.join(CACHE, name)
+        data = array.tobytes()
+        got = hashlib.sha256(data).hexdigest()
+        if got != SETUP_SHA[name]:
+            raise SystemExit(f"{name}: sha256 {got} != {SETUP_SHA[name]}")
+        if os.path.exists(path) and open(path, "rb").read() == data:
+            print(f"ok {name}: {len(data)} bytes, sha256 {got}")
+            continue
+        tmp = path + ".tmp"
+        with open(tmp, "wb") as f:
+            f.write(data)
+        os.replace(tmp, path)
+        print(f"wrote {name}: {len(data)} bytes, sha256 {got}")
+
+
 def main():
+    if "--setup" in sys.argv:
+        setup()
+        return
     size = 64
     if "--split" in sys.argv:
         split()

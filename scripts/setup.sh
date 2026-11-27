@@ -81,6 +81,9 @@ reference/.venv/bin/pip install -q --upgrade pip
 reference/.venv/bin/pip install -q -r reference/requirements.txt
 reference/.venv/bin/python -c "import numpy, sklearn; print('numpy', numpy.__version__, '| sklearn', sklearn.__version__)"
 
+say "Oxford Flowers fixture"
+reference/.venv/bin/python reference/flowers_export.py --setup
+
 # --- 5. clang (Bend builds binaries with it) ----------------------------------------------
 say "clang"
 if command -v clang >/dev/null 2>&1; then
