@@ -241,6 +241,13 @@ loss 11.8269005. Registered run 259
 prints checksum 2.1875, first loss 5.020 and final loss 1.5133939: PASS.
 Run 260 (`make check-fast`) is 33/33. No tolerance or timeout changed.
 
+**CI setup repair (2026-11-27).** CI for `0e087c8` failed at `env-check`
+because its restored cache had Bend but no `bendenv`; setup had never installed
+that binary. `setup.sh` now installs pinned bend-env commit `f750578` with
+Cargo's lockfile and a commit marker, forcing replacement when the marker is
+missing or stale. Registered proof run 261 covers fresh install, idempotence
+and stale-cache repair; `bendenv check` verifies 37 packages each time.
+
 **Toolchain and local-only evidence.** The global Bend is 2.0.38; BendTorch
 verification uses the 2.0.40 side install through `make PATH=...`. Mutation
 needs a temporary HOME pointing at that install and an absolute clang wrapper

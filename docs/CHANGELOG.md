@@ -4,6 +4,17 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### CI setup installs its pinned environment manager
+
+- `scripts/setup.sh` installs `bendenv` from commit
+  `f750578f677c89689900ef29f07c2c2f67bf0ee3` with Cargo's lockfile and writes a
+  commit marker beside the binary. A restored cache without that marker is
+  repaired automatically; a matching installation is reused.
+- The previous setup installed Bend but not `bendenv`, so CI's `env-check`
+  failed with exit 127 whenever the toolchain cache lacked the binary. The
+  registered isolated proof covers fresh install, idempotence and stale-cache
+  repair, with `bendenv check` verifying 37 packages each time.
+
 ### The full-width DiT gate checks its data contract again
 
 - `full_main.bend` prints the loaded value count and first-eight checksum that

@@ -3016,3 +3016,13 @@ the registered command
 prints checksum 2.1875, first loss 5.020 and final loss 1.5133939: PASS
 (run 259, `results/dit-full-final/runs/20261127-112524-20524.log`).
 `make check-fast` remains 33/33. No tolerance or timeout was changed.
+
+CI for `0e087c8` then failed before `env-check` could run: the restored
+toolchain cache contained Bend but no `bendenv`. `setup.sh` had never installed
+the environment manager, so the cache was an accidental dependency. Setup now
+installs `bendenv` from pinned commit
+`f750578f677c89689900ef29f07c2c2f67bf0ee3` with `cargo install --force --locked`
+and records the commit beside the binary. Registered proof run 261
+(`results/bendenv-setup-proof/runs/20261127-114027-78978.log`) verifies fresh
+install, idempotent reuse and stale-marker repair; `bendenv check` reports 37
+packages in all three environments.
