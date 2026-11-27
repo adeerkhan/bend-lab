@@ -105,9 +105,23 @@ def im2col(x, k=3, p=1, s=1):
     return rows, oh, ow
 
 
+def dot_rows(rows, w):
+    """rows (n, i) times w (o, i), summed left to right in float32.
+
+    BendTorch's sdot adds the k products in order from +0.0. A BLAS matmul picks
+    its own order and SIMD width, so the same weights and inputs round
+    differently on different CPUs. Cumsum keeps the order and is still one
+    NumPy loop per output channel.
+    """
+    out = np.empty((rows.shape[0], w.shape[0]), dtype=F)
+    for j in range(w.shape[0]):
+        out[:, j] = np.cumsum(rows * w[j], axis=1, dtype=F)[:, -1]
+    return out
+
+
 def conv(x, w, b, k=3, p=1, s=1):
     rows, oh, ow = im2col(x, k, p, s)
-    return (rows @ w.T + b).reshape(oh, ow, -1).astype(F)
+    return (dot_rows(rows, w) + b).reshape(oh, ow, -1).astype(F)
 
 
 

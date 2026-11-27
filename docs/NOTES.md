@@ -3049,3 +3049,15 @@ Registered clean-project proof run 263
 (`results/bendenv-clean-setup-proof-2/runs/20261127-115846-106383.log`) starts
 without `.bend/env`, creates a 37-package environment, and passes a second setup
 with all 73 files already linked.
+
+CI for `dc8ed36` then reached the full check and failed only
+`reference/test_unet_flowers.py`: `maxabs 2.146e-05` against the unchanged
+`2e-05` gate. The checkpoint, metric and record gates passed. The frozen weights
+and fixture hashes were correct; the twin's convolution used NumPy's BLAS
+matmul, whose accumulation order and SIMD width depend on the CPU. BendTorch's
+`sdot` adds every product left to right from `+0.0`. The twin now sums each
+output channel with a float32 `cumsum`, preserving that order without a
+per-element Python loop. A synthetic 8192x576 by 64 product measured
+`1.144e-04` between BLAS and the ordered sum here, so this is the same class of
+CPU-dependent rounding as the Rec.601 export. Neither the tolerance nor any
+gate was changed; the next CI run must confirm the gate.
