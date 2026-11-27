@@ -45,6 +45,7 @@ stage() {
         return 0
     fi
     printf 'FAIL  %3ss\n' "$((SECONDS - start))"
+    grep -E '^(ERROR|FAIL)' "$LOG" | tail -80 | sed 's/^/    /'
     tail -25 "$LOG" | sed 's/^/    /'
     FAILED="$FAILED $name"
     return 1

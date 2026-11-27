@@ -45,6 +45,15 @@ jobs:
       - name: The one gate (env-check, the cheap gate, the full check, the smoke)
         run: make validate
 
+      - name: Keep the full gate log
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: validate-log-${{ github.run_id }}
+          path: /tmp/mlbend-validate.log
+          if-no-files-found: warn
+          retention-days: 14
+
   long:
     name: make validate --long
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
