@@ -4,6 +4,17 @@ What changed for the people who run the lab. Internal refactors are not listed.
 
 ## Unreleased
 
+### The full-width DiT gate checks its data contract again
+
+- `full_main.bend` prints the loaded value count and first-eight checksum that
+  `reference/test_dit_full.py` already asserts. The loaded list is marked `+data`
+  because the checksum and training loop both read it.
+- The head LayerNorm now starts at scale 1 and shift 0. Its previous deterministic
+  matrix initialization raised the first loss to 11.8269005 and failed the
+  unchanged `<10` gate. The registered 5 GB-guarded run now prints checksum
+  2.1875, first loss 5.020 and final loss 1.5133939: PASS. `make check-fast`
+  remains 33/33.
+
 ### A small HiT reference on flowers, with a matched ViT arm
 
 - `reference/hit_ref.py` implements the HiT mechanism of arXiv:2611.22962 at

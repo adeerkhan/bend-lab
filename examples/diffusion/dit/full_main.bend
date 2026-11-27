@@ -1,10 +1,8 @@
-# DiT denoiser on the pinned optdigits dataset.
+# Full-width conditioned DiT denoiser on the pinned optdigits dataset.
 #
-# Same 496-param model as examples/diffusion/dit/main.bend (embed -> verified
-# conditioned DiT block -> head), trained on REAL digits from the pinned
-# `mstz/optdigits` dataset instead of fixed tensors. Tiny dims: 2 images per
-# batch, 3 of each image's 16 patches, width 8, two kv heads. The patch
-# subsample is a banner: this is a wiring proof, not a quality result.
+# 64 images x 16 patches = 1024 tokens, width 64, 4 heads of 16, condition dim 3.
+# Linear weights use the 0.1-scaled init; the head LayerNorm starts at scale 1
+# and shift 0. This is a wiring-and-scale gate, not a quality result.
 import Base
 import bend-ml-tensor-array@0.1.20.0/main.bend as TA
 import bendtorch@2.1.0.0/main.bend as T
@@ -19,16 +17,6 @@ def PX() -> Nat:
 
 def M(r: Nat, c: Nat) -> Type:
   TA.Mat<r, c>
-
-def vals(+left: Nat, +i: Nat) -> List<&2, F32>:
-  match left:
-    case 0n:
-      Nil{}
-    case 1n+rest:
-      Con{((F32.from_nat(Nat.mod(Nat.mul(i, 7n), 13n)) - 6.0 : F32) / 4.0 : F32), vals(rest, Nat.add(i, 1n))}
-
-def mat(+r: Nat, +c: Nat, +s: Nat) -> TA.Mat<r, c>:
-  TA.Mat.from_list(r, c, vals(Nat.mul(r, c), s))
 
 def X() -> Type:
   T.Two<M(W.B(), W.CD()), M(W.N(), FE())>
@@ -98,7 +86,8 @@ def load_p(p0: ModelP(), arr: Array<F32>) -> ModelP():
   un_pa(T.Layer.load(ModelP(), X, Y, ModelS(), Model(), p0, arr, U32.from_nat(0n)))
 
 def params() -> ModelP:
-  T.Two{T.Two{T.Two{Unit{}, W.smat(W.C(), FE(), 3n)}, W.block_p()}, T.Two{T.LN{mat(1n, W.C(), 61n), mat(1n, W.C(), 67n)}, W.smat(PX(), W.C(), 97n)}}
+  T.Two{T.Two{T.Two{Unit{}, W.smat(W.C(), FE(), 3n)}, W.block_p()},
+    T.Two{T.LN{TA.Mat.from_list(1n, W.C(), W.ones(W.C())), TA.Mat.from_list(1n, W.C(), W.zeros(W.C()))}, W.smat(PX(), W.C(), 97n)}}
 
 # ---- real-data input builders ----
 
@@ -408,7 +397,9 @@ def run_main(r: Run) -> IO(Unit):
     case Run{steps, save, resume}:
       do IO<Unit>:
         tr0 : T.Train<ModelP> <- start_tr(resume)
-        data : List<&2, F32> <- load_digits()
+        +data : List<&2, F32> <- load_digits()
+        Unit <- IO.print(String.append("data_len: ", Nat.show(List.length(&2, F32, data))))
+        Unit <- IO.print(String.append("data_sum8: ", F32.show(sum8(data, 8n, 0n, 0.0))))
         tr1 : T.Train<ModelP> <- train_go(steps, 0n, tr0, data)
         tr2 : T.Train<ModelP> <- save_if(save, tr1)
         IO.print(String.append("final_loss: ", F32.show(loss_of(tr2))))

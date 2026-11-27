@@ -2996,3 +2996,23 @@ was posted.
   local dataset fixed it. `make lint` fetched an incompatible newer bend-lint;
   the pinned 0.2.2 CLI reports 0 findings and 36 suppressed fact-dependent
   checks. All of this is in `.local/issues-hit.md`; `.local/` stays local.
+
+## 2026-11-27 — full-width DiT output contract and head initialization
+
+The third registered default `make validate` attempt passed `env-check` and
+`check-fast`, then exposed a real `test_dit_full.py` failure: the program no
+longer printed `data_len` or `data_sum8`, although the gate asserts both. The
+full stage then reached the final tests before the 5 GB cgroup was OOM-killed;
+systemd records a 5G memory peak and `UNIT_RESULT=oom-kill`. No full green
+baseline is claimed.
+
+Restoring the diagnostics required marking the loaded list `+data`, because
+the checksum and training loop both read it. The gate then reached its unchanged
+loss-scale assertion and printed first loss 11.8269005. The cause was the head
+LayerNorm added in `cb3e976`: its scale and shift used the deterministic test
+matrix rather than the standard 1/0 initialization. With scale 1 and shift 0,
+the registered command
+`BEND_MEM=5G TMPDIR=/tmp/opencode scripts/bend-guard.sh make session TASK=dit-full-final CMD="make check-dit-full"`
+prints checksum 2.1875, first loss 5.020 and final loss 1.5133939: PASS
+(run 259, `results/dit-full-final/runs/20261127-112524-20524.log`).
+`make check-fast` remains 33/33. No tolerance or timeout was changed.

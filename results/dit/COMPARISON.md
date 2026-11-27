@@ -48,13 +48,14 @@ a wiring proof, not a quality result. No sampler.
 
 **Full width** (`make check-dit-full`): `full_block.bend` + `full_main.bend`
 scale the DiT to the ViT's configuration — 64 images x 16 patches = 1024
-tokens, width 64, 4 heads of 16, 0.1-scaled init. The binary builds under the
-2.5 GB guard (the earlier build failures were the HTTP/dataset imports, not the
-block). Six steps on the pinned CSV: first loss 1.059 (the unscaled tiny init
-gave 2e8), final 1.051. Gate verifies data integrity and loss scale; it does
-**not** gate a legibility number — sampling and the held-out metric are not
-built. Free RAM is ~2 GB (an unrelated meshgpt process holds 1.36 GB), so the
-heavy sampler stack cannot be imported yet.
+tokens, width 64, 4 heads of 16, 0.1-scaled linear init. The head LayerNorm
+starts at scale 1 and shift 0; the earlier deterministic matrix initialization
+amplified the first loss to 11.8269005 and failed the unchanged `<10` gate.
+The registered command
+`BEND_MEM=5G TMPDIR=/tmp/opencode scripts/bend-guard.sh make session TASK=dit-full-final CMD="make check-dit-full"`
+prints pinned-CSV checksum 2.1875, first loss 5.020 and final loss 1.5133939
+after six steps: PASS (run 259). The gate verifies data integrity and loss
+scale; it does **not** gate a legibility number.
 
 **Fixed-input training** (`make check-dit-denoiser`, 6 AdamW steps, lr 3e-3, 496 params):
 the first real loss is 1286.68 — identical to the torch twin — and the
