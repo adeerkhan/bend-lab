@@ -30,7 +30,7 @@ if os.path.isdir(LLVM_LIB) and LLVM_LIB not in ENV_BUILD.get("LD_LIBRARY_PATH", 
         filter(None, [LLVM_LIB, ENV_BUILD.get("LD_LIBRARY_PATH")]))
 results = []
 FAST = "--fast" in sys.argv   # the cheap gate: the proofs and the frozen references only
-PYRF = os.path.join(ROOT, "reference/.venv-rf/bin/python")
+PYRF = os.environ.get("PYRF") or os.path.join(ROOT, "reference/.venv-rf/bin/python")
 CUDA_ONLY = {
     "test_mamba3_bf16_curve.py",
     "test_mamba3_cases.py",

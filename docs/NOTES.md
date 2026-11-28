@@ -1,5 +1,22 @@
 # Notes
 
+## 2026-11-28 — MNIST fixture completes the clean-runner full check
+
+- The MambaViT training gate imports `torchvision` and reads
+  `/tmp/opencode/mnist`. Neither was provisioned on a clean runner, so the
+  local CPU full check stopped at `test_mamba_vit_train.py` with
+  `ModuleNotFoundError: No module named 'torchvision'`.
+- `reference/requirements.txt` now pins `torchvision==0.29.2`, and
+  `reference/materialize_mnist.py` downloads the four canonical MNIST gz files
+  to that cache with pinned SHA-256 values. It removes any stale extraction so
+  torchvision re-extracts the verified archive. `scripts/setup.sh` calls it.
+- After the fix, `test_mamba_vit_train.py` passes on CPU in 772.8 s (run 366;
+  gate 1800 s): loss curve worst 9.468e-08, train hits 13/96 both sides, test
+  hits 11/64 both sides, final weights worst 2.476e-05. The local CPU full
+  check before the fix was **184/185 passed, 5 unavailable**, with this gate as
+  the only error; the gate now passes on its own and is included in the next
+  full run.
+
 ## 2026-11-28 — Mamba-3 pure constructor makes the CPU runner self-contained
 
 - `mamba3_twin.Mamba3` is now lazy: it imports the fused module only when a
@@ -56,13 +73,13 @@
   (26/128), looped 10.2% (13/128). The earlier eight-puzzle smoke (25.0% and
   12.5%) was noise. The full per-hop table and commands are in
   `results/looped-transformer/REPORT.md`.
-- The Bend v0 is not the burn-lab architecture. It lacks the learned
-  `keep`/`let_in` gate, the four-token depthwise K/V convolution and per-head
-  Q/K RMSNorm; it initializes every parameter, including norm gains, uniformly
-  in `[-0.5, 0.5)`; and it is `d=32`, batch 8, FF=64 against burn-lab's `d=64`,
-  batch 16, FF=192. The grouped `Conv1d` is merged upstream in BendTorch PR
-  #45 but is not in the released `bendtorch@2.1.0.0`. The result is therefore
-  an undertrained Bend smoke, not a loop-transformer verdict.
+- The first 128-puzzle lane was not the burn-lab architecture. It lacked the
+  learned `keep`/`let_in` gate, the four-token depthwise K/V convolution and
+  per-head Q/K RMSNorm; it initialized every parameter, including norm gains,
+  uniformly in `[-0.5, 0.5)`; and it was `d=32`, batch 8, FF=64 against
+  burn-lab's `d=64`, batch 16, FF=192. The grouped `Conv1d` is merged upstream
+  in BendTorch PR #45 but is not in the released `bendtorch@2.1.0.0`. The result
+  was an undertrained Bend smoke, not a loop-transformer verdict.
 
 ## 2026-11-28 — clean-runner fixtures and self-contained DiT policy (tooling)
 

@@ -95,6 +95,7 @@ if [ ! -e reference/.venv-rf ]; then
   echo "linked reference/.venv-rf -> .venv"
 fi
 reference/.venv/bin/python reference/materialize_datasets.py
+reference/.venv/bin/python reference/materialize_mnist.py
 
 GLM_DATA=examples/language/glm53_flash/data
 if [ ! -f "$GLM_DATA/corpus128-b32/corpus128.json" ] || \
