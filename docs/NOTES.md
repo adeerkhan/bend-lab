@@ -1,5 +1,27 @@
 # Notes
 
+## 2026-11-28 — looped transformer: 128 puzzles per hop, and an undertrained v0
+
+- `eval-all.bin` is now one hop-major file: 12 hops × 16 steps × 8 puzzles,
+  or 128 puzzles per hop. `train_eval_all` trains once and evaluates all 192
+  steps in the same process; `summarize_eval.py` aggregates each block of 16
+  accuracy lines. The generator now fails after 100,000 infeasible splits
+  instead of spinning forever when `--max-hops` is too small.
+- Build run 338: 118.8 s. Plain run 340: 2,000 steps, 108.6 s, final loss
+  2.0886405, seen 16.5%, unseen 18.6%. Looped four-pass run 341: 258.6 s,
+  final loss 2.2999907, seen 10.3%, unseen 10.7%.
+- Both arms are below the 25% four-digit chance line at hop 1: plain 20.3%
+  (26/128), looped 10.2% (13/128). The earlier eight-puzzle smoke (25.0% and
+  12.5%) was noise. The full per-hop table and commands are in
+  `results/looped-transformer/REPORT.md`.
+- The Bend v0 is not the burn-lab architecture. It lacks the learned
+  `keep`/`let_in` gate, the four-token depthwise K/V convolution and per-head
+  Q/K RMSNorm; it initializes every parameter, including norm gains, uniformly
+  in `[-0.5, 0.5)`; and it is `d=32`, batch 8, FF=64 against burn-lab's `d=64`,
+  batch 16, FF=192. The grouped `Conv1d` is merged upstream in BendTorch PR
+  #45 but is not in the released `bendtorch@2.1.0.0`. The result is therefore
+  an undertrained Bend smoke, not a loop-transformer verdict.
+
 ## 2026-11-28 — clean-runner fixtures and self-contained DiT policy (tooling)
 
 - `scripts/setup.sh` now provisions the inputs that the full check previously

@@ -39,6 +39,18 @@ def B() -> Nat:
 def R() -> Nat:
   Nat.mul(B(), SL())
 
+def EH() -> Nat:
+  12n
+
+def EP() -> Nat:
+  128n
+
+def EC() -> Nat:
+  Nat.div(EP(), B())
+
+def ES() -> Nat:
+  Nat.mul(EH(), EC())
+
 def EPS() -> F32:
   0.00001
 
@@ -646,10 +658,73 @@ def train_eval(+k: Nat, +passes: Nat, +train_path: String, +eval_path: String) -
     tr : T.Train<ModelP()> <- train_run(k, passes, train_path)
     eval_tr(tr, passes, eval_path)
 
+# ---- evaluation at scale: every hop's whole sample in one file, one step at a time ----
+
+def dump_bind(-Z: Type, r: T.PL<ModelP()>, k: List<&2, F32> -> Z) -> Z:
+  match r:
+    case T.PL{_, xs}:
+      k(xs)
+
+def params_list(p: ModelP()) -> List<&2, F32>:
+  dump_bind(List<&2, F32>,
+    T.Layer.dump(ModelP(), X(), Y(), ModelS(), Model(1n), p), x => x)
+
+def list_array_go(left: Nat, +i: U32, +xs: List<&2, F32>, arr: Array<F32>) -> Array<F32>:
+  match left:
+    case 0n:
+      arr
+    case 1n+q:
+      match xs:
+        case Nil{}:
+          arr
+        case Con{v, rest}:
+          list_array_go(q, (i + 1 : U32), rest, Array.set(F32, arr, i, v))
+
+def list_to_array(+xs: List<&2, F32>) -> Array<F32>:
+  arr = Array.new(F32, TA.cap_depth(List.length(&2, F32, xs)), 0.0)
+  list_array_go(List.length(&2, F32, xs), 0, xs, arr)
+
+def params_of_array(xs: Array<F32>) -> ModelP():
+  load_bind(T.Layer.load(ModelP(), X(), Y(), ModelS(), Model(1n),
+    T.Layer.zeros(ModelP(), X(), Y(), ModelS(), Model(1n)), xs, 0))
+
+def eval_steps(k: Nat, +step: U32, +xs: List<&2, F32>, +passes: Nat,
+  +path: String) -> IO(Unit):
+  match k:
+    case 0n:
+      IO.pure(Unit, Unit{})
+    case 1n+q:
+      do IO<Unit>:
+        +ids : List<&2, Nat> <- load_batch(path, step)
+        p : ModelP() <- IO.pure(ModelP(), params_of_array(list_to_array(xs)))
+        done : Unit <- eval_fwd(ys_of(ids),
+          T.Layer.fwd(ModelP(), X(), Y(), ModelS(), Model(passes), p, xs_of(ids)))
+        eval_steps(q, (step + 1 : U32), xs, passes, path)
+
+def eval_all_with(p: ModelP(), +passes: Nat, +path: String) -> IO(Unit):
+  xs = params_list(p)
+  eval_steps(ES(), 0, xs, passes, path)
+
+def eval_all_m(+passes: Nat, +path: String) -> IO(Unit):
+  do IO<Unit>:
+    p : ModelP() <- IO.pure(ModelP(), init_params())
+    eval_all_with(p, passes, path)
+
+def eval_all_tr(tr: T.Train<ModelP()>, +passes: Nat, +path: String) -> IO(Unit):
+  match tr:
+    case T.Train{p, g, st, oc, p1, p2, l}:
+      eval_all_with(p, passes, path)
+
+def train_eval_all(+k: Nat, +passes: Nat, +train_path: String,
+  +eval_path: String) -> IO(Unit):
+  do IO<Unit>:
+    tr : T.Train<ModelP()> <- train_run(k, passes, train_path)
+    eval_all_tr(tr, passes, eval_path)
+
 # ---- the command line ----
 
 def usage() -> IO(Unit):
-  IO.print("usage: looped train <steps> <passes> <batch-file> | eval <passes> <batch-file>")
+  IO.print("usage: looped train <steps> <passes> <batch-file> | eval <passes> <batch-file> | eval_all <passes> <eval-all-file> | train_eval_all <steps> <passes> <train-file> <eval-all-file>")
 
 def train_m(pk: Maybe<&2, Nat>, pp: Maybe<&2, Nat>, +path: String) -> IO(Unit):
   match pk pp:
@@ -662,6 +737,13 @@ def eval_m(pp: Maybe<&2, Nat>, +path: String) -> IO(Unit):
   match pp:
     case Some{p}:
       eval_batch(p, path)
+    case None{}:
+      usage()
+
+def eval_all_maybe(pp: Maybe<&2, Nat>, +path: String) -> IO(Unit):
+  match pp:
+    case Some{p}:
+      eval_all_m(p, path)
     case None{}:
       usage()
 
@@ -679,11 +761,36 @@ def dispatch_eval(ok: Bool, passes: String, +path: String) -> IO(Unit):
     case False{}:
       usage()
 
+def dispatch_eval_all_ok(ok: Bool, passes: String, +path: String) -> IO(Unit):
+  match ok:
+    case True{}:
+      eval_all_maybe(Nat.read(passes), path)
+    case False{}:
+      usage()
+
+def dispatch_eval_ok(ok: Bool, +mode: String, passes: String, +path: String) -> IO(Unit):
+  match ok:
+    case True{}:
+      dispatch_eval(True{}, passes, path)
+    case False{}:
+      dispatch_eval_all_ok(String.eq(mode, "eval_all"), passes, path)
+
+def dispatch_five(+mode: String, passes: String, +path: String) -> IO(Unit):
+  dispatch_eval_ok(String.eq(mode, "eval"), mode, passes, path)
+
 def train_eval_m(pk: Maybe<&2, Nat>, pp: Maybe<&2, Nat>, +train_path: String,
   +eval_path: String) -> IO(Unit):
   match pk pp:
     case Some{k} Some{p}:
       train_eval(k, p, train_path, eval_path)
+    case _ _:
+      usage()
+
+def train_eval_all_m(pk: Maybe<&2, Nat>, pp: Maybe<&2, Nat>, +train_path: String,
+  +eval_path: String) -> IO(Unit):
+  match pk pp:
+    case Some{k} Some{p}:
+      train_eval_all(k, p, train_path, eval_path)
     case _ _:
       usage()
 
@@ -695,14 +802,36 @@ def dispatch_train_eval(ok: Bool, k: String, passes: String, +train_path: String
     case False{}:
       usage()
 
+def dispatch_train_eval_all_ok(ok: Bool, k: String, passes: String,
+  +train_path: String, +eval_path: String) -> IO(Unit):
+  match ok:
+    case True{}:
+      train_eval_all_m(Nat.read(k), Nat.read(passes), train_path, eval_path)
+    case False{}:
+      usage()
+
+def dispatch_train_eval_ok(ok: Bool, +mode: String, k: String, passes: String,
+  +train_path: String, +eval_path: String) -> IO(Unit):
+  match ok:
+    case True{}:
+      dispatch_train_eval(True{}, k, passes, train_path, eval_path)
+    case False{}:
+      dispatch_train_eval_all_ok(String.eq(mode, "train_eval_all"), k, passes,
+        train_path, eval_path)
+
+def dispatch_seven(+mode: String, k: String, passes: String, +train_path: String,
+  +eval_path: String) -> IO(Unit):
+  dispatch_train_eval_ok(String.eq(mode, "train_eval"), mode, k, passes,
+    train_path, eval_path)
+
 def dispatch(args: List<String>) -> IO(Unit):
   match args:
     case Con{prog, Con{mode, Con{k, Con{passes, Con{train_path, Con{eval_path, Nil{}}}}}}}:
-      dispatch_train_eval(String.eq(mode, "train_eval"), k, passes, train_path, eval_path)
+      dispatch_seven(mode, k, passes, train_path, eval_path)
     case Con{prog, Con{mode, Con{k, Con{passes, Con{path, Nil{}}}}}}:
       dispatch_train(String.eq(mode, "train"), k, passes, path)
     case Con{prog, Con{mode, Con{passes, Con{path, Nil{}}}}}:
-      dispatch_eval(String.eq(mode, "eval"), passes, path)
+      dispatch_five(mode, passes, path)
     case _:
       usage()
 

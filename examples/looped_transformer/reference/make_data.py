@@ -62,7 +62,13 @@ def split(rng: Rng, n: int, k: int) -> list[int]:
 
 def make_puzzle(rng: Rng, max_hops: int, first: int | None = None):
     notes, chains = N_NOTES, N_CHAINS
+    attempts = 0
     while True:
+        attempts += 1
+        if attempts > 100_000:
+            raise RuntimeError(
+                f"no split of {notes} notes into {chains} chains fits max_hops={max_hops}; "
+                f"the smallest possible longest chain is {-(-notes // chains)}")
         if first is None:
             lens = split(rng, notes, chains)
             check = lens
@@ -131,15 +137,39 @@ def write_eval(path: str, hop: int, count: int, seed: int, max_hops: int) -> Non
     print(f"wrote {path}: {count} sequences at hop {hop}")
 
 
+def write_eval_all(path: str, hops: int, steps_per_hop: int, batch: int, seed: int,
+                   max_hops: int) -> None:
+    """Every hop's evaluation in one file, `steps_per_hop` steps of `batch` sequences.
+
+    The binary reads one step at a time, because its batch is compiled in. Hop
+    `h` is the block of steps `(h - 1) * steps_per_hop .. h * steps_per_hop - 1`.
+    """
+    rng = Rng(seed)
+    with open(path, "wb") as f:
+        for hop in range(1, hops + 1):
+            for _ in range(steps_per_hop):
+                write_step(f, [sequence(rng, max_hops=max_hops, first=hop)
+                               for _ in range(batch)])
+    print(f"wrote {path}: {hops} hops x {steps_per_hop} steps x {batch} sequences")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="data")
     ap.add_argument("--steps", type=int, default=500)
     ap.add_argument("--batch", type=int, default=16)
     ap.add_argument("--eval-count", type=int, default=8)
+    ap.add_argument("--eval-all-count", type=int, default=128,
+                    help="puzzles per hop in eval-all.bin")
+    ap.add_argument("--eval-all-batch", type=int, default=8,
+                    help="sequences per step (the binary's compiled batch)")
+    ap.add_argument("--eval-hops", type=int, default=12)
     ap.add_argument("--max-hops", type=int, default=8)
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()
+
+    if args.eval_all_count % args.eval_all_batch:
+        raise SystemExit("--eval-all-count must be a multiple of --eval-all-batch")
 
     os.makedirs(args.out, exist_ok=True)
     write_train(os.path.join(args.out, "train.bin"), args.steps, args.batch,
@@ -147,6 +177,9 @@ def main() -> None:
     for hop in range(1, 13):
         write_eval(os.path.join(args.out, f"eval-hop-{hop}.bin"), hop,
                    args.eval_count, args.seed + hop, args.max_hops)
+    write_eval_all(os.path.join(args.out, "eval-all.bin"), args.eval_hops,
+                   args.eval_all_count // args.eval_all_batch, args.eval_all_batch,
+                   args.seed + 1000, args.max_hops)
 
 
 if __name__ == "__main__":
