@@ -109,6 +109,7 @@ if [ ! -f "$GLM_DATA/corpus128-b32/corpus128.json" ] || \
 else
   echo "glm53 corpus128-b32 already present"
 fi
+reference/.venv/bin/python reference/glm53_h_data.py --prepare
 
 if [ ! -f .scratch/mamba3_tiny/w_init/manifest.json ]; then
   reference/.venv/bin/python reference/mamba3_tiny_data.py
