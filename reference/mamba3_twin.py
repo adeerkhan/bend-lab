@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import sys
 
@@ -32,11 +33,122 @@ os.environ.setdefault("TRITON_F32_DEFAULT", "ieee")
 
 import numpy as np
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(ROOT, "reference/mamba3"))
-from mamba_ssm.modules.mamba3 import Mamba3  # noqa: E402
+
+
+class _RMSNorm(nn.Module):
+    """The parameter/epsilon contract of the vendored gated RMSNorm."""
+
+    def __init__(self, hidden_size, eps=1e-5, group_size=None,
+                 norm_before_gate=True, device=None, dtype=None):
+        super().__init__()
+        self.eps = eps
+        self.weight = nn.Parameter(torch.empty(hidden_size, device=device, dtype=dtype))
+        self.register_parameter("bias", None)
+        self.group_size = group_size
+        self.norm_before_gate = norm_before_gate
+        nn.init.ones_(self.weight)
+
+    def forward(self, x, z=None):
+        if self.group_size is None:
+            y = x * torch.rsqrt(x.float().pow(2).mean(-1, keepdim=True) + self.eps)
+        else:
+            shape = x.shape
+            grouped = x.reshape(*shape[:-1], shape[-1] // self.group_size, self.group_size)
+            y = grouped * torch.rsqrt(grouped.float().pow(2).mean(-1, keepdim=True) + self.eps)
+            y = y.reshape(shape)
+        y = y * self.weight
+        return y if z is None or not self.norm_before_gate else y * F.silu(z)
+
+
+class PureMamba3(nn.Module):
+    """The Mamba-3 parameter layout, without importing fused Triton ops.
+
+    This mirrors the vendored constructor's random-draw order and tensor
+    shapes for the SISO, GQA and outproj-norm configurations. The recurrences
+    live in the twin modules, not this module's forward path.
+    """
+
+    def __init__(self, d_model, d_state=128, expand=2, headdim=64, ngroups=1,
+                 rope_fraction=0.5, dt_min=0.001, dt_max=0.1,
+                 dt_init_floor=1e-4, A_floor=1e-4, is_outproj_norm=False,
+                 is_mimo=False, mimo_rank=4, fuse_pregate_headwise_norm=True,
+                 chunk_size=64, dropout=0.0, layer_idx=None, n_layer=None,
+                 device=None, dtype=None, **kwargs):
+        super().__init__()
+        if is_mimo:
+            raise ValueError("the pure twin does not implement MIMO kernels")
+        if rope_fraction not in (0.5, 1.0):
+            raise ValueError("rope_fraction must be 0.5 or 1.0")
+        factory_kwargs = {"device": device, "dtype": dtype}
+        self.d_model = d_model
+        self.d_state = d_state
+        self.expand = expand
+        self.headdim = headdim
+        self.chunk_size = chunk_size
+        self.layer_idx = layer_idx
+        self.A_floor = A_floor
+        self.is_outproj_norm = is_outproj_norm
+        self.is_mimo = is_mimo
+        self.mimo_rank = 1
+        self.fuse_pregate_headwise_norm = False
+        self.d_inner = int(expand * d_model)
+        if self.d_inner % headdim:
+            raise ValueError("d_inner must be divisible by headdim")
+        self.nheads = self.d_inner // headdim
+        self.num_bc_heads = ngroups
+        self.rotary_dim_divisor = int(2 / rope_fraction)
+        self.split_tensor_size = int(d_state * rope_fraction)
+        if self.split_tensor_size % 2:
+            self.split_tensor_size -= 1
+        self.num_rope_angles = self.split_tensor_size // 2
+        if self.num_rope_angles <= 0:
+            raise ValueError("d_state and rope_fraction leave no RoPE pairs")
+
+        d_in_proj = (2 * self.d_inner + 2 * d_state * ngroups * self.mimo_rank
+                     + 3 * self.nheads + self.num_rope_angles)
+        self.in_proj = nn.Linear(d_model, d_in_proj, bias=False, **factory_kwargs)
+        _dt = torch.exp(torch.rand(self.nheads, device=device, dtype=torch.float32)
+                        * (math.log(dt_max) - math.log(dt_min)) + math.log(dt_min))
+        _dt = torch.clamp(_dt, min=dt_init_floor)
+        self.dt_bias = nn.Parameter(_dt + torch.log(-torch.expm1(-_dt)))
+        self.dt_bias._no_weight_decay = True
+        self.B_bias = nn.Parameter(1 + torch.zeros(
+            (self.nheads, self.mimo_rank, d_state), dtype=torch.float32, device=device))
+        self.C_bias = nn.Parameter(1 + torch.zeros(
+            (self.nheads, self.mimo_rank, d_state), dtype=torch.float32, device=device))
+        self.B_norm = _RMSNorm(d_state, eps=1e-5, **factory_kwargs)
+        self.C_norm = _RMSNorm(d_state, eps=1e-5, **factory_kwargs)
+        self.D = nn.Parameter(torch.ones(self.nheads, device=device))
+        self.D._no_weight_decay = True
+        if is_outproj_norm:
+            self.norm = _RMSNorm(self.d_inner, eps=1e-5, group_size=headdim,
+                                 norm_before_gate=True, **factory_kwargs)
+        self.out_proj = nn.Linear(self.d_inner, d_model, bias=False, **factory_kwargs)
+
+
+class _Mamba3Proxy:
+    """Import the fused module only when a caller actually constructs it.
+
+    The pure recurrence and the tiny-LM dump need no Triton. On a CPU-only
+    reference environment the proxy falls back to the parameter-identical
+    pure constructor; the kernel lanes still use the vendored fused module
+    whenever it imports.
+    """
+
+    def __new__(cls, *args, **kwargs):
+        sys.path.insert(0, os.path.join(ROOT, "reference/mamba3"))
+        try:
+            from mamba_ssm.modules.mamba3 import Mamba3 as FusedMamba3  # noqa: E402
+        except ImportError:
+            return PureMamba3(*args, **kwargs)
+        return FusedMamba3(*args, **kwargs)
+
+
+Mamba3 = _Mamba3Proxy
 
 D_MODEL, D_STATE, EXPAND, HEADDIM, NGROUPS = 64, 16, 2, 32, 1
 N, T = 8, 8

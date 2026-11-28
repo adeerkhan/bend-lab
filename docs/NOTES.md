@@ -1,5 +1,29 @@
 # Notes
 
+## 2026-11-28 — Mamba-3 pure constructor makes the CPU runner self-contained
+
+- `mamba3_twin.Mamba3` is now lazy: it imports the fused module only when a
+  caller constructs it, and falls back to `PureMamba3` when Triton/einops are
+  unavailable. `PureMamba3` mirrors the vendored constructor's random-draw
+  order and parameter shapes for SISO, GQA and outproj-norm. The GQA and
+  outnorm twins use the same proxy, so their pure recurrences no longer import
+  the fused stack at module load.
+- CPU `torch 2.15.0+cpu` and the CUDA reference `torch 2.11.0+cu128` produce
+  identical state-dict SHA-256 values for all three configurations at seed 71:
+  SISO `84b2dc9f...`, GQA `29698ffe...`, outnorm `96375cce...`. The CPU-generated
+  tiny-LM `w_init/manifest.json` is byte-for-byte equal to the CUDA-generated
+  one (19 tensors, 71,952 parameters).
+- CPU-only runs pass: `test_mamba3_fd.py` (run 357, 2.2 s),
+  `test_mamba3_step_gqa.py` (run 360, 38.1 s),
+  `test_mamba3_step_on.py` (run 361, 33.1 s), and
+  `test_mamba3_step_varlen.py` (run 362, 30.5 s), each with
+  `PYRF=reference/.venv/bin/python`.
+- The CPU runner now marks five gates unavailable instead of three:
+  `test_mamba3_bf16_curve.py`, `test_mamba3_cases.py`,
+  `test_mamba3_clamps.py`, `test_mamba3_lanes.py`, and
+  `test_mamba3_wrap.py`. Each invokes a CUDA path. They still run when CUDA is
+  present; no check is silently skipped.
+
 ## 2026-11-28 — looped transformer: RMSNorm gains start at one (measurement)
 
 - `RMSNormOne` keeps the published RMSNorm forward, backward and parameter
@@ -55,10 +79,11 @@
 - The reference environment installs pinned CPU `torch==2.15.0` and
   `numba==0.68.1`. MambaViT's dump uses a deterministic sine image instead of
   downloading MNIST; its forward and backward gates still pass.
-- On a CPU-only reference environment, `test_mamba3_cases.py`,
-  `test_mamba3_clamps.py` and `test_mamba3_lanes.py` print
-  `unavailable: needs CUDA/Triton` and are counted separately. They still run
-  when CUDA is present. No tolerance or timeout was changed.
+- On a CPU-only reference environment, `test_mamba3_bf16_curve.py`,
+  `test_mamba3_cases.py`, `test_mamba3_clamps.py`, `test_mamba3_lanes.py` and
+  `test_mamba3_wrap.py` print `unavailable: needs CUDA/Triton` and are counted
+  separately. They still run when CUDA is present. No tolerance or timeout was
+  changed.
 
 Measured with `scripts/setup.sh` (exit 0), `make session TASK=dit-ref-local-oracle
 CMD="reference/.venv/bin/python reference/test_dit_ref.py"` (run 326, exit 0,

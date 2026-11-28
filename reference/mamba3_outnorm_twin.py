@@ -21,8 +21,8 @@ import torch
 import torch.nn.functional as F
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(ROOT, "reference/mamba3"))
-from mamba_ssm.modules.mamba3 import Mamba3  # noqa: E402
+sys.path.insert(0, os.path.join(ROOT, "reference"))
+from mamba3_twin import Mamba3  # noqa: E402
 
 D_MODEL, D_STATE, EXPAND, HEADDIM = 64, 16, 2, 32
 NGROUPS, ROPE_FRACTION = 1, 0.5

@@ -32,9 +32,11 @@ results = []
 FAST = "--fast" in sys.argv   # the cheap gate: the proofs and the frozen references only
 PYRF = os.path.join(ROOT, "reference/.venv-rf/bin/python")
 CUDA_ONLY = {
+    "test_mamba3_bf16_curve.py",
     "test_mamba3_cases.py",
     "test_mamba3_clamps.py",
     "test_mamba3_lanes.py",
+    "test_mamba3_wrap.py",
 }
 
 

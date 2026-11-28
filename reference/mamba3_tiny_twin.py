@@ -66,8 +66,8 @@ def sha256(path):
 
 def make_module(seed):
     torch.manual_seed(seed)
-    return W.Mamba3(d_model=DM, d_state=16, expand=2, headdim=32,
-                    ngroups=1, is_mimo=False).float()
+    return W.PureMamba3(d_model=DM, d_state=16, expand=2, headdim=32,
+                        ngroups=1, is_mimo=False).float()
 
 
 def init_extra():
