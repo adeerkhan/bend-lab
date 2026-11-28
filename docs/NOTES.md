@@ -65,7 +65,8 @@
   or 128 puzzles per hop. `train_eval_all` trains once and evaluates all 192
   steps in the same process; `summarize_eval.py` aggregates each block of 16
   accuracy lines. The generator now fails after 100,000 infeasible splits
-  instead of spinning forever when `--max-hops` is too small.
+  instead of spinning forever when `--max-hops` is too small, and rejects a
+  training/evaluation batch other than the binary's compiled batch of eight.
 - Build run 338: 118.8 s. Plain run 340: 2,000 steps, 108.6 s, final loss
   2.0886405, seen 16.5%, unseen 18.6%. Looped four-pass run 341: 258.6 s,
   final loss 2.2999907, seen 10.3%, unseen 10.7%.

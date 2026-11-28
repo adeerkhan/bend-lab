@@ -10,7 +10,7 @@ A training sequence is
 so the model learns the answer as the next token after `?`; the last target of
 the shifted sequence is the answer. Evaluation files force a chain length.
 
-  python3 reference/make_data.py --out data --steps 500 --batch 16
+  python3 reference/make_data.py --out data --steps 500 --batch 8
 """
 from __future__ import annotations
 
@@ -19,6 +19,7 @@ import os
 
 N_NOTES = 16
 N_CHAINS = 4
+COMPILED_BATCH = 8
 LETTERS = "abcdefghijklmnopqrstuvwxyz"
 DIGITS = "0123456789"
 NOTES_LEN = 4 * N_NOTES
@@ -157,17 +158,23 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="data")
     ap.add_argument("--steps", type=int, default=500)
-    ap.add_argument("--batch", type=int, default=16)
-    ap.add_argument("--eval-count", type=int, default=8)
+    ap.add_argument("--batch", type=int, default=COMPILED_BATCH)
+    ap.add_argument("--eval-count", type=int, default=COMPILED_BATCH)
     ap.add_argument("--eval-all-count", type=int, default=128,
                     help="puzzles per hop in eval-all.bin")
-    ap.add_argument("--eval-all-batch", type=int, default=8,
+    ap.add_argument("--eval-all-batch", type=int, default=COMPILED_BATCH,
                     help="sequences per step (the binary's compiled batch)")
     ap.add_argument("--eval-hops", type=int, default=12)
     ap.add_argument("--max-hops", type=int, default=8)
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()
 
+    if args.batch != COMPILED_BATCH:
+        raise SystemExit(f"--batch must be {COMPILED_BATCH}: the Bend binary's batch is compiled in")
+    if args.eval_count != COMPILED_BATCH:
+        raise SystemExit(f"--eval-count must be {COMPILED_BATCH}: each smoke file is one binary step")
+    if args.eval_all_batch != COMPILED_BATCH:
+        raise SystemExit(f"--eval-all-batch must be {COMPILED_BATCH}: the Bend binary's batch is compiled in")
     if args.eval_all_count % args.eval_all_batch:
         raise SystemExit("--eval-all-count must be a multiple of --eval-all-batch")
 
