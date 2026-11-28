@@ -1,5 +1,21 @@
 # Notes
 
+## 2026-11-28 — clean CI green on the hosted CPU runner
+
+- Hosted workflow `46143520699` (`4d3ca67`) is **success**. The main
+  `make validate` job ran 12:12:45–13:22:22 UTC (69m37s); the
+  `reference-long` job ran `make check-long` 12:12:44–13:09:24 (56m40s).
+  Both are under the unchanged 90-minute limit.
+- Setup now provisions the six pinned datasets, MNIST, both GLM53 corpus
+  windows, the GLM hybrid `data/h` weights, the Mamba-3 tiny dump and the
+  MambaViT dump. The five CUDA/Triton gates print `unavailable` and are
+  counted separately. The three long references run in `reference-long`.
+- The previous main-job run was 177/182 with five errors; the fixes are the
+  GLM `data/h` preparation and the lane-robust DiT gap gate. Each now passes
+  standalone: canary 4/4, h_bwd 33/33, h_bwd128 34/34, iso2 3/3, DiT ref PASS.
+  The main job exits 0, so every available gate in its lane passes.
+- No gate, tolerance or timeout was loosened.
+
 ## 2026-11-28 — clean-runner GLM weights and a lane-robust DiT gap gate
 
 - Hosted run `46137018192` (`6279c2b`) split the jobs and kept both under the

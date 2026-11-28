@@ -34,23 +34,18 @@ smoke claim.
 
 ### Clean CI state
 
-Hosted run `46137018192` (`6279c2b`) proved the split: `make check-long`
-passed in 60m42s, and the main job finished in 66m with **177/182** checks.
-Five errors remained, all clean-runner or lane issues:
+Hosted workflow `46143520699` (`4d3ca67`) is **success**. The main
+`make validate` job ran 69m37s and the `reference-long` `make check-long` job
+ran 56m40s, both under the unchanged 90-minute limit. Setup provisions every
+fixture; the five CUDA/Triton gates are reported `unavailable` on the CPU
+runner; the three long references run in the second job. The previous main-job
+run was 177/182; the five errors were the missing GLM `data/h` weights and the
+DiT gap gate frozen to a local 5.454x. Setup now prepares `data/h`, and the
+DiT gate requires the gap to stay above 1.0x and prints its measured value
+(5.454x local, 2.038x hosted CPU). Each fixed gate passes standalone.
 
-- four GLM tests (`test_glm53_canary.py`, `test_glm53_h_bwd.py`,
-  `test_glm53_h_bwd128.py`, `test_glm53_iso2.py`) need
-  `examples/language/glm53_flash/data/h`; setup now runs
-  `reference/glm53_h_data.py --prepare`, whose tree is byte-identical to the
-  local one;
-- `test_dit_ref.py` froze the full-block gradient gap at 5.454x, but the hosted
-  CPU lane measures 2.038x. The gate now requires the gap to stay above 1.0x
-  and prints the measured value; the oracle tolerance is unchanged.
-
-No gate or timeout was loosened. The three long references still run in the
-separate `reference-long` job `make check-long`, and the main job runs
-`make check-ci` through `make validate CI_SPLIT=1`. Both jobs keep the same
-90-minute limit. The main job uploads its full-gate log on cancellation.
+No gate, tolerance or timeout was loosened. The main job uploads its full-gate
+log on failure or cancellation.
 
 ### Looped transformer: current measured lane
 
