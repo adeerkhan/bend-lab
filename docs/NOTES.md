@@ -1,5 +1,30 @@
 # Notes
 
+## 2026-11-28 — looped init and Q/K norm probes: no accuracy gain
+
+- **Per-layer fan-in through `Layer.zeros` is not available.** The first
+  attempt encoded `1/sqrt(fan_in)` in a custom linear layer's `zeros`. That
+  works for `init_params`, but `Train.new` and `OptState.new` also call
+  `Layer.zeros` for the gradient accumulator and the Adam moments. The
+  sentinels corrupted both, and every run printed `loss nan` at step 2. The
+  model files were reverted; this is a BendTorch API constraint, not a Bend
+  bug: `zeros` means “additive identity”, not “initializer”.
+- **A global fan-in scale helped the loss, not the accuracy.** Scaling every
+  zero-initialized weight by `2/sqrt(32)` gave the plain arm a final loss of
+  1.716 (run 382) and seen/unseen 23.1% / 24.2%, with hop 1 at 14.8%. The
+  norm-init baseline is 2.1634831 and 24.3% / 24.0%, hop 1 20.3%. The change
+  was reverted.
+- **Full-width Q/K RMSNorm did not help.** The reference normalizes each
+  head's slice; the Bend probe applied one 32-wide RMSNorm to Q and one to K
+  before RoPE. Plain reached 23.7% / 22.1% (run 387); looped reached 18.8% /
+  20.3% (run 388), against the baseline's 24.3% / 24.0% and 18.4% / 20.1%.
+  The code was reverted; a true per-head norm needs a reshape or a custom
+  head-width layer.
+- The short K/V convolution remains the likely blocker for one-hop lookup.
+  The released `bendtorch@2.1.0.0` still lacks the grouped `Conv1d` merged in
+  upstream PR #45, so the next attempt needs a local layer with a PyTorch
+  forward/backward parity gate.
+
 ## 2026-11-28 — clean CI green on the hosted CPU runner
 
 - Hosted workflow `46143520699` (`4d3ca67`) is **success**. The main

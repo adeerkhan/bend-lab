@@ -79,13 +79,14 @@ batch 8, FF=64 against burn-lab's `d=64`, batch 16, FF=192. The grouped
 
 ### Next, in order
 
-1. Read the final hosted `make validate` result and the local CPU full-check
-   log. Fix setup/gate failures without loosening a tolerance or timeout.
-2. If the CPU runner times out a long gate, reduce that gate's configuration
-   with a measured reason; do not hide it.
-3. For the looped arm, implement the K/V short convolution with a
-   forward/backward PyTorch parity gate before integrating it. A viable local
-   design is four causal row shifts plus per-channel scales; the released
-   BendTorch has no grouped `Conv1d`. Then add the learned gate, per-head Q/K
-   norm and fan-in initialization, and re-run the same 128-puzzle lane.
-4. Keep #40 draft until the owner approves the size-bounded statement.
+1. Implement the K/V short convolution with a forward/backward PyTorch parity
+   gate before integrating it. A viable local design is four causal row shifts
+   plus per-channel scales; the released BendTorch has no grouped `Conv1d`.
+   Two earlier probes did not help and were reverted: a global fan-in scale
+   (loss 1.716, seen 23.1%, unseen 24.2%) and a full-width Q/K RMSNorm (plain
+   23.7% / 22.1%, looped 18.8% / 20.3%). Per-layer fan-in through
+   `Layer.zeros` is not possible because `Train.new` and `OptState.new` use
+   `zeros` for the gradient accumulator and Adam moments.
+2. Add the learned `keep`/`let_in` gate and a true per-head Q/K norm after the
+   convolution, then re-run the same 128-puzzle lane.
+3. Keep #40 draft until the owner approves the size-bounded statement.
