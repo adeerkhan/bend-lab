@@ -34,18 +34,22 @@ smoke claim.
 
 ### Clean CI state
 
-Hosted CI run `46121464010` (`dd4d0f6`) completed setup successfully on the
-ubuntu-24.04 CPU runner and reached `make validate`. Its checkout predates the
-MNIST fixture, so its full gate is expected to stop at
-`test_mamba_vit_train.py` with a missing `torchvision`; that is the last known
-setup hole.
-
-A local full `make check` with `PYRF=reference/.venv/bin/python` finished at
-**184/185 passed, 5 unavailable**, with `test_mamba_vit_train.py` as the only
-error, from the missing `torchvision`. `reference/requirements.txt` now pins
+Hosted CI run `46127994381` (`60fd377`) completed setup successfully and ran
+the full gate until the workflow's 90-minute limit (cancelled at 10:30:33 UTC
+while `mv_train.bin` was running). A local full `make check` with
+`PYRF=reference/.venv/bin/python` finished at **184/185 passed, 5 unavailable**
+before the MNIST fixture; `test_mamba_vit_train.py` was the only error, from a
+missing `torchvision`. `reference/requirements.txt` now pins
 `torchvision==0.29.2`; `reference/materialize_mnist.py` provisions the four
-pinned MNIST archives; the gate then passes standalone in 772.8 s (run 366,
-gate 1800 s). The next full run is the confirmation.
+pinned MNIST archives; the gate passes standalone in 772.8 s (run 366, gate
+1800 s).
+
+The 90-minute job limit was not loosened. The three long references
+(`test_mamba3_tiny_lm_run.py`, `test_mamba3_tiny_opt.py`,
+`test_mamba_vit_train.py`) now run in a second `reference-long` job via
+`make check-long`; the main job runs `make check-ci` through
+`make validate CI_SPLIT=1`. Both jobs keep the same gates and the same
+90-minute limit. The main job also uploads its full-gate log on cancellation.
 
 ### Looped transformer: current measured lane
 

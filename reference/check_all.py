@@ -30,6 +30,10 @@ if os.path.isdir(LLVM_LIB) and LLVM_LIB not in ENV_BUILD.get("LD_LIBRARY_PATH", 
         filter(None, [LLVM_LIB, ENV_BUILD.get("LD_LIBRARY_PATH")]))
 results = []
 FAST = "--fast" in sys.argv   # the cheap gate: the proofs and the frozen references only
+ONLY_LONG = "--only-long" in sys.argv
+WITHOUT_LONG = "--without-long" in sys.argv
+if ONLY_LONG and WITHOUT_LONG:
+    raise SystemExit("check_all: --only-long and --without-long are exclusive")
 PYRF = os.environ.get("PYRF") or os.path.join(ROOT, "reference/.venv-rf/bin/python")
 CUDA_ONLY = {
     "test_mamba3_bf16_curve.py",
@@ -37,6 +41,13 @@ CUDA_ONLY = {
     "test_mamba3_clamps.py",
     "test_mamba3_lanes.py",
     "test_mamba3_wrap.py",
+}
+# The three gates that need most of the hosted runner's budget. CI runs them in
+# a separate job so neither job reaches the 90-minute workflow limit.
+LONG = {
+    "test_mamba3_tiny_lm_run.py",
+    "test_mamba3_tiny_opt.py",
+    "test_mamba_vit_train.py",
 }
 
 
@@ -153,6 +164,21 @@ def check_toolchain():
 
 def main():
     check_toolchain()
+    if ONLY_LONG:
+        cuda = cuda_here()
+        unavailable = 0
+        for name in sorted(LONG):
+            if name in CUDA_ONLY and not cuda:
+                print(f"unavailable reference/{name}: needs CUDA/Triton "
+                      f"(no CUDA in reference/.venv-rf)", flush=True)
+                unavailable += 1
+                continue
+            run(f"reference/{name}: the numbers match", [PY, os.path.join("reference", name)])
+        ok = sum(results)
+        suffix = f" ({unavailable} unavailable: CUDA/Triton)" if unavailable else ""
+        print(f"\n{ok}/{len(results)} checks passed{suffix}", flush=True)
+        sys.exit(0 if ok == len(results) else 1)
+
     packages = sorted(d for d in os.listdir(ROOT)
                       if os.path.isdir(os.path.join(ROOT, d)) and os.path.exists(os.path.join(ROOT, d, "main.bend")))
 
@@ -246,6 +272,7 @@ def main():
     # 5. the numbers, against NumPy and scikit-learn
     cuda = cuda_here()
     unavailable = 0
+    deferred = 0
     for name in sorted(os.listdir(os.path.join(ROOT, "reference"))):
         if not (name.startswith("test_") and name.endswith(".py")):
             continue
@@ -254,10 +281,15 @@ def main():
                   f"(no CUDA in reference/.venv-rf)", flush=True)
             unavailable += 1
             continue
+        if WITHOUT_LONG and name in LONG:
+            print(f"deferred reference/{name}: runs in the reference-long job", flush=True)
+            deferred += 1
+            continue
         run(f"reference/{name}: the numbers match", [PY, os.path.join("reference", name)])
 
     ok = sum(results)
     suffix = f" ({unavailable} unavailable: CUDA/Triton)" if unavailable else ""
+    suffix += f" ({deferred} deferred: reference-long)" if deferred else ""
     print(f"\n{ok}/{len(results)} checks passed{suffix}", flush=True)
     sys.exit(0 if ok == len(results) else 1)
 

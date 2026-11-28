@@ -21,6 +21,9 @@ cd "$(dirname "$0")/.." || exit 2
 
 QUICK="${QUICK:-0}"
 LONG="${LONG:-0}"
+CI_SPLIT="${CI_SPLIT:-0}"
+CHECK_TARGET=check
+[ "$CI_SPLIT" = "1" ] && CHECK_TARGET=check-ci
 for arg in "$@"; do
     case "$arg" in
         --quick) QUICK=1 ;;
@@ -63,7 +66,7 @@ if [ "$QUICK" -eq 1 ]; then
 fi
 
 # 3. the full gate: the same command CI runs
-stage check make check || { echo; echo "validate: FAILED:$FAILED"; exit 1; }
+stage check make "$CHECK_TARGET" || { echo; echo "validate: FAILED:$FAILED"; exit 1; }
 
 # 4. a staged task end to end against the frozen reference: builds, runs, pages
 stage smoke "$PY" reference/experiment.py --task vit-step --seeds 0 \

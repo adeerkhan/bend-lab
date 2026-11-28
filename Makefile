@@ -8,13 +8,19 @@ BEND := $(or $(BEND_BIN),$(HOME)/.bend/bin/bend)
 BEND_VERSION := 2.0.38
 BEND_REF := ../bend-ref
 
-.PHONY: setup check check-dit check-dit-denoiser check-dit-real check-dit-full laws sync-bend clean lint env env-check release experiment experiments results report trace dash dashboard session unet-metric unet-record unet-record-four unet-sample mamba3-bench mamba3-layer mamba3-step mamba3-train-curve mamba3-varlen mamba3-gqa mamba3-outnorm mamba3-deep mamba3-lanes mamba-bf16-curve mamba3-cases mamba3-fd mamba3-state mamba3-wrap mamba3-clamps mamba3-canfail mamba3-det record-compat oracle-boundary lane-matrix pages mamba3-tiny-data mamba-vit-emb mamba-vit-fwd mamba-vit-bwd mamba-vit-train glm-step glm-block-step glm-lin-block glm-decode glm-h192-step batch peaks bounds bench plumbing bench-mamba-tiny bench-ab bend-smoke bend-side bend-latest flow flow64 doctor figures select plots sweep sweep-agent
+.PHONY: setup check check-ci check-long check-dit check-dit-denoiser check-dit-real check-dit-full laws sync-bend clean lint env env-check release experiment experiments results report trace dash dashboard session unet-metric unet-record unet-record-four unet-sample mamba3-bench mamba3-layer mamba3-step mamba3-train-curve mamba3-varlen mamba3-gqa mamba3-outnorm mamba3-deep mamba3-lanes mamba-bf16-curve mamba3-cases mamba3-fd mamba3-state mamba3-wrap mamba3-clamps mamba3-canfail mamba3-det record-compat oracle-boundary lane-matrix pages mamba3-tiny-data mamba-vit-emb mamba-vit-fwd mamba-vit-bwd mamba-vit-train glm-step glm-block-step glm-lin-block glm-decode glm-h192-step batch peaks bounds bench plumbing bench-mamba-tiny bench-ab bend-smoke bend-side bend-latest flow flow64 doctor figures select plots sweep sweep-agent
 
 setup:            ## Bend, Lean and the Python venv
 	scripts/setup.sh
 
 check:            ## the proofs, the kernel (--verdict), the rejected programs, the NumPy comparison
 	$(PY) reference/check_all.py
+
+check-ci:         ## the full gate minus the three long references (CI main job)
+	$(PY) reference/check_all.py --without-long
+
+check-long:       ## only the three long references (CI reference-long job)
+	$(PY) reference/check_all.py --only-long
 
 check-fast:       ## the proofs and the frozen references only: the cheap gate, under a minute
 	$(PY) reference/check_all.py --fast

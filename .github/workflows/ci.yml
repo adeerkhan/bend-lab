@@ -44,15 +44,43 @@ jobs:
 
       - name: The one gate (env-check, the cheap gate, the full check, the smoke)
         run: make validate
+        env:
+          CI_SPLIT: "1"
 
       - name: Keep the full gate log
-        if: failure()
+        if: failure() || cancelled()
         uses: actions/upload-artifact@v5
         with:
           name: validate-log-${{ github.run_id }}
           path: /tmp/mlbend-validate.log
           if-no-files-found: warn
           retention-days: 14
+
+  reference-long:
+    name: make check-long
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Cache the Bend and Lean toolchains
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.bend
+            ~/.elan
+          key: toolchain-${{ runner.os }}-${{ hashFiles('scripts/setup.sh') }}
+
+      - name: Set up (Bend 2.0.38, Lean 4.34.0, Python venv)
+        run: scripts/setup.sh
+
+      - name: The three long references
+        run: make check-long
 
   long:
     name: make validate --long

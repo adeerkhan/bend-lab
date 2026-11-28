@@ -1,5 +1,23 @@
 # Notes
 
+## 2026-11-28 — CI splits the three long references into a second job
+
+- Hosted run `46127994381` (`60fd377`) reached the full gate and was cancelled
+  at the workflow's 90-minute limit (job 09:00:17–10:30:33 UTC). The cancelled
+  step log names `mv_train.bin` as the running process, so the
+  `test_mamba_vit_train.py` gate was the last one still executing. The gate
+  timeout is 1800 s; the job timeout, not a gate, was the limit.
+- No gate or timeout was loosened. `check_all.py` gained `--without-long`
+  (prints `deferred` for the three long references) and `--only-long` (runs
+  only them). `make check-ci` and `make check-long` wrap the two modes, and
+  `scripts/validate.sh` selects `check-ci` when `CI_SPLIT=1`.
+- The push workflow now has two jobs with the same 90-minute limit:
+  `make validate` with `CI_SPLIT=1`, and `reference-long` running
+  `make check-long`. Both must pass. The scheduled `make validate LONG=1` job
+  is unchanged and keeps its 240-minute limit.
+- The main job's full-gate log is now uploaded on `cancelled()` as well as
+  `failure()`, so a job-timeout cancellation leaves the exact gate log.
+
 ## 2026-11-28 — MNIST fixture completes the clean-runner full check
 
 - The MambaViT training gate imports `torchvision` and reads
