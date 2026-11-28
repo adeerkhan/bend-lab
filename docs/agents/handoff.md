@@ -47,27 +47,24 @@ DiT gate requires the gap to stay above 1.0x and prints its measured value
 No gate, tolerance or timeout was loosened. The main job uploads its full-gate
 log on failure or cancellation.
 
-### Looped transformer: current measured lane
+### Looped transformer: current measured lane (v0.2, with K/V convolution)
 
-Build run 349: 115.5 s. Both arms use the same 2,000-step, batch-8, 16-note data
-and 128 puzzles per hop.
+Build run 421, 69.3 s. The four-token causal depthwise K/V convolution is in
+`examples/looped_transformer/short_conv.bend` and passes a PyTorch parity probe
+on y, dx and dw0..dw3 at **0.017x** the oracle tolerance (run 425). Both arms
+use the same 2,000-step, batch-8, 16-note data and 128 puzzles per hop.
 
-| arm | run | final loss | seen 1-8 | unseen 9-12 | hop 1 |
-|---|---|---:|---:|---:|---:|
-| plain, 1 pass | 350 | 2.1634831 | 24.3% | 24.0% | 20.3% |
-| looped, 4 passes | 351 | 2.1318007 | 18.4% | 20.1% | 25.0% |
+| arm | run | wall | final loss | seen 1-8 | unseen 9-12 | hop 1 |
+|---|---|---:|---:|---:|---:|---:|
+| plain, 1 pass | 423 | 888.2 s | 2.1289926 | 23.2% | 24.4% | 21.9% |
+| looped, 4 passes | 424 | 2261.5 s | 1.9377306 | 19.9% | 20.9% | 20.3% |
 
-Plain reaches the chance line overall but does not learn one-hop lookup;
-looped remains below chance overall. This is an undertrained, answer-biased
-model, not an architecture verdict. The exact commands and per-hop table are
-in `results/looped-transformer/REPORT.md`.
-
-The Bend v0 still lacks the learned `keep`/`let_in` gate, the four-token causal
-depthwise K/V convolution and per-head Q/K RMSNorm. Linear/embedding weights
-are uniform `[-0.5, 0.5)` rather than fan-in scaled, and the model is `d=32`,
-batch 8, FF=64 against burn-lab's `d=64`, batch 16, FF=192. The grouped
-`Conv1d` is merged upstream in BendTorch PR #45 but is not in the released
-`bendtorch@2.1.0.0`.
+The convolution did not unlock one-hop lookup; plain stays at chance and
+looped below it. The dense patch-matrix implementation costs about 10x the
+no-convolution lane, so the performance fix is a direct four-shift/per-channel
+scale layer. The learned `keep`/`let_in` gate and true per-head Q/K RMSNorm are
+still absent; linear/embedding initialization is uniform and norm gains are
+one.
 
 ### Upstream state
 
@@ -79,14 +76,12 @@ batch 8, FF=64 against burn-lab's `d=64`, batch 16, FF=192. The grouped
 
 ### Next, in order
 
-1. Implement the K/V short convolution with a forward/backward PyTorch parity
-   gate before integrating it. A viable local design is four causal row shifts
-   plus per-channel scales; the released BendTorch has no grouped `Conv1d`.
-   Two earlier probes did not help and were reverted: a global fan-in scale
-   (loss 1.716, seen 23.1%, unseen 24.2%) and a full-width Q/K RMSNorm (plain
-   23.7% / 22.1%, looped 18.8% / 20.3%). Per-layer fan-in through
-   `Layer.zeros` is not possible because `Train.new` and `OptState.new` use
-   `zeros` for the gradient accumulator and Adam moments.
-2. Add the learned `keep`/`let_in` gate and a true per-head Q/K norm after the
-   convolution, then re-run the same 128-puzzle lane.
-3. Keep #40 draft until the owner approves the size-bounded statement.
+1. Replace the dense patch-matrix convolution with the four-shift/per-channel
+   implementation; keep the same parity probe (y, dx, dw) and the 128-puzzle
+   lane. The patch form is correct but 10x too slow.
+2. Add the learned `keep`/`let_in` gate and a true per-head Q/K norm, then
+   re-run the same lane.
+3. Per-layer fan-in initialization needs a BendTorch API change: `Layer.zeros`
+   is also the optimizer and gradient identity, so it cannot encode an
+   initializer.
+4. Keep #40 draft until the owner approves the size-bounded statement.

@@ -14,6 +14,7 @@
 import Base
 import bendtorch@2.1.0.0/main.bend as T
 import bend-ml-tensor-array@0.1.20.0/main.bend as TA
+import ./short_conv.bend as SC
 
 def D() -> Nat:
   32n
@@ -80,22 +81,43 @@ def RMSNormOne(+n: Nat, +d: Nat, +eps: F32) ->
 
 # ---- one transformer block, built from BendTorch's layers ----
 
-def KVP() -> Type:
-  T.Two<M(D(), D()), M(D(), D())>
-
 def KVY() -> Type:
   T.Two<A(D()), A(D())>
 
-def KVS() -> Type:
+def KVPairP() -> Type:
+  T.Two<M(D(), D()), M(D(), D())>
+
+def KVPairS() -> Type:
   T.Two<A(D()), A(D())>
 
-def KVL() -> T.Layer<KVP, A(D()), KVY(), KVS()>:
+def KVPair() -> T.Layer<KVPairP, A(D()), KVY(), KVPairS()>:
   T.Fork(~M(D(), D()), ~M(D(), D()), ~A(D()), ~A(D()), ~A(D()),
     ~A(D()), ~A(D()),
     ~(m => T.Mat.dup(R(), D(), m)),
     ~(x => y => T.Mat.sum2(R(), D(), x, y)),
     ~T.LinearNB(R(), D(), D(), 0n),
     ~T.LinearNB(R(), D(), D(), 0n))
+
+def KVConvP() -> Type:
+  T.Two<SC.ConvP32(), SC.ConvP32()>
+
+def KVConvS() -> Type:
+  T.Two<A(D()), A(D())>
+
+def KVConv() -> T.Layer<KVConvP, KVY(), KVY(), KVConvS()>:
+  T.Both(~SC.ConvP32(), ~SC.ConvP32(), ~A(D()), ~A(D()), ~A(D()), ~A(D()),
+    ~A(D()), ~A(D()),
+    ~SC.ShortConv32(B(), SL()), ~SC.ShortConv32(B(), SL()))
+
+def KVP() -> Type:
+  T.Two<KVPairP, KVConvP>
+
+def KVS() -> Type:
+  T.Two<KVPairS, KVConvS>
+
+def KVL() -> T.Layer<KVP, A(D()), KVY(), KVS>:
+  T.Seq(~KVPairP, ~KVConvP, ~A(D()), ~KVY(), ~KVY(), ~KVPairS, ~KVConvS,
+    ~KVPair(), ~KVConv())
 
 def AX() -> Type:
   T.Two<A(D()), KVY()>

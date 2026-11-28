@@ -1,5 +1,25 @@
 # Notes
 
+## 2026-11-28 — looped short convolution: parity passes, no accuracy gain
+
+- `examples/looped_transformer/short_conv.bend` implements the four-token
+  causal depthwise K/V convolution as a dense patch matrix: patches are
+  `N x 4d`, the block-diagonal weight is `4d x d`, and `y = P W`. The backward
+  is `dP = dy W^T`, `dW = P^T dy`, then the adjoint of the patch map.
+- The parity probe (`short_conv_probe.bend`, `reference/test_short_conv.py`)
+  matches PyTorch `conv1d(groups=d)` on y, dx and dw0..dw3 at **0.017x** the
+  oracle tolerance (run 425). The model build run 421 took 69.3 s.
+- Plain run 423: 2,000 steps, 888.2 s, final loss 2.1289926, seen 23.2%,
+  unseen 24.4%, hop 1 21.9%. Looped four-pass run 424: 2,261.5 s, final loss
+  1.9377306, seen 19.9%, unseen 20.9%, hop 1 20.3%. The no-convolution
+  norm-init lane was 24.3% / 24.0% and 18.4% / 20.1%; the convolution did not
+  unlock one-hop lookup and costs about 10x because of the dense `4d` product.
+- Two Bend constraints surfaced. A layer's `zeros` field is also the optimizer
+  and gradient identity, so it cannot carry an initializer. And a four-row
+  parameter type pushed the composed model over the compiler's 247-arity
+  limit; packing the four taps into one `1 x 128` row fixed it. The layer now
+  uses one matrix parameter and one `Mat.matmul` per K/V pass.
+
 ## 2026-11-28 — looped init and Q/K norm probes: no accuracy gain
 
 - **Per-layer fan-in through `Layer.zeros` is not available.** The first

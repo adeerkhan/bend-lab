@@ -5,6 +5,42 @@ reduced Bend arm of `burn-lab/looped`: four stored transformer blocks (one
 prelude, two shared middle blocks, one coda), runtime `passes`, answer-only
 loss, and a 16-note chain puzzle.
 
+## v0.2: the four-token K/V convolution (current lane)
+
+The convolution is `examples/looped_transformer/short_conv.bend`: a local
+depthwise causal Conv1d (kernel 4, padding 3, no bias), written as a dense patch
+matrix because `bendtorch@2.1.0.0` has no grouped Conv1d. It is applied to K
+and V in `KVL`.
+
+    reference/.venv/bin/python reference/test_short_conv.py
+
+Run 425, exit 0: **y, dx and dw0..dw3 match PyTorch at 0.017x the oracle
+tolerance.** The probe is `examples/looped_transformer/short_conv_probe.bend`.
+
+    BEND_MEM=6G TMPDIR=/tmp/opencode scripts/bend-guard.sh make session \
+      TASK=looped-build-shortconv \
+      CMD="env PATH=$HOME/.local/bin:$HOME/.bend/bin:$HOME/.elan/bin:$PATH \
+      LD_LIBRARY_PATH=$HOME/.local/lib/llvm22 \
+      bend -o .scratch/looped examples/looped_transformer/main.bend"
+
+Build run 421, exit 0, 69.3 s.
+
+| arm | run | wall | final loss | seen 1-8 | unseen 9-12 | hop 1 |
+|---|---|---:|---:|---:|---:|---:|
+| plain, 1 pass | 423 | 888.2 s | 2.1289926 | 23.2% | 24.4% | 21.9% |
+| looped, 4 passes | 424 | 2261.5 s | 1.9377306 | 19.9% | 20.9% | 20.3% |
+
+**The convolution did not unlock one-hop lookup.** Plain stays at the chance
+line; looped stays below it. Against the v0.1 norm-init lane (plain 24.3% /
+24.0%, looped 18.4% / 20.1%), the differences are within noise and the cost is
+about **9.6x plain** and **9.9x looped** because the patch-matrix
+implementation does a 4d-wide matrix product per layer. A direct shift/scale
+convolution would remove that factor; the parity-gated math is already here.
+
+## v0.1: RMSNorm gains initialized to one (previous lane)
+
+The sections below are the pre-convolution lane. The title still says v0.
+
 ## Build
 
     BEND_MEM=6G TMPDIR=/tmp/opencode scripts/bend-guard.sh make session \
@@ -102,9 +138,9 @@ The Bend v0 is not the burn-lab model:
   use uniform `[-0.5, 0.5)` rather than library fan-in scaling;
 - the message is `start + RMSNorm(message)`; the learned `keep`/`let_in` gate
   is absent;
-- the four-token causal depthwise K/V convolution is absent. The released
-  `bendtorch@2.1.0.0` does not contain the grouped `Conv1d` merged upstream in
-  PR #45;
+- the four-token causal depthwise K/V convolution is present and parity-gated
+  (0.017x), but its dense patch-matrix implementation costs about 10x and did
+  not improve this lane;
 - per-head Q/K RMSNorm before RoPE is absent;
 - the Bend arm is `d=32`, batch 8, FF=64. Burn-lab's recorded comparison is
   `d=64`, batch 16, FF=192.
