@@ -19,14 +19,14 @@ of a 128-puzzle sample in one process.
 This v0 is deliberately reduced, and its numbers are **not** a verdict on the
 article:
 
+- RMSNorm gains initialize to one; linear and embedding weights still use
+  uniform `[-0.5, 0.5)` rather than library fan-in scaling;
 - the message is `start + RMSNorm(message)`; the learned `keep`/`let_in` gate
   is absent;
 - the four-token causal depthwise K/V convolution is absent. The released
   `bendtorch@2.1.0.0` does not contain the grouped `Conv1d` merged upstream in
   PR #45;
 - per-head Q/K RMSNorm before RoPE is absent;
-- every parameter, including RMSNorm gains, is initialized uniformly in
-  `[-0.5, 0.5)`;
 - the model is `d=32`, four heads, batch 8, FF=64. Burn-lab's recorded
   comparison is `d=64`, batch 16, FF=192.
 
@@ -36,15 +36,14 @@ article:
 
 | arm | passes | layer runs | final loss | seen 1-8 | unseen 9-12 |
 |---|---:|---:|---:|---:|---:|
-| plain | 1 | 4 | 2.0886405 | 16.5% | 18.6% |
-| looped | 4 | 10 | 2.2999907 | 10.3% | 10.7% |
+| plain | 1 | 4 | 2.1634831 | 24.3% | 24.0% |
+| looped | 4 | 10 | 2.1318007 | 18.4% | 20.1% |
 
-Both arms are below the 25% four-digit chance line at one hop (plain 20.3%,
-looped 10.2%). This is an undertrained, answer-biased model, not an
-architecture comparison. The earlier eight-puzzle smoke reported 25.0% and
-12.5%; the larger sample changes those to 20.3% and 10.2%.
-
-The exact commands, run ids, and per-hop table are in
+Plain sits at the 25% chance line overall but is still at 20.3% on one hop;
+looped is below chance overall and exactly at chance on one hop (25.0%).
+Neither arm has learned the task. This is an undertrained, answer-biased model,
+not an architecture comparison. The exact commands, run ids, per-hop table,
+and the previous random-norm lane are in
 [`results/looped-transformer/REPORT.md`](../../../results/looped-transformer/REPORT.md).
 
 ## Layout

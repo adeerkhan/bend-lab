@@ -1,5 +1,23 @@
 # Notes
 
+## 2026-11-28 — looped transformer: RMSNorm gains start at one (measurement)
+
+- `RMSNormOne` keeps the published RMSNorm forward, backward and parameter
+  round trip, but changes its zero initializer to a gain of one. The flat
+  initializer now randomizes zero-valued entries (linear and embedding
+  weights) and preserves nonzero initial gains. The previous lane randomized
+  every parameter, including norm gains.
+- Build run 349: 115.5 s. Plain run 350: 2,000 steps, 92.1 s, final loss
+  2.1634831, seen 24.3%, unseen 24.0%, hop 1 20.3%. Looped four-pass run 351:
+  229.3 s, final loss 2.1318007, seen 18.4%, unseen 20.1%, hop 1 25.0%.
+  Summaries are runs 352 and 353.
+- Plain reaches the chance line overall but does not learn one-hop lookup;
+  looped remains below chance overall. The change is closer to the reference
+  initialization, but the Bend v0 still lacks the gate, short convolution and
+  per-head Q/K norm, and its linear weights are not fan-in scaled. The two
+  initialization lanes are reported separately in
+  `results/looped-transformer/REPORT.md`.
+
 ## 2026-11-28 — looped transformer: 128 puzzles per hop, and an undertrained v0
 
 - `eval-all.bin` is now one hop-major file: 12 hops × 16 steps × 8 puzzles,

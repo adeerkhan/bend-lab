@@ -60,6 +60,24 @@ def M(r: Nat, c: Nat) -> Type:
 def A(c: Nat) -> Type:
   TA.Mat<R(), c>
 
+# RMSNorm with the library's zero initializer replaced by a gain of one. The
+# forward, backward and parameter round trip are the published layer's.
+def RMSNormOne(+n: Nat, +d: Nat, +eps: F32) ->
+  T.Layer<M(1n, d), TA.Mat<n, d>, TA.Mat<n, d>, TA.Mat<n, d>>:
+  T.Layer{
+    p => x => T.Layer.fwd(M(1n, d), TA.Mat<n, d>, TA.Mat<n, d>, TA.Mat<n, d>,
+      T.RMSNorm(n, d, eps), p, x),
+    p => s => dy => g => T.Layer.bwd(M(1n, d), TA.Mat<n, d>, TA.Mat<n, d>, TA.Mat<n, d>,
+      T.RMSNorm(n, d, eps), p, s, dy, g),
+    op => p => g => st => T.Layer.step(M(1n, d), TA.Mat<n, d>, TA.Mat<n, d>, TA.Mat<n, d>,
+      T.RMSNorm(n, d, eps), op, p, g, st),
+    u => TA.Mat.fill(1n, d, 1.0),
+    p => T.Mat.dump(1n, d, p),
+    p => xs => off => T.Mat.restore(1n, d, p, xs, off),
+    p => xs => off => T.Mat.store(1n, d, p, xs, off),
+    u => U32.from_nat(d)
+  }
+
 # ---- one transformer block, built from BendTorch's layers ----
 
 def KVP() -> Type:
@@ -146,7 +164,7 @@ def NAttS() -> Type:
 
 def NAtt() -> T.Layer<NAttP, A(D()), A(D()), NAttS()>:
   T.Seq(~M(1n, D()), ~AttP, ~A(D()), ~A(D()), ~A(D()), ~A(D()), ~AttS(),
-    ~T.RMSNorm(R(), D(), EPS()), ~Att())
+    ~RMSNormOne(R(), D(), EPS()), ~Att())
 
 def GateS() -> Type:
   T.Two<A(D()), A(FF())>
@@ -196,7 +214,7 @@ def NMlpS() -> Type:
 
 def NMlp() -> T.Layer<NMlpP, A(D()), A(D()), NMlpS()>:
   T.Seq(~M(1n, D()), ~MlpP, ~A(D()), ~A(D()), ~A(D()), ~A(D()), ~MlpS(),
-    ~T.RMSNorm(R(), D(), EPS()), ~Mlp())
+    ~RMSNormOne(R(), D(), EPS()), ~Mlp())
 
 def BlockP() -> Type:
   T.Two<T.ResidualType(NAttP), T.ResidualType(NMlpP)>
@@ -303,7 +321,7 @@ def pass_fwd(p: PassP(), x: T.Two<A(D()), A(D())>) ->
           then_fwd(M(1n, D()), A(D()), A(D()),
             T.Fwd<PassP(), T.Two<A(D()), A(D())>, PassS()>,
             T.Layer.fwd(M(1n, D()), A(D()), A(D()), A(D()),
-              T.RMSNorm(R(), D(), EPS()), np, msg),
+              RMSNormOne(R(), D(), EPS()), np, msg),
             np2 => nmsg => ns =>
               then_fwd(Unit, A(D()), Unit,
                 T.Fwd<PassP(), T.Two<A(D()), A(D())>, PassS()>,
@@ -332,7 +350,7 @@ def pass_bwd(p: PassP(), s: PassS(), dy: T.Two<A(D()), A(D())>, g: PassP()) ->
                 dz1 => dz2 =>
                   then_bwd(M(1n, D()), A(D()), T.Bwd<PassP(), T.Two<A(D()), A(D())>>,
                     T.Layer.bwd(M(1n, D()), A(D()), A(D()), A(D()),
-                      T.RMSNorm(R(), D(), EPS()), np, ns, dz2, gn),
+                      RMSNormOne(R(), D(), EPS()), np, ns, dz2, gn),
                     np2 => dmsg => gn2 =>
                       T.Bwd{T.Two{lp2, np2},
                         T.Two{T.Mat.sum2(R(), D(), dstart, dz1), dmsg},
@@ -343,21 +361,21 @@ def Pass() -> T.Layer<PassP, T.Two<A(D()), A(D())>, T.Two<A(D()), A(D())>, PassS
     p => x => pass_fwd(p, x),
     p => s => dy => g => pass_bwd(p, s, dy, g),
     op => p => g => st => T.pair_step(~LoopP(), ~A(D()), ~A(D()), ~LoopS(),
-      ~M(1n, D()), ~A(D()), ~A(D()), ~A(D()), ~Loop2(), ~T.RMSNorm(R(), D(), EPS()),
+      ~M(1n, D()), ~A(D()), ~A(D()), ~A(D()), ~Loop2(), ~RMSNormOne(R(), D(), EPS()),
       op, p, g, st),
     u => T.pair_zeros(~LoopP(), ~A(D()), ~A(D()), ~LoopS(), ~M(1n, D()),
-      ~A(D()), ~A(D()), ~A(D()), ~Loop2(), ~T.RMSNorm(R(), D(), EPS())),
+      ~A(D()), ~A(D()), ~A(D()), ~Loop2(), ~RMSNormOne(R(), D(), EPS())),
     p => T.pair_dump(~LoopP(), ~A(D()), ~A(D()), ~LoopS(), ~M(1n, D()),
-      ~A(D()), ~A(D()), ~A(D()), ~Loop2(), ~T.RMSNorm(R(), D(), EPS()), p),
+      ~A(D()), ~A(D()), ~A(D()), ~Loop2(), ~RMSNormOne(R(), D(), EPS()), p),
     p => xs => off => T.pair_load(~LoopP(), ~A(D()), ~A(D()), ~LoopS(),
       ~M(1n, D()), ~A(D()), ~A(D()), ~A(D()), ~Loop2(),
-      ~T.RMSNorm(R(), D(), EPS()), p, xs, off),
+      ~RMSNormOne(R(), D(), EPS()), p, xs, off),
     p => xs => off => T.pair_store(~LoopP(), ~A(D()), ~A(D()), ~LoopS(),
       ~M(1n, D()), ~A(D()), ~A(D()), ~A(D()), ~Loop2(),
-      ~T.RMSNorm(R(), D(), EPS()), p, xs, off),
+      ~RMSNormOne(R(), D(), EPS()), p, xs, off),
     u => (T.Layer.count(LoopP(), A(D()), A(D()), LoopS(), Loop2()) +
           T.Layer.count(M(1n, D()), A(D()), A(D()), A(D()),
-            T.RMSNorm(R(), D(), EPS())) : U32)
+            RMSNormOne(R(), D(), EPS())) : U32)
   }
 
 # ---- the model ----
@@ -428,7 +446,7 @@ def HeadS() -> Type:
 
 def Head() -> T.Layer<HeadP, A(D()), M(R(), V()), HeadS()>:
   T.Seq(~M(1n, D()), ~M(V(), D()), ~A(D()), ~A(D()), ~M(R(), V()),
-    ~A(D()), ~A(D()), ~T.RMSNorm(R(), D(), EPS()),
+    ~A(D()), ~A(D()), ~RMSNormOne(R(), D(), EPS()),
     ~T.LinearNB(R(), D(), V(), 0n))
 
 def BodyP() -> Type:
@@ -466,12 +484,23 @@ def Model(+passes: Nat) -> T.Layer<ModelP(), X(), Y(), ModelS()>:
 def rand_f32(+i: U32, +seed: U32) -> F32:
   (U32.to_f32(T.mix32(U32.xor(seed, T.mix32(i)))) / 4294967296.0 - 0.5 : F32)
 
-def fill_go(left: Nat, +i: U32, +seed: U32, arr: Array<F32>) -> Array<F32>:
+def dump_bind(-Z: Type, r: T.PL<ModelP()>, k: List<&2, F32> -> Z) -> Z:
+  match r:
+    case T.PL{_, xs}:
+      k(xs)
+
+def init_fill_go(left: Nat, +i: U32, +seed: U32, xs: List<&2, F32>,
+  arr: Array<F32>) -> Array<F32>:
   match left:
     case 0n:
       arr
-    case 1n+p:
-      fill_go(p, (i + 1 : U32), seed, Array.set(F32, arr, i, rand_f32(i, seed)))
+    case 1n+q:
+      match xs:
+        case Nil{}:
+          arr
+        case Con{+v, rest}:
+          value = Bool.pick(F32, F32.is_eq(v, 0.0), rand_f32(i, seed), v)
+          init_fill_go(q, (i + 1 : U32), seed, rest, Array.set(F32, arr, i, value))
 
 def load_bind(r: T.PA<ModelP()>) -> ModelP():
   match r:
@@ -481,9 +510,12 @@ def load_bind(r: T.PA<ModelP()>) -> ModelP():
 def init_params() -> ModelP():
   +n = T.Layer.count(ModelP(), X(), Y(), ModelS(), Model(1n))
   z = T.Layer.zeros(ModelP(), X(), Y(), ModelS(), Model(1n))
-  arr = fill_go(U32.to_nat(n), 0, 12345,
+  xs = dump_bind(List<&2, F32>,
+    T.Layer.dump(ModelP(), X(), Y(), ModelS(), Model(1n), z), x => x)
+  arr = init_fill_go(U32.to_nat(n), 0, 12345, xs,
     Array.new(F32, TA.cap_depth(U32.to_nat(n)), 0.0))
-  load_bind(T.Layer.load(ModelP(), X(), Y(), ModelS(), Model(1n), z, arr, 0))
+  load_bind(T.Layer.load(ModelP(), X(), Y(), ModelS(), Model(1n),
+    T.Layer.zeros(ModelP(), X(), Y(), ModelS(), Model(1n)), arr, 0))
 
 def row_bind_rc(~R0: Nat, ~C0: Nat, ~Z: Type, r: TA.MRow<R0, C0>,
   k: TA.Mat<R0, C0> -> List<&2, F32> -> Z) -> Z:
@@ -659,11 +691,6 @@ def train_eval(+k: Nat, +passes: Nat, +train_path: String, +eval_path: String) -
     eval_tr(tr, passes, eval_path)
 
 # ---- evaluation at scale: every hop's whole sample in one file, one step at a time ----
-
-def dump_bind(-Z: Type, r: T.PL<ModelP()>, k: List<&2, F32> -> Z) -> Z:
-  match r:
-    case T.PL{_, xs}:
-      k(xs)
 
 def params_list(p: ModelP()) -> List<&2, F32>:
   dump_bind(List<&2, F32>,
