@@ -15,6 +15,9 @@ cd "$(dirname "$0")/.."
 export BEND_NO_TELEMETRY=1
 HOME_BEND=${BEND_HOME:-$HOME/.bend}
 export PATH="$HOME_BEND/bin:$HOME/.elan/bin:$PATH"
+if [ -d "$HOME/.local/lib/llvm22" ]; then
+  export LD_LIBRARY_PATH="$HOME/.local/lib/llvm22${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+fi
 
 say() { printf '\n== %s\n' "$*"; }
 have_bend() { command -v bend >/dev/null 2>&1 && [ "$(bend version 2>/dev/null | awk '{print $NF}')" = "$BEND_VERSION" ]; }
@@ -83,6 +86,41 @@ reference/.venv/bin/python -c "import numpy, sklearn; print('numpy', numpy.__ver
 
 say "Oxford Flowers fixture"
 reference/.venv/bin/python reference/flowers_export.py --setup
+
+# --- 4b. the clean-runner fixtures the full check reads -------------------------------
+say "Clean-runner fixtures"
+mkdir -p /tmp/opencode .scratch
+if [ ! -e reference/.venv-rf ]; then
+  ln -s .venv reference/.venv-rf
+  echo "linked reference/.venv-rf -> .venv"
+fi
+reference/.venv/bin/python reference/materialize_datasets.py
+
+GLM_DATA=examples/language/glm53_flash/data
+if [ ! -f "$GLM_DATA/corpus128-b32/corpus128.json" ] || \
+   [ ! -f "$GLM_DATA/corpus128-holdout-reverse/corpus128.json" ]; then
+  reference/.venv/bin/python reference/glm53_dense_data.py --prepare --directory "$GLM_DATA"
+  reference/.venv/bin/python reference/glm53_dense_data.py --windows \
+    --directory "$GLM_DATA/corpus128-b32" --examples 16000 --batch 32
+  reference/.venv/bin/python reference/glm53_dense_data.py --windows \
+    --directory "$GLM_DATA/corpus128-holdout-reverse" --examples 20000 --batch 32 \
+    --holdout reverse
+else
+  echo "glm53 corpus128-b32 already present"
+fi
+
+if [ ! -f .scratch/mamba3_tiny/w_init/manifest.json ]; then
+  reference/.venv/bin/python reference/mamba3_tiny_data.py
+  reference/.venv-rf/bin/python reference/mamba3_tiny_twin.py --mode dump
+else
+  echo "mamba3 tiny twin dump already present"
+fi
+
+if [ ! -f .scratch/mamba_vit/manifest.json ]; then
+  reference/.venv-rf/bin/python reference/mamba_vit_bins.py
+else
+  echo "mamba-vit dump already present"
+fi
 
 # --- 5. clang (Bend builds binaries with it) ----------------------------------------------
 say "clang"

@@ -16,7 +16,7 @@ freezes other references — if it moves, the composition changed and must be
 re-investigated. It is NOT a pass and the tolerance is NOT loosened to make
 one. `results/dit/COMPARISON.md` carries the banner and the isolation ladder.
 
-Requires the sibling `bendtorch/reference/oracle.py` (the upstream checkout).
+Uses the local `reference/oracle.py` comparison policy.
 """
 import os
 import re
@@ -28,7 +28,7 @@ PY = os.path.join(ROOT, "reference", ".venv", "bin", "python")
 BEND = os.environ.get("BEND_BIN") or os.path.expanduser("~/.bend/bin/bend")
 ENV_DIR = os.path.join(ROOT, ".bend", "env")
 GUARD = os.path.join(ROOT, "scripts", "bend-guard.sh")
-ORACLE = os.path.join(ROOT, "..", "bendtorch", "reference", "oracle.py")
+ORACLE = os.path.join(ROOT, "reference", "oracle.py")
 SCRATCH = os.path.join(ROOT, ".scratch")
 
 # (source, binary, gate, must_pass, frozen_line)

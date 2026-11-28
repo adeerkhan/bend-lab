@@ -16,7 +16,7 @@ import torch
 import torch.nn.functional as F
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(HERE)), "bendtorch", "reference"))
+sys.path.insert(0, HERE)
 from oracle import close, parse  # noqa: E402
 
 B, TK, N, FE, PX, C, CD, KV, HD, SC, EPS = 2, 3, 6, 8, 4, 8, 3, 2, 4, 0.5, 1e-5

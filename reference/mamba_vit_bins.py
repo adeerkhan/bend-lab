@@ -19,6 +19,7 @@ backward left every forward number above byte-identical.
 """
 from __future__ import annotations
 
+import json
 import os
 import sys
 
@@ -42,13 +43,8 @@ def main():
     torch.manual_seed(0)
     m = MambaViT(image_size=28, patch_size=4, num_classes=10, channels=1,
                  n_layer=N_LAYER, dim=32, pool="mean").eval()
-    # a fixed small image: the first MNIST test image, as 0..1 floats
-    import torchvision
-    from torchvision import transforms
-    ds = torchvision.datasets.MNIST("/tmp/opencode/mnist", train=False, download=True,
-                                    transform=transforms.ToTensor())
-    img = ds[0][0]  # (1,28,28) in 0..1
-    img = img.unsqueeze(0) - 0.5
+    # a fixed deterministic image; the Bend probe reads this same img.bin
+    img = (torch.arange(28 * 28, dtype=torch.float32).reshape(1, 1, 28, 28) * 0.17).sin() * 0.5
     save("img", img.reshape(-1))
 
     # the forward, kept in the graph: every intermediate the probe compares
@@ -112,6 +108,10 @@ def main():
     for name, p in m.named_parameters():
         save("w_" + name.replace(".", "_"), p.detach().numpy())
     files = [f for f in os.listdir(OUT) if f.endswith(".bin")]
+    with open(os.path.join(OUT, "manifest.json"), "w") as f:
+        json.dump({"files": len(files), "image": "sin(arange(784) * 0.17) * 0.5",
+                   "torch": torch.__version__}, f, indent=2)
+        f.write("\n")
     print("wrote", len(files), "files to", OUT)
     print("logits", np.round(logits[0].detach().numpy(), 5))
 

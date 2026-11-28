@@ -1,5 +1,33 @@
 # Notes
 
+## 2026-11-28 — clean-runner fixtures and self-contained DiT policy (tooling)
+
+- `scripts/setup.sh` now provisions the inputs that the full check previously
+  found only on a developer machine: the six pinned dataset downloads, the two
+  GLM53 `corpus128` windows, the Mamba-3 tiny corpus/twin dump, the MambaViT
+  forward/backward dump, `.scratch` and `/tmp/opencode`. Dataset downloads are
+  SHA-256 checked before reuse; generated fixtures are deterministic.
+- `reference/oracle.py` carries the same `ATOL=1e-6`, `RTOL=1e-5` policy as the
+  upstream BendTorch checkout. The six DiT probes and `test_dit_ref.py` now use
+  the local file, so bend-lab no longer needs a sibling checkout to test
+  itself. `test_dit_ref.py` passes with its two parity gates green and the
+  full-block gradient gap frozen at 5.454x.
+- The reference environment installs pinned CPU `torch==2.15.0` and
+  `numba==0.68.1`. MambaViT's dump uses a deterministic sine image instead of
+  downloading MNIST; its forward and backward gates still pass.
+- On a CPU-only reference environment, `test_mamba3_cases.py`,
+  `test_mamba3_clamps.py` and `test_mamba3_lanes.py` print
+  `unavailable: needs CUDA/Triton` and are counted separately. They still run
+  when CUDA is present. No tolerance or timeout was changed.
+
+Measured with `scripts/setup.sh` (exit 0), `make session TASK=dit-ref-local-oracle
+CMD="reference/.venv/bin/python reference/test_dit_ref.py"` (run 326, exit 0,
+58.3 s), `make session TASK=mamba-vit-fwd-final ...` (exit 0, 4.9 s),
+`make session TASK=mamba-vit-bwd-final ...` (exit 0, 21.6 s), and
+`make session TASK=ci-fast-final CMD="make check-fast"` (run 347, 33/33, 43.1 s).
+A full `make check` reached 166/190 with no `ERROR` line before the session
+environment restarted and its `/tmp` log was lost; it is not counted as a pass.
+
 ## 2026-11-15 — MambaViT A3: the checksums, not the loss curve, test the update
 
 - **A rotated flat gradient passes a 1e-3 loss gate.** The trainer keeps the

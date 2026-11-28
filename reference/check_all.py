@@ -30,6 +30,12 @@ if os.path.isdir(LLVM_LIB) and LLVM_LIB not in ENV_BUILD.get("LD_LIBRARY_PATH", 
         filter(None, [LLVM_LIB, ENV_BUILD.get("LD_LIBRARY_PATH")]))
 results = []
 FAST = "--fast" in sys.argv   # the cheap gate: the proofs and the frozen references only
+PYRF = os.path.join(ROOT, "reference/.venv-rf/bin/python")
+CUDA_ONLY = {
+    "test_mamba3_cases.py",
+    "test_mamba3_clamps.py",
+    "test_mamba3_lanes.py",
+}
 
 
 def tidy(text):
@@ -120,6 +126,18 @@ def lean_here():
     except (FileNotFoundError, subprocess.TimeoutExpired):
         return False
     return "version 4.34.0" in lv.stdout
+
+
+def cuda_here():
+    """Whether the reference environment can run the CUDA/Triton gates."""
+    if not os.path.exists(PYRF):
+        return False
+    try:
+        out = subprocess.run([PYRF, "-c", "import torch; print(torch.cuda.is_available())"],
+                             capture_output=True, text=True, env=ENV, timeout=60)
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return out.returncode == 0 and out.stdout.strip() == "True"
 
 
 def check_toolchain():
@@ -224,13 +242,21 @@ def main():
         [PY, "reference/check_mamba3_bend.py"])
 
     # 5. the numbers, against NumPy and scikit-learn
+    cuda = cuda_here()
+    unavailable = 0
     for name in sorted(os.listdir(os.path.join(ROOT, "reference"))):
         if not (name.startswith("test_") and name.endswith(".py")):
+            continue
+        if name in CUDA_ONLY and not cuda:
+            print(f"unavailable reference/{name}: needs CUDA/Triton "
+                  f"(no CUDA in reference/.venv-rf)", flush=True)
+            unavailable += 1
             continue
         run(f"reference/{name}: the numbers match", [PY, os.path.join("reference", name)])
 
     ok = sum(results)
-    print(f"\n{ok}/{len(results)} checks passed", flush=True)
+    suffix = f" ({unavailable} unavailable: CUDA/Triton)" if unavailable else ""
+    print(f"\n{ok}/{len(results)} checks passed{suffix}", flush=True)
     sys.exit(0 if ok == len(results) else 1)
 
 
